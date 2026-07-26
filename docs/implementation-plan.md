@@ -176,10 +176,16 @@ runs without touching a dev tool.
 - [ ] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.
-- [ ] Convex cloud project (development runs on an anonymous local backend at
+- [x] Convex cloud project (development ran on an anonymous local backend at
   127.0.0.1, which real devices cannot reach) — AC: a Convex cloud free-tier
   deployment exists; both apps point at it; TV and phone on real hardware
-  share room state. Requires the user — the project lands on their account.
+  share room state. Done early, out of phase order, because the local backend
+  was blocking honest verification. `nderim-krasniqi:huddle:dev` is live and
+  the TV app points at it; `createRoom`, `joinRoom`, `roster` and all four
+  rejections were exercised against it, confirming `ConvexError` data survives
+  the wire outside `convex-test`. Still open: the Controller does not point at
+  anything yet (it has no Convex client until the join-screen task), and
+  "share room state on real hardware" needs the devices in Phase 5.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
