@@ -14,6 +14,19 @@ working must add it here.
   encoded in its QR deep link (`huddle://join/<code>`). Minted server-side by
   `createRoom`, which redraws until the code is held by no live room; an
   expired room's code returns to the pool.
+- **Join Link** — the `huddle://join/<code>` deep link that puts a phone into a
+  room. The TV's QR encodes it; both apps register its scheme (`huddle`).
+  Built by `roomJoinLink` in game-core, because it is protocol both sides share.
+- **Pairing Screen** — the TV screen an empty room shows: the Room Code in four
+  letter tiles, the QR of its Join Link, and the waiting roster. The TV app's
+  first screen on launch, and where a room returns when it empties.
+- **Stage** — the TV app's fixed 1280×720 design surface (`TvStage`), scaled to
+  whatever panel it runs on, so every measurement in TV screens is written
+  exactly as the design handoff gives it. Distinct from the metaphorical "stage"
+  in Eyes up below.
+- **Open a room** — the TV-side act of getting the room for this launch:
+  `createRoom` if none has been minted yet, otherwise the one already minted.
+  `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once.
 - **Lobby** — the pre-game phase of a room (roster visible, Host picking a
   game). A room is `lobby → in-game → lobby`.
 - **Player** — a phone-holding participant in a room; session-only identity

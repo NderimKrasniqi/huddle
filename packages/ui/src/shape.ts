@@ -28,3 +28,16 @@ export const radius = {
   /** Fully rounded pill badges: HOST, JUST JOINED!, GRAB YOUR PHONE!, chips. */
   pill: 999,
 } as const;
+
+/**
+ * Boardwalk tilts cards and badges like stickers pressed onto the screen
+ * (`rotate(-3deg…3deg)`). Named per surface so the same element is never tilted
+ * two different ways on two different screens; the room-code tiles get their
+ * tilt from `codeTileTilt` instead, because theirs cycles by position.
+ */
+export const stickerTilt = {
+  /** -3° — the "GRAB YOUR PHONE!" badge. */
+  badge: '-3deg',
+  /** 1.5° — the TV's QR card. */
+  qrCard: '1.5deg',
+} as const;

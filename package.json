@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit && pnpm -r typecheck",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "test:unit": "vitest run --project packages",
+    "test:unit": "vitest run --project packages --project apps",
     "test:integration": "vitest run --project convex"
   },
   "devDependencies": {
