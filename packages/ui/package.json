@@ -11,7 +11,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@expo-google-fonts/bungee": "^0.4.1",
+    "@expo-google-fonts/space-grotesk": "^0.4.1"
+  },
   "devDependencies": {
+    "@types/node": "^26.1.1",
     "typescript": "~5.9.3"
   }
 }

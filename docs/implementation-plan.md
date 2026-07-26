@@ -28,7 +28,7 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   `convex/`, `packages/ui`, `packages/game-core`, `packages/games/trivia`,
   `packages/packs`) — AC: `pnpm install && pnpm typecheck` passes from the
   root; both apps boot to a placeholder screen in dev mode.
-- [ ] Boardwalk theme package (`packages/ui`: color tokens, radius/border
+- [x] Boardwalk theme package (`packages/ui`: color tokens, radius/border
   scales, offset-shadow helper, Bungee + Space Grotesk via
   `@expo-google-fonts`) — AC: both apps render a sample screen using only
   theme tokens; no hex color literal exists outside `packages/ui`.

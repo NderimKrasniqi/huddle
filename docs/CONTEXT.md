@@ -48,7 +48,16 @@ working must add it here.
   swatch; their avatar is that color with their initials.
 - **Boardwalk** — Huddle's design system (docs/design/design-handoff.md):
   cream canvas, ink borders, hard offset shadows, sticker rotations, Bungee +
-  Space Grotesk.
+  Space Grotesk. Implemented as `packages/ui`, the only place a color may be
+  written down.
+- **Offset Shadow** — Boardwalk's signature drop shadow: hard-edged and never
+  blurred (`Npx Npx 0 <color>`), ink by default and an accent color for
+  highlights. Always produced by `offsetShadow()` in `packages/ui`; never
+  `elevation` and never a blur.
+- **Color tokens** — Boardwalk names its palette by role, and code uses those
+  names, never a generic color word: `canvas`, `screen`, `surface`, `ink`,
+  `mutedText`, `mutedBorder`, `cobalt`, `tangerine`, `punch`, `green`,
+  `yellow`.
 - **Eyes up** — the platform's core UX principle: the TV is the stage; phones
   are minimal controllers; players' eyes belong on the TV and each other.
 
