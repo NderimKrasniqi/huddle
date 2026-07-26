@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native build output (generated via prebuild)
+apps/*/ios/
+apps/*/android/
+*.ipa
+*.apk
+*.aab
+
+# Convex
+.env.local
+.env*.local
+
+# Testing
+coverage/
+
+# Misc
+.DS_Store
+*.log
+*.tsbuildinfo
