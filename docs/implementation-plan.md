@@ -51,12 +51,18 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   measurement matches the handoff and the copy is confirmed in the shipped
   bundle, but whether it *looks* right is open — see Phase 5's design fidelity
   pass and real-device builds.
-- [ ] Phone join by code — AC: join screen per handoff (code tiles
-  auto-advance per letter, name input); entering code + nickname adds the
-  player and shows the "You're in" screen; the TV roster shows the nickname
-  within 1s; joining a nonexistent code shows "room not found"; a nickname
-  already taken in the room is rejected with "name taken"; an 11th player is
-  rejected with "room full".
+- [ ] Joining a room: server rules & TV roster (split from "Phone join by
+  code", which bundled six criteria across the backend, the controller UI and
+  the TV) — AC: `joinRoom` adds a player to a room by code and the TV roster
+  shows the nickname within 1s; a nonexistent code is rejected "room not
+  found"; a nickname already taken in that room is rejected "name taken"; an
+  11th player is rejected "room full"; each rule has an integration test, and
+  the cap and duplicate checks hold against simultaneous joins rather than
+  only sequential ones.
+- [ ] Phone join screen (the other half of the split) — AC: join screen per
+  handoff (code tiles auto-advance per letter, name input); entering code +
+  nickname adds the player and shows the "You're in" screen; the three
+  server rejections surface as the handoff's error copy.
 - [ ] Phone join by QR — AC: scanning the TV's QR opens the join screen with
   the code prefilled; only the nickname remains to type.
 
