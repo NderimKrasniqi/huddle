@@ -1,6 +1,9 @@
 import { boardwalkFonts } from '@huddle/ui';
+import { ConvexProvider } from 'convex/react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+
+import { convexClient } from '../src/convex-client';
 
 export default function TvLayout() {
   // Boardwalk is a typographic system, so hold the first frame until Bungee
@@ -11,5 +14,9 @@ export default function TvLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <ConvexProvider client={convexClient}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ConvexProvider>
+  );
 }

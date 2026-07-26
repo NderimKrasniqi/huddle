@@ -43,10 +43,14 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
 - [x] Room creation in Convex — AC: `createRoom` returns a room with a unique
   4-letter code (A–Z, e.g. `KWRD`); creating 2 rooms yields different codes;
   integration test.
-- [ ] TV pairing screen — AC: TV app on launch auto-creates a room and renders
+- [x] TV pairing screen — AC: TV app on launch auto-creates a room and renders
   the handoff's pairing screen: 4 code-letter tiles, "GRAB YOUR PHONE!" badge,
   QR card encoding `huddle://join/<code>`, footer "0 of 10 joined"; copy
-  never references huddle.tv.
+  never references huddle.tv. Code verified, never rendered: this machine has
+  Command Line Tools only, so no simulator exists to see it on. Every
+  measurement matches the handoff and the copy is confirmed in the shipped
+  bundle, but whether it *looks* right is open — see Phase 5's design fidelity
+  pass and real-device builds.
 - [ ] Phone join by code — AC: join screen per handoff (code tiles
   auto-advance per letter, name input); entering code + nickname adds the
   player and shows the "You're in" screen; the TV roster shows the nickname
@@ -75,6 +79,13 @@ demoable by force-quitting apps mid-lobby.
   hold the same color (claimed swatches render at 30% opacity); TV card shows
   a circle of the claimed color with Bungee initials; a newly joined player's
   TV card holds the pink "JUST JOINED!" treatment for ~4s.
+- [ ] TV room-open resilience — AC: a TV that launches before the backend is
+  reachable recovers on its own, with no human touching the remote (the TV app
+  is defined as untouched after launch); `openRoom` already clears its memo on
+  failure, so this is a caller that retries with backoff, plus a visible
+  "reconnecting" state; a missing `EXPO_PUBLIC_CONVEX_URL` surfaces as that
+  same readable failure rather than throwing at module import, which currently
+  crashes the app at launch.
 - [ ] Room expiry — AC: last player disconnects → after 10 minutes with no
   rejoin, the room and its players are deleted (integration test with mocked
   clock); the TV returns to a fresh pairing screen.

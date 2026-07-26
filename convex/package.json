@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "description": "Convex backend: the authoritative room state, mutations, and scheduled functions.",
+  "//": "The apps import the generated `api` object from here so that function references stay typed end-to-end; nothing else in this package is public.",
+  "exports": {
+    ".": {
+      "types": "./convex/_generated/api.d.ts",
+      "default": "./convex/_generated/api.js"
+    }
+  },
   "scripts": {
     "dev": "convex dev",
     "typecheck": "tsc --noEmit --project convex"

@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@huddle/convex": "workspace:*",
+    "@huddle/game-core": "workspace:*",
     "@huddle/ui": "workspace:*",
+    "convex": "^1.42.3",
     "expo": "~57.0.8",
     "expo-constants": "~57.0.7",
     "expo-font": "~57.0.1",
@@ -20,8 +23,10 @@
     "expo-router": "~57.0.8",
     "react": "19.2.3",
     "react-native": "npm:react-native-tvos@~0.86.0-2",
+    "react-native-qrcode-svg": "^6.3.21",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.2"
+    "react-native-screens": "~4.26.2",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@react-native-tvos/config-tv": "^0.1.6",
