@@ -31,6 +31,16 @@ working must add it here.
   game). A room is `lobby → in-game → lobby`.
 - **Player** — a phone-holding participant in a room; session-only identity
   (nickname + claimed color), no account.
+- **Nickname** — the name a player types when joining, and the room's name for
+  them. Unique within a room ignoring case and surrounding spaces; `joinRoom`
+  turns a repeat away with "name taken".
+- **Roster** — a room's players as the clients draw them: the TV's seats, and
+  (Phase 2) the Host's rows on their phone. Served in join order by the
+  `roster` query, which projects each player rather than handing over the row.
+- **Seat** — one place on the TV's roster: a dashed empty circle until a player
+  takes it, then their avatar and nickname. A room has ten of them
+  (`ROOM_PLAYER_CAP` in game-core, the plan's pinned cap); the pairing screen's
+  footer always draws at least the handoff's four.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
   active player on disconnect. Plays games like any other player.
