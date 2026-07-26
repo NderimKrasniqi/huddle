@@ -34,6 +34,12 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   theme tokens; no hex color literal exists outside `packages/ui`.
 - [x] CI pipeline (GitHub Actions: typecheck, lint, unit, integration) — AC: a
   push with a deliberately failing unit test fails CI; a clean push passes.
+  Verified locally only — see the GitHub repository task below.
+- [ ] GitHub repository & first CI run (the plan assumed a remote existed; it
+  did not) — AC: a private repo exists with `main` pushed; the workflow is
+  scheduled by a real push and goes green; a push with a deliberately failing
+  unit test goes red. Requires the user — creating a repo is theirs to
+  authorise.
 - [x] Room creation in Convex — AC: `createRoom` returns a room with a unique
   4-letter code (A–Z, e.g. `KWRD`); creating 2 rooms yields different codes;
   integration test.
@@ -146,6 +152,10 @@ runs without touching a dev tool.
 - [ ] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.
+- [ ] Convex cloud project (development runs on an anonymous local backend at
+  127.0.0.1, which real devices cannot reach) — AC: a Convex cloud free-tier
+  deployment exists; both apps point at it; TV and phone on real hardware
+  share room state. Requires the user — the project lands on their account.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
