@@ -32,7 +32,7 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   scales, offset-shadow helper, Bungee + Space Grotesk via
   `@expo-google-fonts`) — AC: both apps render a sample screen using only
   theme tokens; no hex color literal exists outside `packages/ui`.
-- [ ] CI pipeline (GitHub Actions: typecheck, lint, unit, integration) — AC: a
+- [x] CI pipeline (GitHub Actions: typecheck, lint, unit, integration) — AC: a
   push with a deliberately failing unit test fails CI; a clean push passes.
 - [ ] Room creation in Convex — AC: `createRoom` returns a room with a unique
   4-letter code (A–Z, e.g. `KWRD`); creating 2 rooms yields different codes;

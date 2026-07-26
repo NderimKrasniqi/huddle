@@ -1,0 +1,62 @@
+name: CI
+
+# tech-stack.md: the gates run "on every push". Solo project, no PR flow yet —
+# add a `pull_request:` trigger here the day one exists.
+on: push
+
+# A newer push to the same branch makes the older run pointless; cancelling it
+# keeps the free-tier minutes for runs anyone still cares about.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # tech-stack.md's gates run as separate steps in one job rather than separate
+  # jobs: each gate is still named and still fails the run on its own, but they
+  # share one checkout and one install, which is what keeps a run cheap.
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      # Actions are pinned to a major tag, preferring one that has had months of
+      # patch releases behind it over the newest major. checkout and setup-node
+      # sit one major behind their latest; pnpm/action-setup v6 is its latest.
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Before setup-node, so its `cache: pnpm` can find the pnpm store. The
+      # pnpm version comes from the root package.json's `packageManager` field.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          # Local dev runs Node 24; package.json's `engines` floor is 20.
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # Unit and integration are split so a red run names the layer that broke:
+      # pure TypeScript (packages/*) versus Convex functions on convex-test's
+      # in-memory backend. The Convex run needs no deployment and no secrets —
+      # it runs off the committed `convex/convex/_generated` files.
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      # Pack validation (`pnpm validate:packs`) joins the gates in Phase 4, when
+      # the Question Pack schema exists — see docs/implementation-plan.md.

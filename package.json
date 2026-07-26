@@ -8,7 +8,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit && pnpm -r typecheck",
-    "test": "vitest run"
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:unit": "vitest run --project packages",
+    "test:integration": "vitest run --project convex"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
@@ -17,6 +20,8 @@
     "@huddle/packs": "workspace:*",
     "@huddle/ui": "workspace:*",
     "convex-test": "^0.0.54",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.10"
   }

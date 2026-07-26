@@ -82,6 +82,20 @@ packages for game modules and the protocol.
 - **Alternatives considered:** NativeWind/Tamagui — TV support unproven; risk
   without payoff at this UI scale.
 
+### Linting
+- **Choice:** ESLint 9 (flat config) with `eslint-config-expo` — one
+  `eslint.config.js` at the repo root covering every workspace package, run as
+  `pnpm lint` (`eslint . --max-warnings=0`).
+- **Why:** It is the config Expo ships and maintains against the SDK we are on
+  (`eslint-config-expo@57` ↔ `expo@57`), so React/hooks/import rules stay
+  correct for free. One root config instead of one per package: the apps are
+  React Native and everything else is plain TypeScript, which the same config
+  covers. `--max-warnings=0` because the Expo config levels most rules at
+  "warn", and a gate that exits 0 on warnings is not a gate.
+- **Alternatives considered:** Biome — faster, but no Expo-maintained ruleset,
+  so React Native correctness rules would be hand-assembled; per-package ESLint
+  configs — five copies of the same file.
+
 ### Testing
 - **Choice & strategy:**
   - **Unit (Vitest):** game-module reducers, scoring modes, pack schema
@@ -98,8 +112,12 @@ packages for game modules and the protocol.
     not a test suite.
   - **Deliberately untested:** RN component rendering/snapshots (churn without
     confidence), visual layout (play-test catches it).
-  - **CI:** GitHub Actions free tier — typecheck, lint, unit, integration, pack
-    validation on every push.
+  - **CI:** GitHub Actions free tier (`.github/workflows/ci.yml`) — typecheck,
+    lint, unit (`pnpm test:unit`), integration (`pnpm test:integration`) on
+    every push, as four named steps sharing one checkout and one install. It
+    runs off the committed `convex/convex/_generated` files, so no Convex
+    deployment and no secrets are involved. Pack validation joins the gates in
+    Phase 4, when the Question Pack schema exists.
 - **Why:** Solo + cheap: the suite must run in seconds locally and free in CI,
   and concentrate on the shared logic that every client depends on.
 
