@@ -1,0 +1,23 @@
+{
+  "name": "huddle",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && pnpm -r typecheck",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@huddle/game-core": "workspace:*",
+    "@huddle/game-trivia": "workspace:*",
+    "@huddle/packs": "workspace:*",
+    "@huddle/ui": "workspace:*",
+    "convex-test": "^0.0.54",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

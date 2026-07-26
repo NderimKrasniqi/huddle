@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Repo strictness first, then Expo's module/resolution settings, which own
+  // how React Native imports resolve.
+  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"],
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}

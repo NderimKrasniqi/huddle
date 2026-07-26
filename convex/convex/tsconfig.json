@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    // `vite/client` types `import.meta.glob`, which the convex-test harness needs.
+    "types": ["vite/client"]
+  },
+  // `_generated` is committed (Convex's convention) and typechecked with the
+  // rest, so codegen drift shows up as a type error.
+  "include": ["./**/*"]
+}

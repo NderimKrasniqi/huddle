@@ -1,0 +1,29 @@
+{
+  "name": "@huddle/tv",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Huddle TV app: the hub client on the television.",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "EXPO_TV=1 expo start",
+    "android": "EXPO_TV=1 expo run:android",
+    "ios": "EXPO_TV=1 expo run:ios",
+    "prebuild": "EXPO_TV=1 expo prebuild",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "expo": "~57.0.8",
+    "expo-constants": "~57.0.7",
+    "expo-linking": "~57.0.4",
+    "expo-router": "~57.0.8",
+    "react": "19.2.3",
+    "react-native": "npm:react-native-tvos@~0.86.0-2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.2"
+  },
+  "devDependencies": {
+    "@react-native-tvos/config-tv": "^0.1.6",
+    "@types/react": "~19.2.17",
+    "typescript": "~5.9.3"
+  }
+}

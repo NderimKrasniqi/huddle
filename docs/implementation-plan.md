@@ -24,7 +24,7 @@ scoring `100 + round(100 × secondsRemaining / 20)`.
 ## Phase 1 — Walking skeleton: a room you can join
 Goal: TV shows a room; a phone joins it; the name appears on the TV. All
 plumbing (monorepo, Convex, both apps, theme, CI) exists.
-- [ ] Monorepo scaffold (pnpm workspaces: `apps/tv`, `apps/controller`,
+- [x] Monorepo scaffold (pnpm workspaces: `apps/tv`, `apps/controller`,
   `convex/`, `packages/ui`, `packages/game-core`, `packages/games/trivia`,
   `packages/packs`) — AC: `pnpm install && pnpm typecheck` passes from the
   root; both apps boot to a placeholder screen in dev mode.

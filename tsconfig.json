@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Repo-root tooling config only; every workspace package typechecks itself.
+  "extends": "./tsconfig.base.json",
+  "include": ["vitest.config.ts"]
+}
