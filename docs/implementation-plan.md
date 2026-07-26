@@ -51,14 +51,21 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   measurement matches the handoff and the copy is confirmed in the shipped
   bundle, but whether it *looks* right is open — see Phase 5's design fidelity
   pass and real-device builds.
-- [ ] Joining a room: server rules & TV roster (split from "Phone join by
+- [x] Joining a room: server rules & TV roster (split from "Phone join by
   code", which bundled six criteria across the backend, the controller UI and
   the TV) — AC: `joinRoom` adds a player to a room by code and the TV roster
   shows the nickname within 1s; a nonexistent code is rejected "room not
   found"; a nickname already taken in that room is rejected "name taken"; an
   11th player is rejected "room full"; each rule has an integration test, and
   the cap and duplicate checks hold against simultaneous joins rather than
-  only sequential ones.
+  only sequential ones. Two caveats, same as the pairing screen: the roster
+  was never rendered (no simulator on this machine), and "within 1s" is
+  argued, not measured — convex-test has no websocket, so what is established
+  is that the TV holds a live `useQuery` subscription rather than a poll, and
+  that `roster` returns the nickname immediately after `joinRoom`. Likewise
+  the simultaneous-join tests exercise concurrent dispatch, not parallel
+  commit, because convex-test serializes mutations; the rest rests on Convex's
+  OCC plus a read set that was inspected.
 - [ ] Phone join screen (the other half of the split) — AC: join screen per
   handoff (code tiles auto-advance per letter, name input); entering code +
   nickname adds the player and shows the "You're in" screen; the three

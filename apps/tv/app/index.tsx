@@ -1,3 +1,4 @@
+import { api } from '@huddle/convex';
 import { ROOM_CODE_LENGTH, roomJoinLink } from '@huddle/game-core';
 import {
   borderWidth,
@@ -6,34 +7,43 @@ import {
   colors,
   fontFamily,
   letterSpacing,
+  minBodyFontSize,
   offsetShadow,
+  playerInitials,
   radius,
   shadowDepth,
   stickerTilt,
 } from '@huddle/ui';
+import { useQuery } from 'convex/react';
+import type { FunctionReturnType } from 'convex/server';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { openRoom, type OpenRoom } from '../src/room';
+import { footerSeatCount, rosterFooterText, seat } from '../src/roster';
 import { TvStage } from '../src/tv-stage';
 
 /** The QR's edge, per the handoff ("~196px QR"). */
 const QR_SIZE = 196;
 
-/** Dashed footer seats, as drawn in the handoff — a hint that the room is empty. */
-const FOOTER_SEATS = 4;
+/** The footer count's line box, pinned so it can be centred against the seats. */
+const FOOTER_TEXT_LINE = 28;
+
+/**
+ * One taken seat of the TV's roster, taken from the query that serves it — the
+ * TV draws what the backend says a seat is, and never its own idea of one.
+ */
+type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
 
 /**
  * The TV — Pairing screen (docs/design/design-handoff.md §1): the Room Code in
- * four tiles, the QR that deep-links a phone straight into the room, and an
- * empty roster waiting to fill up.
- *
- * The footer count is fixed at zero because nothing can join yet; it starts
- * tracking the roster when the join flow lands (docs/implementation-plan.md).
+ * four tiles, the QR that deep-links a phone straight into the room, and the
+ * roster filling up underneath.
  */
 export default function TvPairingScreen() {
   const { room, failed } = useOpenedRoom();
+  const roster = useRoster(room);
 
   return (
     <TvStage>
@@ -60,14 +70,7 @@ export default function TvPairingScreen() {
           <RoomQrCard code={room?.code} />
         </View>
 
-        <View style={styles.footer}>
-          <View style={styles.seats}>
-            {Array.from({ length: FOOTER_SEATS }, (_unused, seat) => (
-              <View key={seat} style={styles.seat} />
-            ))}
-          </View>
-          <Text style={styles.footerText}>0 of 10 joined — waiting for players…</Text>
-        </View>
+        <RosterFooter roster={roster} />
       </View>
     </TvStage>
   );
@@ -115,6 +118,58 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
 }
 
 /**
+ * The roster under the code: a seat per player, and dashed empty ones for as
+ * long as the room looks empty. A player's seat carries their nickname because
+ * that is the point of the screen — the room's own name for them, up on the TV,
+ * the moment their phone lands.
+ */
+function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
+  return (
+    <View style={styles.footer}>
+      <View style={styles.seats}>
+        {Array.from({ length: footerSeatCount(roster.length) }, (_unused, position) => {
+          const player = roster[position];
+          return player === undefined ? (
+            <EmptySeat key={`empty-${position}`} />
+          ) : (
+            <PlayerSeat key={player.playerId} nickname={player.nickname} />
+          );
+        })}
+      </View>
+      <Text style={styles.footerText}>{rosterFooterText(roster.length)}</Text>
+    </View>
+  );
+}
+
+/** A seat nobody has taken: the handoff's dashed circle. */
+function EmptySeat() {
+  return (
+    <View style={styles.seat}>
+      <View style={[styles.avatar, styles.avatarEmpty]} />
+    </View>
+  );
+}
+
+/**
+ * A player in their seat: Boardwalk's avatar circle with Bungee initials, and
+ * the nickname under it. The circle takes the player's claimed color in Phase
+ * 2's color-claim task; until a color is claimed there is nothing to claim it
+ * with, so the circle stays a plain Boardwalk card face.
+ */
+function PlayerSeat({ nickname }: { readonly nickname: string }) {
+  return (
+    <View style={styles.seat}>
+      <View style={[styles.avatar, styles.avatarTaken]}>
+        <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
+      </View>
+      <Text style={styles.seatName} numberOfLines={1}>
+        {nickname}
+      </Text>
+    </View>
+  );
+}
+
+/**
  * The room this TV opened. `openRoom` is memoised for the life of the app, so
  * this effect re-running — StrictMode, Fast Refresh, a remount — reads the same
  * room rather than minting another one.
@@ -148,6 +203,24 @@ function useOpenedRoom(): { room: OpenRoom | undefined; failed: boolean } {
   }, []);
 
   return { room, failed };
+}
+
+/**
+ * Who is in the room, live. `useQuery` holds a subscription open for as long as
+ * the screen is mounted, so a join reaches the TV as a push from Convex rather
+ * than on a poll the TV would have to be awake for — the roster redraws within
+ * a round trip of the phone's tap.
+ *
+ * Until the room is open there is nothing to subscribe to, and an unopened room
+ * and an empty one draw the same seats anyway.
+ */
+function useRoster(room: OpenRoom | undefined): readonly RosterSeat[] {
+  const roster = useQuery(
+    api.players.roster,
+    room === undefined ? 'skip' : { roomId: room.roomId },
+  );
+
+  return roster ?? [];
 }
 
 // Every measurement below is the handoff's own, at its 1280×720 design size;
@@ -250,26 +323,66 @@ const styles = StyleSheet.create({
 
   footer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Top-aligned, and the count is dropped onto the circles' centre line
+    // below: centring the row instead would hang the count off the middle of a
+    // seat *and its reserved name line*, half a name lower than the handoff
+    // draws it.
+    alignItems: 'flex-start',
     gap: 24,
     paddingBottom: 36,
     paddingHorizontal: 56,
   },
   seats: {
     flexDirection: 'row',
-    gap: 16,
+    gap: seat.gap,
   },
   seat: {
-    width: 72,
-    height: 72,
-    borderColor: colors.mutedBorder,
+    width: seat.size,
+    // The nickname's line is reserved on every seat, taken or not, so that the
+    // screen holds still when a phone joins mid-party.
+    height: seat.size + seat.nameGap + seat.nameLine,
+    alignItems: 'center',
+    gap: seat.nameGap,
+  },
+  avatar: {
+    width: seat.size,
+    height: seat.size,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radius.pill,
-    borderStyle: 'dashed',
     borderWidth: borderWidth.medium,
+  },
+  avatarEmpty: {
+    borderColor: colors.mutedBorder,
+    borderStyle: 'dashed',
+  },
+  avatarTaken: {
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+  },
+  avatarInitials: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    // Bungee's line box runs taller than its caps; pinning it centres the
+    // monogram in the circle instead of letting it ride low.
+    lineHeight: 26,
+  },
+  seatName: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    // A seat is only as wide as its avatar, so the nickname is set at the
+    // smallest size Boardwalk allows on a TV and clipped if it runs past.
+    fontSize: minBodyFontSize.tv,
+    lineHeight: seat.nameLine,
   },
   footerText: {
     color: colors.mutedText,
     fontFamily: fontFamily.body,
     fontSize: 22,
+    lineHeight: FOOTER_TEXT_LINE,
+    // Onto the centre line of the avatar circles beside it, where the handoff
+    // has it, rather than the centre of the taller seat that holds them.
+    marginTop: (seat.size - FOOTER_TEXT_LINE) / 2,
   },
 });

@@ -70,7 +70,10 @@ are iPhone-sized (~390×844).
   - Right: QR card — white, 4px ink border, radius 24, rotated 1.5°, ~196px QR;
     caption "or scan to join".
 - Footer: 4 dashed avatar circles (72px) + "0 of 10 joined — waiting for
-  players…" (22px muted).
+  players…" (22px muted). Once players are in (agreed during implementation)
+  the line is the count alone — "4 of 10 joined": "waiting for players…" is
+  false at 10 of 10, and the seats that fill up claim the width it used. A
+  taken seat is its player's avatar circle with the nickname under it.
 
 ### 2. Phone — Join
 - Logo (20px), heading "Join the room" (Bungee 28px).
