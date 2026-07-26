@@ -11,7 +11,9 @@ working must add it here.
   Room Code. Holds players, current game, and state. It is NOT called a
   "lobby" — the lobby is a phase of a room.
 - **Room Code** — 4-letter (A–Z) code identifying a room, shown on the TV and
-  encoded in its QR deep link (`huddle://join/<code>`).
+  encoded in its QR deep link (`huddle://join/<code>`). Minted server-side by
+  `createRoom`, which redraws until the code is held by no live room; an
+  expired room's code returns to the pool.
 - **Lobby** — the pre-game phase of a room (roster visible, Host picking a
   game). A room is `lobby → in-game → lobby`.
 - **Player** — a phone-holding participant in a room; session-only identity

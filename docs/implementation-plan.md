@@ -34,7 +34,7 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   theme tokens; no hex color literal exists outside `packages/ui`.
 - [x] CI pipeline (GitHub Actions: typecheck, lint, unit, integration) — AC: a
   push with a deliberately failing unit test fails CI; a clean push passes.
-- [ ] Room creation in Convex — AC: `createRoom` returns a room with a unique
+- [x] Room creation in Convex — AC: `createRoom` returns a room with a unique
   4-letter code (A–Z, e.g. `KWRD`); creating 2 rooms yields different codes;
   integration test.
 - [ ] TV pairing screen — AC: TV app on launch auto-creates a room and renders

@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit --project convex"
   },
   "dependencies": {
+    "@huddle/game-core": "workspace:*",
     "convex": "^1.42.3"
   },
   "devDependencies": {

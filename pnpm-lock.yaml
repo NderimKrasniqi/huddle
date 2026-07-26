@@ -124,6 +124,9 @@ importers:
 
   convex:
     dependencies:
+      '@huddle/game-core':
+        specifier: workspace:*
+        version: link:../packages/game-core
       convex:
         specifier: ^1.42.3
         version: 1.42.3(react@19.2.8)
