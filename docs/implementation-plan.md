@@ -35,7 +35,7 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
 - [x] CI pipeline (GitHub Actions: typecheck, lint, unit, integration) — AC: a
   push with a deliberately failing unit test fails CI; a clean push passes.
   Verified locally only — see the GitHub repository task below.
-- [ ] GitHub repository & first CI run (the plan assumed a remote existed; it
+- [x] GitHub repository & first CI run (the plan assumed a remote existed; it
   did not) — AC: a private repo exists with `main` pushed; the workflow is
   scheduled by a real push and goes green; a push with a deliberately failing
   unit test goes red. Requires the user — creating a repo is theirs to
