@@ -278,6 +278,106 @@ describe('joinRoom under simultaneous joins', () => {
   });
 });
 
+/**
+ * Rejoining: the phone that force-quit and came back. Nothing here creates a
+ * player — the seat was never given up, so returning to it is a read of the
+ * Session Token the phone kept, which is exactly why the roster cannot grow a
+ * duplicate no matter how often an app is killed.
+ */
+describe('session', () => {
+  /** The seat a token still holds, the way a relaunched Controller asks for it. */
+  function sessionOf(t: Backend, sessionToken: string) {
+    return t.query(api.players.session, { sessionToken });
+  }
+
+  it('gives a joining phone a Session Token, and a different one to every player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+    expect(ada.sessionToken).toMatch(/^[a-z0-9]{24}$/);
+    expect(grace.sessionToken).not.toBe(ada.sessionToken);
+  });
+
+  it('puts a returning phone back on the same player row, under the same nickname', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    // The app was force-quit here: everything the Controller held is gone but
+    // the token it wrote to the phone.
+    const resumed = await sessionOf(t, joined.sessionToken);
+
+    expect(resumed).toEqual({
+      playerId: joined.playerId,
+      roomId: room.roomId,
+      code: room.code,
+      nickname: 'Ada',
+    });
+  });
+
+  it('leaves the roster exactly as it was — a rejoin is not a second player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    // Ada's phone dies and comes back, the party carries on around her, and it
+    // dies again: the same seat both times, and a roster that grew only by the
+    // player who actually joined.
+    expect(await sessionOf(t, joined.sessionToken)).toMatchObject({ playerId: joined.playerId });
+
+    await join(t, room.code, 'Grace');
+
+    expect(await sessionOf(t, joined.sessionToken)).toMatchObject({
+      playerId: joined.playerId,
+      nickname: 'Ada',
+    });
+    expect(await rosterNames(t, room.roomId)).toEqual(['Ada', 'Grace']);
+  });
+
+  it('knows nothing about a token no player holds', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await join(t, room.code, 'Ada');
+
+    // A phone carrying a token from a room that no longer exists, or a token
+    // from nowhere at all: both are somebody who has not joined this room.
+    expect(await sessionOf(t, 'nobodysessiontoken000000')).toBeNull();
+  });
+
+  it('is over once the room is gone, even if the player row outlives it', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    // Room expiry (Phase 2) deletes both, but the order is its business: a
+    // session that named a room the client cannot find is a seat in nothing.
+    await t.run(async (ctx) => {
+      await ctx.db.delete(room.roomId);
+    });
+
+    expect(await sessionOf(t, joined.sessionToken)).toBeNull();
+  });
+
+  it('keeps the Session Token off the roster the whole room can see', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    // The token is on the row — and the TV, which draws its seats on a screen
+    // everybody in the room is looking at, is not told it.
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(joined.playerId)).toMatchObject({
+        sessionToken: joined.sessionToken,
+      });
+    });
+    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    expect(JSON.stringify(roster)).not.toContain(joined.sessionToken);
+  });
+});
+
 describe('roster', () => {
   it('is empty for a room nobody has joined', async () => {
     const t = convexTest(schema, modules);

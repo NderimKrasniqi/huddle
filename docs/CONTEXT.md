@@ -58,7 +58,17 @@ working must add it here.
 - **TV app** — the hub client on the television; a pure renderer of room
   state; holds no player record; untouched after launch.
 - **Session Token** — random token stored on the phone that identifies a
-  player for rejoining; the entirety of Huddle's "auth".
+  player for rejoining; the entirety of Huddle's "auth". Minted by `joinRoom`
+  (`generateSessionToken` in game-core), returned to that one phone, and kept
+  in the device keystore. Never on the Roster: the `roster` projection is what
+  keeps it off the TV.
+- **Rejoin** — a phone returning to the seat it already holds, by presenting
+  its Session Token; the `session` query answers with that seat or with
+  nothing. It is a read, not a join: force-quitting does not give up a seat, so
+  a rejoining player is never a second player row and the roster never grows a
+  duplicate. The Controller rejoins before it will show anyone a Join Screen —
+  the one exception being a Join Link scanned for a *different* room, which is
+  a player who has walked to another TV and is let through to the form.
 - **Away** — presence state of a player whose phone is disconnected or
   backgrounded; games never wait for away players.
 - **Game Module** — a self-contained game implementation behind the game-core

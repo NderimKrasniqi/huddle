@@ -12,3 +12,6 @@ export {
   ROOM_CODE_LENGTH,
   type RandomSource,
 } from './room-code';
+// Only the minting is shared: no client ever validates a Session Token's
+// shape, so the alphabet and length stay inside the module that draws them.
+export { generateSessionToken } from './session-token';

@@ -19,19 +19,28 @@ export default defineSchema({
     .index('by_code', ['code']),
 
   /**
-   * A Player: one phone in a room. For now a player is a nickname on a roster —
-   * the Session Token that lets them rejoin, the claimed color, the Host flag
-   * and presence all arrive with the Phase 2 tasks that own them.
+   * A Player: one phone in a room. A player is a nickname on a roster and the
+   * Session Token that phone rejoins with — the claimed color, the Host flag
+   * and presence arrive with the Phase 2 tasks that own them.
    */
   players: defineTable({
     /** The room this player is in. Players never move between rooms. */
     roomId: v.id('rooms'),
     /** The name on the TV roster: trimmed, and unique within the room. */
     nickname: v.string(),
+    /**
+     * The Session Token this player's phone holds. Minted by `joinRoom`, and
+     * the only thing that identifies them afterwards — so it is returned to
+     * that one phone and to nothing else (see the `roster` projection).
+     */
+    sessionToken: v.string(),
   })
     // `joinRoom` reads a room's players to enforce the cap and the nickname
     // rule, and the TV's roster is that same read. Convex orders an index by
     // its fields then `_creationTime`, so reading it returns the room's players
     // in join order — which is the order the TV's seats fill.
-    .index('by_room', ['roomId']),
+    .index('by_room', ['roomId'])
+    // A phone coming back from a force-quit knows its token and nothing else;
+    // this is how that token finds the seat it still holds.
+    .index('by_session_token', ['sessionToken']),
 });

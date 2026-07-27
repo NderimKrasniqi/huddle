@@ -90,9 +90,30 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
 ## Phase 2 — A room that survives a party
 Goal: identity, Host, disconnects, and expiry behave like scope demands;
 demoable by force-quitting apps mid-lobby.
-- [ ] Session token rejoin — AC: player force-quits and reopens the app → back
+- [x] Session token rejoin — AC: player force-quits and reopens the app → back
   in the room as the same player (same player row, same nickname); the roster
   never shows a duplicate.
+
+  Rejoin is a *read*, not a join: a returning phone presents its Session Token
+  and asks which seat is already its own, which is structurally why the roster
+  cannot grow a duplicate. `joinRoom` mints the token, the `session` query
+  resolves it to a seat, and the `roster` projection keeps it off the TV.
+
+  Tests and types only — the observable half of the AC has not been seen. A
+  force-quit demo needs the dev deployment's `players` table cleared (it holds
+  Phase-1 rows minted before `sessionToken` existed, and the push aborts on
+  them — written up in `docs/tech-stack.md`), then a schema push and a
+  Controller dev build. The 4-second patience before the join screen gives up
+  waiting on an unreachable backend is reasoned from round trips, not measured
+  on a phone.
+
+  Two consequences accepted rather than solved. A player can still take a
+  second seat if the backend is unreachable for the full 4 seconds *and* they
+  deliberately retype a different nickname — retyping their own name hits
+  `nameTaken` while their first row still holds it. And joining room B while
+  seated in room A orphans A's row, holding one of its ten seats until presence
+  and room expiry clean it up. Both are written up in `resumeSession`'s
+  docstring.
 - [ ] Presence & away badge — AC: phone backgrounded ≥10s → TV roster marks
   that player "away" within a further 5s; foregrounding clears it within 5s;
   active players show the green status dot per the handoff.

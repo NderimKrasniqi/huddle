@@ -49,10 +49,30 @@ packages for game modules and the protocol.
   headroom trivia doesn't need; Cloudflare Durable Objects — more assembly
   (presence, persistence, client) for no MVP gain; Firebase — authoritative
   logic awkward, and lock-in without Convex's DX.
+- **Notes that cost time if forgotten:**
+  - **A new required field will not push onto rows that lack it.** Convex
+    validates every existing document against the schema at push time and
+    aborts the whole push — functions included — if one fails. The symptom is
+    `convex dev` refusing to deploy with a validation error naming the table
+    and the field, on a working tree where nothing looks wrong.
+  - **This bites right now on `sessionToken`.** Phase 2's rejoin task added
+    `players.sessionToken` as required (`convex/convex/schema.ts`), and the
+    dev deployment `nderim-krasniqi:huddle:dev` still holds player rows minted
+    before it — leftovers from Phase 1 join tests. Clear the table once, from
+    the Convex dashboard (Data → `players` → Clear table), and the push goes
+    through; `npx convex data players` shows what is there first. Those rows
+    are junk from testing, and nothing in the product outlives a party.
+  - The field stays required rather than optional on purpose: every player row
+    is created by `joinRoom`, which always mints a token, so a player without
+    one is a player who could never rejoin — a state worth failing on, not one
+    worth modelling.
 
 ### Authentication
 - **Choice:** None. Random session token generated on first join, stored in the
   phone app, identifies the player for rejoin. Host is a flag on a player row.
+  The token is minted server-side by `joinRoom` and kept on the phone by
+  `expo-secure-store` (iOS Keychain / Android Keystore) — it must outlive a
+  force-quit, and it is the one value Huddle holds that acts as a credential.
 - **Why:** Scope: no accounts, ephemeral identity, rejoin-with-score-intact. A
   token in app storage is the entire requirement.
 - **Alternatives considered:** Convex Auth / Clerk — rejected: nothing to
@@ -170,4 +190,6 @@ packages for game modules and the protocol.
 - `expo-camera` — QR scan on the phone for joining (with manual room-code entry
   as fallback).
 - `convex/react` — live queries; the entire client data layer.
+- `expo-secure-store` — the Controller's Session Token across launches (see
+  Authentication above).
 - `react-native-qrcode-svg` — QR render on the TV.

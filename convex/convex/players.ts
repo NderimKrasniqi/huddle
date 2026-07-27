@@ -1,4 +1,5 @@
 import {
+  generateSessionToken,
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
   ROOM_PLAYER_CAP,
@@ -50,6 +51,24 @@ function isUsableNickname(trimmedNickname: string): boolean {
 }
 
 /**
+ * A player's place in a room, as the phone holding that seat is told it: which
+ * room, which player row, and the two things the Controller draws — the Room
+ * Code on its chip and the name the room knows them by.
+ *
+ * `joinRoom` returns one of these and so does `session`, because taking a seat
+ * and finding it again land the Controller in the same place. The nickname
+ * comes back from the row rather than from what was typed: after a force-quit
+ * the phone has nothing but its token, and the name on the TV is the room's to
+ * state.
+ */
+const playerSessionFields = {
+  playerId: v.id('players'),
+  roomId: v.id('rooms'),
+  code: v.string(),
+  nickname: v.string(),
+};
+
+/**
  * Puts a phone in a room: the Controller sends the code from the TV and the
  * nickname its owner typed, and the room gains a seat.
  *
@@ -68,13 +87,16 @@ function isUsableNickname(trimmedNickname: string): boolean {
  * deliberate: it is the read the cap needs anyway, it is bounded by
  * `ROOM_PLAYER_CAP` rows, and it puts every player of the room in the read set
  * — which is precisely the range a competing join writes into.
+ *
+ * The Session Token it mints goes back to this phone alone. It is what makes
+ * the seat survive the app: see `session` below.
  */
 export const joinRoom = mutation({
   args: {
     code: v.string(),
     nickname: v.string(),
   },
-  returns: v.object({ playerId: v.id('players'), roomId: v.id('rooms') }),
+  returns: v.object({ ...playerSessionFields, sessionToken: v.string() }),
   handler: async (ctx, args) => {
     const code = normalizeRoomCode(args.code);
     const nickname = args.nickname.trim();
@@ -115,9 +137,57 @@ export const joinRoom = mutation({
       throw new ConvexError<JoinRejection>({ kind: 'nameTaken', nickname });
     }
 
-    const playerId = await ctx.db.insert('players', { roomId: room._id, nickname });
+    const sessionToken = generateSessionToken();
+    const playerId = await ctx.db.insert('players', {
+      roomId: room._id,
+      nickname,
+      sessionToken,
+    });
 
-    return { playerId, roomId: room._id };
+    return { playerId, roomId: room._id, code, nickname, sessionToken };
+  },
+});
+
+/**
+ * The seat a Session Token still holds, or `null` if it holds none.
+ *
+ * This is rejoining, and it is a query rather than a mutation because nothing
+ * changes: force-quitting an app does not give up a seat, so a phone coming
+ * back is not asking for one — it is asking which one is already its own. That
+ * is the whole reason the roster cannot grow a duplicate. The Controller reads
+ * this before it will show anybody a join form (`apps/controller/src/session.ts`).
+ *
+ * The room is read too, and a token whose room is gone answers `null`: the
+ * Controller cannot draw the Room Code chip without it, and a seat in a room
+ * that no longer exists is not a seat. Room expiry (Phase 2) deletes players
+ * with their room, so this is a guard against the order of a deletion rather
+ * than an expected state.
+ */
+export const session = query({
+  args: { sessionToken: v.string() },
+  returns: v.union(v.null(), v.object(playerSessionFields)),
+  handler: async (ctx, args) => {
+    const player = await ctx.db
+      .query('players')
+      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
+      .first();
+
+    if (player === null) {
+      return null;
+    }
+
+    const room = await ctx.db.get(player.roomId);
+
+    if (room === null) {
+      return null;
+    }
+
+    return {
+      playerId: player._id,
+      roomId: room._id,
+      code: room.code,
+      nickname: player.nickname,
+    };
   },
 });
 
@@ -127,9 +197,8 @@ export const joinRoom = mutation({
  * the TV".
  *
  * It projects each player rather than returning the row: the TV is a renderer
- * and gets what it draws. Player rows grow private fields in Phase 2 (the
- * Session Token above all), and a projection is what keeps them off a screen
- * the entire room is looking at.
+ * and gets what it draws. A player row carries the phone's Session Token, and
+ * this projection is what keeps it off a screen the entire room is looking at.
  */
 export const roster = query({
   args: { roomId: v.id('rooms') },

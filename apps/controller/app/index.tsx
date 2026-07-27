@@ -12,7 +12,7 @@ import {
   shadowDepth,
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
-import { useMutation } from 'convex/react';
+import { useConvex, useMutation } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -26,6 +26,13 @@ import {
 } from '../src/join-entry';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
+import {
+  joinScreenState,
+  type PlayerSession,
+  rememberSession,
+  resumeSession,
+} from '../src/session';
+import { phoneSessionTokenStore } from '../src/session-store';
 
 /** How long the caret in the active cell rests between showing and hiding. */
 const CARET_BLINK_MS = 530;
@@ -46,30 +53,70 @@ export default function JoinScreen() {
   // (`app/join/[code].tsx`). It is the only difference a scanned join makes —
   // the nickname is still typed.
   const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();
+  const convex = useConvex();
+
+  // The seat this phone already holds: `undefined` while its Session Token and
+  // the room are still being asked, `null` once the answer is that it holds
+  // none. A player who force-quit mid-party is nobody's new arrival, so the
+  // join form is what this screen falls back to rather than what it opens with.
+  const [session, setSession] = useState<PlayerSession | null>();
+
+  useEffect(() => {
+    // Safe on every mount, unlike the TV's `openRoom`: rejoining reads, so a
+    // remount asks the same question again instead of taking a second seat.
+    // It may answer twice — a bounded blank screen first, the room's real word
+    // whenever it lands (see `resumeSession`) — and this state takes both.
+    return resumeSession(
+      phoneSessionTokenStore,
+      (sessionToken) => convex.query(api.players.session, { sessionToken }),
+      // A late answer fills a blank, and never overwrites a seat. Between the
+      // deadline and the room finally answering, the player may have joined
+      // somewhere else — and the room they are in now beats the one they were
+      // in then, whichever order the two arrive in.
+      (late) => setSession((current) => current ?? late),
+    );
+  }, [convex]);
+
+  const state = joinScreenState(session, linkedCode ?? '');
+
+  if (state.kind === 'restoring') {
+    // Nothing yet — the launch is already blank behind the root layout's font
+    // gate, on a window painted the Boardwalk canvas. Drawing the join form
+    // here instead would flash the wrong screen at every player who is in fact
+    // already in the room. It is bounded: `resumeSession` will say "no seat"
+    // rather than let a phone that cannot reach the backend wait for ever.
+    return null;
+  }
+
+  if (state.kind === 'seated') {
+    return <YoureInScreen session={state.session} />;
+  }
 
   // Keyed by the link so a second Join Link scanned while this screen is
   // already open starts the form over on the room it names, rather than leaving
-  // the first room's code in tiles the player thinks they just replaced. A
-  // typed join has no link and so a constant key: nothing remounts under
-  // somebody's thumbs.
-  return <JoinForm key={linkedCode ?? ''} linkedCode={linkedCode ?? ''} />;
+  // the first room's code in tiles the player thinks they just replaced — which
+  // covers the phone that already holds a seat and has just scanned another
+  // room's TV, since `joinScreenState` sends that scan here. A typed join has
+  // no link and so a constant key: nothing remounts under somebody's thumbs.
+  return <JoinForm key={linkedCode ?? ''} linkedCode={linkedCode ?? ''} onSeated={setSession} />;
 }
 
-function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
+function JoinForm({
+  linkedCode,
+  onSeated,
+}: {
+  readonly linkedCode: string;
+  readonly onSeated: (session: PlayerSession) => void;
+}) {
   const prefilledCode = codeEntry(linkedCode);
 
   const [code, setCode] = useState(prefilledCode);
   const [nickname, setNickname] = useState('');
   const [joining, setJoining] = useState(false);
   const [failure, setFailure] = useState<string>();
-  const [seatedAs, setSeatedAs] = useState<string>();
 
   const nameField = useRef<TextInput>(null);
   const joinRoom = useMutation(api.players.joinRoom);
-
-  if (seatedAs !== undefined) {
-    return <YoureInScreen code={code} nickname={seatedAs} />;
-  }
 
   // A rejection is about what the fields held when Join was tapped, so it stops
   // being true the moment either field changes: "Ada is already in that room"
@@ -96,8 +143,13 @@ function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
     setFailure(undefined);
 
     try {
-      await joinRoom({ code, nickname: claimed });
-      setSeatedAs(claimed);
+      // The token goes to the phone's storage and the seat goes to the screen:
+      // it is what this player is identified by from now on, and nothing that
+      // renders needs to hold it. The nickname shown is the room's, not the one
+      // typed — the same value a rejoin would come back with.
+      const { sessionToken, ...seat } = await joinRoom({ code, nickname: claimed });
+      await rememberSession(phoneSessionTokenStore, sessionToken);
+      onSeated(seat);
     } catch (error) {
       // Every reason the room can refuse is one the player can act on, so the
       // rejection is read for its kind and shown, not logged and swallowed.
@@ -270,20 +322,18 @@ function BlinkingCaret() {
 
 /**
  * The room's answer (handoff §4): the code they are in, their avatar, and their
- * name in the room's own words.
+ * name in the room's own words. It is also where a relaunched app opens — the
+ * handoff's reconnect rule is that a rejoining phone lands on the screen its
+ * room's phase calls for, and in the lobby that is this one.
  *
  * The handoff puts a color picker on this screen. Color Claim is a Phase 2 task
  * and the server has nothing to claim a color with yet, so the picker is left
  * out and the avatar is a plain Boardwalk face — the same circle the TV draws
  * on its seats until a color is claimed.
  */
-function YoureInScreen({
-  code,
-  nickname,
-}: {
-  readonly code: string;
-  readonly nickname: string;
-}) {
+function YoureInScreen({ session }: { readonly session: PlayerSession }) {
+  const { code, nickname } = session;
+
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
