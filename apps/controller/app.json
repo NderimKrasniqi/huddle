@@ -6,6 +6,8 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "//backgroundColor": "Boardwalk's `colors.canvas`, the token phone-screen.tsx paints — see the note in apps/tv/app.json for why the value is written out rather than imported.",
+    "backgroundColor": "#EDE5D4",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.controller"

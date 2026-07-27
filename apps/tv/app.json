@@ -6,6 +6,8 @@
     "version": "0.1.0",
     "orientation": "landscape",
     "userInterfaceStyle": "light",
+    "//backgroundColor": "Boardwalk's `colors.screen`, the token tv-stage.tsx paints. Stated here so the native window is already the right cream before any React view exists — otherwise a cold start flashes the platform default while the fonts resolve and TvLayout returns null. Kept honest by color-literals.test.ts, which is also why the value is written out: Expo transpiles app.config.ts and then requires it, so importing the token is not possible.",
+    "backgroundColor": "#F7F1E6",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.hub"

@@ -9,7 +9,13 @@
 - Foundation rule: hub code never imports from a game module except through the
   game-core interface; games never import hub internals.
 - Design rule: all styling comes from the Boardwalk theme package
-  (docs/design/design-handoff.md is the spec); no hex value outside it.
+  (docs/design/design-handoff.md is the spec); no hex value outside it. The
+  one exception is each app's Expo config, which needs a window
+  `backgroundColor` before any React view exists and cannot import the token
+  (Expo transpiles `app.config.ts` and then `require`s it, so an imported
+  `.ts` is never transpiled). Those literals are allowed only where they equal
+  a Boardwalk value, and `color-literals.test.ts` enforces both that and their
+  agreement with the token each app's root screen paints.
 
 ## Definition of Done
 A task is done when its acceptance criteria pass as tests (unit/integration per
@@ -180,12 +186,7 @@ runs without touching a dev tool.
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the
   720p design size and question text readable from 3m; avatar pop-in spring
-  (~300ms) and carousel transition (~250ms) implemented per handoff; the TV
-  window background is the Boardwalk canvas from the first frame, not the
-  platform default — which on Android means installing `expo-system-ui`,
-  because without it `"userInterfaceStyle": "light"` in `apps/tv/app.json` is
-  a no-op and a cold start flashes dark grey until the fonts resolve (found on
-  the Android emulator; see the toolchain task above).
+  (~300ms) and carousel transition (~250ms) implemented per handoff.
 - [ ] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.
@@ -281,6 +282,29 @@ runs without touching a dev tool.
   default dark grey instead of the Boardwalk canvas until the fonts resolve
   and `TvLayout` stops returning `null`. On a television that is a black flash
   on every cold start.
+- [x] Both apps open on the Boardwalk canvas (found on the Android emulator
+  during the toolchain task above, and split out of the design fidelity pass
+  so it is fixed once rather than noticed again on every screen) — AC:
+  `expo-system-ui` is installed in both apps, so `userInterfaceStyle` is no
+  longer a silent no-op on Android; each app's Expo config declares a window
+  `backgroundColor` equal to the token its own root screen paints
+  (`colors.screen` for the TV, `colors.canvas` for the Controller); unit tests
+  tie those literals both to the Boardwalk palette and to the root screens, so
+  the two cannot drift; and a cold start on the Android TV emulator shows the
+  cream window rather than the platform's dark grey while the fonts resolve.
+
+  Verified by capturing the same frame of the launch sequence before and after:
+  the flat window that sits behind `TvLayout`'s `null` while the fonts resolve
+  was `#2E2E2E` and is now `#F7F1E6`, and the pairing screen still renders
+  after it. `prebuild` generates `activityBackground` into `colors.xml` and
+  points `android:windowBackground` at it, which is the mechanism.
+
+  Two things to be straight about. The Controller's half is config and unit
+  tests only — that app has never been built for Android at all, so its
+  `colors.canvas` window is asserted, not seen. And the fix addresses the
+  window *behind* the React view; the very first frame is still the splash
+  theme's own white, which is a separate treatment the design fidelity pass
+  owns.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to

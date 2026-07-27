@@ -151,6 +151,13 @@ packages for game modules and the protocol.
     `adb shell getprop sys.boot_completed` to return `1` before building —
     `expo run:android` fails outright against a device that is merely
     *attached*, not booted.
+  - **A config change needs `prebuild --clean`.** `expo run:android` reuses an
+    existing `android/` and does not re-apply config plugins, so it will build
+    and install happily while silently ignoring the change — the symptom is a
+    green build that behaves exactly as before. `pnpm --filter @huddle/tv
+    prebuild --platform android --clean` is what actually regenerates it;
+    verify against `android/app/src/main/res/values/` rather than trusting the
+    build.
   - `reactNativeArchitectures` defaults to all four ABIs. Exporting
     `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64` builds only what the
     emulator can run; the full set is only needed for the Philips TV (arm64)
