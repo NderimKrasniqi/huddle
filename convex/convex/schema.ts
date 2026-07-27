@@ -1,6 +1,27 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
+/**
+ * A claimed color, as the database and the `roster` projection both state it.
+ *
+ * The ten names are written out rather than built from game-core's list because
+ * a schema is a contract with the stored data and reads better stated than
+ * computed; `players.test.ts` holds the two in step by storing every name
+ * game-core knows.
+ */
+export const playerColorValidator = v.union(
+  v.literal('cobalt'),
+  v.literal('grape'),
+  v.literal('plum'),
+  v.literal('punch'),
+  v.literal('tangerine'),
+  v.literal('yellow'),
+  v.literal('lime'),
+  v.literal('green'),
+  v.literal('lagoon'),
+  v.literal('sky'),
+);
+
 export default defineSchema({
   /**
    * A Room: the shared session a TV creates and phones join. Players, the
@@ -61,6 +82,13 @@ export default defineSchema({
      * fact the TV is told, and the only one it needs to draw a seat.
      */
     away: v.boolean(),
+    /**
+     * The color this player has claimed, held by nobody else in their room.
+     * Absent until they tap a swatch — a player is on the roster from the
+     * moment they join, and the picker is the screen they land on, so a seat
+     * has to be drawable without one.
+     */
+    color: v.optional(playerColorValidator),
   })
     // `joinRoom` reads a room's players to enforce the cap and the nickname
     // rule, and the TV's roster is that same read. Convex orders an index by

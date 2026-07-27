@@ -110,7 +110,18 @@ working must add it here.
 - **Victory Screen** — end-of-game final standings on the TV; ties share the
   top rank.
 - **Color Claim** — a player's server-validated selection of a unique color
-  swatch; their avatar is that color with their initials.
+  swatch; their avatar is that color with their initials. Unique within a room
+  and first-to-ask-wins, like a Nickname; tapping a second swatch moves a player
+  rather than adding one, and frees the first. A player has no color until they
+  pick one — the picker is the screen they land on.
+- **Player Palette** — the ten claimable colors: Boardwalk's five accents plus
+  five more around the hue wheel. game-core names them (`PLAYER_COLOR_NAMES`)
+  because a name is protocol; `packages/ui` says what each looks like, because a
+  value is Boardwalk's. Ten because a room seats ten. Each carries the ink its
+  Bungee initials are set in — one text color cannot read on all ten.
+- **Color Rejection** — why `claimColor` refused a swatch: `colorTaken`,
+  `colorUnknown`, or `notInRoom`. The Join Rejection's shape and thrown the same
+  way, so the picker tells them apart by `kind`.
 - **Boardwalk** — Huddle's design system (docs/design/design-handoff.md):
   cream canvas, ink borders, hard offset shadows, sticker rotations, Bungee +
   Space Grotesk. Implemented as `packages/ui`, the only place a color may be

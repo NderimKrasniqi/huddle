@@ -13,6 +13,7 @@ function seatsOf(...seats: readonly { name: string; host?: boolean }[]): RosterS
     nickname: name,
     away: false,
     host,
+    color: undefined,
   }));
 }
 

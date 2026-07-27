@@ -1,4 +1,9 @@
-import { HEARTBEAT_INTERVAL_MS, type JoinRejection } from '@huddle/game-core';
+import {
+  type ColorRejection,
+  HEARTBEAT_INTERVAL_MS,
+  type JoinRejection,
+  PLAYER_COLOR_NAMES,
+} from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -412,6 +417,216 @@ describe('roster', () => {
     expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([
       { playerId: joined.playerId, nickname: 'Ada', away: false, host: true },
     ]);
+  });
+});
+
+/**
+ * Color Claim: a player's server-validated pick of one of the ten swatches.
+ *
+ * The rule is the nickname rule in another dress — unique within a room, first
+ * to ask wins — and it is enforced server-side for the same reason: the picker
+ * dims what is taken as a courtesy to whoever is looking at it, not as a
+ * promise about what arrives.
+ */
+describe('claimColor', () => {
+  /** Ada's phone, tapping a swatch. */
+  function claim(t: Backend, sessionToken: string, color: string): Promise<unknown> {
+    return t.mutation(api.players.claimColor, { sessionToken, color });
+  }
+
+  /** Why a claim was refused, or `undefined` if it was not. */
+  async function refusalOf(attempt: Promise<unknown>): Promise<ColorRejection | undefined> {
+    try {
+      await attempt;
+      return undefined;
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConvexError);
+      return (error as ConvexError<ColorRejection>).data;
+    }
+  }
+
+  /** The color the room is drawing this player in. */
+  async function colorOf(
+    t: Backend,
+    roomId: Id<'rooms'>,
+    nickname: string,
+  ): Promise<string | undefined> {
+    const roster = await t.query(api.players.roster, { roomId });
+    return roster.find((seat) => seat.nickname === nickname)?.color;
+  }
+
+  it('records the color a player taps', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    await claim(t, ada.sessionToken, 'lagoon');
+
+    expect(await colorOf(t, room.roomId, 'Ada')).toBe('lagoon');
+  });
+
+  it('seats a player with no color at all until they pick one', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await join(t, room.code, 'Ada');
+
+    // The picker is the screen they land on, so every seat has to be drawable
+    // before anybody has claimed anything.
+    expect(await colorOf(t, room.roomId, 'Ada')).toBeUndefined();
+  });
+
+  it('stores every color game-core says a player may claim', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    // The schema writes the ten names out; this is what holds that list to
+    // game-core's, which is the one the picker and the server both read.
+    for (const [index, color] of PLAYER_COLOR_NAMES.entries()) {
+      const player = await t.mutation(api.players.joinRoom, {
+        code: room.code,
+        nickname: `Player ${index + 1}`,
+      });
+      expect(await refusalOf(claim(t, player.sessionToken, color))).toBeUndefined();
+    }
+
+    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    expect(roster.map((seat) => seat.color)).toEqual([...PLAYER_COLOR_NAMES]);
+  });
+
+  it('refuses a color another player in the room is holding', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+    await claim(t, ada.sessionToken, 'punch');
+
+    expect(await refusalOf(claim(t, grace.sessionToken, 'punch'))).toEqual({
+      kind: 'colorTaken',
+      color: 'punch',
+    });
+    expect(await colorOf(t, room.roomId, 'Ada')).toBe('punch');
+    expect(await colorOf(t, room.roomId, 'Grace')).toBeUndefined();
+  });
+
+  it('lets the same color be held in two different rooms', async () => {
+    const t = convexTest(schema, modules);
+    const first = await openRoom(t);
+    const second = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: first.code, nickname: 'Ada' });
+    const grace = await t.mutation(api.players.joinRoom, { code: second.code, nickname: 'Grace' });
+
+    await claim(t, ada.sessionToken, 'sky');
+
+    // Colors are unique within a room, like nicknames — two parties in one
+    // house do not have to negotiate.
+    expect(await refusalOf(claim(t, grace.sessionToken, 'sky'))).toBeUndefined();
+  });
+
+  it('moves a player who taps a second swatch, and frees the first', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    await claim(t, ada.sessionToken, 'yellow');
+
+    await claim(t, ada.sessionToken, 'grape');
+
+    // She holds one color, not two, and the one she left is somebody else's to
+    // take.
+    expect(await colorOf(t, room.roomId, 'Ada')).toBe('grape');
+    expect(await refusalOf(claim(t, grace.sessionToken, 'yellow'))).toBeUndefined();
+  });
+
+  it('lets a player re-tap the color they already hold', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    await claim(t, ada.sessionToken, 'lime');
+
+    // Their own color is not "taken" to them: a double tap confirms what the
+    // screen already shows rather than refusing it.
+    expect(await refusalOf(claim(t, ada.sessionToken, 'lime'))).toBeUndefined();
+    expect(await colorOf(t, room.roomId, 'Ada')).toBe('lime');
+  });
+
+  it('refuses a color that is not one of the ten', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    // No picker sends this. `claimColor` is public and Huddle has no auth by
+    // design, so the server does not get to assume one asked.
+    expect(await refusalOf(claim(t, ada.sessionToken, 'chartreuse'))).toEqual({
+      kind: 'colorUnknown',
+      color: 'chartreuse',
+    });
+    expect(await colorOf(t, room.roomId, 'Ada')).toBeUndefined();
+  });
+
+  it('refuses a claim from a token no seat answers to', async () => {
+    const t = convexTest(schema, modules);
+    await openRoom(t);
+
+    // Refused rather than ignored, unlike a heartbeat: a phone whose seat has
+    // gone would otherwise be left showing a swatch it does not hold.
+    expect(await refusalOf(claim(t, 'nobodysessiontoken000000', 'green'))).toEqual({
+      kind: 'notInRoom',
+    });
+  });
+
+  it('gives one of five players who claim the same color at once that color', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const players = [];
+    for (const name of ['Ada', 'Grace', 'Linus', 'Ken', 'Barbara']) {
+      players.push(await t.mutation(api.players.joinRoom, { code: room.code, nickname: name }));
+    }
+
+    // Every claim is in flight before any of them commits, so each has to
+    // decide from the database as it stands when it runs — see the note above
+    // `joinRoom under simultaneous joins` for what this does and does not
+    // exercise.
+    const outcomes = await Promise.all(
+      players.map((player) => refusalOf(claim(t, player.sessionToken, 'cobalt'))),
+    );
+
+    expect(outcomes.filter((outcome) => outcome === undefined)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome?.kind === 'colorTaken')).toHaveLength(4);
+
+    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    expect(roster.filter((seat) => seat.color === 'cobalt')).toHaveLength(1);
+  });
+
+  it('leaves a room free of duplicate colors when every swatch is contested', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const players = [];
+    for (let seat = 1; seat <= 10; seat += 1) {
+      players.push(
+        await t.mutation(api.players.joinRoom, { code: room.code, nickname: `Player ${seat}` }),
+      );
+    }
+
+    // Ten players and ten colors, each player working down the list from a
+    // different place: every color is claimed by several phones at once, and
+    // the room must still end with no two players sharing one.
+    await Promise.all(
+      players.flatMap((player, at) =>
+        PLAYER_COLOR_NAMES.map((_unused, step) => {
+          const color = PLAYER_COLOR_NAMES[(at + step) % PLAYER_COLOR_NAMES.length];
+          if (color === undefined) {
+            throw new Error('the palette is shorter than it says it is');
+          }
+          return refusalOf(claim(t, player.sessionToken, color));
+        }),
+      ),
+    );
+
+    const claimed = (await t.query(api.players.roster, { roomId: room.roomId }))
+      .map((seat) => seat.color)
+      .filter((color) => color !== undefined);
+    expect(new Set(claimed).size).toBe(claimed.length);
   });
 });
 

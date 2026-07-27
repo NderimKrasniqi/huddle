@@ -175,12 +175,45 @@ demoable by force-quitting apps mid-lobby.
   Every client learns the host from the `roster` projection, which is why a
   handover reaches the new host's phone as a push rather than at its next
   launch. Verified against `convex-test` on a fake clock.
-- [ ] Color claim — AC: the "You're in" screen shows 10 swatches (palette
-  extends the Boardwalk accents to 10 distinct player colors in
-  `packages/ui`); tapping claims the color server-side; two players cannot
-  hold the same color (claimed swatches render at 30% opacity); TV card shows
-  a circle of the claimed color with Bungee initials; a newly joined player's
-  TV card holds the pink "JUST JOINED!" treatment for ~4s.
+  Color claim was split into the three below during implementation: it bundled a
+  palette, a server rule and two screens, and each of those is a piece that can
+  be reviewed and reverted on its own. The acceptance criteria are unchanged,
+  only divided.
+- [x] Player palette & claiming a color — AC: `packages/ui` extends the
+  Boardwalk accents to 10 distinct player colors, each legible as an avatar
+  fill under Bungee initials; a `claimColor` mutation records a player's choice;
+  two players in a room cannot hold the same color, and the rule holds under
+  simultaneous claims; the claimed color reaches every client on the `roster`
+  projection.
+
+  The palette is split across two packages on purpose: game-core holds the ten
+  *names*, because which swatch was tapped is protocol both sides share, and
+  `packages/ui` holds what each one looks like, because that is the only place a
+  color may be written down. `packages/ui` keys its palette off game-core's list
+  so there is one list, and gained a dependency on game-core to do it.
+
+  Both palette promises are held to arithmetic rather than to the eye: every
+  pair is ≥12 ΔE apart (CIE76), and every color carries the ink its monogram is
+  set in — one text color cannot serve ten fills, since ink on cobalt measures
+  2.8:1 and white on yellow 1.4:1. The floor is WCAG's 3:1 for large text, which
+  is what 24–42px Bungee is; the worst pair in fact measures 4.2:1. `punch` and
+  `plum` are the reason the floor is not 4.5 — neither clears it against any
+  monogram, and dropping two Boardwalk accents to satisfy a threshold written
+  for body text would have been the wrong trade.
+
+  `claimColor` enforces one color per room the way `joinRoom` enforces one
+  nickname — read-then-write inside a serializable transaction, so five phones
+  racing for green produce one green. Verified against `convex-test`, including
+  a contested run where ten players claim all ten colors at once.
+- [ ] The color picker on "You're in" — AC: the seated screen shows the 10
+  swatches (44px circles, selected one carrying ink border + shadow); tapping
+  one claims it; colors another player holds render at 30% opacity and cannot
+  be taken; the player's own avatar takes the color they claimed.
+- [ ] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
+  player's claimed color with Bungee initials; a newly joined player's seat
+  carries the pink "JUST JOINED!" treatment for ~4s. The handoff draws both on
+  the §3 lobby card, which does not exist yet — as with the HOST pill, they land
+  on the pairing seat that does, and move to the card when it arrives.
 - [ ] TV room-open resilience — AC: a TV that launches before the backend is
   reachable recovers on its own, with no human touching the remote (the TV app
   is defined as untouched after launch); `openRoom` already clears its memo on

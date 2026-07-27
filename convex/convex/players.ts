@@ -1,6 +1,8 @@
 import {
   AWAY_AFTER_MS,
+  type ColorRejection,
   generateSessionToken,
+  isPlayerColorName,
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
   ROOM_PLAYER_CAP,
@@ -10,6 +12,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
+import { playerColorValidator } from './schema';
 
 // A join is refused with a `ConvexError` for the reason `createRoom` throws one
 // (see rooms.ts): Convex redacts the message of anything else to "Server
@@ -387,6 +390,65 @@ export const markAway = internalMutation({
 });
 
 /**
+ * Takes a color for a player, if their room has it going spare.
+ *
+ * The rule it enforces — one player per color within a room — is read-then-write
+ * and holds exactly rather than probably for the reason `joinRoom`'s two rules
+ * do: the index read below joins this transaction's read set, so a competing
+ * claim on the same color writes into the range this one read, Convex re-runs
+ * this mutation against the committed row, and the second phone to tap is
+ * refused. Two friends racing for green get one green.
+ *
+ * Claiming is also *re*-claiming: a player who taps a second swatch moves,
+ * rather than collecting colors, and the one they were holding goes back to the
+ * room. That falls out of the color being a single field on their row, which is
+ * the reason it is one.
+ *
+ * The Session Token says whose claim this is, for the same reason `heartbeat`
+ * is keyed on it: the roster hands every client every player's id, and a claim
+ * keyed on that would let any phone in the room repaint anybody else.
+ */
+export const claimColor = mutation({
+  args: { sessionToken: v.string(), color: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Whether a color exists at all is a property of what was sent, not of any
+    // room, so it is settled before anything is read.
+    if (!isPlayerColorName(args.color)) {
+      throw new ConvexError<ColorRejection>({ kind: 'colorUnknown', color: args.color });
+    }
+
+    const player = await ctx.db
+      .query('players')
+      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
+      .first();
+
+    // Unlike a heartbeat, this is refused rather than ignored: a phone whose
+    // seat has gone would otherwise be left showing a swatch it does not hold.
+    if (player === null) {
+      throw new ConvexError<ColorRejection>({ kind: 'notInRoom' });
+    }
+
+    const seated = await ctx.db
+      .query('players')
+      .withIndex('by_room', (q) => q.eq('roomId', player.roomId))
+      .collect();
+    const heldByAnother = seated.some(
+      (other) => other._id !== player._id && other.color === args.color,
+    );
+
+    if (heldByAnother) {
+      throw new ConvexError<ColorRejection>({ kind: 'colorTaken', color: args.color });
+    }
+
+    // Re-tapping the color they already hold is not a claim to refuse; it is a
+    // player confirming what the screen already shows.
+    await ctx.db.patch(player._id, { color: args.color });
+    return null;
+  },
+});
+
+/**
  * A room's roster in join order — the TV subscribes to this and redraws its
  * seats the moment a player lands, which is the whole of "the name appears on
  * the TV".
@@ -396,8 +458,11 @@ export const markAway = internalMutation({
  * this projection is what keeps it off a screen the entire room is looking at.
  *
  * `away` is here because a seat is drawn differently for a player whose phone
- * has gone quiet; `lastSeenAt` is not, because the TV has no clock the room
- * agrees with and no business deciding this. `host` is here for the same reason
+ * has gone quiet, and `color` because a seat is drawn *in* it; `lastSeenAt` is
+ * not, because the TV has no clock the room agrees with and no business
+ * deciding this. `color` is also how the picker knows which swatches are spoken
+ * for — the room's own answer, so a phone dims exactly what the server would
+ * refuse. `host` is here for the same reason
  * as `away` — and it is what a Controller reads to know whether *it* is the
  * host, since this is the one live subscription every client in the room
  * already holds. A phone finding itself by `playerId` on the roster it is on
@@ -412,6 +477,7 @@ export const roster = query({
       nickname: v.string(),
       away: v.boolean(),
       host: v.boolean(),
+      color: v.optional(playerColorValidator),
     }),
   ),
   handler: async (ctx, args) => {
@@ -426,6 +492,7 @@ export const roster = query({
       nickname: player.nickname,
       away: player.away,
       host: player._id === room?.hostPlayerId,
+      color: player.color,
     }));
   },
 });
