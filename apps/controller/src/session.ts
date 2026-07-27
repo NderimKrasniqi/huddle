@@ -34,6 +34,36 @@ export type SessionTokenStore = {
 export type SessionLookup = (sessionToken: string) => Promise<PlayerSession | null>;
 
 /**
+ * `store`, plus a memory of what it was last given — so that a store which
+ * cannot write is not also a store that cannot read.
+ *
+ * A keystore write can fail (a locked device, a keychain that will not open),
+ * and `rememberSession` swallows that on purpose: a phone that cannot record
+ * its token has lost its rejoin, not its join. That stopped being the whole
+ * cost the moment presence started reading the token back on every launch —
+ * without this, the same failure would leave a player who is sitting in the
+ * room unable to beat, and muted on the TV within seconds of joining it. Memory
+ * covers the run the phone is in; only a keystore can cover the next one.
+ *
+ * What it remembers wins over what the store answers, because it is never the
+ * staler of the two: it is written in the same breath, and it is the right one
+ * in exactly the case where the store's half of that breath failed.
+ */
+export function alsoInMemory(store: SessionTokenStore): SessionTokenStore {
+  let mintedThisLaunch: string | null = null;
+
+  return {
+    read: async () => mintedThisLaunch ?? (await store.read()),
+    write: async (sessionToken) => {
+      // Before the write, not after it: the failing write is the case this
+      // exists for.
+      mintedThisLaunch = sessionToken;
+      await store.write(sessionToken);
+    },
+  };
+}
+
+/**
  * How long a launch will stay blank waiting to hear whether this phone already
  * holds a seat, before it gives up and shows the join form.
  *

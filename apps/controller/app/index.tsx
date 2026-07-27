@@ -15,7 +15,7 @@ import { StickerSurface } from '@huddle/ui/native';
 import { useConvex, useMutation } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   activeCodeCell,
@@ -26,6 +26,7 @@ import {
 } from '../src/join-entry';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
+import { type ForegroundWatch, keepPresent } from '../src/presence';
 import {
   joinScreenState,
   type PlayerSession,
@@ -39,6 +40,21 @@ const CARET_BLINK_MS = 530;
 
 /** How far a pressed button travels into its own shadow. */
 const PRESS_TRAVEL = 2;
+
+/**
+ * React Native's `AppState`, in the shape `keepPresent` watches: whether the app
+ * is in front of its owner right now, and word of it whenever that changes.
+ *
+ * Only `active` counts as the foreground. iOS reports `inactive` while the app
+ * switcher or a call banner sits over the app — nobody is playing then either,
+ * and a glance away that brief is absorbed by the ten seconds the room waits
+ * before it says anything about anybody.
+ */
+const watchAppForeground: ForegroundWatch = (onChange) => {
+  onChange(AppState.currentState === 'active');
+  const watching = AppState.addEventListener('change', (state) => onChange(state === 'active'));
+  return () => watching.remove();
+};
 
 /**
  * The Controller's first screen (docs/design/design-handoff.md §2 and §4): the
@@ -333,6 +349,7 @@ function BlinkingCaret() {
  */
 function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const { code, nickname } = session;
+  useHeartbeat();
 
   return (
     <PhoneScreen>
@@ -360,6 +377,29 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         <Text style={styles.statusText}>Eyes on the TV — your name is up there now.</Text>
       </StickerSurface>
     </PhoneScreen>
+  );
+}
+
+/**
+ * Says this phone is still here, for as long as its owner is on a screen that
+ * holds a seat — the green dot on the TV's roster is the room repeating it back.
+ *
+ * It hangs off the seated screen rather than the app's root because holding a
+ * seat is exactly the condition: a phone on the join form has nothing to be
+ * present as. The token is read from the keystore inside `keepPresent`, which
+ * is what keeps it out of this screen's state (see `resumeSession`).
+ */
+function useHeartbeat(): void {
+  const heartbeat = useMutation(api.players.heartbeat);
+
+  useEffect(
+    () =>
+      keepPresent(
+        phoneSessionTokenStore,
+        (sessionToken) => heartbeat({ sessionToken }),
+        watchAppForeground,
+      ),
+    [heartbeat],
   );
 }
 

@@ -5,6 +5,9 @@
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
 export type { JoinRejection } from './join-rejection';
 export { NICKNAME_MAX_LENGTH } from './nickname';
+// Presence is a two-sided rule: the Controller keeps the beat, the room keeps
+// the deadline, and neither number means anything alone.
+export { AWAY_AFTER_MS, HEARTBEAT_INTERVAL_MS } from './presence';
 export { ROOM_PLAYER_CAP } from './room-capacity';
 export {
   generateRoomCode,

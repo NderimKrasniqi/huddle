@@ -55,13 +55,19 @@ packages for game modules and the protocol.
     aborts the whole push — functions included — if one fails. The symptom is
     `convex dev` refusing to deploy with a validation error naming the table
     and the field, on a working tree where nothing looks wrong.
-  - **This bites right now on `sessionToken`.** Phase 2's rejoin task added
-    `players.sessionToken` as required (`convex/convex/schema.ts`), and the
-    dev deployment `nderim-krasniqi:huddle:dev` still holds player rows minted
-    before it — leftovers from Phase 1 join tests. Clear the table once, from
-    the Convex dashboard (Data → `players` → Clear table), and the push goes
-    through; `npx convex data players` shows what is there first. Those rows
-    are junk from testing, and nothing in the product outlives a party.
+  - **It bit once, on `sessionToken`, and is resolved.** Phase 2's rejoin task
+    made `players.sessionToken` required while the dev deployment
+    `nderim-krasniqi:huddle:dev` still held seven player rows from Phase 1 join
+    tests, minted before the field existed; presence then added `lastSeenAt`
+    and `away` to the same table before any push had been attempted. Clearing
+    `players` once resolved all three at once, and the push then added the
+    `by_session_token` index cleanly. Those rows were testing junk — nothing in
+    the product outlives a party.
+  - **How to clear a table from the CLI**, since the dashboard is not the only
+    way: `npx convex import --table <name> --replace -y <file>` with a file
+    containing `[]` deletes every row (it reports the delete count before it
+    runs). `npx convex data <name>` shows what is there first — look before
+    you clear, because this is not reversible.
   - The field stays required rather than optional on purpose: every player row
     is created by `joinRoom`, which always mints a token, so a player without
     one is a player who could never rejoin — a state worth failing on, not one

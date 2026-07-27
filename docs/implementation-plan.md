@@ -114,9 +114,37 @@ demoable by force-quitting apps mid-lobby.
   seated in room A orphans A's row, holding one of its ten seats until presence
   and room expiry clean it up. Both are written up in `resumeSession`'s
   docstring.
-- [ ] Presence & away badge — AC: phone backgrounded ≥10s → TV roster marks
+- [x] Presence & away badge — AC: phone backgrounded ≥10s → TV roster marks
   that player "away" within a further 5s; foregrounding clears it within 5s;
   active players show the green status dot per the handoff.
+
+  Two constants carry the AC, derived rather than picked: a 3s heartbeat and a
+  13s away threshold. A phone goes quiet *between* beats, so the room acts no
+  earlier than 13 − 3 = 10s (never premature) and no later than 13s, leaving 2s
+  of the AC's 15 for the scheduler and the push to the TV. Both bounds are
+  pinned against the scope's literal seconds, and review confirmed by mutation
+  that they fail if either drifts.
+
+  Away is a *scheduled write*, not a comparison made at read time: a Convex
+  query re-runs when its rows change, not when time passes, so a roster
+  deriving away-ness from a timestamp would show a full room of present players
+  until somebody joined. Exactly one check is pending per present player —
+  "away" is precisely "no check pending" — and that is now asserted against
+  `_scheduled_functions` rather than only documented. The beat is keyed on the
+  Session Token, not the `playerId` the roster hands out, so no client can hold
+  another player present; there is no API path by which one client learns
+  another's token.
+
+  The away *visual* is a judgement call, not the handoff's: it specifies no
+  away state for a TV seat, and an "AWAY" pill at the 18px TV minimum would
+  overhang a 72px seat. The avatar dims to `opacity.unavailable`, the dot mutes,
+  and the nickname goes to `colors.mutedText` rather than dimming — ink at 30%
+  over the screen colour measures ~1.8:1, unreadable across a room. A real pill
+  belongs with the §3 lobby cards when they land.
+
+  Verified against `convex-test` on a fake clock, and the schema is now pushed
+  to the dev deployment — but the real scheduler's punctuality, which the 2s of
+  slack exists for, is still reasoned rather than measured.
 - [ ] Host role & auto-transfer — AC: first player to join is flagged Host
   (HOST pill on TV card and roster row) and their phone shows host controls;
   Host disconnects → the longest-connected active player becomes Host within

@@ -1,7 +1,7 @@
-import type { JoinRejection } from '@huddle/game-core';
+import { HEARTBEAT_INTERVAL_MS, type JoinRejection } from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from './_generated/api';
 import schema from './schema';
@@ -398,7 +398,211 @@ describe('roster', () => {
     // fields in Phase 2 (the Session Token), and this projection is what keeps
     // them off a screen the whole room is looking at.
     expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([
-      { playerId: joined.playerId, nickname: 'Ada' },
+      { playerId: joined.playerId, nickname: 'Ada', away: false },
     ]);
+  });
+});
+
+/**
+ * Presence: the phone that is still in somebody's hand, and the one that went
+ * into a pocket. The room hears a heartbeat every few seconds from every phone
+ * that is awake, and a scheduled check turns a player Away when it stops.
+ *
+ * The clock is the subject here, so these run on fake timers: the promise is
+ * about seconds, and a suite that waited for them would take minutes to say so.
+ * The seconds asserted below are the scope's own — backgrounded ≥10s, away
+ * within a further 5 — rather than the constants the implementation uses, which
+ * `packages/game-core/src/presence.test.ts` pins to those same sentences.
+ */
+describe('presence', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Lets `ms` of the party go by, and runs whatever the room had scheduled for it. */
+  async function elapse(t: Backend, ms: number): Promise<void> {
+    await vi.advanceTimersByTimeAsync(ms);
+    await t.finishInProgressScheduledFunctions();
+  }
+
+  /** Whether the TV's roster is drawing this player as away. */
+  async function isAway(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<boolean> {
+    const roster = await t.query(api.players.roster, { roomId });
+    const seat = roster.find((player) => player.nickname === nickname);
+
+    if (seat === undefined) {
+      throw new Error(`${nickname} is not on the roster`);
+    }
+
+    return seat.away;
+  }
+
+  /** A room with Ada in it, holding the token her phone would beat with. */
+  async function roomWithAda(t: Backend) {
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    return { ...room, playerId: ada.playerId, sessionToken: ada.sessionToken };
+  }
+
+  /** Away-checks the room still has scheduled against this player. */
+  async function pendingAwayChecks(t: Backend, playerId: Id<'players'>): Promise<number> {
+    return await t.run(async (ctx) => {
+      const scheduled = await ctx.db.system.query('_scheduled_functions').collect();
+
+      return scheduled.filter((job) => {
+        const [args] = job.args as [{ readonly playerId?: Id<'players'> }];
+        return job.state.kind === 'pending' && args.playerId === playerId;
+      }).length;
+    });
+  }
+
+  it('seats a joining player as present', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomWithAda(t);
+
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+  });
+
+  it('marks a backgrounded phone away — after ten seconds, and inside a further five', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomWithAda(t);
+
+    // Ada's phone goes into her pocket the instant she joins: the beats stop,
+    // and nothing else about her changes. This is the longest the room can take
+    // to notice, because her last beat is as recent as it can be.
+    await elapse(t, 10_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+
+    await elapse(t, 5_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(true);
+  });
+
+  it('leaves a phone that keeps beating alone, however long the lobby sits', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, sessionToken } = await roomWithAda(t);
+
+    // Half a minute of a Controller doing exactly what it does, which is more
+    // than one away-check's worth: the check has to find her fresh and go back
+    // to waiting, every time.
+    for (let beat = 0; beat < 10; beat += 1) {
+      await elapse(t, HEARTBEAT_INTERVAL_MS);
+      await t.mutation(api.players.heartbeat, { sessionToken });
+      expect(await isAway(t, roomId, 'Ada')).toBe(false);
+    }
+  });
+
+  it('notices a phone that goes quiet mid-lobby, not only one that never spoke', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, sessionToken } = await roomWithAda(t);
+
+    // A beat lands, and is the last one: the check already pending was armed
+    // against her join, so it comes due while she is still fresh and has to go
+    // back to waiting rather than call it a day.
+    await elapse(t, HEARTBEAT_INTERVAL_MS);
+    await t.mutation(api.players.heartbeat, { sessionToken });
+
+    await elapse(t, 10_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+    await elapse(t, 5_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(true);
+  });
+
+  it('watches a beating phone with one check, not one per beat', async () => {
+    const t = convexTest(schema, modules);
+    const { playerId, sessionToken } = await roomWithAda(t);
+    expect(await pendingAwayChecks(t, playerId)).toBe(1);
+
+    for (let beat = 0; beat < 5; beat += 1) {
+      await elapse(t, HEARTBEAT_INTERVAL_MS);
+      await t.mutation(api.players.heartbeat, { sessionToken });
+    }
+
+    // Arming a fresh check on every beat would work, and would pile up one
+    // scheduled function per phone per three seconds for as long as the party
+    // lasted, with every other test in this file still passing. Away-ness is
+    // the same thing as having no check pending, and that only holds if the
+    // count does.
+    expect(await pendingAwayChecks(t, playerId)).toBe(1);
+
+    // And a phone that went quiet, was noticed, and came back is watched by
+    // exactly one again — not none, and not the one it left plus the one its
+    // return started.
+    await elapse(t, 15_000);
+    expect(await pendingAwayChecks(t, playerId)).toBe(0);
+    await t.mutation(api.players.heartbeat, { sessionToken });
+    expect(await pendingAwayChecks(t, playerId)).toBe(1);
+  });
+
+  it('brings a player back the moment their phone beats again', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, sessionToken } = await roomWithAda(t);
+    await elapse(t, 15_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(true);
+
+    // Foregrounding sends a beat straight away, and clearing the badge costs
+    // one round trip rather than any part of the five seconds it is allowed.
+    await t.mutation(api.players.heartbeat, { sessionToken });
+
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+  });
+
+  it('goes on watching a phone that came back, so a second disappearance shows too', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, sessionToken } = await roomWithAda(t);
+    await elapse(t, 15_000);
+    await t.mutation(api.players.heartbeat, { sessionToken });
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+
+    // Ada put the phone down again. Nothing about the second time is different,
+    // and a room that only ever noticed the first would be worse than useless
+    // at the end of a party.
+    await elapse(t, 10_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+    await elapse(t, 5_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(true);
+  });
+
+  it('keeps one player going quiet off everybody else', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, code, sessionToken } = await roomWithAda(t);
+    await join(t, code, 'Grace');
+
+    await elapse(t, 15_000);
+    expect(await isAway(t, roomId, 'Ada')).toBe(true);
+    expect(await isAway(t, roomId, 'Grace')).toBe(true);
+
+    await t.mutation(api.players.heartbeat, { sessionToken });
+
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+    expect(await isAway(t, roomId, 'Grace')).toBe(true);
+  });
+
+  it('ignores a beat from a token no seat answers to', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomWithAda(t);
+
+    // A phone whose room has expired under it, or one carrying a token from
+    // nowhere: there is nothing to hold present and nothing to complain about.
+    await t.mutation(api.players.heartbeat, { sessionToken: 'nobodysessiontoken000000' });
+
+    expect(await isAway(t, roomId, 'Ada')).toBe(false);
+  });
+
+  it('stops watching a player whose row has gone', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    // Room expiry deletes players out from under a pending check. The check
+    // still runs, and has to find nothing rather than throw.
+    await t.run(async (ctx) => {
+      await ctx.db.delete(ada.playerId);
+    });
+
+    await expect(elapse(t, 15_000)).resolves.toBeUndefined();
+    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([]);
   });
 });

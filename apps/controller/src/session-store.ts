@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-import type { SessionTokenStore } from './session';
+import { alsoInMemory, type SessionTokenStore } from './session';
 
 /**
  * Where this phone keeps its Session Token: the device keystore, via
@@ -16,10 +16,16 @@ import type { SessionTokenStore } from './session';
  *
  * One key, overwritten on every join: a phone is in one room at a time, and the
  * token of a room it has left is of no use to anyone.
+ *
+ * Wrapped in `alsoInMemory` because the keystore is the one part of this that
+ * can refuse. A device that will not hand its keychain over costs the player
+ * their rejoin — there is no helping that — but it must not also cost them
+ * their heartbeat, which reads the same token back for as long as they are
+ * seated (see `keepPresent`).
  */
 const SESSION_TOKEN_KEY = 'huddle.sessionToken';
 
-export const phoneSessionTokenStore: SessionTokenStore = {
+export const phoneSessionTokenStore: SessionTokenStore = alsoInMemory({
   read: () => SecureStore.getItemAsync(SESSION_TOKEN_KEY),
   write: (sessionToken) => SecureStore.setItemAsync(SESSION_TOKEN_KEY, sessionToken),
-};
+});

@@ -19,9 +19,10 @@ export default defineSchema({
     .index('by_code', ['code']),
 
   /**
-   * A Player: one phone in a room. A player is a nickname on a roster and the
-   * Session Token that phone rejoins with — the claimed color, the Host flag
-   * and presence arrive with the Phase 2 tasks that own them.
+   * A Player: one phone in a room. A player is a nickname on a roster, the
+   * Session Token that phone rejoins with, and whether the room is still
+   * hearing from it — the claimed color and the Host flag arrive with the
+   * Phase 2 tasks that own them.
    */
   players: defineTable({
     /** The room this player is in. Players never move between rooms. */
@@ -34,6 +35,18 @@ export default defineSchema({
      * that one phone and to nothing else (see the `roster` projection).
      */
     sessionToken: v.string(),
+    /**
+     * When this phone last said it was there: its join, or its most recent
+     * heartbeat. Written on every beat, which is why the away flag is a stored
+     * field beside it rather than something the roster works out from this one
+     * — see `markAway` in players.ts.
+     */
+    lastSeenAt: v.number(),
+    /**
+     * Whether the room has stopped hearing from this phone. The one presence
+     * fact the TV is told, and the only one it needs to draw a seat.
+     */
+    away: v.boolean(),
   })
     // `joinRoom` reads a room's players to enforce the cap and the nickname
     // rule, and the TV's roster is that same read. Convex orders an index by

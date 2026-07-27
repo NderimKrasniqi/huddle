@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  alsoInMemory,
   joinScreenState,
   type PlayerSession,
   rememberSession,
@@ -186,6 +187,45 @@ describe('rememberSession', () => {
     // down: a storage failure costs this player their rejoin, and must not cost
     // them the join they just made.
     await expect(rememberSession(brokenPhone(), 'adastoken')).resolves.toBeUndefined();
+  });
+});
+
+describe('alsoInMemory', () => {
+  it('reads back a token the store refused to write', async () => {
+    const phone = alsoInMemory(brokenPhone());
+
+    await rememberSession(phone, 'adastoken');
+
+    // The player is seated and the keychain is not co-operating. What they must
+    // not lose on top of their rejoin is their heartbeat, which reads this back
+    // every few seconds for as long as they are in the room.
+    expect(await phone.read()).toBe('adastoken');
+  });
+
+  it('prefers the token it was just given to the one the store holds', async () => {
+    // A store that takes a write and goes on answering with what it had: the
+    // shape of a keystore whose write quietly failed. Ada walked to another TV,
+    // and only one of these two tokens is the room she is standing in.
+    const phone = alsoInMemory({
+      read: () => Promise.resolve('oldroomtoken'),
+      write: () => Promise.resolve(),
+    });
+
+    await phone.write('newroomtoken');
+
+    expect(await phone.read()).toBe('newroomtoken');
+  });
+
+  it('falls through to the store when nothing has been written this launch', async () => {
+    // The force-quit case, which memory cannot help with and the keystore can.
+    expect(await alsoInMemory(phoneRemembering('adastoken')).read()).toBe('adastoken');
+    expect(await alsoInMemory(phoneRemembering(null)).read()).toBeNull();
+  });
+
+  it('still fails a write the store failed', async () => {
+    // `rememberSession` is the one that decides a failed write is survivable,
+    // and it can only decide that if it hears about it.
+    await expect(alsoInMemory(brokenPhone()).write('adastoken')).rejects.toThrow();
   });
 });
 
