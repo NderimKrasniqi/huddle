@@ -46,11 +46,10 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
 - [x] TV pairing screen — AC: TV app on launch auto-creates a room and renders
   the handoff's pairing screen: 4 code-letter tiles, "GRAB YOUR PHONE!" badge,
   QR card encoding `huddle://join/<code>`, footer "0 of 10 joined"; copy
-  never references huddle.tv. Code verified, never rendered: this machine has
-  Command Line Tools only, so no simulator exists to see it on. Every
-  measurement matches the handoff and the copy is confirmed in the shipped
-  bundle, but whether it *looks* right is open — see Phase 5's design fidelity
-  pass and real-device builds.
+  never references huddle.tv. Rendered on the tvOS simulator and matches the
+  handoff: tilted sticker tiles with a colour per letter, the orange badge, the
+  QR card, and the footer. Whether it reads right on a real 10-foot panel is
+  still open — see Phase 5's design fidelity pass and real-device builds.
 - [x] Joining a room: server rules & TV roster (split from "Phone join by
   code", which bundled six criteria across the backend, the controller UI and
   the TV) — AC: `joinRoom` adds a player to a room by code and the TV roster
@@ -58,11 +57,12 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   found"; a nickname already taken in that room is rejected "name taken"; an
   11th player is rejected "room full"; each rule has an integration test, and
   the cap and duplicate checks hold against simultaneous joins rather than
-  only sequential ones. Two caveats, same as the pairing screen: the roster
-  was never rendered (no simulator on this machine), and "within 1s" is
-  argued, not measured — convex-test has no websocket, so what is established
-  is that the TV holds a live `useQuery` subscription rather than a poll, and
-  that `roster` returns the nickname immediately after `joinRoom`. Likewise
+  only sequential ones. The roster has since been watched on the tvOS
+  simulator: a join seated "Grace" and the footer went to "1 of 10 joined"
+  with no reload, so the live subscription is real rather than argued. "Within
+  1s" is still not *measured* — the observation was a screenshot taken after
+  the fact, not a timed one, and convex-test has no websocket to time it in.
+  Likewise
   the simultaneous-join tests exercise concurrent dispatch, not parallel
   commit, because convex-test serializes mutations; the rest rests on Convex's
   OCC plus a read set that was inspected.
@@ -75,11 +75,11 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
 - [x] Phone join by QR — AC: scanning the TV's QR opens the join screen with
   the code prefilled; only the nickname remains to type. The phone's own camera
   opens the link, so the Controller asks for no camera permission of its own.
-  Same caveat as the two tasks above: never scanned on a device. What is
-  established is structural — the Controller claims the `huddle` scheme, and
-  the path `roomJoinLink` builds resolves to a route file that exists (both
-  asserted in `join-link.test.ts`, which fails if either drifts) — but the
-  OS → app → route hop itself waits on Phase 5's real-device builds.
+  Verified on the iOS simulator by opening `huddle://join/XZBY`: iOS offered
+  the app, and the join screen came up with the code already in its tiles and
+  only the name left to type. A camera scanning the TV's QR is the one step
+  still untried, and it waits on Phase 5's real-device builds — everything
+  after the scan is the same deep link, exercised here.
 
 ## Phase 2 — A room that survives a party
 Goal: identity, Host, disconnects, and expiry behave like scope demands;
@@ -194,18 +194,32 @@ runs without touching a dev tool.
   the wire outside `convex-test`. Still open: the Controller does not point at
   anything yet (it has no Convex client until the join-screen task), and
   "share room state on real hardware" needs the devices in Phase 5.
-- [ ] A way to actually see the TV app — AC: the TV pairing screen renders
-  somewhere a human can look at it. Three screens were built without ever
-  being rendered, and the tvOS simulator route is currently blocked by two
-  separate problems found on 2026-07-27: CocoaPods reports `expo-router was
-  not linked: supports iOS but target is tvOS`, and `pod install` then fails
-  outright with ``Invalid `RNSVG.podspec` file: no implicit conversion of nil
-  into String`` from `rnsvg_find_config()` — react-native-svg 15.15.4 (pulled
-  in by the QR library) cannot resolve its config under react-native-tvos +
-  pnpm. Either fix those, or install Android Studio with an Android TV system
-  image, which is closer to the Philips target anyway. Note CocoaPods 1.17 on
-  Ruby 4.0 also needs `LANG`/`LC_ALL` set to a UTF-8 locale or it crashes in
-  `Pod::Config#installation_root`.
+- [x] A way to actually see the TV app — AC: the TV pairing screen renders
+  somewhere a human can look at it. Both simulators now run the real apps, and
+  the whole Phase 1 slice has been watched end to end: the TV opened room
+  EDFO, a join seated "Grace", and the roster went to "1 of 10 joined" on its
+  live subscription with no reload.
+
+  The blockers recorded on 2026-07-27 are resolved, and the note that this
+  machine had Command Line Tools only was simply out of date — Xcode 26.5 is
+  installed, with both iOS and tvOS simulators.
+  - ``Invalid `RNSVG.podspec` file: no implicit conversion of nil into
+    String`` is react-native-svg resolving `react-native/package.json`,
+    landing in `react-native-tvos/` because of the TV app's alias, looking for
+    a sibling `react-native/` that pnpm never created, and reaching
+    `File.join(nil, ...)` because its `REACT_NATIVE_NODE_MODULES_DIR` fallback
+    was unset. Setting that variable to the app's own `node_modules` — where
+    pnpm *does* put a `react-native` symlink — is the fix, and it now lives in
+    `apps/tv`'s `ios` and `prebuild` scripts beside the `LC_ALL` CocoaPods
+    1.17 on Ruby 4 needs.
+  - `expo-router was not linked: supports iOS but target is tvOS` is a
+    warning, not a blocker. expo-router declares `platforms: ["apple", ...]`,
+    so tvOS autolinking skips its three native modules (`ExpoHead`,
+    `LinkPreview`, `RouterToolbar`) — none of which the TV app uses. Routing
+    is JavaScript: the app bundles 1698 modules and renders.
+
+  Still open: Android. This machine has no Android Studio, SDK or JDK, so the
+  Philips target itself stays untested until the real-device task.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
