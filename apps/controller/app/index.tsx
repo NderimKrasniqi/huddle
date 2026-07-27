@@ -6,12 +6,12 @@ import {
   colors,
   fontFamily,
   letterSpacing,
-  offsetShadow,
   opacity,
   playerInitials,
   radius,
   shadowDepth,
 } from '@huddle/ui';
+import { StickerSurface } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -125,9 +125,13 @@ function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
 
       <View style={styles.field}>
         <Text style={styles.label}>YOUR NAME</Text>
-        {/* The Boardwalk surface is the wrapper's, not the field's: React
-            Native only accepts a hard offset shadow on a view style. */}
-        <View style={styles.nameField}>
+        {/* The Boardwalk surface is the wrapper's, not the field's: the shadow
+            is cast by a view, and a TextInput owns its own text box. */}
+        <StickerSurface
+          depth={shadowDepth.phoneSmall}
+          style={styles.nameField}
+          wrapperStyle={styles.stretch}
+        >
           <TextInput
             ref={nameField}
             style={styles.nameInput}
@@ -146,22 +150,28 @@ function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
             }}
             accessibilityLabel="Your name"
           />
-        </View>
+        </StickerSurface>
       </View>
 
       <View style={styles.field}>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !ready && styles.buttonUnavailable,
-            pressed && styles.buttonPressed,
-          ]}
+          style={styles.stretch}
           disabled={!ready || joining}
           onPress={() => void join()}
           accessibilityRole="button"
           accessibilityState={{ disabled: !ready || joining }}
         >
-          <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join →'}</Text>
+          {({ pressed }) => (
+            <StickerSurface
+              depth={shadowDepth.phoneCard}
+              style={[styles.button, pressed && styles.buttonPressed]}
+              // Dimming belongs to the whole sticker: fading the face alone
+              // would leave a solid shadow under a ghosted button.
+              wrapperStyle={[styles.stretch, !ready && styles.buttonUnavailable]}
+            >
+              <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join →'}</Text>
+            </StickerSurface>
+          )}
         </Pressable>
 
         {failure === undefined ? null : (
@@ -280,21 +290,25 @@ function YoureInScreen({
         <Text style={styles.logoSmall}>
           HUDDLE<Text style={styles.logoPeriod}>.</Text>
         </Text>
-        <View style={styles.codeChip}>
+        <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
           <Text style={styles.codeChipText}>{code}</Text>
-        </View>
+        </StickerSurface>
       </View>
 
-      <View style={styles.avatar}>
+      <StickerSurface depth={shadowDepth.phoneHero} style={styles.avatar}>
         <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
-      </View>
+      </StickerSurface>
 
       <Text style={styles.title}>You’re in, {nickname}!</Text>
 
-      <View style={styles.statusCard}>
+      <StickerSurface
+        depth={shadowDepth.phoneCard}
+        style={styles.statusCard}
+        wrapperStyle={styles.stretch}
+      >
         <View style={styles.statusDot} />
         <Text style={styles.statusText}>Eyes on the TV — your name is up there now.</Text>
-      </View>
+      </StickerSurface>
     </PhoneScreen>
   );
 }
@@ -392,6 +406,13 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
 
+  // A StickerSurface wrapper sits between a full-width surface and its parent,
+  // so the stretch has to be asked for on the wrapper as well as the surface —
+  // otherwise the wrapper shrink-wraps and the card stops filling the column.
+  stretch: {
+    alignSelf: 'stretch',
+  },
+
   nameField: {
     alignSelf: 'stretch',
     justifyContent: 'center',
@@ -399,7 +420,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.input,
-    boxShadow: offsetShadow(shadowDepth.phoneSmall),
   },
   nameInput: {
     // 50 inside the wrapper's two 3px borders is the handoff's 56px field.
@@ -422,16 +442,16 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.button,
-    boxShadow: offsetShadow(shadowDepth.phoneCard),
   },
   buttonUnavailable: {
     opacity: opacity.unavailable,
   },
-  // Boardwalk's press: the button travels into its own shadow, which shortens
-  // by exactly as far as the button moved.
+  // Boardwalk's press: the button travels into its own shadow. The shadow is a
+  // rectangle sitting still behind it, so moving the face is the whole effect —
+  // what shows past the edge shortens by exactly as far as the button went, and
+  // no second shadow value has to be kept in step with this one.
   buttonPressed: {
     transform: [{ translateX: PRESS_TRAVEL }, { translateY: PRESS_TRAVEL }],
-    boxShadow: offsetShadow(shadowDepth.phoneCard - PRESS_TRAVEL),
   },
   buttonLabel: {
     color: colors.surface,
@@ -459,7 +479,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.chip,
-    boxShadow: offsetShadow(shadowDepth.phoneSmall),
   },
   codeChipText: {
     color: colors.cobalt,
@@ -480,7 +499,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
-    boxShadow: offsetShadow(shadowDepth.phoneHero),
   },
   avatarInitials: {
     color: colors.ink,
@@ -502,7 +520,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.row,
-    boxShadow: offsetShadow(shadowDepth.phoneCard),
   },
   statusDot: {
     width: 12,

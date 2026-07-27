@@ -8,12 +8,12 @@ import {
   fontFamily,
   letterSpacing,
   minBodyFontSize,
-  offsetShadow,
   playerInitials,
   radius,
   shadowDepth,
   stickerTilt,
 } from '@huddle/ui';
+import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
 import type { FunctionReturnType } from 'convex/server';
 import { useEffect, useState } from 'react';
@@ -56,9 +56,13 @@ export default function TvPairingScreen() {
 
         <View style={styles.center}>
           <View style={styles.codeGroup}>
-            <View style={styles.badge}>
+            <StickerSurface
+              depth={shadowDepth.phoneCard}
+              style={styles.badge}
+              wrapperStyle={styles.badgeTilt}
+            >
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
-            </View>
+            </StickerSurface>
             <RoomCodeTiles code={room?.code} />
             <Text style={styles.caption}>
               {failed
@@ -85,14 +89,18 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   return (
     <View style={styles.tiles}>
       {Array.from({ length: ROOM_CODE_LENGTH }, (_unused, position) => (
-        <View
+        <StickerSurface
           key={position}
-          style={[styles.tile, { transform: [{ rotate: codeTileTilt(position) }] }]}
+          depth={shadowDepth.tvCard}
+          style={styles.tile}
+          // The tilt goes on the wrapper: rotating the tile alone would swing
+          // it off its own shadow.
+          wrapperStyle={{ transform: [{ rotate: codeTileTilt(position) }] }}
         >
           <Text style={[styles.tileLetter, { color: codeLetterColor(position) }]}>
             {code?.charAt(position) ?? ''}
           </Text>
-        </View>
+        </StickerSurface>
       ))}
     </View>
   );
@@ -101,7 +109,11 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
 /** The Join Link as a QR: scanning it opens the Controller straight into the room. */
 function RoomQrCard({ code }: { readonly code: string | undefined }) {
   return (
-    <View style={styles.qrCard}>
+    <StickerSurface
+      depth={shadowDepth.tvCard}
+      style={styles.qrCard}
+      wrapperStyle={styles.qrCardTilt}
+    >
       <View style={styles.qr}>
         {code === undefined ? null : (
           <QRCode
@@ -113,7 +125,7 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
         )}
       </View>
       <Text style={styles.qrCaption}>or scan to join</Text>
-    </View>
+    </StickerSurface>
   );
 }
 
@@ -263,7 +275,8 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
-    boxShadow: offsetShadow(shadowDepth.phoneCard),
+  },
+  badgeTilt: {
     transform: [{ rotate: stickerTilt.badge }],
   },
   badgeText: {
@@ -285,7 +298,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.card,
-    boxShadow: offsetShadow(shadowDepth.tvCard),
   },
   tileLetter: {
     fontFamily: fontFamily.display,
@@ -308,7 +320,8 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.card,
-    boxShadow: offsetShadow(shadowDepth.tvCard),
+  },
+  qrCardTilt: {
     transform: [{ rotate: stickerTilt.qrCard }],
   },
   qr: {

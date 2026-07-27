@@ -329,24 +329,49 @@ runs without touching a dev tool.
   between a card's ink border and its ink shadow is solid ink, with no lighter
   row between them.
 
-  An outset `box-shadow` is not painted beneath the border box, so RN clips the
-  shadow to the card's rounded rect. That clip edge and the border's own edge
-  are the same curve, and two antialiased edges on one path each contribute
-  partial coverage, summing to less than opaque. Measured at a tile's bottom
-  border, scanning down: ink `27`, then one row at `83` on tvOS / `69` on
-  Android, then ink `27` again — roughly a fifth of the background bleeding
-  through a boundary that should be solid. Unaffected by
-  `UIViewEdgeAntialiasing`, as expected.
+  Measured at a tile's bottom border, scanning down: ink `27`, then one row at
+  `83` on tvOS / `69` on Android, then ink `27` again — roughly a fifth of the
+  background bleeding through a boundary that should be solid, on every bordered
+  surface in the product. Unaffected by `UIViewEdgeAntialiasing`.
 
-  Not fixed yet because the options trade off against things the project has
-  taken positions on. Drawing the shadow as an opaque sibling rounded rect
-  behind the card removes the clip entirely and costs nothing visually, but it
-  wants a shared component, and `packages/ui` is deliberately React-free —
-  `shadows.ts` says so, and that is what keeps it testable under Node. A 1px
-  ink `outline` over the seam is a one-line style change but thickens every
-  card's perimeter on the three sides that have no shadow. Leaving it is
-  defensible too: it is a single sub-pixel row, and whether it is visible at 3m
-  on the Philips is unknown. Decide with real hardware in view.
+  The cause is on the surface itself, not in the shadow. A view that both fills
+  and strokes paints its `backgroundColor` across the whole rounded rect and
+  then strokes the border inside it; at the antialiased boundary the background
+  out-covers the stroke, so a sub-pixel sliver of *fill* escapes outside the
+  ink. The seam therefore takes the fill colour, which is the evidence: the
+  white tiles leak white (`(84,84,81)` is 75% ink over white, not over cream)
+  and the tangerine badge leaks orange (`(70,44,24)`). Predicting that the badge
+  would leak orange before looking is what confirmed it.
+
+  Three earlier diagnoses were wrong and should not be re-tried. (1) tvOS
+  `allowsEdgeAntialiasing` — a real but separate bug, fixed in the task above,
+  and it never touched this hairline. (2) An outset `box-shadow` being clipped
+  to exclude the border box, leaving two coincident antialiased edges on one
+  curve: drawing the shadow as an opaque sibling rect instead left the seam
+  byte-identical at `84`. (3) The surface's outer edge blending with the screen:
+  growing the shadow 1px under that edge also left it byte-identical. An earlier
+  revision of this entry stated (2) as fact; it was not.
+
+  The fix is `StickerSurface` (`@huddle/ui/native`), which every bordered
+  surface in both apps now goes through — 3 on the TV, 6 on the Controller. It
+  sets the surface's own background to the border colour, makes the border
+  transparent while keeping its width so the content box does not move, and lays
+  the fill in behind the content, leaving nothing lighter than ink able to
+  escape past the edge. It also draws the shadow as a sibling rectangle, which
+  is why `shadows.ts` now returns a rect rather than a `boxShadow` — kept
+  because it is equivalent and keeps that module Node-testable, *not* because it
+  fixes anything.
+
+  Still open because only half the AC is met. **tvOS passes**: on the Apple TV
+  4K simulator the junction reads as one solid ink band, and temporarily
+  restoring the old fill-and-stroke rendering puts the pale hairline back into
+  the identical crop of the identical scene — an A/B, not a single hopeful
+  screenshot. **Android is unverified**: the emulator would not stay up
+  alongside the tvOS simulator this session. The cause is platform-independent
+  and the seam measured on both, so tvOS passing is good evidence for Android —
+  but it is inference, not a measurement. And the Controller's 6 surfaces have
+  never been run on any device at all; they are converted, type-checked and
+  unit-tested, and nothing more.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
