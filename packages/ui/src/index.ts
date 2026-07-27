@@ -6,5 +6,5 @@ export { colors, type ColorToken } from './colors';
 export { boardwalkFonts } from './fonts';
 export { tvDesignSize, tvStageScale, type WindowSize } from './layout';
 export { offsetShadow, shadowDepth, type OffsetShadow } from './shadows';
-export { borderWidth, radius, stickerTilt } from './shape';
+export { borderWidth, opacity, radius, stickerTilt } from './shape';
 export { fontFamily, letterSpacing, minBodyFontSize } from './typography';

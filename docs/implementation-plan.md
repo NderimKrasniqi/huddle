@@ -66,10 +66,12 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   the simultaneous-join tests exercise concurrent dispatch, not parallel
   commit, because convex-test serializes mutations; the rest rests on Convex's
   OCC plus a read set that was inspected.
-- [ ] Phone join screen (the other half of the split) — AC: join screen per
+- [x] Phone join screen (the other half of the split) — AC: join screen per
   handoff (code tiles auto-advance per letter, name input); entering code +
-  nickname adds the player and shows the "You're in" screen; the three
-  server rejections surface as the handoff's error copy.
+  nickname adds the player and shows the "You're in" screen; all four server
+  rejections (`roomNotFound`, `roomFull`, `nameTaken`, `nameUnusable`)
+  surface as the handoff's error copy, chosen by `kind` rather than by
+  matching on message text.
 - [ ] Phone join by QR — AC: scanning the TV's QR opens the join screen with
   the code prefilled; only the nickname remains to type.
 
@@ -186,6 +188,18 @@ runs without touching a dev tool.
   the wire outside `convex-test`. Still open: the Controller does not point at
   anything yet (it has no Convex client until the join-screen task), and
   "share room state on real hardware" needs the devices in Phase 5.
+- [ ] A way to actually see the TV app — AC: the TV pairing screen renders
+  somewhere a human can look at it. Three screens were built without ever
+  being rendered, and the tvOS simulator route is currently blocked by two
+  separate problems found on 2026-07-27: CocoaPods reports `expo-router was
+  not linked: supports iOS but target is tvOS`, and `pod install` then fails
+  outright with ``Invalid `RNSVG.podspec` file: no implicit conversion of nil
+  into String`` from `rnsvg_find_config()` — react-native-svg 15.15.4 (pulled
+  in by the QR library) cannot resolve its config under react-native-tvos +
+  pnpm. Either fix those, or install Android Studio with an Android TV system
+  image, which is closer to the Philips target anyway. Note CocoaPods 1.17 on
+  Ruby 4.0 also needs `LANG`/`LC_ALL` set to a UTF-8 locale or it crashes in
+  `Pod::Config#installation_root`.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
