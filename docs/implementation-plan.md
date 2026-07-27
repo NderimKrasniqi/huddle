@@ -218,8 +218,18 @@ runs without touching a dev tool.
     `LinkPreview`, `RouterToolbar`) — none of which the TV app uses. Routing
     is JavaScript: the app bundles 1698 modules and renders.
 
-  Still open: Android. This machine has no Android Studio, SDK or JDK, so the
-  Philips target itself stays untested until the real-device task.
+  Still open: Android — see the toolchain task directly below.
+- [ ] Android toolchain & the TV app on an emulator (split out of "Real-device
+  builds" below, which bundled three targets and silently assumed a toolchain
+  that does not exist) — AC: a JDK, the Android SDK and an Android TV system
+  image are installed; `pnpm --filter @huddle/tv android` builds and launches
+  the hub on an Android TV emulator; the pairing screen renders and its
+  roster still updates live on a join. Taken before Phase 2 on purpose: the
+  Philips Android TV is the real hub target and nothing has ever run on
+  Android, so every Boardwalk measurement, the font loading, and the
+  remote-control focus model are unverified there. Expect differences the
+  Apple simulators cannot show — `boxShadow` support, Bungee rendering, and
+  D-pad focus above all.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
