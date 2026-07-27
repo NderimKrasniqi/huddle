@@ -305,6 +305,48 @@ runs without touching a dev tool.
   window *behind* the React view; the very first frame is still the splash
   theme's own white, which is a separate treatment the design fidelity pass
   owns.
+- [x] Sticker tilts render cleanly on tvOS — AC: the ±1–2° rotations Boardwalk
+  puts on the code tiles, the badge and the QR card no longer leave stepped
+  borders on Apple TV; a rotated edge shows continuously varying coverage row
+  to row rather than holding one position and jumping.
+
+  `CALayer.allowsEdgeAntialiasing` is false by default and a layer carrying a
+  transform is composited without antialiasing, so every tilted card had a
+  visibly stepped outline — Apple-only, because Android's RenderThread already
+  antialiases transformed layers. Measured on tile 1's left border: before, 21
+  consecutive rows reported the edge at exactly `x=213` at full ink and then
+  jumped a pixel, with no intermediate values anywhere; after, coverage ramps
+  every row (`27, 31, 39, 46, 54 … 145`), matching Android's profile.
+  `ios.infoPlist.UIViewEdgeAntialiasing` turns it on app-wide; `expo config
+  --type introspect` confirms prebuild emits the key. Apple documents a
+  rendering cost, which does not matter on these near-static screens. Only the
+  TV app needs it — nothing in the Controller is rotated.
+
+  Found by eye first, and the pale hairline reported alongside it turned out to
+  be a *different* bug on both platforms — see the task below.
+- [ ] Hard offset shadows leave a pale seam where they meet the border (both
+  platforms, so not the tvOS antialiasing issue above) — AC: the junction
+  between a card's ink border and its ink shadow is solid ink, with no lighter
+  row between them.
+
+  An outset `box-shadow` is not painted beneath the border box, so RN clips the
+  shadow to the card's rounded rect. That clip edge and the border's own edge
+  are the same curve, and two antialiased edges on one path each contribute
+  partial coverage, summing to less than opaque. Measured at a tile's bottom
+  border, scanning down: ink `27`, then one row at `83` on tvOS / `69` on
+  Android, then ink `27` again — roughly a fifth of the background bleeding
+  through a boundary that should be solid. Unaffected by
+  `UIViewEdgeAntialiasing`, as expected.
+
+  Not fixed yet because the options trade off against things the project has
+  taken positions on. Drawing the shadow as an opaque sibling rounded rect
+  behind the card removes the clip entirely and costs nothing visually, but it
+  wants a shared component, and `packages/ui` is deliberately React-free —
+  `shadows.ts` says so, and that is what keeps it testable under Node. A 1px
+  ink `outline` over the seam is a one-line style change but thickens every
+  card's perimeter on the three sides that have no shadow. Leaving it is
+  defensible too: it is a single sub-pixel row, and whether it is visible at 3m
+  on the Philips is unknown. Decide with real hardware in view.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
