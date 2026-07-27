@@ -130,6 +130,35 @@ packages for game modules and the protocol.
 - **Alternatives considered:** EAS Build — convenient but paid/queued; revisit
   if local builds become a time sink.
 
+### Local Toolchain
+- **Choice:** Homebrew for both halves. Apple: Xcode 26.5 with the iOS and tvOS
+  simulators. Android: `brew install openjdk@17` plus the
+  `android-studio` and `android-commandlinetools` casks, with the SDK
+  provisioned by `sdkmanager` into `~/Library/Android/sdk` — platform-tools 37,
+  emulator 36.6.11, platforms 35 and 36, build-tools 35.0.0 and 36.0.0, and the
+  `system-images;android-36;android-tv;x86_64` TV image. Gradle pulls NDK
+  27.1.12297006 itself on the first build, which only succeeds because the SDK
+  licences were accepted up front (`sdkmanager --licenses`).
+- **Why:** the command-line tools are what makes the Android setup scriptable
+  and reproducible, and Android Studio is kept alongside them for the GUI that
+  a headless CLI cannot give — logcat, the layout inspector, and the AVD
+  manager — which the Philips TV work will want.
+- **Notes that cost time if forgotten:**
+  - `openjdk@17` is keg-only, so `JAVA_HOME` must be set explicitly to
+    `/usr/local/opt/openjdk@17`; `/usr/libexec/java_home` will not find it.
+    Both it and `ANDROID_HOME` are exported from `~/.zshrc`.
+  - The emulator AVD is `huddle_tv`, on the `tv_1080p` profile. Wait for
+    `adb shell getprop sys.boot_completed` to return `1` before building —
+    `expo run:android` fails outright against a device that is merely
+    *attached*, not booted.
+  - `reactNativeArchitectures` defaults to all four ABIs. Exporting
+    `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64` builds only what the
+    emulator can run; the full set is only needed for the Philips TV (arm64)
+    and is much slower. A clean x86_64-only debug build is ~10 minutes.
+  - Only `android-36` ships a 64-bit Android TV image, so on an Intel Mac the
+    emulator runs an API level well above the real Philips target. See the
+    caveats on the toolchain task in implementation-plan.md.
+
 ### Notable Libraries
 - `expo-camera` — QR scan on the phone for joining (with manual room-code entry
   as fallback).

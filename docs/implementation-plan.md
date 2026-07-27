@@ -180,7 +180,12 @@ runs without touching a dev tool.
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the
   720p design size and question text readable from 3m; avatar pop-in spring
-  (~300ms) and carousel transition (~250ms) implemented per handoff.
+  (~300ms) and carousel transition (~250ms) implemented per handoff; the TV
+  window background is the Boardwalk canvas from the first frame, not the
+  platform default — which on Android means installing `expo-system-ui`,
+  because without it `"userInterfaceStyle": "light"` in `apps/tv/app.json` is
+  a no-op and a cold start flashes dark grey until the fonts resolve (found on
+  the Android emulator; see the toolchain task above).
 - [ ] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.
@@ -218,8 +223,9 @@ runs without touching a dev tool.
     `LinkPreview`, `RouterToolbar`) — none of which the TV app uses. Routing
     is JavaScript: the app bundles 1698 modules and renders.
 
-  Still open: Android — see the toolchain task directly below.
-- [ ] Android toolchain & the TV app on an emulator (split out of "Real-device
+  Android was the piece still open here, and the toolchain task directly below
+  has since closed it: the hub renders on an Android TV emulator too.
+- [x] Android toolchain & the TV app on an emulator (split out of "Real-device
   builds" below, which bundled three targets and silently assumed a toolchain
   that does not exist) — AC: a JDK, the Android SDK and an Android TV system
   image are installed; `pnpm --filter @huddle/tv android` builds and launches
@@ -230,6 +236,51 @@ runs without touching a dev tool.
   remote-control focus model are unverified there. Expect differences the
   Apple simulators cannot show — `boxShadow` support, Bungee rendering, and
   D-pad focus above all.
+
+  Done: the toolchain is installed (see tech-stack.md's Local Toolchain for the
+  exact versions and the reproducible setup) and the hub has been watched
+  running on an Android TV emulator. The pairing screen rendered room `SPZJ`
+  complete with Bungee and Space Grotesk, the per-letter tile colours, the
+  ±1–2° sticker tilts, and the hard offset shadows — so `boxShadow` does work
+  under Fabric on this image, and the Google-Fonts loading path is not
+  Apple-only. Two joins were then seated live, `Grace` and `Milo`, taking the
+  footer to "2 of 10 joined" with no reload, so the Convex subscription is
+  real on Android too.
+
+  The Boardwalk scaling survives the platform change for a non-obvious
+  reason worth recording: the `tv_1080p` profile is 1920×1080 at density 320,
+  which React Native sees as 960×540 **dp**, where tvOS handed the app
+  1920×1080 pt. `tvStageScale` therefore resolves to exactly 0.75, and 0.75 dp
+  × 2 lands on 1.5 physical pixels per design pixel — precisely the "×1.5 for
+  1080p" the handoff asks for. Nothing needed changing, but the app is hitting
+  that number by a different route than on tvOS.
+
+  Three things this did **not** establish:
+  - **The API level is wrong for the target, deliberately.** `android-36` is
+    the only 64-bit Android TV image offered, and this is an Intel Mac; the
+    rest are 32-bit x86. Android 16 is far newer than any Philips TV, so this
+    validates the toolchain, the renderer and the font path — not the API
+    level the real hub will run. `boxShadow` needs API 28+, which is the one
+    thing an older Philips could still fail.
+  - **D-pad focus is still completely unexercised.** The pairing screen has
+    nothing focusable, which is by design (see "TV app remote surface"), so
+    the emulator could not test the focus model even in principle. It stays
+    open until a TV screen has a control on it.
+  - **The 667 ms figure is an upper bound, not a latency.** The first
+    screenshot to complete after `joinRoom` returned — 667 ms later — already
+    showed `Milo`, but a single `screencap` round-trip is itself ~650 ms of
+    that, and the clock started when the mutation returned rather than when a
+    phone tapped Join. It bounds the TV's update inside the 1 s criterion
+    without measuring it, so the Phase 1 caveat narrows rather than clears.
+
+  One defect found, filed on the design fidelity pass above rather than fixed
+  here: `"userInterfaceStyle": "light"` in `apps/tv/app.json` is a silent
+  no-op on Android. `expo prebuild` says so outright — "userInterfaceStyle:
+  Install expo-system-ui in your project to enable this feature" — and the
+  consequence is visible at launch, where the window sits at the platform's
+  default dark grey instead of the Boardwalk canvas until the fonts resolve
+  and `TvLayout` stops returning `null`. On a television that is a black flash
+  on every cold start.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
