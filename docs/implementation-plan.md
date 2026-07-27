@@ -72,8 +72,14 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
   rejections (`roomNotFound`, `roomFull`, `nameTaken`, `nameUnusable`)
   surface as the handoff's error copy, chosen by `kind` rather than by
   matching on message text.
-- [ ] Phone join by QR — AC: scanning the TV's QR opens the join screen with
-  the code prefilled; only the nickname remains to type.
+- [x] Phone join by QR — AC: scanning the TV's QR opens the join screen with
+  the code prefilled; only the nickname remains to type. The phone's own camera
+  opens the link, so the Controller asks for no camera permission of its own.
+  Same caveat as the two tasks above: never scanned on a device. What is
+  established is structural — the Controller claims the `huddle` scheme, and
+  the path `roomJoinLink` builds resolves to a route file that exists (both
+  asserted in `join-link.test.ts`, which fails if either drifts) — but the
+  OS → app → route hop itself waits on Phase 5's real-device builds.
 
 ## Phase 2 — A room that survives a party
 Goal: identity, Host, disconnects, and expiry behave like scope demands;

@@ -42,12 +42,21 @@ const PRESS_TRAVEL = 2;
  * means a rejection lands back on a form that still holds what they typed.
  */
 export default function JoinScreen() {
-  // The code a scanned Join Link brought with it, if the phone arrived that
-  // way. Delivering it is the QR task's job (docs/implementation-plan.md);
-  // taking it as given is this screen's, and it is the only difference a
-  // scanned join makes — the nickname is still typed.
+  // The code a scanned Join Link brought with it, if the phone arrived that way
+  // (`app/join/[code].tsx`). It is the only difference a scanned join makes —
+  // the nickname is still typed.
   const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();
-  const prefilledCode = codeEntry(linkedCode ?? '');
+
+  // Keyed by the link so a second Join Link scanned while this screen is
+  // already open starts the form over on the room it names, rather than leaving
+  // the first room's code in tiles the player thinks they just replaced. A
+  // typed join has no link and so a constant key: nothing remounts under
+  // somebody's thumbs.
+  return <JoinForm key={linkedCode ?? ''} linkedCode={linkedCode ?? ''} />;
+}
+
+function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
+  const prefilledCode = codeEntry(linkedCode);
 
   const [code, setCode] = useState(prefilledCode);
   const [nickname, setNickname] = useState('');
