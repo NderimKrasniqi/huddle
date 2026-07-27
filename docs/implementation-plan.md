@@ -324,7 +324,7 @@ runs without touching a dev tool.
 
   Found by eye first, and the pale hairline reported alongside it turned out to
   be a *different* bug on both platforms — see the task below.
-- [ ] Hard offset shadows leave a pale seam where they meet the border (both
+- [x] Hard offset shadows leave a pale seam where they meet the border (both
   platforms, so not the tvOS antialiasing issue above) — AC: the junction
   between a card's ink border and its ink shadow is solid ink, with no lighter
   row between them.
@@ -362,16 +362,22 @@ runs without touching a dev tool.
   because it is equivalent and keeps that module Node-testable, *not* because it
   fixes anything.
 
-  Still open because only half the AC is met. **tvOS passes**: on the Apple TV
-  4K simulator the junction reads as one solid ink band, and temporarily
-  restoring the old fill-and-stroke rendering puts the pale hairline back into
-  the identical crop of the identical scene — an A/B, not a single hopeful
-  screenshot. **Android is unverified**: the emulator would not stay up
-  alongside the tvOS simulator this session. The cause is platform-independent
-  and the seam measured on both, so tvOS passing is good evidence for Android —
-  but it is inference, not a measurement. And the Controller's 6 surfaces have
-  never been run on any device at all; they are converted, type-checked and
-  unit-tested, and nothing more.
+  Both platforms measured clean. On tvOS, an A/B on the Apple TV 4K simulator:
+  the junction reads as one solid ink band, and temporarily restoring the old
+  fill-and-stroke rendering puts the hairline back into the identical crop of
+  the identical scene. On the Android TV emulator, scanning the pixels: down a
+  tile's bottom border, 14 unbroken rows of ink `27` from fill to cream with no
+  lighter row; across a tile's right border, the same; and down the tangerine
+  badge, 11 unbroken rows with no orange escaping past the ink — the badge being
+  the surface whose leak identified the cause.
+
+  Two things this does *not* establish. The same A/B on Android did **not**
+  reproduce the seam: with fill-and-stroke restored, the junction stayed solid.
+  So Android confirms the fix is clean, not that it is what made it clean — the
+  reproduction there probably needs the original `boxShadow` path, which no
+  longer exists to restore. And the Controller's 6 converted surfaces have never
+  been run on any device; they are converted, type-checked and unit-tested, and
+  nothing more. Both are for the design fidelity pass to close.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to
