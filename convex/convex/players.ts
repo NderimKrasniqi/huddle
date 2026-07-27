@@ -1,20 +1,16 @@
-import { NICKNAME_MAX_LENGTH, ROOM_PLAYER_CAP } from '@huddle/game-core';
+import {
+  type JoinRejection,
+  NICKNAME_MAX_LENGTH,
+  ROOM_PLAYER_CAP,
+} from '@huddle/game-core';
 import { ConvexError, v } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
 
-/**
- * Why a join was refused. A `ConvexError` for the reason `createRoom` throws
- * one (see rooms.ts): Convex redacts the message of anything else to "Server
- * Error", while `data` crosses the wire intact. The Controller's join screen
- * picks its copy by `kind` — the rejections are told apart programmatically,
- * never by matching on a message someone may reword.
- */
-export type JoinRejection =
-  | { readonly kind: 'roomNotFound'; readonly code: string }
-  | { readonly kind: 'roomFull'; readonly cap: number }
-  | { readonly kind: 'nameTaken'; readonly nickname: string }
-  | { readonly kind: 'nameUnusable'; readonly maxLength: number };
+// A join is refused with a `ConvexError` for the reason `createRoom` throws one
+// (see rooms.ts): Convex redacts the message of anything else to "Server
+// Error", while `data` crosses the wire intact. `JoinRejection` itself lives in
+// game-core, because the Controller reads every one of these.
 
 /**
  * A Room Code as the room holds it. The code is a token in a player's hands —

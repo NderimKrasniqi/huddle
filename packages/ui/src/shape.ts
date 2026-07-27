@@ -30,6 +30,16 @@ export const radius = {
 } as const;
 
 /**
+ * Boardwalk dims what a player cannot have rather than hiding or greying it —
+ * the handoff sets claimed color swatches to "30% opacity", and anything else
+ * that is present but not currently available (a Join button with no code in
+ * the tiles yet) reads the same way.
+ */
+export const opacity = {
+  unavailable: 0.3,
+} as const;
+
+/**
  * Boardwalk tilts cards and badges like stickers pressed onto the screen
  * (`rotate(-3deg…3deg)`). Named per surface so the same element is never tilted
  * two different ways on two different screens; the room-code tiles get their

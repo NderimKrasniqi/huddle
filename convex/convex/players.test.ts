@@ -1,3 +1,4 @@
+import type { JoinRejection } from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { describe, expect, it } from 'vitest';
@@ -5,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import { api } from './_generated/api';
 import schema from './schema';
 import type { Id } from './_generated/dataModel';
-import type { JoinRejection } from './players';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.

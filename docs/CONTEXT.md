@@ -24,6 +24,16 @@ working must add it here.
   whatever panel it runs on, so every measurement in TV screens is written
   exactly as the design handoff gives it. Distinct from the metaphorical "stage"
   in Eyes up below.
+- **Join Screen** — the Controller's first screen: four Room Code cells that
+  fill one letter at a time, a nickname field, and Join. Where a phone becomes
+  a Player. Its "You're in" state is the same screen once the room has seated
+  them — the Controller's half of what the Pairing Screen is on the TV.
+- **Join Rejection** — why `joinRoom` refused a phone: `roomNotFound`,
+  `roomFull`, `nameTaken`, or `nameUnusable`. A discriminated union in
+  game-core (protocol both sides share, like the Join Link), thrown as the
+  `data` of a `ConvexError` because that is the only part of a thrown error
+  Convex does not redact. The Join Screen picks its copy by `kind`, never by
+  matching the message text.
 - **Open a room** — the TV-side act of getting the room for this launch:
   `createRoom` if none has been minted yet, otherwise the one already minted.
   `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once.
