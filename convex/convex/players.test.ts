@@ -45,6 +45,18 @@ async function rosterNames(t: Backend, roomId: Id<'rooms'>): Promise<string[]> {
   return roster.map((seat) => seat.nickname);
 }
 
+/**
+ * Lets `ms` of the party go by, and runs whatever the room had scheduled for it.
+ *
+ * Only meaningful under fake timers — every suite below that uses it installs
+ * them, because what these tests are about is seconds, and a suite that waited
+ * for them would take minutes to say so.
+ */
+async function elapse(t: Backend, ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms);
+  await t.finishInProgressScheduledFunctions();
+}
+
 describe('joinRoom', () => {
   it('seats a player in the room holding the code, under their nickname', async () => {
     const t = convexTest(schema, modules);
@@ -398,7 +410,7 @@ describe('roster', () => {
     // fields in Phase 2 (the Session Token), and this projection is what keeps
     // them off a screen the whole room is looking at.
     expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([
-      { playerId: joined.playerId, nickname: 'Ada', away: false },
+      { playerId: joined.playerId, nickname: 'Ada', away: false, host: true },
     ]);
   });
 });
@@ -421,12 +433,6 @@ describe('presence', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
-  /** Lets `ms` of the party go by, and runs whatever the room had scheduled for it. */
-  async function elapse(t: Backend, ms: number): Promise<void> {
-    await vi.advanceTimersByTimeAsync(ms);
-    await t.finishInProgressScheduledFunctions();
-  }
 
   /** Whether the TV's roster is drawing this player as away. */
   async function isAway(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<boolean> {
@@ -604,5 +610,299 @@ describe('presence', () => {
 
     await expect(elapse(t, 15_000)).resolves.toBeUndefined();
     expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([]);
+  });
+});
+
+/** Who the room is calling Host, by the name every client is told — or nobody. */
+async function hostName(t: Backend, roomId: Id<'rooms'>): Promise<string | undefined> {
+  const roster = await t.query(api.players.roster, { roomId });
+  return roster.find((seat) => seat.host)?.nickname;
+}
+
+/**
+ * How many players the room is calling Host at once.
+ *
+ * Asserted alongside *who* holds it, because the interesting failure of a
+ * transfer is not landing on the wrong player — it is landing on a second one.
+ */
+async function hostCount(t: Backend, roomId: Id<'rooms'>): Promise<number> {
+  const roster = await t.query(api.players.roster, { roomId });
+  return roster.filter((seat) => seat.host).length;
+}
+
+/**
+ * The Host, as a room hands it out: the first phone in the room gets it, and
+ * nothing a later join does takes it away.
+ */
+describe('host', () => {
+  it('gives the room to the first player who joins it', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    await join(t, room.code, 'Ada');
+
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+  });
+
+  it('leaves everyone who joins afterwards a regular player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    await join(t, room.code, 'Ada');
+    await join(t, room.code, 'Grace');
+    await join(t, room.code, 'Linus');
+
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('has no host to name in a room nobody has joined', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    // A television mints a room before there is anybody to run it. Nothing
+    // renders a host here — but a room whose pointer had to be non-empty from
+    // the start could only satisfy that by pointing at a player who does not
+    // exist.
+    expect(await hostName(t, room.roomId)).toBeUndefined();
+  });
+
+  it('gives each room its own host', async () => {
+    const t = convexTest(schema, modules);
+    const first = await openRoom(t);
+    const second = await openRoom(t);
+
+    await join(t, first.code, 'Ada');
+    await join(t, second.code, 'Grace');
+
+    expect(await hostName(t, first.roomId)).toBe('Ada');
+    expect(await hostName(t, second.roomId)).toBe('Grace');
+  });
+
+  it('hands one host to a room a dozen phones join at once', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    // Every join is in flight before any of them commits, and each reads a room
+    // whose host pointer the one before it may just have filled. Two hosts is
+    // what a read made from anything other than the committed row produces —
+    // see the note above `joinRoom under simultaneous joins`.
+    const attempts = Array.from({ length: 12 }, (_unused, index) =>
+      join(t, room.code, `Player ${index + 1}`),
+    );
+    await Promise.all(attempts.map(rejectionOf));
+
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+});
+
+/**
+ * The Host leaving the party, which the room only ever learns the way it learns
+ * anything about a phone: by not hearing from it. So a host who backgrounds
+ * their phone, force-quits, or walks out of wifi range is one event, and the
+ * room hands the room on at the moment it gives up on them — which is why this
+ * rides on the same scheduled check that sets Away rather than on a clock of
+ * its own.
+ *
+ * Fake timers, and the seconds asserted are the plan's own: within 15s of the
+ * host going quiet, somebody else is running the room.
+ */
+describe('host transfer', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** `ms` of party, with these phones doing what a foregrounded Controller does. */
+  async function elapseBeating(
+    t: Backend,
+    sessionTokens: readonly string[],
+    ms: number,
+  ): Promise<void> {
+    for (let gone = 0; gone < ms; gone += HEARTBEAT_INTERVAL_MS) {
+      await elapse(t, Math.min(HEARTBEAT_INTERVAL_MS, ms - gone));
+      for (const sessionToken of sessionTokens) {
+        await t.mutation(api.players.heartbeat, { sessionToken });
+      }
+    }
+  }
+
+  /** Seats a player, and hands back what their phone would be holding. */
+  function seatPlayer(t: Backend, code: string, nickname: string) {
+    return t.mutation(api.players.joinRoom, { code, nickname });
+  }
+
+  it('hands the room to the longest-connected active player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+    const linus = await seatPlayer(t, room.code, 'Linus');
+
+    // Ada's phone goes into a pocket; the other two are still in hands. Grace
+    // joined first of the two, so the room is hers.
+    await elapseBeating(t, [grace.sessionToken, linus.sessionToken], 15_000);
+
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('moves the room inside the fifteen seconds a host may be gone for', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+
+    // Ada's last word was her join, so this is the longest the room can take to
+    // notice — and it may not act before ten seconds either, or a host who put
+    // their phone down for a moment would lose the room.
+    await elapseBeating(t, [grace.sessionToken], 10_000);
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+
+    await elapseBeating(t, [grace.sessionToken], 5_000);
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+  });
+
+  it('passes over players who have gone quiet themselves', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await seatPlayer(t, room.code, 'Ada');
+    await seatPlayer(t, room.code, 'Grace');
+    const linus = await seatPlayer(t, room.code, 'Linus');
+
+    // The room empties out around the host: only Linus, who joined last, still
+    // has a phone in his hand. Handing the room to Grace because she joined
+    // before him would hand it to nobody.
+    await elapseBeating(t, [linus.sessionToken], 15_000);
+
+    expect(await hostName(t, room.roomId)).toBe('Linus');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('leaves the room with an away host when nobody is there to take it', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await seatPlayer(t, room.code, 'Ada');
+    await seatPlayer(t, room.code, 'Grace');
+
+    // Both phones are down. A room that dropped its host here would be a room
+    // nobody can start a game in once they come back, so the host stays where
+    // it is until somebody is actually able to hold it.
+    await elapse(t, 15_000);
+
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+  });
+
+  it('gives an away host their room back the moment they beat, if nobody took it', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await seatPlayer(t, room.code, 'Ada');
+    await elapse(t, 15_000);
+
+    await t.mutation(api.players.heartbeat, { sessionToken: ada.sessionToken });
+
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+  });
+
+  it('makes an original host who comes back a regular player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+    await elapseBeating(t, [grace.sessionToken], 15_000);
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+
+    // Ada is back — with her seat, her nickname and her Session Token, and
+    // without the room. Grace has been running it, and a host that snapped back
+    // to whoever happened to join first would take it out of her hands mid-party.
+    await t.mutation(api.players.heartbeat, { sessionToken: ada.sessionToken });
+
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('leaves the host alone when a regular player goes quiet', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await seatPlayer(t, room.code, 'Ada');
+    await seatPlayer(t, room.code, 'Grace');
+
+    await elapseBeating(t, [ada.sessionToken], 15_000);
+
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('hands the room on again when the player who took it goes quiet too', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+    const linus = await seatPlayer(t, room.code, 'Linus');
+
+    // A party thinning out one phone at a time is the case this exists for: the
+    // room has to keep finding somebody, not just survive the first departure.
+    await elapseBeating(t, [grace.sessionToken, linus.sessionToken], 15_000);
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+
+    await elapseBeating(t, [linus.sessionToken], 15_000);
+
+    expect(await hostName(t, room.roomId)).toBe('Linus');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('survives a host whose row has gone', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+
+    // Room expiry deletes players out from under a pending check; the check
+    // that would have moved the host still runs, and has to find nothing rather
+    // than throw. It leaves the room pointing at a player who is gone, which is
+    // only reachable by deleting a row on its own — expiry takes the room with
+    // it, and the pointer dies there.
+    await t.run(async (ctx) => {
+      await ctx.db.delete(ada.playerId);
+    });
+
+    await expect(elapseBeating(t, [grace.sessionToken], 15_000)).resolves.toBeUndefined();
+    expect(await rosterNames(t, room.roomId)).toEqual(['Grace']);
+  });
+
+  it('gives the room to the next player to join when the host it named is gone', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await seatPlayer(t, room.code, 'Ada');
+    await t.run(async (ctx) => {
+      await ctx.db.delete(ada.playerId);
+    });
+
+    await seatPlayer(t, room.code, 'Grace');
+
+    // The room would otherwise hold a pointer to nobody for good, and nothing a
+    // later join did would clear it — a room no one present can ever start.
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
+  it('leaves an original host who relaunches their app a regular player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const ada = await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+    await elapseBeating(t, [grace.sessionToken], 15_000);
+
+    // Not a foregrounded app this time but a force-quit one, coming back the
+    // only way it can: its Session Token, and the seat that answers to it.
+    // Rejoining is a read, and it must not be a way to take the room back.
+    const rejoined = await t.query(api.players.session, { sessionToken: ada.sessionToken });
+    await t.mutation(api.players.heartbeat, { sessionToken: ada.sessionToken });
+
+    expect(rejoined).toMatchObject({ playerId: ada.playerId, nickname: 'Ada' });
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+    expect(await hostCount(t, room.roomId)).toBe(1);
   });
 });

@@ -12,7 +12,7 @@ import {
   shadowDepth,
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
-import { useConvex, useMutation } from 'convex/react';
+import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -24,6 +24,7 @@ import {
   isCodeComplete,
   nicknameEntry,
 } from '../src/join-entry';
+import { type LobbyStanding, lobbyStanding, lobbyStatusText } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
 import { type ForegroundWatch, keepPresent } from '../src/presence';
@@ -346,10 +347,19 @@ function BlinkingCaret() {
  * and the server has nothing to claim a color with yet, so the picker is left
  * out and the avatar is a plain Boardwalk face — the same circle the TV draws
  * on its seats until a color is claimed.
+ *
+ * The Host gets the pill and a line saying the room is theirs, and nothing to
+ * press: the handoff's host screen (§5) is a roster with a "Choose a game"
+ * button, and both the roster and every control on it belong to the game
+ * lifecycle in Phase 3. Until then this screen is where a player finds out they
+ * are running the room — including when they become the host mid-party, which
+ * is why the standing is read from a live query rather than from the answer
+ * that seated them.
  */
 function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const { code, nickname } = session;
   useHeartbeat();
+  const standing = useLobbyStanding(session);
 
   return (
     <PhoneScreen>
@@ -357,9 +367,12 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         <Text style={styles.logoSmall}>
           HUDDLE<Text style={styles.logoPeriod}>.</Text>
         </Text>
-        <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
-          <Text style={styles.codeChipText}>{code}</Text>
-        </StickerSurface>
+        <View style={styles.seatedHeaderEnd}>
+          {standing.youAreHost ? <HostPill /> : null}
+          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+            <Text style={styles.codeChipText}>{code}</Text>
+          </StickerSurface>
+        </View>
       </View>
 
       <StickerSurface depth={shadowDepth.phoneHero} style={styles.avatar}>
@@ -374,10 +387,33 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         wrapperStyle={styles.stretch}
       >
         <View style={styles.statusDot} />
-        <Text style={styles.statusText}>Eyes on the TV — your name is up there now.</Text>
+        <Text style={styles.statusText}>{lobbyStatusText(standing)}</Text>
       </StickerSurface>
     </PhoneScreen>
   );
+}
+
+/** Boardwalk's HOST pill (handoff §5): ink fill, white Bungee, fully rounded. */
+function HostPill() {
+  return (
+    <View style={styles.hostPill}>
+      <Text style={styles.hostPillText}>HOST</Text>
+    </View>
+  );
+}
+
+/**
+ * Whether this phone is running the room, live.
+ *
+ * It subscribes to the same roster the TV draws its seats from — the one query
+ * that already says who the host is — and finds this player on it. So a
+ * handover reaches the new host's phone as a push, within a round trip of the
+ * room deciding it, rather than at the next launch.
+ */
+function useLobbyStanding(session: PlayerSession): LobbyStanding {
+  const roster = useQuery(api.players.roster, { roomId: session.roomId });
+
+  return lobbyStanding(roster ?? [], session.playerId);
 }
 
 /**
@@ -561,6 +597,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'stretch',
     justifyContent: 'space-between',
+  },
+  // The pill and the code chip travel together at the header's right end, so
+  // the row stays a logo and a status group however many badges land in it.
+  seatedHeaderEnd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  hostPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.ink,
+    borderRadius: radius.pill,
+  },
+  hostPillText: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    // The size this screen already sets its uppercase labels at, so the pill
+    // reads as the code chip's sibling rather than shouting over it.
+    fontSize: 13,
+    letterSpacing: letterSpacing.label,
+    // The label's letter spacing trails its last letter; pulling it back keeps
+    // the word centred in the pill.
+    marginRight: -letterSpacing.label,
   },
   codeChip: {
     paddingHorizontal: 14,

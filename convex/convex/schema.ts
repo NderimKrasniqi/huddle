@@ -10,6 +10,19 @@ export default defineSchema({
   rooms: defineTable({
     /** The Room Code shown on the TV. Held by at most one room at a time. */
     code: v.string(),
+    /**
+     * The Host: the player who holds room control. A pointer on the room rather
+     * than a flag on a player, because "exactly one host" is a fact about the
+     * room — written this way the invariant is structural, and no sequence of
+     * joins, silences and returns can leave two players wearing the pill or a
+     * transfer half-done.
+     *
+     * Optional because a room is minted by a television before anybody is in
+     * it: the first join fills it (see `joinRoom`), and it stays filled from
+     * then on — an away Host with nobody active to take over keeps it, since a
+     * room with no host is a room that cannot start a game.
+     */
+    hostPlayerId: v.optional(v.id('players')),
     // A room's age is `_creationTime`. The 10-minute expiry clock (Phase 2)
     // starts from the last player leaving rather than from creation, so it will
     // need a field of its own instead of reusing this one.
@@ -21,8 +34,9 @@ export default defineSchema({
   /**
    * A Player: one phone in a room. A player is a nickname on a roster, the
    * Session Token that phone rejoins with, and whether the room is still
-   * hearing from it — the claimed color and the Host flag arrive with the
-   * Phase 2 tasks that own them.
+   * hearing from it — the claimed color arrives with the Phase 2 task that owns
+   * it. Being the Host is not among these: it is the room's `hostPlayerId`,
+   * because it is a fact about the room and not about the player.
    */
   players: defineTable({
     /** The room this player is in. Players never move between rooms. */

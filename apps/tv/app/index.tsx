@@ -149,7 +149,12 @@ function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
           return player === undefined ? (
             <EmptySeat key={`empty-${position}`} />
           ) : (
-            <PlayerSeat key={player.playerId} nickname={player.nickname} away={player.away} />
+            <PlayerSeat
+              key={player.playerId}
+              nickname={player.nickname}
+              away={player.away}
+              host={player.host}
+            />
           );
         })}
       </View>
@@ -174,6 +179,13 @@ function EmptySeat() {
  * claimed color in Phase 2's color-claim task; until a color is claimed there
  * is nothing to claim it with, so the circle stays a plain Boardwalk card face.
  *
+ * The Host's circle is tangerine, which the palette names for exactly this
+ * ("Brand accent, Host avatar"). The handoff's HOST pill belongs to the §3
+ * lobby card and the §5 roster row, and a pill wide enough to read across a
+ * room does not fit a 72px seat — the same measurement that kept the away badge
+ * off this screen. The color says it in the space there is, and moves aside for
+ * the pill when the cards it was drawn for land.
+ *
  * Away dims the face the way Boardwalk dims anything present but not available,
  * and mutes the dot. The nickname is not dimmed with them — it is the one thing
  * on the seat that has to be read from a sofa, and ink at 30% over the screen
@@ -181,10 +193,25 @@ function EmptySeat() {
  * footer count is already set in, which says the same thing and survives the
  * room. The dot stays at full strength, because it is what is doing the saying.
  */
-function PlayerSeat({ nickname, away }: { readonly nickname: string; readonly away: boolean }) {
+function PlayerSeat({
+  nickname,
+  away,
+  host,
+}: {
+  readonly nickname: string;
+  readonly away: boolean;
+  readonly host: boolean;
+}) {
   return (
     <View style={styles.seat}>
-      <View style={[styles.avatar, styles.avatarTaken, away && styles.avatarAway]}>
+      <View
+        style={[
+          styles.avatar,
+          styles.avatarTaken,
+          host && styles.avatarHost,
+          away && styles.avatarAway,
+        ]}
+      >
         <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
       </View>
       {/* A sibling of the circle rather than a child of it. The dot sits half
@@ -390,6 +417,12 @@ const styles = StyleSheet.create({
   avatarTaken: {
     backgroundColor: colors.surface,
     borderColor: colors.ink,
+  },
+  // The palette's own Host avatar color. The monogram stays ink: on tangerine
+  // that is a ~6.6:1 contrast, where white would be ~2.6:1 and unreadable from
+  // a sofa.
+  avatarHost: {
+    backgroundColor: colors.tangerine,
   },
   // Boardwalk's own treatment for something present but not available: the
   // handoff dims a claimed color swatch to 30%, and an away player's face is

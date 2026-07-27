@@ -145,10 +145,36 @@ demoable by force-quitting apps mid-lobby.
   Verified against `convex-test` on a fake clock, and the schema is now pushed
   to the dev deployment — but the real scheduler's punctuality, which the 2s of
   slack exists for, is still reasoned rather than measured.
-- [ ] Host role & auto-transfer — AC: first player to join is flagged Host
+- [x] Host role & auto-transfer — AC: first player to join is flagged Host
   (HOST pill on TV card and roster row) and their phone shows host controls;
   Host disconnects → the longest-connected active player becomes Host within
   15s; original host rejoins → they are a regular player.
+
+  The Host is a pointer on the room (`hostPlayerId`), not a flag on a player, so
+  "exactly one host" is structural rather than maintained. It moves inside
+  `markAway`: a host who has gone quiet is a host who has left, since the room
+  cannot tell those apart, and riding the away check is what makes the handover
+  punctual — the plan's 15s are the 10–13s `AWAY_AFTER_MS` already spends, with
+  the rest left for the scheduler. The successor is the earliest-joined player
+  the room is still hearing from, measured off `lastSeenAt` rather than the
+  `away` flag: with a whole party putting phones down at once, every check comes
+  due together, and the flag would hand the room to a player the room was about
+  to give up on. A room with nobody beating keeps its away host — being away is
+  not resigning, and a hostless room can never be started.
+
+  Both surfaces the AC names are later screens: the HOST pill belongs to the §3
+  TV lobby card and the §5 phone roster row, and the host controls it describes
+  (pick game, settings, start) are Phase 3 tasks. So the role is drawn on the
+  surfaces that exist — the phone's "You're in" screen gets the real pill and is
+  told the room is theirs, everyone else is told whose it is by name (the
+  handoff's §4 copy, which needed the host to be knowable); the TV's 72px
+  pairing seat takes the palette's own Host avatar tangerine, because a pill
+  wide enough to read across a room does not fit it, the same measurement that
+  kept the away badge off that seat. There is nothing yet for a host to press.
+
+  Every client learns the host from the `roster` projection, which is why a
+  handover reaches the new host's phone as a push rather than at its next
+  launch. Verified against `convex-test` on a fake clock.
 - [ ] Color claim — AC: the "You're in" screen shows 10 swatches (palette
   extends the Boardwalk accents to 10 distinct player colors in
   `packages/ui`); tapping claims the color server-side; two players cannot

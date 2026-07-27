@@ -53,7 +53,12 @@ working must add it here.
   footer always draws at least the handoff's four.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
-  active player on disconnect. Plays games like any other player.
+  active player on disconnect. Plays games like any other player. Held as the
+  room's `hostPlayerId` rather than a flag on a player, so a room has exactly
+  one by construction. "Disconnect" is the room's only signal for it — the Host
+  going Away — and "longest-connected" is join order, so a player who dropped
+  out and came back keeps the place they always had. A room whose players have
+  all gone quiet keeps its away Host: being away is not resigning.
 - **Controller** — the phone app. Not "remote".
 - **TV app** — the hub client on the television; a pure renderer of room
   state; holds no player record; untouched after launch.

@@ -8,7 +8,7 @@ import {
 import { ConvexError, v } from 'convex/values';
 
 import { internal } from './_generated/api';
-import type { Id } from './_generated/dataModel';
+import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 
 // A join is refused with a `ConvexError` for the reason `createRoom` throws one
@@ -70,6 +70,76 @@ async function watchForSilence(
   after: number = AWAY_AFTER_MS,
 ): Promise<void> {
   await ctx.scheduler.runAfter(after, internal.players.markAway, { playerId });
+}
+
+/** How long it has been since the room last heard from this player's phone. */
+function silenceOf(player: Doc<'players'>): number {
+  return Date.now() - player.lastSeenAt;
+}
+
+/**
+ * Whether this room has nobody running it — no host named, or one whose player
+ * row is gone.
+ *
+ * The second half is not reachable today: the only thing that deletes players
+ * is room expiry, which takes the room and its pointer with it. It is asked
+ * anyway because the cost of being wrong is not symmetric — a room left holding
+ * a dangling host can never be started by anybody, and no join afterwards would
+ * fix it, whereas the guard is one read on a mutation that happens at most ten
+ * times a room.
+ */
+async function needsHost(ctx: MutationCtx, room: Doc<'rooms'>): Promise<boolean> {
+  return room.hostPlayerId === undefined || (await ctx.db.get(room.hostPlayerId)) === null;
+}
+
+/**
+ * Hands the room to somebody else, if the player who has just gone quiet was
+ * the one running it.
+ *
+ * The successor is the longest-connected player the room is still hearing from:
+ * the `by_room` index reads in join order, so the first such row is the earliest
+ * to have joined. Join order is what "longest-connected" means here — a player
+ * who dropped out and came back has the seat they always had, and ranking by how
+ * long the current run of heartbeats has lasted would move the room around on
+ * every reconnection without telling anybody anything more useful.
+ *
+ * Who counts as still here is asked of `lastSeenAt` and not of the `away` flag,
+ * for the same reason `markAway` asks it that way: the flag is the room's
+ * *published* view of presence and lags a phone going quiet by up to a
+ * scheduled check, and inside a mutation the room knows better. It matters when
+ * a whole party puts its phones down at once — every check comes due at
+ * roughly the same moment, and against the flag the first one to run would hand
+ * the room to a player it was about to give up on, purely because that player's
+ * check had not fired yet.
+ *
+ * A room with nobody still beating keeps the host it has. Handing it to nobody
+ * would leave a room that cannot start a game once its players come back —
+ * being away is not resigning, and a party backgrounding their phones between
+ * rounds must not cost the room its host.
+ */
+async function handOverRoom(ctx: MutationCtx, departing: Doc<'players'>): Promise<void> {
+  const room = await ctx.db.get(departing.roomId);
+
+  if (room === null || room.hostPlayerId !== departing._id) {
+    return;
+  }
+
+  const seated = await ctx.db
+    .query('players')
+    .withIndex('by_room', (q) => q.eq('roomId', departing.roomId))
+    .collect();
+  // The departing player is excluded by id rather than by their own silence,
+  // which is a number this very call was prompted by: the point is that a host
+  // cannot succeed themselves, and that should not rest on arithmetic.
+  const successor = seated.find(
+    (player) => player._id !== departing._id && silenceOf(player) < AWAY_AFTER_MS,
+  );
+
+  if (successor === undefined) {
+    return;
+  }
+
+  await ctx.db.patch(room._id, { hostPlayerId: successor._id });
 }
 
 /**
@@ -171,6 +241,14 @@ export const joinRoom = mutation({
       away: false,
     });
     await watchForSilence(ctx, playerId);
+
+    // The first phone in the room runs it. The read of `room` above is in this
+    // transaction's read set, so two players joining an empty room at the same
+    // instant cannot both find the pointer empty: the second is re-run against
+    // the row the first wrote, and finds the room already has a host.
+    if (await needsHost(ctx, room)) {
+      await ctx.db.patch(room._id, { hostPlayerId: playerId });
+    }
 
     return { playerId, roomId: room._id, code, nickname, sessionToken };
   },
@@ -286,7 +364,7 @@ export const markAway = internalMutation({
       return null;
     }
 
-    const silence = Date.now() - player.lastSeenAt;
+    const silence = silenceOf(player);
 
     if (silence < AWAY_AFTER_MS) {
       // They have beaten since this check was scheduled. Re-arm for the moment
@@ -297,6 +375,13 @@ export const markAway = internalMutation({
     }
 
     await ctx.db.patch(player._id, { away: true });
+    // A host who has gone quiet is a host who has left the party, because the
+    // room has no way to tell those apart. Doing it here rather than on a clock
+    // of its own is what makes the handover punctual: the room passes the room
+    // on at the same moment it gives up on the phone holding it, so the plan's
+    // fifteen seconds are the ten-to-thirteen `AWAY_AFTER_MS` already spends,
+    // with the rest left for the scheduler and the push to the clients.
+    await handOverRoom(ctx, player);
     return null;
   },
 });
@@ -312,14 +397,25 @@ export const markAway = internalMutation({
  *
  * `away` is here because a seat is drawn differently for a player whose phone
  * has gone quiet; `lastSeenAt` is not, because the TV has no clock the room
- * agrees with and no business deciding this.
+ * agrees with and no business deciding this. `host` is here for the same reason
+ * as `away` — and it is what a Controller reads to know whether *it* is the
+ * host, since this is the one live subscription every client in the room
+ * already holds. A phone finding itself by `playerId` on the roster it is on
+ * learns of a handover within a round trip of the room deciding it, which no
+ * one-shot answer at launch could do.
  */
 export const roster = query({
   args: { roomId: v.id('rooms') },
   returns: v.array(
-    v.object({ playerId: v.id('players'), nickname: v.string(), away: v.boolean() }),
+    v.object({
+      playerId: v.id('players'),
+      nickname: v.string(),
+      away: v.boolean(),
+      host: v.boolean(),
+    }),
   ),
   handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
     const seated = await ctx.db
       .query('players')
       .withIndex('by_room', (q) => q.eq('roomId', args.roomId))
@@ -329,6 +425,7 @@ export const roster = query({
       playerId: player._id,
       nickname: player.nickname,
       away: player.away,
+      host: player._id === room?.hostPlayerId,
     }));
   },
 });
