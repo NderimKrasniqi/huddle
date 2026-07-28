@@ -574,11 +574,28 @@ it.
   bundler inlining something from outside it. And the handoff's swipe (§7,
   "Swipe or tap arrows") is not implemented — the arrows are, the hint text
   promises both, and with one installed game there is nothing to swipe to.
-- [ ] Trivia reducer with flat scoring — AC (unit tests, using a 3-question
+- [x] Trivia reducer with flat scoring — AC (unit tests, using a 3-question
   inline set): each question presents 4 options with exactly 1 correct; a
   correct answer scores +100, wrong or no answer +0; with players A and B
   where A answers 3/3 correctly and B answers 1/3, final scores are A=300,
   B=100; after the last reveal the game emits a finished state ordered A, B.
+
+  What this does not carry: any seated phone can end the beat for the whole
+  room. `advanced` discards the event's playerId, and a game module is
+  deliberately never told who the Host is, so authority over `advance` is the
+  hub's problem and is not solved here.
+
+  The question list, `correctIndex` included, rides in `game.state`, which the
+  public `running` query in `convex/convex/games.ts` hands to every phone
+  before the reveal. It leaks nothing today, because the phones bundle
+  `INLINE_QUESTIONS` themselves — but Phase 4's server-side packs would be
+  leaked by that same line, and the pack is rewritten into the room document on
+  every answer event.
+
+  Two things the screen tasks below need from here: the reveal does not move to
+  the next question by itself, and a sender of `advance` must read the state it
+  is looking at in order to address the event — the beat it is ending, not
+  "now".
 - [ ] Phone answer screen — AC: 4 large buttons matching the TV's option
   colors/shapes; tapping locks the answer (buttons disable, "locked in"
   shown); a second tap changes nothing; answering before the question is

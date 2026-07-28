@@ -26,12 +26,20 @@ describe('the trivia Game Module', () => {
     expect(triviaGameModule.metadata.estimatedMinutes).toBeGreaterThan(0);
   });
 
-  it('starts with the players it was given', () => {
+  it('starts with the players it was given on the scoreboard', () => {
+    // The module is the rules plus its screens, so this is `./logic`'s factory
+    // reached through what the clients actually mount. What that state *is* is
+    // logic.test.ts's business; that it carries the room's players is the part
+    // the hub depends on, since the hub hands the players over and never looks
+    // at the state again.
     const state = triviaGameModule.createInitialState({
       players: [player('p1', 'Ada'), player('p2', 'Grace')],
       settings: undefined,
     });
 
-    expect(state.playerIds).toEqual(['p1', 'p2']);
+    expect(state.standings).toEqual([
+      { playerId: 'p1', score: 0 },
+      { playerId: 'p2', score: 0 },
+    ]);
   });
 });

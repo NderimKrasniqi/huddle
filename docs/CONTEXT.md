@@ -208,8 +208,28 @@ working must add it here.
 - **Question Pack** — versioned data file of trivia questions (text, 4
   options, correctIndex, category, difficulty). The only way trivia gets
   content; every future source emits packs. Not "quiz".
+- **Inline Questions** — the three questions written into the trivia module
+  (`INLINE_QUESTIONS`) that every game is dealt until Phase 4's curated pack
+  replaces them. Deliberately not a Question Pack: a pack is a versioned file
+  with an id and a category on every question, and these are three questions
+  inline so the rules could be built and played before that format existed.
 - **Reveal** — the post-question moment showing the correct option and who
-  scored, followed by the running scoreboard.
+  scored, followed by the running scoreboard. One of trivia's three phases
+  (`question`, `reveal`, `finished`), which is where a game of it is.
+- **Advance** — trivia's "the room moves on from what is on screen": it ends a
+  reveal, or ends a question the room has stopped waiting on (whoever has not
+  answered scores what a wrong answer scores). A Game Event like an answer,
+  because a reducer has no clock — Phase 4's question timer is what will send it
+  unprompted. Addressed to the beat it ends (the question *and* the phase), the
+  way an answer is addressed to its question: nothing owns the signal, so every
+  source of it races every other, and a bare "move on" arriving a beat late
+  would reveal a question the room has not read yet and cost it the scores from
+  it. Named that way, the second of two thumbs a beat apart does nothing.
+- **Standings** — trivia's scoreboard as its state holds it: one row per player,
+  highest score first, ties left in the order they already had. Ordered once in
+  the rules rather than on each screen, so the running scoreboard, the Victory
+  Screen and the finished state cannot disagree about who is winning. It is also
+  who is playing: every player has a row from the first question.
 - **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
   or `speed` (`100 + round(100 × secondsRemaining / 20)`).
 - **Victory Screen** — end-of-game final standings on the TV; ties share the

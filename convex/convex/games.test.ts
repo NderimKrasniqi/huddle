@@ -78,10 +78,14 @@ describe('the Host starting a game', () => {
     const roster = await t.query(api.players.roster, { roomId });
 
     expect(running?.gameId).toBe('trivia');
-    // Trivia's opening state is the players it was started with, in roster
-    // order — which is what says the module's own factory ran, and that the hub
-    // did not invent a state of its own.
-    expect(running?.state).toEqual({ playerIds: roster.map((seat) => seat.playerId) });
+    // Trivia opens on its first question with the room's players on the
+    // scoreboard in roster order — which is what says the module's own factory
+    // ran, and that the hub did not invent a state of its own. The rest of that
+    // state is trivia's business and is tested where its rules are.
+    expect(running?.state.phase).toBe('question');
+    expect(running?.state.standings).toEqual(
+      roster.map((seat) => ({ playerId: seat.playerId, score: 0 })),
+    );
   });
 
   it('refuses a game the Registry does not install', async () => {

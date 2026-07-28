@@ -1,6 +1,6 @@
 import type { GameModule } from '@huddle/game-core';
 
-import { triviaGameLogic, type TriviaState } from './logic';
+import { triviaGameLogic, type TriviaEvent, type TriviaState } from './logic';
 
 /**
  * Trivia: the first Game Module, and the reason the interface exists.
@@ -11,7 +11,7 @@ import { triviaGameLogic, type TriviaState } from './logic';
  * (docs/implementation-plan.md): the four answer buttons on the phone, the
  * question and reveal screens on the TV.
  */
-export const triviaGameModule: GameModule<TriviaState> = {
+export const triviaGameModule: GameModule<TriviaState, TriviaEvent> = {
   ...triviaGameLogic,
   screens: {
     // The TV question, reveal and scoreboard screens, and the phone's four
