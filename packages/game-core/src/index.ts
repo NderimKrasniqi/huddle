@@ -1,10 +1,28 @@
-// The Game Module interface (metadata, settings schema, initial-state factory,
-// reduce(state, event), TV/Controller screens) lands here in Phase 3. See
-// docs/implementation-plan.md. Until then this package holds the room types the
-// hub and the game modules share.
 export type { ColorRejection } from './color-rejection';
+// The Game Module interface: the whole of what the hub knows about a game, and
+// the reason a second game is an entry in the Registry rather than a change to
+// the hub.
+export type {
+  ControllerGameScreenProps,
+  GameEvent,
+  GameKeyArt,
+  GameMetadata,
+  GameModule,
+  GamePlayer,
+  GamePlayerId,
+  GameRegistry,
+  GameSetting,
+  GameSettingOption,
+  GameSettingsSchema,
+  GameSetup,
+  PlayerRange,
+  TvGameScreenProps,
+} from './game-module';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
 export type { JoinRejection } from './join-rejection';
+// The names only, as with the player colors below: a module declares the color
+// its Key Art wears, and `packages/ui` says what that color is.
+export { KEY_ART_COLOR_NAMES, type KeyArtColorName } from './key-art';
 export { NICKNAME_MAX_LENGTH } from './nickname';
 // The names only: what a swatch looks like is Boardwalk's business, and lives
 // in `packages/ui`, which keys its palette off this list.

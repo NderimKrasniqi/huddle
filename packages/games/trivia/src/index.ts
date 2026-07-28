@@ -1,3 +1,3 @@
-// Placeholder: the trivia Game Module lands here in Phase 3 — it is the first
-// implementation of the game-core interface. See docs/implementation-plan.md.
-export {};
+// Trivia: the first Game Module behind game-core's interface. The Registry
+// (`@huddle/game-registry`) is what installs it in the hub.
+export { triviaGameModule, type TriviaState } from './trivia';

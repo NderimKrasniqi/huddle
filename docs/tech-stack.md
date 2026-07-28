@@ -30,8 +30,8 @@ packages for game modules and the protocol.
 ### Monorepo
 - **Choice:** pnpm workspaces: `apps/tv`, `apps/controller`, `convex/`,
   `packages/game-core` (module interface, room/event types),
-  `packages/games/trivia`, `packages/packs` (question-pack schema + the curated
-  pack).
+  `packages/game-registry` (the installed modules), `packages/games/trivia`,
+  `packages/packs` (question-pack schema + the curated pack).
 - **Why:** Scope's foundation requirements (game modules beside the platform,
   packs as data) are directory boundaries, enforced from day one. pnpm is free
   and fast; Expo supports it.
@@ -92,6 +92,13 @@ packages for game modules and the protocol.
   at compile time. Pack validation runs in CI so a typo'd question can't ship.
 - **Alternatives considered:** Hand-rolled checks — drift from types;
   ArkType/Valibot — fine tools, smaller ecosystems, no advantage here.
+- **Notes that cost time if forgotten:**
+  - **A game's Settings Schema is not a Zod schema.** It is a declaration the
+    hub *renders* — labelled options with a default — because the scope makes
+    the Host's settings UI generic, and a validator does not carry labels or an
+    order to draw them in. Zod stays where it was chosen for: the pack format
+    and the payloads crossing a Convex function boundary, including the settings
+    a Host sends back.
 
 ### UI & Styling
 - **Choice:** React Native `StyleSheet` with a shared theme package

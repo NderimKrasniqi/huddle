@@ -369,12 +369,54 @@ demoable by force-quitting apps mid-lobby.
 Goal: a complete playable trivia game with flat scoring on a small inline
 question set — and the game-module interface exists because trivia is behind
 it.
-- [ ] Game-module interface in `game-core` — AC: interface exposes metadata
+- [x] Game-module interface in `game-core` — AC: interface exposes metadata
   (id, title, key-art treatment, player range, est. duration, category),
   settings schema, initial-state factory, `reduce(state, event)`, and TV/phone
   screen components; the hub renders purely from the registry (trivia is the
   only entry); a compile-time test instantiates a dummy module against the
   interface.
+
+  `GameModule<State, Event, Settings>` holds all three of a game's own types,
+  and the hub holds all three opaquely. The members that touch them are
+  declared as *methods* rather than properties, which makes their assignment
+  bivariant — the deliberate hole that lets a `GameModule<TriviaState, …>` sit
+  in a `readonly GameModule[]`. It is a hole, and it is the only way one array
+  holds games of unrelated shapes; what the hub does through it is store and
+  reload a state it never reads.
+
+  The Registry is its own package, `@huddle/game-registry`, because the
+  dependencies point the wrong way for it to live in game-core: every module
+  depends on the interface, so the list of modules cannot sit beside it without
+  a cycle — and the TV, the Controller and the Convex mutations all read it, so
+  it belongs to none of them either.
+
+  Two decisions the plan did not settle. A Settings Schema is a *declaration*
+  the hub renders — labelled options with a default — not a Zod schema, because
+  a validator carries neither labels nor the order to draw them in; Zod keeps
+  the pack format and the function boundary. And every Game Event names its
+  player (`GameEvent`), so one generic mutation can carry any game's event —
+  but the name is a claim, filled in server-side from the Session Token, never
+  believed from the phone.
+
+  **The compile-time test bites, checked rather than assumed.** A Coin Toss
+  module built against the interface — state, event and settings deliberately
+  unlike trivia's — plus five `@ts-expect-error` cases. Mutating the interface
+  five ways (optional `estimatedMinutes`, dropping the `Event extends
+  GameEvent` constraint, widening `reduce`'s return to `unknown`, widening the
+  key-art color to `string`, widening the TV screen's state to `any`) each
+  turned a case into `TS2578: Unused '@ts-expect-error' directive`. Two of
+  those were re-run independently at review; the files restored byte-identical.
+
+  What this does not carry: the AC's "hub renders purely from the registry" is
+  true structurally — the registry is the only place in Huddle that names a
+  game, grep-verified across `apps/` and `convex/` — but no hub surface draws a
+  game yet, so the *rendering* half is only demonstrated by the carousel task
+  below. Trivia's entry is metadata and an honest zero: an empty settings
+  schema, a `reduce` that returns the state it was given, and screens that draw
+  nothing, each commented with the task that fills it. Its `estimatedMinutes`
+  is 5 rather than the handoff's "~12 min" chip, read as mock filler: ten
+  questions at a 20s countdown and a 5s reveal is about five minutes, and the
+  chip draws whatever the module declares.
 - [ ] Room state machine & game lifecycle — AC: room states are `lobby →
   in-game → lobby`; Host selects trivia and starts → TV and all phones switch
   to trivia screens within 1s; Host "End game" mid-game → everyone returns to

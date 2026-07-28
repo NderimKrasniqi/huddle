@@ -130,12 +130,37 @@ working must add it here.
   which is the permanent fact that this screen watched the seat being taken;
   Just Joined is the four seconds that fact earns, counted by the seat itself.
 - **Game Module** — a self-contained game implementation behind the game-core
-  interface (metadata, settings schema, reducer, TV/phone screens). Games are
-  modules; the hub never contains game logic.
+  interface (`GameModule`: metadata, settings schema, initial-state factory,
+  reducer, TV/Controller screens). Games are modules; the hub never contains
+  game logic. Its state, event and settings types are its own, and the hub
+  holds all three opaquely — which is why the interface's members that touch
+  them are declared as methods, so a `GameModule<TriviaState, …>` sits in a
+  list of `GameModule<unknown, …>`.
+- **Game Metadata** — everything the hub can say about a game without playing
+  it, and the whole of its carousel card: id (what a room stores when a game is
+  picked), title, Key Art, player range, estimated minutes, and the genre
+  category chip. A game's category is not a Question Pack's category.
+- **Key Art** — a Game Module's card face: a flat block of Boardwalk color with
+  its Bungee title on it, and the only say a module has over how it is drawn.
+  game-core names the five colors it may wear (`KEY_ART_COLOR_NAMES`, the
+  Boardwalk accents), `packages/ui` holds their values — the split the Player
+  Palette already uses.
+- **Game Event** — what a player did, as the Reducer receives it. Its shape is
+  the module's own but every one of them names the player it came from
+  (`GameEvent`), because that is the one thing the hub can settle generically:
+  a Controller presents its Session Token and the room turns it into a player.
+  A phone naming itself is a claim, never an identification.
 - **Registry** — the list of installed game modules the hub renders (carousel,
-  metadata). Adding a game = adding a registry entry.
+  metadata), held in order because the carousel browses it by index. Adding a
+  game = adding a registry entry. It is `packages/game-registry` and not part
+  of game-core because every module depends on the interface, so the list of
+  modules cannot sit beside it without a cycle. The only place in Huddle that
+  names a game.
 - **Settings Schema** — a game module's declaration of its host-tunable
-  options; the hub renders settings UI generically from it.
+  options; the hub renders settings UI generically from it. Each option is a
+  labelled key with a closed list of labelled values and a default among them,
+  which is what every setting Huddle has scoped is and what a generic screen
+  can draw without the game telling it how.
 - **Reducer** — a game module's pure `reduce(state, event)` rules function;
   runs server-side in Convex mutations.
 - **Question Pack** — versioned data file of trivia questions (text, 4

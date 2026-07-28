@@ -11,8 +11,13 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "//peerDependencies": "React is a type-only dependency: the Game Module interface types a game's two screens, and a screen is a React component. Nothing in this package imports a value from React, which is what keeps it runnable under plain Node.",
+  "peerDependencies": {
+    "react": "*"
+  },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "@types/react": "~19.2.17",
     "typescript": "~5.9.3"
   }
 }

@@ -1,0 +1,22 @@
+{
+  "name": "@huddle/game-registry",
+  "version": "0.1.0",
+  "private": true,
+  "//description": "It is a package of its own rather than a file in game-core because the dependencies point the other way: every Game Module depends on the interface, so the list of installed modules cannot live beside it without a cycle. The TV app, the Controller and the Convex mutations all read it, which is what keeps it out of any one of them.",
+  "description": "The Registry: the installed Game Modules the hub renders.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@huddle/game-core": "workspace:*",
+    "@huddle/game-trivia": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

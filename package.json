@@ -16,6 +16,7 @@
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
     "@huddle/game-core": "workspace:*",
+    "@huddle/game-registry": "workspace:*",
     "@huddle/game-trivia": "workspace:*",
     "@huddle/packs": "workspace:*",
     "@huddle/ui": "workspace:*",
