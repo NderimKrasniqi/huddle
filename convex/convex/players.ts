@@ -12,6 +12,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
+import { watchForDesertion } from './rooms';
 import { playerColorValidator } from './schema';
 
 // A join is refused with a `ConvexError` for the reason `createRoom` throws one
@@ -268,9 +269,12 @@ export const joinRoom = mutation({
  *
  * The room is read too, and a token whose room is gone answers `null`: the
  * Controller cannot draw the Room Code chip without it, and a seat in a room
- * that no longer exists is not a seat. Room expiry (Phase 2) deletes players
- * with their room, so this is a guard against the order of a deletion rather
- * than an expected state.
+ * that no longer exists is not a seat. A phone whose room expired therefore
+ * comes back to the Join Screen — which is the whole of what a player has to do
+ * about a party that ended while their phone was in a pocket. `expireRoom`
+ * deletes the players with the room in one transaction, so the half-deleted
+ * state this guards against is an ordering nobody can observe rather than one
+ * anybody reaches.
  */
 export const session = query({
   args: { sessionToken: v.string() },
@@ -385,6 +389,11 @@ export const markAway = internalMutation({
     // fifteen seconds are the ten-to-thirteen `AWAY_AFTER_MS` already spends,
     // with the rest left for the scheduler and the push to the clients.
     await handOverRoom(ctx, player);
+    // And if there is nobody left to hand it to at all, the room starts its own
+    // ten minutes. This is where it belongs for the same reason the handover is
+    // here: going quiet is the only thing a room ever learns about a phone, so
+    // the last phone going quiet is the only "everybody has left" it can have.
+    await watchForDesertion(ctx, player.roomId);
     return null;
   },
 });

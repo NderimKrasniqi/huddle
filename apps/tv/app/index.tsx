@@ -9,6 +9,7 @@ import {
   letterSpacing,
   minBodyFontSize,
   opacity,
+  playerFace,
   playerInitials,
   radius,
   shadowDepth,
@@ -16,13 +17,28 @@ import {
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
-import type { FunctionReturnType } from 'convex/server';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-import { openRoom, type OpenRoom } from '../src/room';
-import { footerSeatCount, rosterFooterText, seat } from '../src/roster';
+import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
+import { closeExpiredRoom, deployed, openRoom } from '../src/room';
+import {
+  keepOpeningRoom,
+  type OpenRoom,
+  type RoomOpening,
+  roomOpeningAtLaunch,
+  type RoomOpeningCaption,
+  roomOpeningCaption,
+} from '../src/room-opening';
+import {
+  footerSeatCount,
+  type RosterSeat,
+  rosterFooterText,
+  seat,
+  seatHighlight,
+  type SeatHighlight,
+} from '../src/roster';
 import { TvStage } from '../src/tv-stage';
 
 /** The QR's edge, per the handoff ("~196px QR"). */
@@ -32,10 +48,32 @@ const QR_SIZE = 196;
 const FOOTER_TEXT_LINE = 28;
 
 /**
- * One taken seat of the TV's roster, taken from the query that serves it — the
- * TV draws what the backend says a seat is, and never its own idea of one.
+ * How a seat wears its news: Boardwalk's accent offset shadow, which is the
+ * system's own way of highlighting a card — the handoff's signature rules give
+ * the "JUST JOINED!" card an 8px shadow in punch pink.
+ *
+ * It rides the shadow rather than the border, where the §3 lobby card puts it,
+ * because on a card the border is spare and on a seat it is not: the circle's
+ * fill is the player's claimed color and its ink border is what makes the circle
+ * a Boardwalk object at all. The shadow — offset outside the circle, onto the
+ * screen's cream — is the one channel none of the ten fills can collide with.
+ *
+ * The Host's tangerine moves here from the circle's fill for that same reason.
+ * The fill now says who a player is, and `tangerine` is one of the ten colors
+ * anybody can claim, so a Host wearing it as a fill was about to be
+ * indistinguishable from whoever claimed it. The palette still names tangerine
+ * for the Host ("Brand accent, Host avatar"), and the HOST pill it stands in for
+ * still waits on the §3 lobby card, which has the width to draw one.
  */
-type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
+const seatHighlightShadow: Record<
+  SeatHighlight,
+  { readonly depth: number; readonly color: string }
+> = {
+  justJoined: { depth: shadowDepth.tvCardHighlight, color: colors.punch },
+  // A step shallower than an arrival, so a phone landing mid-party visibly
+  // lifts above the seat that is merely running the room.
+  host: { depth: shadowDepth.tvCard, color: colors.tangerine },
+};
 
 /**
  * The TV — Pairing screen (docs/design/design-handoff.md §1): the Room Code in
@@ -43,8 +81,8 @@ type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
  * roster filling up underneath.
  */
 export default function TvPairingScreen() {
-  const { room, failed } = useOpenedRoom();
-  const roster = useRoster(room);
+  const { opening, reopen } = useRoomOpening();
+  const room = opening.kind === 'open' ? opening.room : undefined;
 
   return (
     <TvStage>
@@ -65,17 +103,24 @@ export default function TvPairingScreen() {
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
             </StickerSurface>
             <RoomCodeTiles code={room?.code} />
-            <Text style={styles.caption}>
-              {failed
-                ? 'Could not open a room — check the Huddle backend and relaunch.'
-                : 'Open Huddle on your phone and enter this code'}
-            </Text>
+            <PairingCaption caption={roomOpeningCaption(opening)} />
           </View>
 
           <RoomQrCard code={room?.code} />
         </View>
 
-        <RosterFooter roster={roster} />
+        {/* The screen's live subscriptions only exist once there is a room to
+            subscribe to — and a room can only be open on a launch that has a
+            Convex client for `ConvexProvider` to provide. Until then the footer
+            draws its empty seats from nothing. */}
+        {room === undefined ? (
+          <RosterFooter roster={[]} arrivals={undefined} />
+        ) : (
+          // Keyed by the room, so a room that expires takes its seats and
+          // everything this screen watched happen in it away with it: the
+          // replacement starts as empty as a pairing screen on a fresh launch.
+          <OpenRoomFooter key={room.roomId} room={room} onExpired={reopen} />
+        )}
       </View>
     </TvStage>
   );
@@ -107,6 +152,35 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   );
 }
 
+/**
+ * The line under the tiles: the invitation to join, or — when there is no code
+ * to join with — what has gone wrong, as a Boardwalk status chip.
+ *
+ * Trouble is promoted from the caption's quiet muted line to a bordered yellow
+ * pill because of who is reading it and when: four blank code tiles are the
+ * least explicable thing this app can put on a television, and the sentence
+ * explaining them competes with a hero the size of the screen. The chip is
+ * assembled from parts the system already has — the handoff's chip accent, its
+ * pill radius, a TV card's 4px ink border and 6px offset shadow, a sticker tilt
+ * that leans against the badge above it — because the handoff draws no failure
+ * state for this screen at all (it draws a TV that is working).
+ */
+function PairingCaption({ caption }: { readonly caption: RoomOpeningCaption }) {
+  if (!caption.trouble) {
+    return <Text style={styles.caption}>{caption.text}</Text>;
+  }
+
+  return (
+    <StickerSurface
+      depth={shadowDepth.tvCard}
+      style={styles.troubleChip}
+      wrapperStyle={styles.troubleChipTilt}
+    >
+      <Text style={styles.troubleChipText}>{caption.text}</Text>
+    </StickerSurface>
+  );
+}
+
 /** The Join Link as a QR: scanning it opens the Controller straight into the room. */
 function RoomQrCard({ code }: { readonly code: string | undefined }) {
   return (
@@ -131,6 +205,29 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
 }
 
 /**
+ * The footer of a screen that has a room: its roster, live, and a watch on the
+ * room itself in case it ends.
+ *
+ * Both subscriptions are here rather than on the screen because this is the only
+ * part of it that is mounted once a room is open, which is what keeps them — and
+ * the `ConvexProvider` they need above them — out of a launch that never reached
+ * a backend.
+ */
+function OpenRoomFooter({
+  room,
+  onExpired,
+}: {
+  readonly room: OpenRoom;
+  readonly onExpired: (expired: OpenRoom) => void;
+}) {
+  const roster = useRoster(room);
+  const arrivals = useArrivals(roster);
+  useRoomExpiry(room, onExpired);
+
+  return <RosterFooter roster={roster ?? []} arrivals={arrivals} />;
+}
+
+/**
  * The roster under the code: a seat per player, and dashed empty ones for as
  * long as the room looks empty. A player's seat carries their nickname because
  * that is the point of the screen — the room's own name for them, up on the TV,
@@ -140,7 +237,13 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
  * from it: the room still holds their place, and the count under the seats is
  * how many phones are in the room, not how many are awake.
  */
-function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
+function RosterFooter({
+  roster,
+  arrivals,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly arrivals: Arrivals | undefined;
+}) {
   return (
     <View style={styles.footer}>
       <View style={styles.seats}>
@@ -150,10 +253,12 @@ function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
             <EmptySeat key={`empty-${position}`} />
           ) : (
             <PlayerSeat
+              // Keyed by the player, so a seat belongs to one of them for as
+              // long as they are in the room: it is the seat's own mount that
+              // starts the four seconds below.
               key={player.playerId}
-              nickname={player.nickname}
-              away={player.away}
-              host={player.host}
+              player={player}
+              arrived={arrivals !== undefined && isArrival(arrivals, player.playerId)}
             />
           );
         })}
@@ -173,47 +278,58 @@ function EmptySeat() {
 }
 
 /**
- * A player in their seat: Boardwalk's avatar circle with Bungee initials, the
- * nickname under it, and the handoff's status dot on the circle's edge — green
- * while the room is hearing from their phone. The circle takes the player's
- * claimed color in Phase 2's color-claim task; until a color is claimed there
- * is nothing to claim it with, so the circle stays a plain Boardwalk card face.
+ * A player in their seat: their claimed color as the circle, their initials on
+ * it in Bungee, the nickname under it, and the handoff's status dot on the
+ * circle's edge — green while the room is hearing from their phone.
  *
- * The Host's circle is tangerine, which the palette names for exactly this
- * ("Brand accent, Host avatar"). The handoff's HOST pill belongs to the §3
- * lobby card and the §5 roster row, and a pill wide enough to read across a
- * room does not fit a 72px seat — the same measurement that kept the away badge
- * off this screen. The color says it in the space there is, and moves aside for
- * the pill when the cards it was drawn for land.
+ * The circle is a plain Boardwalk card face until a color is claimed, because a
+ * player is seated the moment they join and the picker is the next screen their
+ * phone shows them; `playerFace` is where both answers live, so a seat and the
+ * hero avatar on that phone are never the same player in two different colors.
+ * The monogram's own color comes with the fill: one ink cannot be read on all
+ * ten (see `packages/ui/src/player-colors.ts`).
+ *
+ * Whatever else the seat has to say rides the offset shadow — an arrival in
+ * punch pink, the Host in tangerine — for the reasons `seatHighlightShadow`
+ * gives. An ordinary seat has no shadow at all, which is how the handoff draws
+ * the footer's circles.
  *
  * Away dims the face the way Boardwalk dims anything present but not available,
- * and mutes the dot. The nickname is not dimmed with them — it is the one thing
- * on the seat that has to be read from a sofa, and ink at 30% over the screen
- * color falls below any legible contrast. It takes the muted text color the
- * footer count is already set in, which says the same thing and survives the
- * room. The dot stays at full strength, because it is what is doing the saying.
+ * and mutes the dot; the dimming goes on the wrapper so that a Host's shadow
+ * fades with the circle it falls from. The nickname is not dimmed with them —
+ * it is the one thing on the seat that has to be read from a sofa, and ink at
+ * 30% over the screen color falls below any legible contrast. It takes the
+ * muted text color the footer count is already set in, which says the same
+ * thing and survives the room. The dot stays at full strength, because it is
+ * what is doing the saying.
  */
 function PlayerSeat({
-  nickname,
-  away,
-  host,
+  player,
+  arrived,
 }: {
-  readonly nickname: string;
-  readonly away: boolean;
-  readonly host: boolean;
+  readonly player: RosterSeat;
+  readonly arrived: boolean;
 }) {
+  const { nickname, away, color } = player;
+  const justJoined = useJustJoined(arrived);
+  const face = playerFace(color);
+  const highlight = seatHighlight(player, justJoined);
+  const news = highlight === undefined ? undefined : seatHighlightShadow[highlight];
+
   return (
     <View style={styles.seat}>
-      <View
-        style={[
-          styles.avatar,
-          styles.avatarTaken,
-          host && styles.avatarHost,
-          away && styles.avatarAway,
-        ]}
+      <StickerSurface
+        // No news, no shadow: a seat with nothing to say is the flat circle the
+        // handoff's pairing footer draws.
+        depth={news?.depth ?? 0}
+        shadowColor={news?.color}
+        style={[styles.avatar, styles.avatarTaken, { backgroundColor: face.fill }]}
+        wrapperStyle={away ? styles.avatarAway : undefined}
       >
-        <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
-      </View>
+        <Text style={[styles.avatarInitials, { color: face.monogram }]}>
+          {playerInitials(nickname)}
+        </Text>
+      </StickerSurface>
       {/* A sibling of the circle rather than a child of it. The dot sits half
           off the circle's edge, which is precisely the geometry a rounded
           parent would be entitled to clip; positioning it against the seat
@@ -227,39 +343,63 @@ function PlayerSeat({
 }
 
 /**
- * The room this TV opened. `openRoom` is memoised for the life of the app, so
- * this effect re-running — StrictMode, Fast Refresh, a remount — reads the same
- * room rather than minting another one.
+ * How the room this TV shows is getting on: opening, reconnecting, open, or
+ * never going to open because this build has no deployment — and `reopen`, for
+ * when the room that was open has expired and the screen needs another.
+ *
+ * `keepOpeningRoom` owns the retrying, and `openRoom` is memoised outside React
+ * — so this effect re-running (StrictMode, Fast Refresh, a remount) rejoins the
+ * attempt already in flight or reads the room already opened, rather than
+ * minting another one. `reopen` is the one thing that clears that memo, which is
+ * why it is also what starts the effect over: from here on the launch is exactly
+ * as it was at the beginning, minus a room that no longer exists.
  */
-function useOpenedRoom(): { room: OpenRoom | undefined; failed: boolean } {
-  const [room, setRoom] = useState<OpenRoom>();
-  const [failed, setFailed] = useState(false);
+function useRoomOpening(): {
+  readonly opening: RoomOpening;
+  readonly reopen: (expired: OpenRoom) => void;
+} {
+  /** How many rooms this screen has watched end — the trigger, not a statistic. */
+  const [roomsEnded, setRoomsEnded] = useState(0);
+  const [opening, setOpening] = useState<RoomOpening>(() => roomOpeningAtLaunch(deployed));
 
-  useEffect(() => {
-    let watching = true;
+  useEffect(
+    () => (deployed ? keepOpeningRoom(openRoom, setOpening) : undefined),
+    // `deployed` is fixed at bundle time, so the only thing that ever opens a
+    // second room is the first one expiring.
+    [roomsEnded],
+  );
 
-    openRoom().then(
-      (opened) => {
-        if (watching) {
-          setRoom(opened);
-        }
-      },
-      (error: unknown) => {
-        // The TV has no other channel to complain through, and the screen
-        // itself only has room for the short version.
-        console.error('Huddle TV could not open a room:', error);
-        if (watching) {
-          setFailed(true);
-        }
-      },
-    );
-
-    return () => {
-      watching = false;
-    };
+  const reopen = useCallback((expired: OpenRoom) => {
+    closeExpiredRoom(expired);
+    setOpening(roomOpeningAtLaunch(deployed));
+    setRoomsEnded((ended) => ended + 1);
   }, []);
 
-  return { room, failed };
+  return { opening, reopen };
+}
+
+/**
+ * Watches the room this TV is showing for the end of it.
+ *
+ * A room whose party has gone is deleted ten minutes later, and nobody is going
+ * to touch the television about it — so the news has to arrive as a push, which
+ * is what this subscription is. Until it does, the screen is showing a Room Code
+ * that belongs to no room: the worst thing a pairing screen can display, because
+ * it fails silently in the hands of whoever types it.
+ *
+ * It cannot be read off the roster, which is the subscription this screen
+ * already holds: an expired room and a room nobody has joined are the same empty
+ * roster, and they want opposite treatment.
+ */
+function useRoomExpiry(room: OpenRoom, onExpired: (expired: OpenRoom) => void): void {
+  const stillOpen = useQuery(api.rooms.stillOpen, { roomId: room.roomId });
+
+  useEffect(() => {
+    // `undefined` is the moment before the first answer, which says nothing.
+    if (stillOpen === false) {
+      onExpired(room);
+    }
+  }, [stillOpen, room, onExpired]);
 }
 
 /**
@@ -268,16 +408,61 @@ function useOpenedRoom(): { room: OpenRoom | undefined; failed: boolean } {
  * than on a poll the TV would have to be awake for — the roster redraws within
  * a round trip of the phone's tap.
  *
- * Until the room is open there is nothing to subscribe to, and an unopened room
- * and an empty one draw the same seats anyway.
+ * The moment before the first answer lands is the `undefined` this hands on
+ * rather than flattening to an empty room: a screen that has not been told who
+ * is here is not a screen that has been told nobody is, and `useArrivals` is
+ * the part of this one that has to tell the difference.
  */
-function useRoster(room: OpenRoom | undefined): readonly RosterSeat[] {
-  const roster = useQuery(
-    api.players.roster,
-    room === undefined ? 'skip' : { roomId: room.roomId },
-  );
+function useRoster(room: OpenRoom): readonly RosterSeat[] | undefined {
+  return useQuery(api.players.roster, { roomId: room.roomId });
+}
 
-  return roster ?? [];
+/**
+ * Who this screen has watched arrive, kept up with the roster.
+ *
+ * Folded during render rather than in an effect, because it is derived from the
+ * roster and nothing else: the first snapshot to land is the baseline, and every
+ * one after it is compared with what was already on the screen. `noteArrivals`
+ * hands back the identical value whenever a snapshot seats nobody — which is
+ * most of them, since claiming a color and going away both push a fresh roster —
+ * so this settles on the render after a join and holds still through everything
+ * else.
+ */
+function useArrivals(roster: readonly RosterSeat[] | undefined): Arrivals | undefined {
+  const [arrivals, setArrivals] = useState<Arrivals>();
+  const noted = roster === undefined ? arrivals : noteArrivals(arrivals, roster);
+
+  if (noted !== arrivals) {
+    setArrivals(noted);
+  }
+
+  return noted;
+}
+
+/**
+ * A seat's four seconds of "JUST JOINED!", counted from the moment the seat
+ * appears — which is this component mounting, since the footer keys a seat to
+ * its player.
+ *
+ * The screen holds a clock nobody has to agree with, so this is a timer rather
+ * than a timestamp: a seat settles when nothing at all has happened, and nothing
+ * happening is precisely what a live query never reports. A seat the screen did
+ * not watch arrive never starts one.
+ */
+function useJustJoined(arrived: boolean): boolean {
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (!arrived) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setSettled(true), JUST_JOINED_MS);
+
+    return () => clearTimeout(timer);
+  }, [arrived]);
+
+  return arrived && !settled;
 }
 
 // Every measurement below is the handoff's own, at its 1280×720 design size;
@@ -356,6 +541,27 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     fontSize: 22,
   },
+  // The caption's slot, in Boardwalk's chip accent, when the news is that
+  // nothing is working: a TV card's border and shadow because it is on a TV,
+  // and the pill radius every Boardwalk label wears.
+  troubleChip: {
+    paddingHorizontal: 26,
+    paddingVertical: 10,
+    backgroundColor: colors.yellow,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.pill,
+  },
+  troubleChipTilt: {
+    transform: [{ rotate: stickerTilt.statusChip }],
+  },
+  troubleChipText: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    // The caption's own size, which is well past the 18px a TV allows: this is
+    // the one line on the screen that has to be read and acted on.
+    fontSize: 22,
+  },
 
   qrCard: {
     alignItems: 'center',
@@ -414,15 +620,11 @@ const styles = StyleSheet.create({
     borderColor: colors.mutedBorder,
     borderStyle: 'dashed',
   },
+  // The fill is the player's claimed color and arrives with the seat; the ink
+  // border is what every Boardwalk surface is drawn with, and stays put through
+  // all ten of them.
   avatarTaken: {
-    backgroundColor: colors.surface,
     borderColor: colors.ink,
-  },
-  // The palette's own Host avatar color. The monogram stays ink: on tangerine
-  // that is a ~6.6:1 contrast, where white would be ~2.6:1 and unreadable from
-  // a sofa.
-  avatarHost: {
-    backgroundColor: colors.tangerine,
   },
   // Boardwalk's own treatment for something present but not available: the
   // handoff dims a claimed color swatch to 30%, and an away player's face is
@@ -447,8 +649,8 @@ const styles = StyleSheet.create({
   statusDotAway: {
     backgroundColor: colors.mutedBorder,
   },
+  // The monogram's own color comes with the fill, from `playerFace`.
   avatarInitials: {
-    color: colors.ink,
     fontFamily: fontFamily.display,
     fontSize: 24,
     // Bungee's line box runs taller than its caps; pinning it centres the

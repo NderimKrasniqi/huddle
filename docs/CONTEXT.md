@@ -34,9 +34,18 @@ working must add it here.
   `data` of a `ConvexError` because that is the only part of a thrown error
   Convex does not redact. The Join Screen picks its copy by `kind`, never by
   matching the message text.
-- **Open a room** — the TV-side act of getting the room for this launch:
+- **Open a room** — the TV-side act of getting the room to show:
   `createRoom` if none has been minted yet, otherwise the one already minted.
-  `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once.
+  `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once —
+  once per room rather than once per launch, since a television outlives the
+  rooms it shows (see Room Expiry).
+  Opening can fail, and nobody can help it: the TV app is untouched after
+  launch, so `keepOpeningRoom` retries with backoff for as long as the
+  television is on and never gives up. What it is doing meanwhile is the
+  **Room Opening** — `opening`, `reconnecting`, `open`, or `misconfigured`
+  (this build was given no `EXPO_PUBLIC_CONVEX_URL`, so there is nothing to
+  retry against). `reconnecting` and `misconfigured` are what the pairing
+  screen's status chip says; the other two carry its ordinary invitation.
 - **Lobby** — the pre-game phase of a room (roster visible, Host picking a
   game). A room is `lobby → in-game → lobby`.
 - **Player** — a phone-holding participant in a room; session-only identity
@@ -48,9 +57,13 @@ working must add it here.
   (Phase 2) the Host's rows on their phone. Served in join order by the
   `roster` query, which projects each player rather than handing over the row.
 - **Seat** — one place on the TV's roster: a dashed empty circle until a player
-  takes it, then their avatar and nickname. A room has ten of them
-  (`ROOM_PLAYER_CAP` in game-core, the plan's pinned cap); the pairing screen's
-  footer always draws at least the handoff's four.
+  takes it, then their claimed color with their Bungee initials, and the
+  nickname under it. A room has ten of them (`ROOM_PLAYER_CAP` in game-core, the
+  plan's pinned cap); the pairing screen's footer always draws at least the
+  handoff's four. Because the circle's fill is now the player, everything else
+  a seat has to say rides its Offset Shadow — punch for Just Joined, tangerine
+  for the Host — which is the one channel none of the ten fills can collide
+  with. Both stand in for pills the §3 lobby card will draw properly.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
   active player on disconnect. Plays games like any other player. Held as the
@@ -85,12 +98,37 @@ working must add it here.
   passed since that player's last Heartbeat, and cleared by the next one. An
   away player keeps their seat, their score and their Session Token; games
   never wait for them.
+- **Deserted** — a room whose every player is Away: the room's own reading of
+  "everybody has left", and the only one available to it, since going quiet is
+  all it ever learns about a phone. Noticed inside `markAway`, because the last
+  check to mark a player away is the one that completes it.
+- **Room Expiry** — a Deserted room being deleted, with its players, once
+  `ROOM_EXPIRY_MS` (10 minutes, the plan's pinned default) has passed since the
+  last Heartbeat the room heard from anybody. A scheduled write (`expireRoom`)
+  for the reason Away is one: a query re-runs when rows change, not when time
+  passes. A Heartbeat inside the ten minutes saves the room without cancelling
+  anything — the check re-reads the clock when it runs and leaves a room that
+  has been rejoined standing. A room nobody has joined never expires: nobody
+  left it, and its Room Code is on a screen somebody may be reading. Expiry is
+  what returns a Room Code to the pool, and what sends a phone whose party
+  ended back to the Join Screen, since its Session Token then answers nothing.
+  The TV learns of it from the `stillOpen` subscription and opens a fresh room
+  (`closeExpiredRoom`) rather than showing a code that belongs to no room.
 - **Status Dot** — the dot on a player's avatar saying whether the room is
   hearing from their phone: Boardwalk green when it is, muted when they are
   Away. Boardwalk's online dot (the handoff draws it on the Host's roster rows;
   the TV's pairing seats are specified as avatar and nickname only), carried
   onto every surface that lists players because presence is news wherever a
   player is drawn.
+- **Just Joined** — the pink treatment a Seat wears for about four seconds after
+  its player appears (the handoff's avatar pop-in), then settles. A fact about
+  what one screen has watched, not about the room: the TV works it out by
+  comparing the roster snapshots it has been pushed, since the room does not
+  record when a seat was taken and a server timestamp would be read against a
+  television's own clock. Seats already taken when a screen starts watching are
+  greeted by nobody. Distinct from an **Arrival** (`noteArrivals`, `isArrival`),
+  which is the permanent fact that this screen watched the seat being taken;
+  Just Joined is the four seconds that fact earns, counted by the seat itself.
 - **Game Module** — a self-contained game implementation behind the game-core
   interface (metadata, settings schema, reducer, TV/phone screens). Games are
   modules; the hub never contains game logic.

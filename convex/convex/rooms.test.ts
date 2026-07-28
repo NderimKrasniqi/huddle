@@ -1,15 +1,18 @@
-import { ROOM_CODE_ALPHABET } from '@huddle/game-core';
+import { HEARTBEAT_INTERVAL_MS, ROOM_CODE_ALPHABET } from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from './_generated/api';
+import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import type { RoomCodeExhausted } from './rooms';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
+
+type Backend = ReturnType<typeof convexTest>;
 
 /**
  * The `Math.random()` draw that lands on a given letter, aimed at the middle of
@@ -98,5 +101,224 @@ describe('createRoom', () => {
       kind: 'roomCodeExhausted',
       draws: expect.any(Number),
     });
+  });
+});
+
+/**
+ * Room expiry: the room outliving the party by the ten minutes the plan allows,
+ * and then taking its players with it.
+ *
+ * "The last player disconnects" is a thing the room can only ever infer, and it
+ * infers it the one way it infers anything about a phone — by not being heard
+ * from. So a *deserted* room is one whose every player has gone Away, and the
+ * ten minutes run from the last heartbeat the room heard from anybody. That
+ * makes rejoining, backgrounding, force-quitting and a dropped router one event
+ * here, exactly as they are for presence.
+ *
+ * Fake timers, because the subject is minutes: the suite says so in
+ * milliseconds rather than waiting for them.
+ */
+describe('room expiry', () => {
+  const TEN_MINUTES = 10 * 60 * 1_000;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * Lets `ms` of the evening go by, running whatever the room had scheduled for
+   * it. The twin of the helper in players.test.ts — the two suites both live on
+   * the room's clock, and neither imports the other's fixtures.
+   */
+  async function elapse(t: Backend, ms: number): Promise<void> {
+    await vi.advanceTimersByTimeAsync(ms);
+    await t.finishInProgressScheduledFunctions();
+  }
+
+  /** `ms` of evening with these phones doing what a foregrounded Controller does. */
+  async function elapseBeating(
+    t: Backend,
+    sessionTokens: readonly string[],
+    ms: number,
+  ): Promise<void> {
+    for (let gone = 0; gone < ms; gone += HEARTBEAT_INTERVAL_MS) {
+      await elapse(t, Math.min(HEARTBEAT_INTERVAL_MS, ms - gone));
+      for (const sessionToken of sessionTokens) {
+        await t.mutation(api.players.heartbeat, { sessionToken });
+      }
+    }
+  }
+
+  /** Seats a player, and hands back what their phone would be holding. */
+  function seatPlayer(t: Backend, code: string, nickname: string) {
+    return t.mutation(api.players.joinRoom, { code, nickname });
+  }
+
+  /**
+   * How many player rows the room still holds. Asked through the roster, which
+   * reads the players by room and not through the room — so a room deleted
+   * without its players would still answer with them, which is exactly the
+   * half-done expiry worth failing on.
+   */
+  async function seatedCount(t: Backend, roomId: Id<'rooms'>): Promise<number> {
+    return (await t.query(api.players.roster, { roomId })).length;
+  }
+
+  /** Expiry checks the room still has scheduled against itself. */
+  async function pendingExpiryChecks(t: Backend, roomId: Id<'rooms'>): Promise<number> {
+    return await t.run(async (ctx) => {
+      const scheduled = await ctx.db.system.query('_scheduled_functions').collect();
+
+      return scheduled.filter((job) => {
+        // The away checks scheduled against the same room carry a `playerId`
+        // and no `roomId`, so this counts exactly the expiry ones.
+        const [args] = job.args as [{ readonly roomId?: Id<'rooms'> }];
+        return job.state.kind === 'pending' && args.roomId === roomId;
+      }).length;
+    });
+  }
+
+  it('deletes the room and its players ten minutes after the last phone goes quiet', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    await seatPlayer(t, room.code, 'Ada');
+    await seatPlayer(t, room.code, 'Grace');
+
+    // Both phones leave with the party. Nothing beats again, so the last word
+    // the room had was their joins.
+    await elapse(t, TEN_MINUTES - 1_000);
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+    expect(await seatedCount(t, room.roomId)).toBe(2);
+
+    await elapse(t, 1_000);
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+    expect(await seatedCount(t, room.roomId)).toBe(0);
+  });
+
+  it('leaves a room alone for as long as one phone is still beating', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+
+    // Ada's phone is in a pocket and has been away for most of the evening;
+    // Grace is sitting in front of the television. One phone is a party.
+    await elapseBeating(t, [grace.sessionToken], TEN_MINUTES + 60_000);
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+    expect(await seatedCount(t, room.roomId)).toBe(2);
+  });
+
+  it('starts the ten minutes again when somebody comes back', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const ada = await seatPlayer(t, room.code, 'Ada');
+
+    // Five minutes of nothing, and then Ada's phone says one word and goes
+    // quiet again. The check already pending comes due at the original ten
+    // minutes and must not take a room somebody was in five minutes ago.
+    await elapse(t, 5 * 60_000);
+    await t.mutation(api.players.heartbeat, { sessionToken: ada.sessionToken });
+
+    await elapse(t, 5 * 60_000);
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+
+    // Ten minutes after that one word, and not a moment sooner, the room goes.
+    await elapse(t, 5 * 60_000);
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+  });
+
+  it('leaves a room nobody has joined open for as long as the television is on', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+
+    // A television switched on before the guests arrive. Nobody has left this
+    // room, so nothing has expired — and taking its code away while somebody
+    // across the room is reading it off the screen is the one thing expiry must
+    // never do.
+    await elapse(t, 3 * TEN_MINUTES);
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+  });
+
+  it('gives an expired room’s code back to the pool', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    await seatPlayer(t, room.code, 'Ada');
+
+    await elapse(t, TEN_MINUTES);
+
+    // Four letters is only enough alphabet if codes are recycled, which is what
+    // `drawUnusedRoomCode` checking *live* rooms means. Nothing but expiry ever
+    // made that true before now. The draw is pinned only after the party, since
+    // minting a Session Token draws from the same `Math.random`.
+    pinDrawsTo(room.code);
+    const next = await t.mutation(api.rooms.createRoom, {});
+    expect(next.code).toBe(room.code);
+  });
+
+  it('answers nothing to the Session Token of a player whose room expired', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const ada = await seatPlayer(t, room.code, 'Ada');
+
+    await elapse(t, TEN_MINUTES);
+
+    // A seat in a room that no longer exists is not a seat: the phone comes
+    // back to the Join Screen rather than to a room nobody is showing.
+    expect(await t.query(api.players.session, { sessionToken: ada.sessionToken })).toBeNull();
+  });
+
+  it('goes on running after the away checks of players it has deleted come due', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const ada = await seatPlayer(t, room.code, 'Ada');
+
+    // Ada's phone beats until the last minute, so her away check is still
+    // pending — against a row expiry is about to delete — when the room goes.
+    await elapseBeating(t, [ada.sessionToken], TEN_MINUTES);
+    await elapse(t, TEN_MINUTES);
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+    expect(await seatedCount(t, room.roomId)).toBe(0);
+  });
+
+  it('takes only its own room down with it', async () => {
+    const t = convexTest(schema, modules);
+    const ended = await t.mutation(api.rooms.createRoom, {});
+    const carryingOn = await t.mutation(api.rooms.createRoom, {});
+    await seatPlayer(t, ended.code, 'Ada');
+    const grace = await seatPlayer(t, carryingOn.code, 'Grace');
+
+    // Two televisions in one house, and one party goes home. Everything expiry
+    // reads is scoped by the `by_room` index; a read that lost that scope would
+    // count the other room's phones as this room's — or delete them.
+    await elapseBeating(t, [grace.sessionToken], TEN_MINUTES + 60_000);
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: ended.roomId })).toBe(false);
+    expect(await seatedCount(t, ended.roomId)).toBe(0);
+    expect(await t.query(api.rooms.stillOpen, { roomId: carryingOn.roomId })).toBe(true);
+    expect(await seatedCount(t, carryingOn.roomId)).toBe(1);
+  });
+
+  it('watches a deserted room with one expiry check, not one per player', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    await seatPlayer(t, room.code, 'Ada');
+    await seatPlayer(t, room.code, 'Grace');
+    await seatPlayer(t, room.code, 'Linus');
+    expect(await pendingExpiryChecks(t, room.roomId)).toBe(0);
+
+    // A whole party puts its phones down at once, so every away check comes due
+    // together. Scheduling from each of them would work and would leave two
+    // spare deletions pending against a room the first one takes, with every
+    // other test in this file still passing.
+    await elapse(t, 15_000);
+
+    expect(await pendingExpiryChecks(t, room.roomId)).toBe(1);
   });
 });

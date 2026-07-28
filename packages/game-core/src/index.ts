@@ -17,6 +17,9 @@ export {
 // the deadline, and neither number means anything alone.
 export { AWAY_AFTER_MS, HEARTBEAT_INTERVAL_MS } from './presence';
 export { ROOM_PLAYER_CAP } from './room-capacity';
+// The third presence number, and the room's own: how long it outlives the last
+// phone it heard from.
+export { ROOM_EXPIRY_MS } from './room-expiry';
 export {
   generateRoomCode,
   ROOM_CODE_ALPHABET,

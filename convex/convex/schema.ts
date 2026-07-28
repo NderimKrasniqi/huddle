@@ -44,9 +44,11 @@ export default defineSchema({
      * room with no host is a room that cannot start a game.
      */
     hostPlayerId: v.optional(v.id('players')),
-    // A room's age is `_creationTime`. The 10-minute expiry clock (Phase 2)
-    // starts from the last player leaving rather than from creation, so it will
-    // need a field of its own instead of reusing this one.
+    // A room's age is `_creationTime`, and its expiry needs no field of its own:
+    // the ten minutes run from the last heartbeat the room heard, which is
+    // already written down as the newest `lastSeenAt` among its players. A
+    // stored deadline here would be a second copy of that, refreshed on every
+    // beat — ten phones writing the one row a whole party shares.
   })
     // `createRoom` reads this index before it mints a code, and joining a room
     // is a lookup by the code someone typed on their phone.

@@ -168,9 +168,16 @@ demoable by force-quitting apps mid-lobby.
   surfaces that exist — the phone's "You're in" screen gets the real pill and is
   told the room is theirs, everyone else is told whose it is by name (the
   handoff's §4 copy, which needed the host to be knowable); the TV's 72px
-  pairing seat takes the palette's own Host avatar tangerine, because a pill
-  wide enough to read across a room does not fit it, the same measurement that
-  kept the away badge off that seat. There is nothing yet for a host to press.
+  pairing seat says it in the palette's own Host avatar tangerine, because a
+  pill wide enough to read across a room does not fit it, the same measurement
+  that kept the away badge off that seat. That tangerine started as the circle's
+  fill and moved to its offset shadow in the colored-seats task below: the fill
+  became the player's claimed color, and `tangerine` is itself one of the ten a
+  player can claim, so a Host wearing it as a fill would have been
+  indistinguishable from whoever claimed it — the shadow, offset onto the
+  screen's cream, is the one channel none of the ten fills collide with. The
+  HOST pill still waits on the §3 lobby card either way. There is nothing yet
+  for a host to press.
 
   Every client learns the host from the `roster` projection, which is why a
   handover reaches the new host's phone as a push rather than at its next
@@ -223,21 +230,140 @@ demoable by force-quitting apps mid-lobby.
   swatch under a thumb would say the opposite of what is happening. The feedback
   is the claim itself: the swatch takes the ink border and shadow the moment it
   is the player's.
-- [ ] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
+- [x] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
   player's claimed color with Bungee initials; a newly joined player's seat
   carries the pink "JUST JOINED!" treatment for ~4s. The handoff draws both on
   the §3 lobby card, which does not exist yet — as with the HOST pill, they land
   on the pairing seat that does, and move to the card when it arrives.
-- [ ] TV room-open resilience — AC: a TV that launches before the backend is
+
+  The pink is the accent Offset Shadow the handoff's signature rules already
+  give that card (`8px 8px 0 #E23D6D`), not a pill: a pill wide enough to read
+  across a room still does not fit a 72px seat. The Host's tangerine moved onto
+  the same channel, because the circle's fill now says who a player *is* — see
+  the host task above.
+
+  Seen on the tvOS simulator, with players seated through `npx convex run`
+  against the cloud dev deployment: Ada's circle drew cobalt with a white "A"
+  and Grace Hopper's punch with an ink "GH", so the palette's paired monogram
+  inks are on screen and not merely in a unit test; the tangerine Host shadow
+  followed a real auto-transfer when Ada's heartbeat stopped; an away player's
+  seat still dimmed, shadow with circle. The four seconds are *measured*: four
+  screenshots 1.1s apart caught a joining player's pink shadow at roughly +1.2s,
+  +2.3s and +3.4s after the push, settled by +4.4s.
+
+  What that pass is carrying is the settle itself. `JUST_JOINED_MS` is pinned to
+  4000 by a unit test and the arrivals fold is tested hard, but the timer in
+  `useJustJoined` is a React hook with no test around it — a literal `400` in
+  its place would leave the suite green. So the "~4s" rests on inspection plus
+  the simulator run above, and would not survive a careless edit.
+- [x] TV room-open resilience — AC: a TV that launches before the backend is
   reachable recovers on its own, with no human touching the remote (the TV app
   is defined as untouched after launch); `openRoom` already clears its memo on
   failure, so this is a caller that retries with backoff, plus a visible
   "reconnecting" state; a missing `EXPO_PUBLIC_CONVEX_URL` surfaces as that
   same readable failure rather than throwing at module import, which currently
   crashes the app at launch.
-- [ ] Room expiry — AC: last player disconnects → after 10 minutes with no
+
+  The crux was that a room fails to open in two different shapes, and they want
+  opposite treatment. A *rejection* is an attempt that is over, so it earns a
+  retry: 1s, 2s, 4s, 8s, 16s, then every 30s forever, with no attempt limit —
+  a television has no remote to press, so giving up is giving up permanently.
+  *Silence* is an attempt still out there: `ConvexReactClient` queues a mutation
+  it has no socket for and neither resolves nor rejects it, which is exactly
+  what a TV switched on ahead of its router gets. So after 4s of patience the
+  screen says so and nothing further is issued — re-asking would open a second
+  room the instant the socket came up, and every phone that had read the first
+  code off the screen would be typing it at a room nobody was showing.
+  `openRoom`'s in-flight memo is what makes waiting safe.
+
+  The handoff draws no failure state for this screen. Rather than invent one,
+  the caption slot under the code tiles becomes a Boardwalk status chip in
+  trouble — chip accent, ink border, offset shadow through `StickerSurface`,
+  pill radius, a 2° tilt leaning against the badge above it, at 22px against
+  the 18px TV floor. It is assembled from parts the system already had; the one
+  addition is `stickerTilt.statusChip`.
+
+  Seen on the tvOS simulator, all three states: an unreachable deployment draws
+  the reconnecting chip with no crash; an empty `EXPO_PUBLIC_CONVEX_URL` draws
+  the misconfigured chip — the case that used to kill the app at launch; a real
+  deployment opens the room and draws the QR. Review separately confirmed the
+  crash is gone rather than moved (the app's one `useQuery` is unreachable
+  without a client) and that no sequence of failures reaches a double-open: a
+  20× remount storm held peak concurrency of the underlying mutation at 1.
+
+  Argued, not observed: the recovery *transition* itself — backend absent at
+  launch, then present, room appears untouched. Staging it honestly needs a
+  backend started mid-run or the Mac's network toggled, so it rests on the unit
+  tests plus Convex's own socket retry. The 4s patience and the 30s ceiling are
+  reasoned from round trips, not measured on a television. The Controller's
+  client still throws at import on a missing URL; that was left deliberately —
+  this task names the TV, and a phone has someone holding it — but it is the
+  obvious matching task if the symmetry is wanted.
+- [x] Room expiry — AC: last player disconnects → after 10 minutes with no
   rejoin, the room and its players are deleted (integration test with mocked
   clock); the TV returns to a fresh pairing screen.
+
+  "The last player disconnects" is not something a room can observe, so it is
+  defined as the room being *deserted*: every player Away. The check rides
+  `markAway`, since that is the only place a player becomes away and therefore
+  the only way a room can become deserted. It asks the `away` flag where the
+  Host handover deliberately asks `lastSeenAt`, and the reasons are opposites: a
+  host has to move at the *first* check that comes due, so it cannot wait on
+  flags that lag, while expiry must happen at the *last* one, and the flag is
+  what makes that exact. A whole party putting phones down together brings every
+  away check due at once; against the clock each of them would schedule its own
+  deletion for the one room, and against the flags only the last one to run sees
+  a room where everybody is away. One party, one pending deletion.
+
+  The ten minutes run from the last heartbeat the room *heard*, not from the
+  moment it noticed — the room has already spent `AWAY_AFTER_MS` of the party's
+  absence working out that they were gone, and that is not the party's time to
+  lose. `roomSilence` reads it off the newest `lastSeenAt` among the players, so
+  the room needs no expiry field of its own.
+
+  Nothing is cancelled when somebody comes back, as nothing cancels an away
+  check. Cancelling would mean writing to the room row on a heartbeat, and a
+  heartbeat is ten phones every three seconds against the one row a whole party
+  shares — contention bought for nothing. `expireRoom` re-reads the clock when it
+  runs instead, and leaves a room that has been rejoined standing; the phone that
+  returned will go quiet again, and `markAway` starts the ten minutes over then.
+
+  A room nobody has ever joined never expires: nobody left it, and its Room Code
+  is on a television somebody may be reading across the room, so taking it away
+  is the one thing expiry must not do. The consequence is that never-joined rooms
+  accumulate — the dev deployment holds about twenty-five from past TV launches —
+  which is flagged rather than fixed, because every fix for it is a fix that can
+  delete a code off a working screen.
+
+  **Seen, on the real scheduler.** The tvOS simulator against the cloud dev
+  deployment: the TV opened `DKZS`, a player joined and took a seat, and the
+  deployment held exactly one pending `rooms.js:expireRoom` for that room,
+  scheduled at the join plus 600.0s. It fired on time — room gone, `players`
+  table empty, `stillOpen` false — and the television, untouched, drew `BVNR`
+  with a fresh QR and "0 of 10 joined". The replacement room row was created
+  208 ms after the expiry's scheduled time, so "the TV returns to a fresh pairing
+  screen" is measured rather than argued.
+
+  What that run does not carry: the rejoin-saves-the-room path and the
+  multi-player desertion arithmetic are `convex-test` on a fake clock only, and
+  `useRoomExpiry`/`useRoomOpening` are React hooks with no test around them. The
+  reopen logic under them is tested through `roomOpener` — including the
+  double-report guard that would otherwise mint a second room — but the wiring
+  from the subscription to that logic rests on the single run above.
+
+  One cost measured and accepted: because nothing is cancelled, a player who goes
+  away and comes back repeatedly leaves a pending `expireRoom` behind each time.
+  Twenty away/return cycles leave twenty pending jobs, each of which fires and
+  does nothing; the worst realistic case is roughly forty-five pending checks
+  against one room in a ten-minute window, each costing one room read and at most
+  ten player reads. That is benign at ten rooms, and the alternative is the
+  room-row write on every heartbeat that the design exists to avoid.
+
+  A Controller gap this exposes, left for the phase that owns the phone's room
+  screens: the Controller resolves its session once at launch, so a phone left on
+  "You're in" when its room expires goes on showing a dead Room Code until it is
+  relaunched — at which point `players.session` answers nothing and it lands
+  correctly on the Join Screen.
 
 ## Phase 3 — Trivia, minimal loop: the platform is born
 Goal: a complete playable trivia game with flat scoring on a small inline

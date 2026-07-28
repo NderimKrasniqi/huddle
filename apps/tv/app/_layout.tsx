@@ -14,9 +14,16 @@ export default function TvLayout() {
     return null;
   }
 
-  return (
-    <ConvexProvider client={convexClient}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </ConvexProvider>
+  const app = <Stack screenOptions={{ headerShown: false }} />;
+
+  // A build with no deployment configured has no client to provide, and must
+  // still reach the pairing screen: that screen is where the TV says what is
+  // wrong, and it is the only place anybody in the room can be told. The
+  // screen's own Convex subscriptions only mount once a room is open, which
+  // cannot happen without a client.
+  return convexClient === undefined ? (
+    app
+  ) : (
+    <ConvexProvider client={convexClient}>{app}</ConvexProvider>
   );
 }
