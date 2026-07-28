@@ -34,9 +34,11 @@ working must add it here.
   `data` of a `ConvexError` because that is the only part of a thrown error
   Convex does not redact. The Join Screen picks its copy by `kind`, never by
   matching the message text.
-- **Open a room** — the TV-side act of getting the room for this launch:
+- **Open a room** — the TV-side act of getting the room to show:
   `createRoom` if none has been minted yet, otherwise the one already minted.
-  `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once.
+  `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once —
+  once per room rather than once per launch, since a television outlives the
+  rooms it shows (see Room Expiry).
   Opening can fail, and nobody can help it: the TV app is untouched after
   launch, so `keepOpeningRoom` retries with backoff for as long as the
   television is on and never gives up. What it is doing meanwhile is the
@@ -96,6 +98,22 @@ working must add it here.
   passed since that player's last Heartbeat, and cleared by the next one. An
   away player keeps their seat, their score and their Session Token; games
   never wait for them.
+- **Deserted** — a room whose every player is Away: the room's own reading of
+  "everybody has left", and the only one available to it, since going quiet is
+  all it ever learns about a phone. Noticed inside `markAway`, because the last
+  check to mark a player away is the one that completes it.
+- **Room Expiry** — a Deserted room being deleted, with its players, once
+  `ROOM_EXPIRY_MS` (10 minutes, the plan's pinned default) has passed since the
+  last Heartbeat the room heard from anybody. A scheduled write (`expireRoom`)
+  for the reason Away is one: a query re-runs when rows change, not when time
+  passes. A Heartbeat inside the ten minutes saves the room without cancelling
+  anything — the check re-reads the clock when it runs and leaves a room that
+  has been rejoined standing. A room nobody has joined never expires: nobody
+  left it, and its Room Code is on a screen somebody may be reading. Expiry is
+  what returns a Room Code to the pool, and what sends a phone whose party
+  ended back to the Join Screen, since its Session Token then answers nothing.
+  The TV learns of it from the `stillOpen` subscription and opens a fresh room
+  (`closeExpiredRoom`) rather than showing a code that belongs to no room.
 - **Status Dot** — the dot on a player's avatar saying whether the room is
   hearing from their phone: Boardwalk green when it is, muted when they are
   Away. Boardwalk's online dot (the handoff draws it on the Host's roster rows;

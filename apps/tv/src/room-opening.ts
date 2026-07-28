@@ -1,21 +1,82 @@
 import type { api } from '@huddle/convex';
 import type { FunctionReturnType } from 'convex/server';
 
+import { onlyOnce } from './only-once';
+
 /**
- * Opening the room, as a thing that can go wrong: how long the TV waits between
- * tries, what it is doing right now, and what the pairing screen says about it.
+ * Everything about getting a room onto the pairing screen: which room the TV is
+ * showing and when it needs another, how long it waits between tries, what it is
+ * doing right now, and what the screen says about it.
  *
- * It is a separate concern from `room.ts` — which holds the one room a launch
- * opens — because the TV app is *untouched after launch*. There is no remote
- * surface, no relaunch, nobody to tell. A television switched on before the
- * router has finished booting has to arrive at a working pairing screen on its
- * own, however long that takes, and has to say something legible from a sofa
- * while it gets there. All of that is decided here, where it is plain
- * TypeScript a unit test can run.
+ * All of it lives here rather than beside the Convex client in `room.ts` —
+ * which is only this launch's instance of it — because the TV app is *untouched
+ * after launch*. There is no remote surface, no relaunch, nobody to tell. A
+ * television switched on before the router has finished booting has to arrive at
+ * a working pairing screen on its own, however long that takes; one whose room
+ * expires under it at midnight has to open the next one just as unaided; and
+ * both have to say something legible from a sofa meanwhile. Those are decisions,
+ * not plumbing, so they are made here, where they are plain TypeScript a unit
+ * test can run.
  */
 
 /** The room this TV opened: its id, and the Room Code on the pairing screen. */
 export type OpenRoom = FunctionReturnType<typeof api.rooms.createRoom>;
+
+/** The room this TV is showing, and the news that it has expired. */
+export type RoomOpener = {
+  /** The room this TV shows — minting one the first time, then the same one. */
+  readonly openRoom: () => Promise<OpenRoom>;
+  /**
+   * Says a room is gone, so the next `openRoom` mints a replacement. Anything
+   * but the room currently being shown is ignored.
+   */
+  readonly closeExpiredRoom: (expired: OpenRoom) => void;
+};
+
+/**
+ * Holds the one room a television is showing.
+ *
+ * `openRoom` is memoised because `createRoom` is a mutation and mutations are
+ * not idempotent: calling it twice mints two rooms and the screen can only show
+ * one code, so every phone that read the other one is typing at a room nobody is
+ * showing. A `useEffect` cannot promise "once" by itself — StrictMode runs
+ * effects twice on purpose, and Fast Refresh and expo-router both remount
+ * screens — which is why the memo lives out here rather than in a render.
+ *
+ * Room expiry is what makes it a memo per *room* rather than per launch. A room
+ * whose party has gone is deleted ten minutes later, and the television is still
+ * on and still showing its code; a code that belongs to no room is the worst
+ * thing this screen can display, because it fails silently in somebody's hands
+ * across the room. So the pairing screen says the room is gone and this mints
+ * the next one — the only moment a second room is the right answer, since the
+ * first no longer exists to be confused with it.
+ *
+ * `closeExpiredRoom` ignores any room other than the one being shown, which is
+ * what makes it safe to say twice. The screen learns of an expiry from a live
+ * subscription and an effect, and either can repeat; forgetting a replacement
+ * that was still in flight would mint the second room all of the above exists to
+ * prevent.
+ */
+export function roomOpener(mint: () => Promise<OpenRoom>): RoomOpener {
+  let opening = onlyOnce(mint);
+  let showing: OpenRoom | undefined;
+
+  return {
+    openRoom: async () => {
+      const room = await opening();
+      showing = room;
+      return room;
+    },
+    closeExpiredRoom: (expired) => {
+      if (showing?.roomId !== expired.roomId) {
+        return;
+      }
+
+      showing = undefined;
+      opening = onlyOnce(mint);
+    },
+  };
+}
 
 /** How far the TV has got with opening the room it is going to show. */
 export type RoomOpening =

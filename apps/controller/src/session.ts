@@ -102,8 +102,9 @@ const RESUME_PATIENCE_MS = 4000;
  * four seconds and a deliberate change of name — retyping their own name is
  * refused by `nameTaken`, since their first row still holds it — and the screen
  * itself keeps the newer seat (see the report callback in `app/index.tsx`).
- * The stranded row is left to presence and room expiry, the Phase 2 tasks that
- * own rows nobody is behind.
+ * The stranded row is left to presence and room expiry, which own rows nobody
+ * is behind: it goes Away within seconds, and with the room ten minutes after
+ * the party does.
  *
  * Returns a canceller for a screen that has gone away: it drops the deadline and
  * the report. The lookup itself cannot be called back, only ignored.
@@ -173,11 +174,11 @@ export type JoinScreenState =
  *
  * A seat wins over the form — that is rejoining — with one exception: a Join
  * Link naming a *different* room. The party moving to a second TV is the case,
- * and since the seated screen has no leave control and rooms are not expired
- * yet, a phone kept in its old room by a scan it ignored would be kept there
- * for good. A link for the room they are already in asks for nothing and is
- * ignored, which is why the two are told apart by code rather than by the link
- * merely existing.
+ * and since the seated screen has no leave control and a room only expires ten
+ * minutes after the last phone in it goes quiet, a phone kept in its old room by
+ * a scan it ignored would be kept there for the rest of the evening. A link for
+ * the room they are already in asks for nothing and is ignored, which is why the
+ * two are told apart by code rather than by the link merely existing.
  */
 export function joinScreenState(
   session: PlayerSession | null | undefined,

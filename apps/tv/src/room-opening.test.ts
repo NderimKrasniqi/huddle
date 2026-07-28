@@ -4,6 +4,7 @@ import {
   keepOpeningRoom,
   type OpenRoom,
   reopenDelay,
+  roomOpener,
   type RoomOpening,
   roomOpeningAtLaunch,
   roomOpeningCaption,
@@ -237,5 +238,82 @@ describe('roomOpeningAtLaunch', () => {
 
   it('starts out saying so when there is not', () => {
     expect(roomOpeningAtLaunch(false)).toEqual({ kind: 'misconfigured' });
+  });
+});
+
+describe('roomOpener', () => {
+  /** A `createRoom` that mints a different room every time it is called. */
+  function mintRooms() {
+    let minted = 0;
+    return vi.fn(() => {
+      minted += 1;
+      return Promise.resolve({
+        roomId: `room-${minted}` as OpenRoom['roomId'],
+        code: `ROO${minted}`,
+      });
+    });
+  }
+
+  it('opens one room however many callers ask for it', async () => {
+    // What a StrictMode double-effect, a Fast Refresh and a remount all look
+    // like: two rooms would strand every phone that read the first code.
+    const mint = mintRooms();
+    const { openRoom } = roomOpener(mint);
+
+    const [first, second] = await Promise.all([openRoom(), openRoom()]);
+
+    expect(first).toBe(second);
+    expect(mint).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a fresh room once the one it was showing has expired', async () => {
+    const mint = mintRooms();
+    const { openRoom, closeExpiredRoom } = roomOpener(mint);
+    const expired = await openRoom();
+
+    closeExpiredRoom(expired);
+
+    expect(await openRoom()).not.toEqual(expired);
+    expect(mint).toHaveBeenCalledTimes(2);
+  });
+
+  it('has nothing to close before a room has opened', async () => {
+    const mint = mintRooms();
+    const { openRoom, closeExpiredRoom } = roomOpener(mint);
+
+    closeExpiredRoom({ roomId: 'room-0' as OpenRoom['roomId'], code: 'KWRD' });
+
+    expect(await openRoom()).toMatchObject({ code: 'ROO1' });
+    expect(mint).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an expiry reported twice while the replacement is still in flight', async () => {
+    // The screen can say the same room has expired more than once — an effect
+    // that runs twice, a second push of the same query. Forgetting the
+    // replacement mid-flight would mint the second room the memo exists to
+    // prevent, and the code on the screen would belong to neither of them.
+    const mint = mintRooms();
+    const { openRoom, closeExpiredRoom } = roomOpener(mint);
+    const expired = await openRoom();
+
+    closeExpiredRoom(expired);
+    const replacing = openRoom();
+    closeExpiredRoom(expired);
+
+    expect(await replacing).toBe(await openRoom());
+    expect(mint).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores an expiry reported for a room it is no longer showing', async () => {
+    const mint = mintRooms();
+    const { openRoom, closeExpiredRoom } = roomOpener(mint);
+    const expired = await openRoom();
+    closeExpiredRoom(expired);
+    const replacement = await openRoom();
+
+    closeExpiredRoom(expired);
+
+    expect(await openRoom()).toBe(replacement);
+    expect(mint).toHaveBeenCalledTimes(2);
   });
 });

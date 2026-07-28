@@ -299,9 +299,71 @@ demoable by force-quitting apps mid-lobby.
   client still throws at import on a missing URL; that was left deliberately —
   this task names the TV, and a phone has someone holding it — but it is the
   obvious matching task if the symmetry is wanted.
-- [ ] Room expiry — AC: last player disconnects → after 10 minutes with no
+- [x] Room expiry — AC: last player disconnects → after 10 minutes with no
   rejoin, the room and its players are deleted (integration test with mocked
   clock); the TV returns to a fresh pairing screen.
+
+  "The last player disconnects" is not something a room can observe, so it is
+  defined as the room being *deserted*: every player Away. The check rides
+  `markAway`, since that is the only place a player becomes away and therefore
+  the only way a room can become deserted. It asks the `away` flag where the
+  Host handover deliberately asks `lastSeenAt`, and the reasons are opposites: a
+  host has to move at the *first* check that comes due, so it cannot wait on
+  flags that lag, while expiry must happen at the *last* one, and the flag is
+  what makes that exact. A whole party putting phones down together brings every
+  away check due at once; against the clock each of them would schedule its own
+  deletion for the one room, and against the flags only the last one to run sees
+  a room where everybody is away. One party, one pending deletion.
+
+  The ten minutes run from the last heartbeat the room *heard*, not from the
+  moment it noticed — the room has already spent `AWAY_AFTER_MS` of the party's
+  absence working out that they were gone, and that is not the party's time to
+  lose. `roomSilence` reads it off the newest `lastSeenAt` among the players, so
+  the room needs no expiry field of its own.
+
+  Nothing is cancelled when somebody comes back, as nothing cancels an away
+  check. Cancelling would mean writing to the room row on a heartbeat, and a
+  heartbeat is ten phones every three seconds against the one row a whole party
+  shares — contention bought for nothing. `expireRoom` re-reads the clock when it
+  runs instead, and leaves a room that has been rejoined standing; the phone that
+  returned will go quiet again, and `markAway` starts the ten minutes over then.
+
+  A room nobody has ever joined never expires: nobody left it, and its Room Code
+  is on a television somebody may be reading across the room, so taking it away
+  is the one thing expiry must not do. The consequence is that never-joined rooms
+  accumulate — the dev deployment holds about twenty-five from past TV launches —
+  which is flagged rather than fixed, because every fix for it is a fix that can
+  delete a code off a working screen.
+
+  **Seen, on the real scheduler.** The tvOS simulator against the cloud dev
+  deployment: the TV opened `DKZS`, a player joined and took a seat, and the
+  deployment held exactly one pending `rooms.js:expireRoom` for that room,
+  scheduled at the join plus 600.0s. It fired on time — room gone, `players`
+  table empty, `stillOpen` false — and the television, untouched, drew `BVNR`
+  with a fresh QR and "0 of 10 joined". The replacement room row was created
+  208 ms after the expiry's scheduled time, so "the TV returns to a fresh pairing
+  screen" is measured rather than argued.
+
+  What that run does not carry: the rejoin-saves-the-room path and the
+  multi-player desertion arithmetic are `convex-test` on a fake clock only, and
+  `useRoomExpiry`/`useRoomOpening` are React hooks with no test around them. The
+  reopen logic under them is tested through `roomOpener` — including the
+  double-report guard that would otherwise mint a second room — but the wiring
+  from the subscription to that logic rests on the single run above.
+
+  One cost measured and accepted: because nothing is cancelled, a player who goes
+  away and comes back repeatedly leaves a pending `expireRoom` behind each time.
+  Twenty away/return cycles leave twenty pending jobs, each of which fires and
+  does nothing; the worst realistic case is roughly forty-five pending checks
+  against one room in a ten-minute window, each costing one room read and at most
+  ten player reads. That is benign at ten rooms, and the alternative is the
+  room-row write on every heartbeat that the design exists to avoid.
+
+  A Controller gap this exposes, left for the phase that owns the phone's room
+  screens: the Controller resolves its session once at launch, so a phone left on
+  "You're in" when its room expires goes on showing a dead Room Code until it is
+  relaunched — at which point `players.session` answers nothing and it lands
+  correctly on the Join Screen.
 
 ## Phase 3 — Trivia, minimal loop: the platform is born
 Goal: a complete playable trivia game with flat scoring on a small inline

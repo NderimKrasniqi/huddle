@@ -1,23 +1,22 @@
 import { api } from '@huddle/convex';
 
 import { convexClient } from './convex-client';
-import { onlyOnce } from './only-once';
-import type { OpenRoom } from './room-opening';
+import { type OpenRoom, roomOpener } from './room-opening';
 
 /**
- * Opens the one room this TV shows, and hands every later caller that same
- * room. The TV app holds no player record and needs no remote — launching it
- * *is* the act of opening a room.
+ * The room this TV shows, bound to this launch's Convex connection. The TV app
+ * holds no player record and needs no remote — launching it *is* the act of
+ * opening a room.
  *
- * The memo lives at module scope on purpose: it must outlive the pairing
- * screen's mounts, because a second call would mint a second room and strand
- * every phone that already read the first code off the screen. It is also what
- * makes retrying safe — `onlyOnce` forgets a *failed* attempt so the next
- * caller has another go, and hands back an *in-flight* one so a retry that
- * arrives early is the same attempt rather than a second room. `keepOpeningRoom`
- * is the caller that does the retrying.
+ * `openRoom` mints one and then hands every later caller that same room;
+ * `closeExpiredRoom` is how the pairing screen says the room it was showing has
+ * expired, so that the next `openRoom` mints its replacement. Both live at
+ * module scope on purpose: they must outlive the pairing screen's mounts,
+ * because how many rooms a television has opened is a fact about the evening and
+ * not about a render. `roomOpener` holds the rest of the reasoning, and
+ * `keepOpeningRoom` is the caller that retries a room that will not open.
  */
-export const openRoom = onlyOnce(
+export const { openRoom, closeExpiredRoom } = roomOpener(
   (): Promise<OpenRoom> =>
     convexClient === undefined
       ? // Unreachable from the pairing screen, which never starts opening a room

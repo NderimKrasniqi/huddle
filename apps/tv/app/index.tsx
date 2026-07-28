@@ -17,12 +17,12 @@ import {
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
-import { deployed, openRoom } from '../src/room';
+import { closeExpiredRoom, deployed, openRoom } from '../src/room';
 import {
   keepOpeningRoom,
   type OpenRoom,
@@ -81,7 +81,7 @@ const seatHighlightShadow: Record<
  * roster filling up underneath.
  */
 export default function TvPairingScreen() {
-  const opening = useRoomOpening();
+  const { opening, reopen } = useRoomOpening();
   const room = opening.kind === 'open' ? opening.room : undefined;
 
   return (
@@ -109,14 +109,17 @@ export default function TvPairingScreen() {
           <RoomQrCard code={room?.code} />
         </View>
 
-        {/* The roster is a live subscription, so it only exists once there is a
-            room to subscribe to — and a room can only be open on a launch that
-            has a Convex client for `ConvexProvider` to provide. Until then the
-            footer draws its empty seats from nothing. */}
+        {/* The screen's live subscriptions only exist once there is a room to
+            subscribe to — and a room can only be open on a launch that has a
+            Convex client for `ConvexProvider` to provide. Until then the footer
+            draws its empty seats from nothing. */}
         {room === undefined ? (
           <RosterFooter roster={[]} arrivals={undefined} />
         ) : (
-          <RoomRoster room={room} />
+          // Keyed by the room, so a room that expires takes its seats and
+          // everything this screen watched happen in it away with it: the
+          // replacement starts as empty as a pairing screen on a fresh launch.
+          <OpenRoomFooter key={room.roomId} room={room} onExpired={reopen} />
         )}
       </View>
     </TvStage>
@@ -202,13 +205,24 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
 }
 
 /**
- * The room's roster, live. Mounted only once a room is open, which is what
- * keeps the Convex subscription — and the `ConvexProvider` it needs above it —
- * out of a launch that never reached a backend.
+ * The footer of a screen that has a room: its roster, live, and a watch on the
+ * room itself in case it ends.
+ *
+ * Both subscriptions are here rather than on the screen because this is the only
+ * part of it that is mounted once a room is open, which is what keeps them — and
+ * the `ConvexProvider` they need above them — out of a launch that never reached
+ * a backend.
  */
-function RoomRoster({ room }: { readonly room: OpenRoom }) {
+function OpenRoomFooter({
+  room,
+  onExpired,
+}: {
+  readonly room: OpenRoom;
+  readonly onExpired: (expired: OpenRoom) => void;
+}) {
   const roster = useRoster(room);
   const arrivals = useArrivals(roster);
+  useRoomExpiry(room, onExpired);
 
   return <RosterFooter roster={roster ?? []} arrivals={arrivals} />;
 }
@@ -330,23 +344,62 @@ function PlayerSeat({
 
 /**
  * How the room this TV shows is getting on: opening, reconnecting, open, or
- * never going to open because this build has no deployment.
+ * never going to open because this build has no deployment — and `reopen`, for
+ * when the room that was open has expired and the screen needs another.
  *
- * `keepOpeningRoom` owns the retrying, and `openRoom` is memoised for the life
- * of the app — so this effect re-running (StrictMode, Fast Refresh, a remount)
- * rejoins the attempt already in flight or reads the room already opened,
- * rather than minting another one.
+ * `keepOpeningRoom` owns the retrying, and `openRoom` is memoised outside React
+ * — so this effect re-running (StrictMode, Fast Refresh, a remount) rejoins the
+ * attempt already in flight or reads the room already opened, rather than
+ * minting another one. `reopen` is the one thing that clears that memo, which is
+ * why it is also what starts the effect over: from here on the launch is exactly
+ * as it was at the beginning, minus a room that no longer exists.
  */
-function useRoomOpening(): RoomOpening {
+function useRoomOpening(): {
+  readonly opening: RoomOpening;
+  readonly reopen: (expired: OpenRoom) => void;
+} {
+  /** How many rooms this screen has watched end — the trigger, not a statistic. */
+  const [roomsEnded, setRoomsEnded] = useState(0);
   const [opening, setOpening] = useState<RoomOpening>(() => roomOpeningAtLaunch(deployed));
 
   useEffect(
     () => (deployed ? keepOpeningRoom(openRoom, setOpening) : undefined),
-    // `deployed` is fixed at bundle time, so this runs once per mount.
-    [],
+    // `deployed` is fixed at bundle time, so the only thing that ever opens a
+    // second room is the first one expiring.
+    [roomsEnded],
   );
 
-  return opening;
+  const reopen = useCallback((expired: OpenRoom) => {
+    closeExpiredRoom(expired);
+    setOpening(roomOpeningAtLaunch(deployed));
+    setRoomsEnded((ended) => ended + 1);
+  }, []);
+
+  return { opening, reopen };
+}
+
+/**
+ * Watches the room this TV is showing for the end of it.
+ *
+ * A room whose party has gone is deleted ten minutes later, and nobody is going
+ * to touch the television about it — so the news has to arrive as a push, which
+ * is what this subscription is. Until it does, the screen is showing a Room Code
+ * that belongs to no room: the worst thing a pairing screen can display, because
+ * it fails silently in the hands of whoever types it.
+ *
+ * It cannot be read off the roster, which is the subscription this screen
+ * already holds: an expired room and a room nobody has joined are the same empty
+ * roster, and they want opposite treatment.
+ */
+function useRoomExpiry(room: OpenRoom, onExpired: (expired: OpenRoom) => void): void {
+  const stillOpen = useQuery(api.rooms.stillOpen, { roomId: room.roomId });
+
+  useEffect(() => {
+    // `undefined` is the moment before the first answer, which says nothing.
+    if (stillOpen === false) {
+      onExpired(room);
+    }
+  }, [stillOpen, room, onExpired]);
 }
 
 /**
