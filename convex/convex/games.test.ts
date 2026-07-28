@@ -33,6 +33,43 @@ async function roomWithParty(t: Backend): Promise<{
   return { roomId: room.roomId, host: host.sessionToken, guest: guest.sessionToken };
 }
 
+/** A room in a game, with every phone's token by the nickname holding it. */
+async function roomPlaying(
+  t: Backend,
+  ...nicknames: readonly string[]
+): Promise<{ roomId: Id<'rooms'>; tokens: Record<string, string> }> {
+  const room = await t.mutation(api.rooms.createRoom, {});
+  const tokens: Record<string, string> = {};
+
+  for (const nickname of nicknames) {
+    const seated = await t.mutation(api.players.joinRoom, { code: room.code, nickname });
+    tokens[nickname] = seated.sessionToken;
+  }
+
+  // The first to join is the Host, and the Host is who starts a game.
+  const host = tokens[nicknames[0] ?? ''];
+
+  if (host === undefined) {
+    throw new Error('a room with nobody in it has no game to play');
+  }
+
+  await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+
+  return { roomId: room.roomId, tokens };
+}
+
+/** The room's own id for the player it knows by this nickname. */
+async function playerIdOf(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<string> {
+  const roster = await t.query(api.players.roster, { roomId });
+  const seat = roster.find((player) => player.nickname === nickname);
+
+  if (seat === undefined) {
+    throw new Error(`no player called ${nickname} in this room`);
+  }
+
+  return seat.playerId;
+}
+
 /** The rejection a refused call carried, or a failure if it was not refused. */
 async function rejectionFrom(call: Promise<unknown>): Promise<GameLifecycleRejection> {
   try {
@@ -229,6 +266,153 @@ describe('the Host ending the game', () => {
 
     expect(await t.query(api.games.running, { roomId })).toBeNull();
     expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+});
+
+/**
+ * The one mutation a running game's events travel on.
+ *
+ * It is the hub's whole part in playing a game: it says which player an event
+ * came from and stores whatever the module's rules make of it. Every rule the
+ * events below meet is trivia's, tested where trivia's rules are — what is
+ * tested here is that the hub carries them faithfully and adds nothing.
+ */
+describe('a player’s event in the running game', () => {
+  it('reaches the module’s rules, and the room keeps what they decide', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const grace = await playerIdOf(t, roomId, 'Grace');
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Grace ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: 2 },
+    });
+
+    const running = await t.query(api.games.running, { roomId });
+    expect(running?.state.answers).toEqual({ [grace]: 2 });
+  });
+
+  it('names the player from the Session Token, never from the phone', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const ada = await playerIdOf(t, roomId, 'Ada');
+    const grace = await playerIdOf(t, roomId, 'Grace');
+
+    // A phone naming somebody else is a claim, and the hub does not believe
+    // it: the answer is recorded against the seat the token holds.
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Grace ?? '',
+      event: { kind: 'answer', playerId: ada, questionIndex: 0, optionIndex: 1 },
+    });
+
+    const running = await t.query(api.games.running, { roomId });
+    expect(running?.state.answers).toEqual({ [grace]: 1 });
+  });
+
+  it('lets a second tap change nothing', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const grace = await playerIdOf(t, roomId, 'Grace');
+
+    for (const optionIndex of [2, 0]) {
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Grace ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex },
+      });
+    }
+
+    // The rule is the reducer's; what this says is that the hub does not
+    // overwrite an answer on its way past.
+    expect((await t.query(api.games.running, { roomId }))?.state.answers).toEqual({ [grace]: 2 });
+  });
+
+  it('takes a whole party answering at once', async () => {
+    const t = convexTest(schema, modules);
+    const party = ['Ada', 'Grace', 'Linus', 'Ken', 'Barbara'];
+    const { roomId, tokens } = await roomPlaying(t, ...party);
+
+    // Every answer is in flight before any of them commits — the scope's
+    // "simultaneous answers without races", against the transaction that is
+    // supposed to make it true.
+    await Promise.all(
+      party.map((nickname, optionIndex) =>
+        t.mutation(api.games.sendEvent, {
+          sessionToken: tokens[nickname] ?? '',
+          event: { kind: 'answer', questionIndex: 0, optionIndex: optionIndex % 4 },
+        }),
+      ),
+    );
+
+    const running = await t.query(api.games.running, { roomId });
+    expect(Object.keys(running?.state.answers ?? {})).toHaveLength(party.length);
+    // The last answer ends the question, which is only reached if none of the
+    // five was lost on the way in.
+    expect(running?.state.phase).toBe('reveal');
+  });
+
+  it('does nothing at all in a room that is between games', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, guest } = await roomWithParty(t);
+
+    // A thumb that landed just after the Host ended the game. There is nothing
+    // to tell the person holding the phone — the screen they are on has
+    // already gone — so this is silence rather than a refusal.
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: guest,
+      event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+    });
+
+    expect(await t.query(api.games.running, { roomId })).toBeNull();
+  });
+
+  it('stores nothing when the module makes nothing of the event', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const started = await t.query(api.games.running, { roomId });
+
+    // A phone that is behind — or one that is lying. A module that does not
+    // recognise an event returns no state at all, and storing that would let
+    // one such event erase the game the room is playing.
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Grace ?? '',
+      event: { kind: 'not-an-event-trivia-knows' },
+    });
+
+    expect(await t.query(api.games.running, { roomId })).toEqual(started);
+  });
+
+  it('refuses a phone whose seat is gone', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomPlaying(t, 'Ada', 'Grace');
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.sendEvent, {
+          sessionToken: 'a-token-no-seat-holds',
+          event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+        }),
+      ),
+    ).toEqual({ kind: 'notInRoom' });
+    expect((await t.query(api.games.running, { roomId }))?.state.answers).toEqual({});
+  });
+
+  it('is open to every player, not only the Host', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    // The lifecycle is Host-only; playing the game is not. A game that only
+    // the Host could act in would not be a party game.
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+    });
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Grace ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+    });
+
+    expect(Object.keys((await t.query(api.games.running, { roomId }))?.state.answers ?? {}))
+      .toHaveLength(2);
   });
 });
 

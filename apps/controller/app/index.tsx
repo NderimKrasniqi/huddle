@@ -1,6 +1,7 @@
 import { api } from '@huddle/convex';
 import {
   gamePlayersFrom,
+  type GameEvent,
   type GameModule,
   type GamePlayer,
   type PlayerColorName,
@@ -716,10 +717,18 @@ function InGameScreen({
 /**
  * The module's Controller screen, mounted on the state the room stored.
  *
- * `sendEvent` is the phone's way of telling the room what its player did. The
- * mutation behind it arrives with the reducer task, which is also when the
- * first module has an event to send — no screen calls this yet, and it is wired
- * here as the shape the interface promises rather than left out of it.
+ * `sendEvent` is the phone's way of telling the room what its player did. It is
+ * fire-and-forget on purpose: the answer a player just gave comes back through
+ * the room's own subscription, the same round trip the color swatches wait for,
+ * so there is nothing here for the screen to wait on and nothing local to keep
+ * in step. What the phone draws is always what the room says, never what this
+ * phone hopes it said.
+ *
+ * A failure is swallowed rather than shown. Every refusal a game event can meet
+ * is either the room having moved on — a beat the player can see for themselves
+ * on the television — or this phone having lost its seat, which the screen
+ * behind this one is already saying. An error card over four answer buttons
+ * would interrupt the game to report something that no longer matters.
  */
 function PlayerGameScreen({
   module,
@@ -730,9 +739,27 @@ function PlayerGameScreen({
   readonly state: unknown;
   readonly player: GamePlayer;
 }) {
+  const sendGameEvent = useMutation(api.games.sendEvent);
+
+  function send(event: GameEvent) {
+    void (async () => {
+      try {
+        const sessionToken = await phoneSessionTokenStore.read();
+
+        if (sessionToken === null) {
+          return;
+        }
+
+        await sendGameEvent({ sessionToken, event });
+      } catch {
+        // Deliberately silent — see above.
+      }
+    })();
+  }
+
   return (
     <View style={styles.gameStage}>
-      {module.screens.controller({ state, player, sendEvent: () => undefined })}
+      {module.screens.controller({ state, player, sendEvent: send })}
     </View>
   );
 }

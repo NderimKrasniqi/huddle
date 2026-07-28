@@ -228,7 +228,19 @@ importers:
       '@huddle/packs':
         specifier: workspace:*
         version: link:../../packs
+      '@huddle/ui':
+        specifier: workspace:*
+        version: link:../../ui
     devDependencies:
+      '@types/react':
+        specifier: ~19.2.17
+        version: 19.2.17
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-native:
+        specifier: 0.86.0
+        version: 0.86.0(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

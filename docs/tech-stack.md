@@ -145,6 +145,22 @@ packages for game modules and the protocol.
     not a test suite.
   - **Deliberately untested:** RN component rendering/snapshots (churn without
     confidence), visual layout (play-test catches it).
+  - **`react-native` is stubbed under Vitest** (`test/react-native-stub.ts`,
+    aliased for all three projects). Not a change to the line above — the point
+    is still that renderers are not tested. But a Game Module's `screens` are
+    properties of it, so from the first real screen onward, importing a module
+    at all reaches React Native, whose Flow-typed source Node cannot parse. The
+    Registry's tests, the carousel's and the hub's would fail on the import
+    before asserting anything. The stub renders nothing on purpose: a test that
+    needs to assert what a screen draws is a decision to start testing
+    renderers, not a reason to grow the stub.
+  - **The stub can hide a broken seam.** Game logic must never pull screens into
+    the Convex bundle (`packages/game-registry/src/logic.test.ts` walks the
+    server entry's imports), and with `react-native` resolvable under Node a
+    leak would now import cleanly and stay green. That guard is a *source*
+    check; the check that would actually catch it is bundling
+    `convex/convex/games.ts` and grepping the output, which is a manual step at
+    the moment and not a CI gate.
   - **CI:** GitHub Actions free tier (`.github/workflows/ci.yml`) — typecheck,
     lint, unit (`pnpm test:unit`), integration (`pnpm test:integration`) on
     every push, as four named steps sharing one checkout and one install. It

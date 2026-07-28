@@ -596,10 +596,38 @@ it.
   the next question by itself, and a sender of `advance` must read the state it
   is looking at in order to address the event — the beat it is ending, not
   "now".
-- [ ] Phone answer screen — AC: 4 large buttons matching the TV's option
+- [x] Phone answer screen — AC: 4 large buttons matching the TV's option
   colors/shapes; tapping locks the answer (buttons disable, "locked in"
   shown); a second tap changes nothing; answering before the question is
   shown is impossible.
+
+  What this does not carry: **"matching the TV's option colors/shapes" is not
+  verified, because there is no TV question screen yet** — it is the next task.
+  What was built instead of a match is a shared source: both screens take an
+  option's color from `accentFace(optionIndex)` in `packages/ui`, so they agree
+  by construction rather than by two files being kept in step. The TV task is
+  where that stops being an argument.
+
+  The screen itself is untested, per the repo's rule that renderers are not
+  tested (docs/tech-stack.md). What *is* tested is everything behind it:
+  `answering.test.ts` covers which buttons a state offers — including that a
+  locked-in player has no pressable option left and that a phone on any other
+  beat is offered nothing at all — and `logic.test.ts` and `games.test.ts`
+  cover the refusals underneath. So "buttons disable" and "'locked in' shown"
+  are argued from the code, not observed. Nothing here has run on a phone.
+
+  This task also carried two things the plan did not anticipate, both forced by
+  it being the first real screen: `boardwalkFonts` moved out of `@huddle/ui`'s
+  root barrel to `@huddle/ui/fonts` (a barrel is all-or-nothing, so importing
+  `colors` was dragging four .ttf files into every Node test), and Vitest now
+  stubs `react-native`. See docs/tech-stack.md, including what the stub can
+  hide.
+
+  The event transport landed here rather than in the reducer task: `sendEvent`
+  in `convex/convex/games.ts` is the one mutation a running game's events
+  travel on. It names the player from the Session Token and never from the
+  phone, stores nothing when the module makes nothing of the event, and skips
+  the write when the rules refuse — so a refused tap wakes no subscription.
 - [ ] TV question & reveal screens — AC: TV shows question, 4 options, and how
   many players have answered ("3/5 answered"); when all active players have
   answered, reveal shows the correct option and per-player correctness; then

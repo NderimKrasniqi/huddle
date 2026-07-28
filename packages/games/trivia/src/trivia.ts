@@ -1,5 +1,6 @@
 import type { GameModule } from '@huddle/game-core';
 
+import { TriviaControllerScreen } from './controller-screen';
 import { triviaGameLogic, type TriviaEvent, type TriviaState } from './logic';
 
 /**
@@ -14,10 +15,10 @@ import { triviaGameLogic, type TriviaEvent, type TriviaState } from './logic';
 export const triviaGameModule: GameModule<TriviaState, TriviaEvent> = {
   ...triviaGameLogic,
   screens: {
-    // The TV question, reveal and scoreboard screens, and the phone's four
-    // answer buttons, are their own tasks later in Phase 3. A game that draws
-    // nothing is what "not yet" looks like from the hub.
+    // The TV's question, reveal and scoreboard screens are still their own task
+    // later in Phase 3. A game that draws nothing is what "not yet" looks like
+    // from the hub.
     tv: () => null,
-    controller: () => null,
+    controller: TriviaControllerScreen,
   },
 };

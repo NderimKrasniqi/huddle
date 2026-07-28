@@ -230,6 +230,18 @@ working must add it here.
   the rules rather than on each screen, so the running scoreboard, the Victory
   Screen and the finished state cannot disagree about who is winning. It is also
   who is playing: every player has a row from the first question.
+- **Answer Screen** — what a phone shows during a game of trivia: the question's
+  four options as buttons, or, on any beat with nothing to press, a line sending
+  the room's Eyes up to the television. Derived from the room's state and
+  nothing else (`answerScreen`) — a phone remembers no tap of its own, so what
+  it draws is always what the room says rather than what that phone hopes it
+  said. It offers only taps the rules would accept, which is what leaves the
+  reducer's refusals a floor nobody stands on.
+- **Locked In** — a player's answer is in and cannot be changed. The reducer
+  takes the first answer per player per question and refuses the rest, so this
+  is one state with three guards behind it: the button stops being pressable,
+  the rules refuse a second answer, and the hub does not overwrite one on its
+  way past.
 - **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
   or `speed` (`100 + round(100 × secondsRemaining / 20)`).
 - **Victory Screen** — end-of-game final standings on the TV; ties share the

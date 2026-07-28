@@ -33,10 +33,10 @@ import { mutation, type MutationCtx, query } from './_generated/server';
  * them. The Session Token is the only thing a phone presents — a phone never
  * names itself and is never believed when it does — so the lookup starts there.
  */
-async function roomThisPhoneRuns(
+async function seatThisPhoneHolds(
   ctx: MutationCtx,
   sessionToken: string,
-): Promise<Doc<'rooms'>> {
+): Promise<{ player: Doc<'players'>; room: Doc<'rooms'> }> {
   const player = await ctx.db
     .query('players')
     .withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken))
@@ -54,6 +54,22 @@ async function roomThisPhoneRuns(
   if (room === null) {
     throw new ConvexError<GameLifecycleRejection>({ kind: 'notInRoom' });
   }
+
+  return { player, room };
+}
+
+/**
+ * The room this phone *runs*, or the refusal that says why it does not.
+ *
+ * The seat lookup above plus the one question the lifecycle adds: does the room
+ * point at this player? Playing a game asks only for the seat, which is why the
+ * two are separate — `sendEvent` is open to everybody at the table.
+ */
+async function roomThisPhoneRuns(
+  ctx: MutationCtx,
+  sessionToken: string,
+): Promise<Doc<'rooms'>> {
+  const { player, room } = await seatThisPhoneHolds(ctx, sessionToken);
 
   // The host moves — a player who joined second holds it the moment the room
   // gives up on the first — so this is asked at the tap and never cached.
@@ -176,6 +192,68 @@ export const browseGame = mutation({
     const room = await roomThisPhoneRuns(ctx, args.sessionToken);
 
     await ctx.db.patch(room._id, { browsingGameIndex: browsingIndex(args.index) });
+    return null;
+  },
+});
+
+/**
+ * A player acts in the running game: the event goes to the module's rules, and
+ * the room keeps whatever they make of it.
+ *
+ * This is the hub's whole part in playing a game, and it is deliberately small.
+ * It decides exactly one thing — which player the event came from — and decides
+ * nothing else: it does not know what an answer is, cannot tell a good event
+ * from a bad one, and asks the module rather than judging.
+ *
+ * Open to every player, unlike the lifecycle above. A game only the Host could
+ * act in would not be a party game.
+ */
+export const sendEvent = mutation({
+  args: { sessionToken: v.string(), event: v.any() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { player, room } = await seatThisPhoneHolds(ctx, args.sessionToken);
+
+    // A thumb that landed just after the Host ended the game, or a phone that
+    // has not heard yet. There is nothing to tell the person holding it — the
+    // screen they tapped has already gone — so this is silence, not a refusal.
+    if (room.game === undefined) {
+      return null;
+    }
+
+    // A room playing a game this build does not install: possible only across a
+    // deployment, and not something a phone can be told anything useful about.
+    const game = gameLogicById(room.game.gameId);
+
+    if (game === undefined) {
+      return null;
+    }
+
+    // The player is named here and nowhere else. A phone may put whatever it
+    // likes in the event — this overwrites it with the seat the Session Token
+    // holds, so naming somebody else is a claim the hub simply does not read
+    // (see `GameEvent`, which calls the field a claim rather than an identity).
+    const next = game.reduce(room.game.state, {
+      ...(args.event as object),
+      playerId: player._id,
+    });
+
+    // A module that does not recognise an event returns no state at all, and an
+    // exhaustive switch over its own events is how it does that. Storing
+    // `undefined` here would let one unrecognised event erase the game the room
+    // is playing, so nothing arriving from a phone is ever stored unexamined.
+    if (next === undefined) {
+      return null;
+    }
+
+    // The rules refuse by returning the state they were given, so an identical
+    // state means nothing happened — and writing it anyway would wake every
+    // subscription in the room to redraw what they are already showing.
+    if (next === room.game.state) {
+      return null;
+    }
+
+    await ctx.db.patch(room._id, { game: { gameId: room.game.gameId, state: next } });
     return null;
   },
 });
