@@ -65,6 +65,15 @@ working must add it here.
   already in. A room too *large* for a game is not refused — Huddle cannot
   remove a player, so that belongs in the Host's picker, where there is still
   something to be done about it.
+- **Carousel** — the TV's game browser (handoff §6): the focused card with its
+  neighbours either side. It draws whatever `browsingGameIndex` names, so the
+  television follows the room rather than any one phone.
+- **Browsing Game Index** — the room's position in the Registry's ordered list,
+  which the Host's arrows move and the TV and every other phone follow. An index
+  and not a game id, because browsing is a walk along an ordered list: "the third
+  card" has to mean the same thing on every screen. Clamped to what the build
+  installs (`browsingIndex`) rather than refused, since the list differs between
+  builds.
 - **Game Stage** — the part of a client's screen a running game draws in: the
   whole TV under the header, and the phone under its own. The frame around it is
   the hub's and says only what Game Metadata already told it, so neither client

@@ -5,7 +5,7 @@ import {
   ROOM_CODE_LENGTH,
   roomJoinLink,
 } from '@huddle/game-core';
-import { runningGameScreen } from '@huddle/game-registry';
+import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/game-registry';
 import {
   borderWidth,
   codeLetterColor,
@@ -137,6 +137,9 @@ function OpenRoomStage({
   // a game, where the roster changes on every join, claim and heartbeat.
   const running = useQuery(api.games.running, { roomId: room.roomId });
   const screen = runningGameScreen(running);
+  // Which card the Host is on. Its own subscription, and the one the AC times:
+  // the room writes it on a tap and Convex pushes it here.
+  const browsingAt = useQuery(api.games.browsing, { roomId: room.roomId });
 
   if (screen.kind === 'unknownGame') {
     return <UnknownGameStage gameId={screen.gameId} />;
@@ -146,11 +149,23 @@ function OpenRoomStage({
     return <GameStage module={screen.module} state={screen.state} roster={roster ?? []} />;
   }
 
+  // A room nobody has joined is still inviting people in, so it keeps the big
+  // code and the QR. The moment there is a player there is a Host, and the
+  // television becomes what that Host is browsing — the code stays reachable in
+  // the header chip, which is where the handoff's lobby and carousel both keep
+  // it (§3, §6).
+  const seats = roster ?? [];
+  const browsing = carouselWindow(browsingAt ?? 0);
+
+  if (seats.length > 0 && browsing !== undefined) {
+    return <CarouselStage window={browsing} code={room.code} roster={seats} />;
+  }
+
   return (
     <PairingStage
       opening={opening}
       code={room.code}
-      footer={<RosterFooter roster={roster ?? []} arrivals={arrivals} />}
+      footer={<RosterFooter roster={seats} arrivals={arrivals} />}
     />
   );
 }
@@ -196,6 +211,126 @@ function PairingStage({
         {footer}
       </View>
     </TvStage>
+  );
+}
+
+/**
+ * TV — Game carousel (docs/design/design-handoff.md §6): the game the Host is
+ * browsing, with its neighbours either side, and the room's code still on the
+ * header so somebody arriving late can still get in.
+ *
+ * The television is a renderer here as everywhere else — it draws the index the
+ * room stored, and the Host's phone is the only thing that moves it. Nothing on
+ * this screen knows which game it is showing: the card is `GameMetadata`, which
+ * is what metadata is for.
+ */
+function CarouselStage({
+  window,
+  code,
+  roster,
+}: {
+  readonly window: CarouselWindow;
+  readonly code: string;
+  readonly roster: readonly RosterSeat[];
+}) {
+  const host = roster.find((seat) => seat.host);
+
+  return (
+    <TvStage>
+      <View style={styles.screen}>
+        <View style={styles.carouselHeader}>
+          <Text style={styles.logo}>
+            HUDDLE<Text style={styles.logoPeriod}>.</Text>
+          </Text>
+          <View style={styles.roomChipGroup}>
+            <Text style={styles.roomChipLabel}>room</Text>
+            <StickerSurface depth={shadowDepth.tvCard} style={styles.roomChip}>
+              <Text style={styles.roomChipText}>{code}</Text>
+            </StickerSurface>
+          </View>
+        </View>
+
+        <View style={styles.carousel}>
+          {/* The side cards are absent rather than duplicated with one game
+              installed — `carouselWindow` is what decides that, and this just
+              draws what it was handed. */}
+          <SideKeyArt game={window.previous} />
+          <FocusedGameCard game={window.focused} />
+          <SideKeyArt game={window.next} />
+        </View>
+
+        <View style={styles.carouselFooter}>
+          <View style={styles.pageDots}>
+            {Array.from({ length: window.total }, (_unused, position) => (
+              <View
+                key={position}
+                style={[styles.pageDot, position === window.index && styles.pageDotActive]}
+              />
+            ))}
+          </View>
+          <Text style={styles.browsingLine}>
+            {host === undefined
+              ? 'Picking a game…'
+              : `${host.nickname} is browsing on their phone`}
+          </Text>
+        </View>
+      </View>
+    </TvStage>
+  );
+}
+
+/**
+ * The focused card: key art over the title and its chips (handoff §6 — 440×520,
+ * 4px ink border, 10px cobalt offset shadow).
+ */
+function FocusedGameCard({ game }: { readonly game: GameModule }) {
+  const { title, keyArt, playerRange, estimatedMinutes, category } = game.metadata;
+
+  return (
+    <StickerSurface
+      depth={shadowDepth.tvHero}
+      shadowColor={colors.cobalt}
+      style={styles.focusedCard}
+    >
+      <View style={[styles.keyArt, { backgroundColor: colors[keyArt.color] }]}>
+        <Text style={styles.keyArtTitle}>{title}</Text>
+      </View>
+
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <View style={styles.chips}>
+          <Chip text={`${playerRange.min}–${playerRange.max} players`} />
+          <Chip text={`~${estimatedMinutes} min`} />
+          <Chip text={category} tone={colors.yellow} />
+        </View>
+      </View>
+    </StickerSurface>
+  );
+}
+
+/** A neighbouring card: key art alone, dimmed, tilted and stood back (§6). */
+function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
+  if (game === undefined) {
+    // Nothing rather than a placeholder: an empty slot beside the focused card
+    // would read as a game that failed to draw.
+    return null;
+  }
+
+  return (
+    <View style={styles.sideCardWrapper}>
+      <View style={[styles.sideCard, { backgroundColor: colors[game.metadata.keyArt.color] }]}>
+        <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** One meta chip under a card's title. */
+function Chip({ text, tone }: { readonly text: string; readonly tone?: string }) {
+  return (
+    <View style={[styles.chip, tone === undefined ? null : { backgroundColor: tone }]}>
+      <Text style={styles.chipText}>{text}</Text>
+    </View>
   );
 }
 
@@ -611,6 +746,155 @@ const styles = StyleSheet.create({
 
   // Bungee at the header's right end, opposite the wordmark: the game's name,
   // which is the one thing the hub can say about a game it does not know.
+  // Header as the handoff's lobby: logo left, "room" + code chip right.
+  carouselHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    paddingHorizontal: 56,
+    paddingVertical: 28,
+  },
+  roomChipGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roomChipLabel: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.tv,
+  },
+  roomChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.chip,
+  },
+  roomChipText: {
+    color: colors.cobalt,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    letterSpacing: letterSpacing.roomCode,
+    marginRight: -letterSpacing.roomCode,
+  },
+
+  carousel: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 28,
+  },
+  // 440×520 with the ink border and the cobalt offset shadow (§6).
+  focusedCard: {
+    width: 440,
+    height: 520,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.cardLarge,
+  },
+  keyArt: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  keyArtTitle: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    fontSize: 46,
+    lineHeight: 52,
+    textAlign: 'center',
+  },
+  cardInfo: {
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 22,
+    backgroundColor: colors.surface,
+  },
+  cardTitle: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 38,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.chip,
+  },
+  chipText: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.tv,
+  },
+
+  // 300×400 at half opacity and stood back, per §6. The tilt comes from
+  // Boardwalk's own sticker rotation rather than a number invented here.
+  sideCardWrapper: {
+    opacity: opacity.carouselSideCard,
+    transform: [{ scale: 0.94 }, { rotate: stickerTilt.carouselSideCard }],
+  },
+  sideCard: {
+    width: 300,
+    height: 400,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.cardLarge,
+  },
+  sideCardTitle: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 40,
+    textAlign: 'center',
+  },
+
+  carouselFooter: {
+    alignItems: 'center',
+    gap: 16,
+    paddingBottom: 36,
+  },
+  pageDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pageDot: {
+    width: 12,
+    height: 12,
+    backgroundColor: colors.mutedBorder,
+    borderRadius: radius.pill,
+  },
+  // The active dot is a cobalt pill with an ink border (§6).
+  pageDotActive: {
+    width: 32,
+    backgroundColor: colors.cobalt,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+  },
+  browsingLine: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 22,
+  },
+
   gameTitle: {
     color: colors.ink,
     fontFamily: fontFamily.display,

@@ -5,7 +5,7 @@ import {
   type GameLifecycleRejection,
   type GamePlayer,
 } from '@huddle/game-core';
-import { gameLogicById } from '@huddle/game-registry/logic';
+import { browsingIndex, gameLogicById } from '@huddle/game-registry/logic';
 import { ConvexError, v } from 'convex/values';
 
 import type { Doc, Id } from './_generated/dataModel';
@@ -151,6 +151,50 @@ export const endGame = mutation({
     // lobby — `phaseAfter('end')` is that field being absent.
     await ctx.db.patch(room._id, { game: undefined });
     return null;
+  },
+});
+
+/**
+ * The Host moves the carousel: the room remembers which card, and the TV
+ * follows.
+ *
+ * Host-only like the rest of the lifecycle, and for the same reason — the
+ * carousel is one shared surface, and a room where anybody could move it would
+ * be a room where nobody could read it.
+ *
+ * The index is clamped rather than refused (`browsingIndex`): it is a position
+ * in a list that differs between builds, so a phone browsing past what this
+ * deployment installs gets the nearest card instead of an error. Browsing is
+ * also allowed mid-game and simply has no effect on it — the carousel is lobby
+ * furniture, and refusing would mean a Host whose thumb was still on the arrows
+ * as a game started seeing a failure for something harmless.
+ */
+export const browseGame = mutation({
+  args: { sessionToken: v.string(), index: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const room = await roomThisPhoneRuns(ctx, args.sessionToken);
+
+    await ctx.db.patch(room._id, { browsingGameIndex: browsingIndex(args.index) });
+    return null;
+  },
+});
+
+/**
+ * Which card the room is browsing — the subscription the TV's carousel and the
+ * non-Host phones follow.
+ *
+ * Always a number this build can use, so no client has to decide what an absent
+ * or out-of-range index means; they would each have to decide it the same way,
+ * and one of them eventually would not.
+ */
+export const browsing = query({
+  args: { roomId: v.id('rooms') },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+
+    return browsingIndex(room?.browsingGameIndex);
   },
 });
 

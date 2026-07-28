@@ -67,6 +67,18 @@ export default defineSchema({
         state: v.any(),
       }),
     ),
+    /**
+     * Which card the Host is browsing in the lobby: a position in the Registry's
+     * ordered list, which the TV's carousel follows.
+     *
+     * An index and not a game id, because browsing is a walk along an ordered
+     * list — "the third card" has to mean the same thing on the television and
+     * on the phone, and ids would leave the two to agree on an order
+     * separately. Absent means nobody has browsed yet, which reads as the first
+     * card; `browsingIndex` in game-registry is what turns either into a
+     * position this build actually has.
+     */
+    browsingGameIndex: v.optional(v.number()),
     // A room's age is `_creationTime`, and its expiry needs no field of its own:
     // the ten minutes run from the last heartbeat the room heard, which is
     // already written down as the newest `lastSeenAt` among its players. A

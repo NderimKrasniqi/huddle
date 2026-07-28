@@ -37,6 +37,13 @@ export const radius = {
  */
 export const opacity = {
   unavailable: 0.3,
+  /**
+   * 50% — the carousel's side cards (handoff §6). A separate number from
+   * `unavailable` on purpose: a neighbouring game is not unavailable, it is
+   * merely not the one being looked at, and the two would drift the moment one
+   * of those meanings changed.
+   */
+  carouselSideCard: 0.5,
 } as const;
 
 /**
@@ -56,4 +63,10 @@ export const stickerTilt = {
    * handoff's alternating sibling tilts.
    */
   statusChip: '2deg',
+  /**
+   * -2° — the carousel's side cards (handoff §6, "tilted"). Inside Boardwalk's
+   * -3°…3° range and shallower than the badge, so a card standing back from the
+   * focused one does not out-lean the loudest sticker on the screen.
+   */
+  carouselSideCard: '-2deg',
 } as const;

@@ -1,4 +1,5 @@
 import type { GameLifecycleRejection } from '@huddle/game-core';
+import { GAME_REGISTRY } from '@huddle/game-registry';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { describe, expect, it } from 'vitest';
@@ -224,5 +225,60 @@ describe('the Host ending the game', () => {
 
     expect(await t.query(api.games.running, { roomId })).toBeNull();
     expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+});
+
+describe('the carousel the Host browses', () => {
+  it('starts on the first card in a room nobody has browsed in', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomWithParty(t);
+
+    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+  });
+
+  it('remembers where the Host browsed to', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.games.browseGame, { sessionToken: host, index: 0 });
+
+    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+  });
+
+  it('clamps an index this build does not install', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    // A phone browsing past what this deployment has installed gets the nearest
+    // card, not an error on a television.
+    await t.mutation(api.games.browseGame, { sessionToken: host, index: 99 });
+
+    expect(await t.query(api.games.browsing, { roomId })).toBe(GAME_REGISTRY.length - 1);
+  });
+
+  it('refuses a phone that is not the Host', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, guest } = await roomWithParty(t);
+
+    // One shared surface: a room where anybody could move it is a room where
+    // nobody could read it.
+    expect(
+      await rejectionFrom(t.mutation(api.games.browseGame, { sessionToken: guest, index: 0 })),
+    ).toEqual({ kind: 'notHost' });
+    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+  });
+
+  it('leaves a running game alone', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+    const running = await t.query(api.games.running, { roomId });
+
+    // Browsing mid-game is harmless lobby furniture, not a refusal for a Host
+    // whose thumb was still on the arrows as the game started.
+    await t.mutation(api.games.browseGame, { sessionToken: host, index: 0 });
+
+    expect(await t.query(api.games.running, { roomId })).toEqual(running);
   });
 });

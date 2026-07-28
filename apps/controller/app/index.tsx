@@ -6,7 +6,13 @@ import {
   type PlayerColorName,
   ROOM_CODE_LENGTH,
 } from '@huddle/game-core';
-import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
+import {
+  carouselWindow,
+  type CarouselWindow,
+  nextIndex,
+  previousIndex,
+  runningGameScreen,
+} from '@huddle/game-registry';
 import {
   borderWidth,
   codeLetterColor,
@@ -36,7 +42,7 @@ import {
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
-import { startControl } from '../src/game-controls';
+import { gameToStart, startControl } from '../src/game-controls';
 import { startFailureMessage } from '../src/game-rejection';
 import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
@@ -437,8 +443,135 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         <Text style={styles.statusText}>{lobbyStatusText(standing)}</Text>
       </StickerSurface>
 
-      {standing.youAreHost ? <StartGameControl roster={roster} /> : null}
+      <LobbyGameControls
+        roomId={session.roomId}
+        roster={roster}
+        youAreHost={standing.youAreHost}
+      />
     </PhoneScreen>
+  );
+}
+
+/**
+ * What the lobby offers below the status card: the picker for the Host, and for
+ * everybody else the one thing they need to know about it.
+ *
+ * Both read the same `browsingGameIndex`, so "Now viewing Trivia" on a player's
+ * phone is the card the Host is looking at and the card the television is
+ * showing — one subscription, three screens.
+ */
+function LobbyGameControls({
+  roomId,
+  roster,
+  youAreHost,
+}: {
+  readonly roomId: PlayerSession['roomId'];
+  readonly roster: readonly RosterSeat[];
+  readonly youAreHost: boolean;
+}) {
+  const browsingAt = useQuery(api.games.browsing, { roomId });
+  const browsing = carouselWindow(browsingAt ?? 0);
+
+  if (browsing === undefined) {
+    return null;
+  }
+
+  return youAreHost ? (
+    <HostGamePicker browsing={browsing} roster={roster} />
+  ) : (
+    <NowViewing browsing={browsing} />
+  );
+}
+
+/**
+ * Phone — Host game picker (handoff §7): the card being browsed, arrows either
+ * side of "1 / 1", and the button that starts it.
+ *
+ * The arrows write `browsingGameIndex` and nothing else — the television is
+ * following the room, not this phone, so what the Host sees here and what the
+ * room sees on the TV cannot come apart.
+ */
+function HostGamePicker({
+  browsing,
+  roster,
+}: {
+  readonly browsing: CarouselWindow;
+  readonly roster: readonly RosterSeat[];
+}) {
+  const browseGame = useMutation(api.games.browseGame);
+  const back = previousIndex(browsing.index);
+  const on = nextIndex(browsing.index);
+
+  async function browse(to: number | undefined) {
+    if (to === undefined) {
+      return;
+    }
+
+    const sessionToken = await phoneSessionTokenStore.read();
+
+    if (sessionToken !== null) {
+      await browseGame({ sessionToken, index: to });
+    }
+  }
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>YOU’RE THE HOST — PICK A GAME</Text>
+
+      <View style={styles.pickerRow}>
+        <RoundButton label="‹" enabled={back !== undefined} onPress={() => void browse(back)} />
+        <View style={styles.pickedGame}>
+          <Text style={styles.pickedTitle}>{browsing.focused.metadata.title}</Text>
+          <Text style={styles.pickedMeta}>
+            {browsing.index + 1} / {browsing.total}
+          </Text>
+        </View>
+        <RoundButton label="›" enabled={on !== undefined} onPress={() => void browse(on)} />
+      </View>
+
+      <Text style={styles.pickerHint}>Swipe or tap arrows — the TV follows along</Text>
+
+      <StartGameControl roster={roster} browsingAt={browsing.index} />
+    </View>
+  );
+}
+
+/** Phone — Player waiting (handoff §8): the card the room is looking at. */
+function NowViewing({ browsing }: { readonly browsing: CarouselWindow }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.nowViewing}>Now viewing {browsing.focused.metadata.title}</Text>
+    </View>
+  );
+}
+
+/** One of the picker's 76px round buttons (§7). */
+function RoundButton({
+  label,
+  enabled,
+  onPress,
+}: {
+  readonly label: string;
+  readonly enabled: boolean;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      disabled={!enabled}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !enabled }}
+    >
+      {({ pressed }) => (
+        <StickerSurface
+          depth={shadowDepth.phoneSmall}
+          style={[styles.roundButton, pressed && styles.buttonPressed]}
+          wrapperStyle={enabled ? undefined : styles.buttonUnavailable}
+        >
+          <Text style={styles.roundButtonLabel}>{label}</Text>
+        </StickerSurface>
+      )}
+    </Pressable>
   );
 }
 
@@ -452,11 +585,17 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
  * refusal is the rule; this is the courtesy of not making the Host find out by
  * pressing.
  */
-function StartGameControl({ roster }: { readonly roster: readonly RosterSeat[] }) {
+function StartGameControl({
+  roster,
+  browsingAt,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly browsingAt: number;
+}) {
   const startGame = useMutation(api.games.startGame);
   const [starting, setStarting] = useState(false);
   const [failure, setFailure] = useState<string>();
-  const control = startControl(roster);
+  const control = startControl(roster, browsingAt);
 
   async function start() {
     setStarting(true);
@@ -470,10 +609,10 @@ function StartGameControl({ roster }: { readonly roster: readonly RosterSeat[] }
         return;
       }
 
-      const game = GAME_REGISTRY[0];
+      const game = gameToStart(browsingAt);
 
       if (game !== undefined) {
-        await startGame({ sessionToken, gameId: game.metadata.id });
+        await startGame({ sessionToken, gameId: game.id });
       }
     } catch (error) {
       setFailure(startFailureMessage(error));
@@ -1106,6 +1245,63 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.row,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  // The handoff's 76px round buttons, in Boardwalk's white-and-ink.
+  roundButton: {
+    width: 76,
+    height: 76,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.pill,
+  },
+  roundButtonLabel: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 30,
+    // Bungee rides low in its own line box; pinning it centres the chevron.
+    lineHeight: 34,
+  },
+  pickedGame: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  pickedTitle: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    lineHeight: 26,
+    textAlign: 'center',
+  },
+  pickedMeta: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+  },
+  pickerHint: {
+    alignSelf: 'stretch',
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  // What a player who is not running the room is told about the carousel: the
+  // card the Host is on, which is the card on the television.
+  nowViewing: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+    textAlign: 'center',
   },
   startButton: {
     backgroundColor: colors.green,

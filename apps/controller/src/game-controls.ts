@@ -1,20 +1,19 @@
 import type { GameMetadata, RosterSeatForGame } from '@huddle/game-core';
-import { GAME_REGISTRY } from '@huddle/game-registry';
+import { carouselWindow } from '@huddle/game-registry';
 
 /**
  * What the Host's phone offers in the lobby, and what it says when it cannot
  * offer it.
  *
- * The Host's real picker is the carousel (docs/design/design-handoff.md §7, and
- * its own task): browsing the Registry, settings, a chosen game. This is the
- * one control that task needs to already exist — the tap that starts what is
- * being browsed — so what it starts is the Registry's first entry, which is
- * also the only entry. `browsingGameIndex` replaces the zero when it lands.
+ * What it starts is whatever card the room is browsing (handoff §7), so the
+ * arrows and this button are two views of the same `browsingGameIndex` — and a
+ * Host who never touches the arrows starts the first card, which with one game
+ * installed is the only one.
  */
 
-/** The game the Host would start right now. */
-export function gameToStart(): GameMetadata | undefined {
-  return GAME_REGISTRY[0]?.metadata;
+/** The game the Host would start right now, given the card they are on. */
+export function gameToStart(browsingAt: number): GameMetadata | undefined {
+  return carouselWindow(browsingAt)?.focused.metadata;
 }
 
 /** What the Host's start control says and whether it can be pressed. */
@@ -34,8 +33,11 @@ export type StartControl = {
  * that refuses after it is pressed. The server stays the thing that decides,
  * because this phone's roster is a subscription and can be a round trip stale.
  */
-export function startControl(seats: readonly RosterSeatForGame[]): StartControl {
-  const game = gameToStart();
+export function startControl(
+  seats: readonly RosterSeatForGame[],
+  browsingAt: number,
+): StartControl {
+  const game = gameToStart(browsingAt);
 
   if (game === undefined) {
     // No games installed. Unreachable while the Registry has an entry, and the

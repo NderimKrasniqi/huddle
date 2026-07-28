@@ -17,13 +17,13 @@ describe('the game the Host would start', () => {
   it('is the one the Registry installs', () => {
     // Not "trivia": the phone reads the Registry, and naming a game here is the
     // thing the whole interface exists to avoid.
-    expect(gameToStart()).toBe(GAME_REGISTRY[0]?.metadata);
+    expect(gameToStart(0)).toBe(GAME_REGISTRY[0]?.metadata);
   });
 });
 
 describe('the Host’s start control', () => {
   it('offers the installed game by name', () => {
-    const control = startControl(party(2));
+    const control = startControl(party(2), 0);
 
     expect(control.label).toBe(`Start ${GAME_REGISTRY[0]?.metadata.title}`);
     expect(control.enabled).toBe(true);
@@ -31,7 +31,7 @@ describe('the Host’s start control', () => {
   });
 
   it('waits, and says what it is waiting for, one player short', () => {
-    const control = startControl(party(1));
+    const control = startControl(party(1), 0);
 
     expect(control.enabled).toBe(false);
     // Singular, because "needs 1 more players" is what a machine says.
@@ -41,7 +41,7 @@ describe('the Host’s start control', () => {
   it('counts how many more are needed when it is more than one', () => {
     // No installed game needs three today; the wording is what is being pinned,
     // and it has to be right the first time a game does.
-    const control = startControl([]);
+    const control = startControl([], 0);
     const need = GAME_REGISTRY[0]?.metadata.playerRange.min ?? 0;
 
     expect(control.enabled).toBe(false);
@@ -53,7 +53,7 @@ describe('the Host’s start control', () => {
   it('still names the game it is waiting to start', () => {
     // The label does not become "Waiting…": the Host should see what the button
     // will do once the room fills, not lose it while the room is short.
-    expect(startControl(party(1)).label).toBe(`Start ${GAME_REGISTRY[0]?.metadata.title}`);
+    expect(startControl(party(1), 0).label).toBe(`Start ${GAME_REGISTRY[0]?.metadata.title}`);
   });
 
   it('counts an away player, since the room still seats them', () => {
@@ -64,6 +64,6 @@ describe('the Host’s start control', () => {
 
     // The same count `startGame` uses — excluding away players is Phase 4's
     // "Away players in-game", and the two must not disagree before then.
-    expect(startControl(withOneAway).enabled).toBe(true);
+    expect(startControl(withOneAway, 0).enabled).toBe(true);
   });
 });

@@ -526,10 +526,54 @@ it.
   repo tests logic rather than rendering. `runningGameScreen` and `startControl`
   carry the decisions and are unit-tested; the wiring from a subscription to a
   mounted screen rests on the typecheck and on the run that has not happened.
-- [ ] Synced game carousel — AC: host phone prev/next (or swipe) updates
+- [x] Synced game carousel — AC: host phone prev/next (or swipe) updates
   `browsingGameIndex` in room state; the TV carousel follows within 250ms
   (focused card treatment per handoff); non-host phones show "Now viewing
   <Game>"; renders correctly with the registry's single MVP entry.
+
+  An index into the ordered Registry, not a game id: browsing is a walk along a
+  list, so "the third card" has to mean the same thing on the television and on
+  the phone, and ids would leave the two to agree an order separately. It is
+  clamped rather than refused — the list differs between builds, and a phone
+  that browsed past what this deployment installs should get the nearest card,
+  not an error on a television. `browseGame` is Host-only for the reason the
+  rest of the lifecycle is: one shared surface that anybody could move is a
+  surface nobody can read.
+
+  **A decision the docs did not settle, and the user made:** §1 pairing, §3
+  lobby and §6 carousel are three separate TV screens, and at handoff sizes they
+  cannot coexist — the focused card alone is 520px of a 720px stage, so the
+  carousel and the Phase 2 roster cannot both be on screen. The television now
+  shows the pairing screen while the room is empty and the carousel from the
+  first join onward, with the Room Code moving to the header chip that §3 and §6
+  both keep. The cost is that the filling-up seats stop being the TV's main
+  event once anybody is in.
+
+  With one game installed both side cards are absent rather than duplicated, and
+  both arrows are dead — a list of one that wrapped would give the Host two
+  buttons that changed nothing. Two Boardwalk tokens were added for §6 rather
+  than inlined: `opacity.carouselSideCard` (50%, deliberately not the 30%
+  `unavailable`, because a neighbouring game is not unavailable) and
+  `stickerTilt.carouselSideCard`.
+
+  **A regression this task caused and caught.** Putting `browsingIndex` on the
+  server's entry point as a re-export from `./carousel` pulled `GAME_REGISTRY`
+  — and every installed game's React Native screens — straight back into the
+  Convex bundle, undoing the seam two tasks earlier existed to build. Nothing
+  failed; the bundle simply grew the screens back, and it was found only by
+  re-running the esbuild check by hand. The clamp now lives in `./browsing`,
+  which takes a list *length* and imports no Registry at all, and
+  `logic.test.ts` walks the server entry point's import graph so the same
+  mistake fails a test instead of a play-test. That guard was mutation-checked:
+  re-adding the offending export fails both its assertions.
+
+  What this does not carry: "within 250ms" is **argued, not observed**, exactly
+  as the previous task's "within 1s" is — same Convex subscription, nothing run
+  on a television. The guard is a *source* check and not a bundle check: it
+  reads relative imports inside `packages/game-registry` and would not see a
+  bundler inlining something from outside it. And the handoff's swipe (§7,
+  "Swipe or tap arrows") is not implemented — the arrows are, the hint text
+  promises both, and with one installed game there is nothing to swipe to.
 - [ ] Trivia reducer with flat scoring — AC (unit tests, using a 3-question
   inline set): each question presents 4 options with exactly 1 correct; a
   correct answer scores +100, wrong or no answer +0; with players A and B
