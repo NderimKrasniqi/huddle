@@ -338,10 +338,8 @@ function Chip({ text, tone }: { readonly text: string; readonly tone?: string })
  * The television with a game on it: the module's own screen, under a header
  * that says only what `GameMetadata` already told the hub.
  *
- * Nothing here knows which game it is drawing. The module's TV screen draws
- * nothing yet — the question, reveal and scoreboard screens are their own tasks
- * later in this phase — so today this is the game's title over an empty
- * Boardwalk canvas, which is what "not yet" honestly looks like from the hub.
+ * Nothing here knows which game it is drawing — the header is metadata and the
+ * stage below it is the module's.
  */
 function GameStage({
   module,
@@ -352,6 +350,10 @@ function GameStage({
   readonly state: unknown;
   readonly roster: readonly RosterSeat[];
 }) {
+  // Mounted as a component rather than called as a function, so a game's screen
+  // owns its own hooks instead of registering them on this one's list.
+  const TvScreen = module.screens.tv;
+
   return (
     <TvStage>
       <View style={styles.screen}>
@@ -363,7 +365,7 @@ function GameStage({
         </View>
 
         <View style={styles.gameStage}>
-          {module.screens.tv({ state, players: gamePlayersFrom(roster) })}
+          <TvScreen state={state} players={gamePlayersFrom(roster)} />
         </View>
       </View>
     </TvStage>

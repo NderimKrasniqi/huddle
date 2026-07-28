@@ -16,6 +16,15 @@ import { INLINE_QUESTIONS, type TriviaQuestion } from './questions';
 export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
 
 /**
+ * How long the Reveal stays up before the room moves to the next question.
+ *
+ * A rule of the game rather than a fact about either screen, so it is here with
+ * the rest of them: the phones count it down and the television draws for that
+ * long, and the two cannot be counting different numbers.
+ */
+export const REVEAL_SECONDS = 5;
+
+/**
  * Where a game of trivia is: a question on screen, its Reveal, or over.
  *
  * The three beats of the loop the TV draws (docs/implementation-plan.md, Phase
@@ -248,3 +257,42 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent> = {
     }
   },
 };
+
+/**
+ * The beat that ends a Reveal, addressed and timed — or nothing, on a beat that
+ * ends by itself.
+ *
+ * This is the room's clock, and it is here rather than in the screen that runs
+ * it for one reason: it is the only thing in trivia that moves the room from
+ * one question to the next, and a mistake in it does not fail loudly. An
+ * `advance` addressed to the wrong beat is *inert by design* — the reducer
+ * returns the state untouched and the hub skips the write — so getting this
+ * wrong does not throw, does not log, and does not fail a renderer test. It
+ * hangs the reveal forever. Deciding it here is what lets it be asserted.
+ *
+ * Who sends it is the screen's business (`./controller-screen`), and the answer
+ * is "every playing phone": the event is addressed to the beat it ends, so the
+ * first to arrive moves the room and the rest do nothing at all.
+ */
+export function revealBeat(
+  state: TriviaState,
+  playerId: GamePlayerId,
+):
+  | { readonly afterMs: number; readonly event: Extract<TriviaEvent, { kind: 'advance' }> }
+  | undefined {
+  if (state.phase !== 'reveal') {
+    return undefined;
+  }
+
+  return {
+    afterMs: REVEAL_SECONDS * 1000,
+    event: {
+      kind: 'advance',
+      playerId,
+      // The beat on screen now — not the one that will be up when the timer
+      // fires, which is exactly what makes a late send harmless.
+      questionIndex: state.questionIndex,
+      phase: 'reveal',
+    },
+  };
+}

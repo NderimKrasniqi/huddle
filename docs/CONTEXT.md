@@ -242,6 +242,21 @@ working must add it here.
   is one state with three guards behind it: the button stops being pressable,
   the rules refuse a second answer, and the hub does not overwrite one on its
   way past.
+- **Watched Screen** — the Answer Screen's counterpart on the television: what
+  the TV draws during a game of trivia (`watchedScreen`) — the question with its
+  four options and the "3/5 answered" count, the Reveal with the correct option
+  and a Verdict per player, or the final scoreboard. Derived from the room's
+  state and its roster, which is the whole of what a TV screen is given: the
+  television holds no player record and sends nothing.
+- **Verdict** — whether one player got the question just revealed right. False
+  for a wrong answer *and* for no answer, which score the same, so the mark on
+  screen can never disagree with the score it produced.
+- **Reveal Beat** — the five seconds a Reveal stays up, and the `advance` that
+  ends it (`revealBeat`, `REVEAL_SECONDS`). It comes from the phones because it
+  cannot come from the television, and from *every* playing phone rather than a
+  nominated one: the event is addressed to the beat it ends, so the first to
+  arrive moves the room and the rest do nothing. One nominated phone would be
+  one phone whose screen locking stalls the room.
 - **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
   or `speed` (`100 + round(100 × secondsRemaining / 20)`).
 - **Victory Screen** — end-of-game final standings on the TV; ties share the

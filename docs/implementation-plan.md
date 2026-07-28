@@ -628,10 +628,49 @@ it.
   travel on. It names the player from the Session Token and never from the
   phone, stores nothing when the module makes nothing of the event, and skips
   the write when the rules refuse — so a refused tap wakes no subscription.
-- [ ] TV question & reveal screens — AC: TV shows question, 4 options, and how
+- [x] TV question & reveal screens — AC: TV shows question, 4 options, and how
   many players have answered ("3/5 answered"); when all active players have
   answered, reveal shows the correct option and per-player correctness; then
   the running scoreboard for 5s; then the next question.
+
+  How "then the next question" happens, since the plan did not say: the
+  television cannot send it. A TV screen is given the room's state and its
+  roster and nothing else — it holds no player record, and every Game Event
+  must name a player. So the Reveal Beat comes from the phones, and from
+  *every* playing phone rather than a nominated one: the `advance` is addressed
+  to the beat it ends, so the first to arrive moves the room and the rest do
+  nothing. One nominated phone would be one phone whose screen locking stalls
+  the room. This is the flat cost of the reducer task's flagged gap, paid the
+  cheap way; Phase 4's question timer is where a server-side scheduler and a
+  player-less event belong.
+
+  What this does not carry: **the reveal and the running scoreboard are shown
+  together for the 5s, not in sequence.** The AC reads "reveal shows the correct
+  option and per-player correctness; then the running scoreboard for 5s", and
+  everything named is on screen for the full five seconds. This matches
+  docs/CONTEXT.md's Reveal, which is one phase showing the answer "followed by
+  the running scoreboard" — recorded here so a later reader does not re-litigate
+  it. A sequenced version needs no reducer change, only a second timer inside
+  the reveal render.
+
+  **A room with every phone backgrounded at once stalls on the reveal.** Nothing
+  else can send the beat. It self-heals the moment any phone comes forward, and
+  the Host's "Back to lobby" is the only other way out. Phase 4's server-side
+  scheduler is the real fix.
+
+  **One line of the send path is guarded by nothing.** `revealBeat` decides what
+  to send and when, and is asserted against four mutations — but the line in
+  `useRevealBeat` that actually calls `sendEvent` when the timer fires is in a
+  `.tsx` file, and deleting it would hang every reveal with tests, lint and
+  typecheck all green. Closing it means mounting a React component, which the
+  repo has no renderer for and deliberately does not do (docs/tech-stack.md).
+  A play-test is what catches this one.
+
+  Also true of the two screens generally: neither has run on a television or a
+  phone. The Boardwalk ink borders on both were wrong until review caught it —
+  every `StickerSurface` needs an explicit `borderColor`, since the surface
+  paints its band from that field — which is the kind of thing only a screen
+  someone has looked at can settle.
 - [ ] Victory & return to lobby — AC: after the last question the TV shows
   final standings (winner celebrated, ties share the top rank); Host's "Back
   to lobby" returns everyone to the lobby with the same roster.

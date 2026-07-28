@@ -1,7 +1,7 @@
 import type { GamePlayer } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
-import { triviaGameLogic, type TriviaState } from './logic';
+import { REVEAL_SECONDS, revealBeat, triviaGameLogic, type TriviaState } from './logic';
 import { INLINE_QUESTIONS } from './questions';
 
 /**
@@ -300,5 +300,74 @@ describe('a game played to the end', () => {
 
     expect(advancing(finished)).toBe(finished);
     expect(answering(finished, ADA, 0)).toBe(finished);
+  });
+});
+
+/**
+ * The beat that ends a reveal.
+ *
+ * Tested here rather than through the screen that runs it because getting it
+ * wrong is silent: an `advance` addressed to the wrong beat is inert by design,
+ * so a mistake does not throw or fail a render — it hangs the reveal forever.
+ * These are the assertions that turn that into a red test.
+ */
+describe('the beat that ends a reveal', () => {
+  it('is nothing at all while a question is still up', () => {
+    expect(revealBeat(gameWith(ADA, GRACE), ADA)).toBeUndefined();
+  });
+
+  it('is nothing once the game is over', () => {
+    let finished = gameWith(ADA, GRACE);
+
+    for (let question = 0; question < INLINE_QUESTIONS.length; question += 1) {
+      finished = answering(finished, ADA, rightAnswerTo(finished));
+      finished = answering(finished, GRACE, rightAnswerTo(finished));
+      finished = advancing(finished);
+    }
+
+    expect(finished.phase).toBe('finished');
+    expect(revealBeat(finished, ADA)).toBeUndefined();
+  });
+
+  it('is addressed to the reveal on screen, so the room actually moves on', () => {
+    const revealed = answering(
+      answering(gameWith(ADA, GRACE), ADA, 0),
+      GRACE,
+      0,
+    );
+
+    expect(revealed.phase).toBe('reveal');
+
+    const beat = revealBeat(revealed, ADA);
+
+    if (beat === undefined) {
+      throw new Error('a reveal must have a beat that ends it');
+    }
+
+    expect(beat.afterMs).toBe(REVEAL_SECONDS * 1000);
+
+    // The assertion that matters: the event this produces must be one the
+    // reducer acts on. Addressed to any other beat it would be swallowed in
+    // silence and the reveal would never end.
+    const moved = triviaGameLogic.reduce(revealed, beat.event);
+
+    expect(moved).not.toBe(revealed);
+    expect(moved.phase).toBe('question');
+    expect(moved.questionIndex).toBe(revealed.questionIndex + 1);
+  });
+
+  it('is inert when it fires late, which is what lets every phone send it', () => {
+    const revealed = answering(answering(gameWith(ADA, GRACE), ADA, 0), GRACE, 0);
+    const beat = revealBeat(revealed, ADA);
+    const movedOn = advancing(revealed);
+
+    if (beat === undefined) {
+      throw new Error('a reveal must have a beat that ends it');
+    }
+
+    // Ada's phone was slow; by the time it fires the room is on the next
+    // question. The nine other phones that sent the same thing are why the
+    // room did not wait for her.
+    expect(triviaGameLogic.reduce(movedOn, beat.event)).toBe(movedOn);
   });
 });

@@ -757,9 +757,15 @@ function PlayerGameScreen({
     })();
   }
 
+  // Mounted as a component rather than called as a function. The screen owns
+  // hooks now (trivia's reveal beat), and calling it would register them on
+  // this component's hook list instead of its own — making hook count a hidden
+  // contract between the hub and every game it installs.
+  const Controller = module.screens.controller;
+
   return (
     <View style={styles.gameStage}>
-      {module.screens.controller({ state, player, sendEvent: send })}
+      <Controller state={state} player={player} sendEvent={send} />
     </View>
   );
 }

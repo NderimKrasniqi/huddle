@@ -10,10 +10,11 @@ import {
   shadowDepth,
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
+import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
-import type { TriviaEvent, TriviaState } from './logic';
+import { revealBeat, type TriviaEvent, type TriviaState } from './logic';
 
 /**
  * Trivia on the phone: four buttons, and then a phone that gets out of the way.
@@ -89,12 +90,76 @@ function LockedInPill() {
   );
 }
 
+/**
+ * Runs the beat that ends a Reveal.
+ *
+ * *What* to send and *when* is `revealBeat`, in the rules, where it can be
+ * asserted — a mis-addressed advance is inert by design and would hang the
+ * reveal in silence. This hook is only the timer around it.
+ *
+ * It comes from the phones because it cannot come from the television: a TV
+ * screen is given the room's state and its roster and nothing else — it holds
+ * no player record, and every game event has to name a player
+ * (`TvGameScreenProps`, `GameEvent`). So the room's clock lives on the only
+ * devices that can speak.
+ *
+ * *Every* playing phone runs it, not the Host's alone, and that is the point:
+ * ten phones send the same `advance` a few milliseconds apart, the first moves
+ * the room, and the rest are inert because the event is addressed to the beat
+ * it ends. One nominated phone would be one phone whose screen locking stalls
+ * the room; a crowd of redundant senders cannot. The hub skips the write for
+ * the ones that change nothing, so the nine no-ops wake no subscription.
+ */
+function useRevealBeat(
+  state: TriviaState,
+  playerId: string,
+  sendEvent: (event: TriviaEvent) => void,
+) {
+  const beat = revealBeat(state, playerId);
+
+  // Both the beat and the hub's callback are fresh objects on every render —
+  // `revealBeat` builds one, and nothing in `ControllerGameScreenProps`
+  // promises `sendEvent` is stable. Depending on either directly would restart
+  // the five seconds on each render, which is a reveal that never ends. The ref
+  // is what the timer reads when it fires, so it always sends the current beat
+  // through the current callback.
+  const latest = useRef({ beat, sendEvent });
+
+  useEffect(() => {
+    latest.current = { beat, sendEvent };
+  });
+
+  // What the beat *is*, rather than which object it is: this changes only when
+  // the room moves to another beat, which is exactly when the timer should
+  // start over.
+  const beatKey = beat === undefined ? null : `${beat.event.questionIndex}:${beat.event.phase}`;
+  const afterMs = beat?.afterMs;
+
+  useEffect(() => {
+    if (beatKey === null || afterMs === undefined) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const current = latest.current;
+
+      if (current.beat !== undefined) {
+        current.sendEvent(current.beat.event);
+      }
+    }, afterMs);
+
+    return () => clearTimeout(timer);
+  }, [beatKey, afterMs]);
+}
+
 export function TriviaControllerScreen({
   state,
   player,
   sendEvent,
 }: ControllerGameScreenProps<TriviaState, TriviaEvent>) {
   const screen = answerScreen(state, player.playerId);
+
+  useRevealBeat(state, player.playerId, sendEvent);
 
   if (screen.kind === 'eyesUp') {
     return (
@@ -151,6 +216,7 @@ const styles = StyleSheet.create({
     opacity: opacity.unavailable,
   },
   answer: {
+    borderColor: colors.ink,
     borderRadius: radius.button,
     borderWidth: borderWidth.medium,
   },
@@ -172,6 +238,7 @@ const styles = StyleSheet.create({
   lockedIn: {
     alignSelf: 'center',
     backgroundColor: colors.green,
+    borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thin,
     paddingHorizontal: 16,
