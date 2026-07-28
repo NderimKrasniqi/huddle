@@ -256,13 +256,49 @@ demoable by force-quitting apps mid-lobby.
   `useJustJoined` is a React hook with no test around it — a literal `400` in
   its place would leave the suite green. So the "~4s" rests on inspection plus
   the simulator run above, and would not survive a careless edit.
-- [ ] TV room-open resilience — AC: a TV that launches before the backend is
+- [x] TV room-open resilience — AC: a TV that launches before the backend is
   reachable recovers on its own, with no human touching the remote (the TV app
   is defined as untouched after launch); `openRoom` already clears its memo on
   failure, so this is a caller that retries with backoff, plus a visible
   "reconnecting" state; a missing `EXPO_PUBLIC_CONVEX_URL` surfaces as that
   same readable failure rather than throwing at module import, which currently
   crashes the app at launch.
+
+  The crux was that a room fails to open in two different shapes, and they want
+  opposite treatment. A *rejection* is an attempt that is over, so it earns a
+  retry: 1s, 2s, 4s, 8s, 16s, then every 30s forever, with no attempt limit —
+  a television has no remote to press, so giving up is giving up permanently.
+  *Silence* is an attempt still out there: `ConvexReactClient` queues a mutation
+  it has no socket for and neither resolves nor rejects it, which is exactly
+  what a TV switched on ahead of its router gets. So after 4s of patience the
+  screen says so and nothing further is issued — re-asking would open a second
+  room the instant the socket came up, and every phone that had read the first
+  code off the screen would be typing it at a room nobody was showing.
+  `openRoom`'s in-flight memo is what makes waiting safe.
+
+  The handoff draws no failure state for this screen. Rather than invent one,
+  the caption slot under the code tiles becomes a Boardwalk status chip in
+  trouble — chip accent, ink border, offset shadow through `StickerSurface`,
+  pill radius, a 2° tilt leaning against the badge above it, at 22px against
+  the 18px TV floor. It is assembled from parts the system already had; the one
+  addition is `stickerTilt.statusChip`.
+
+  Seen on the tvOS simulator, all three states: an unreachable deployment draws
+  the reconnecting chip with no crash; an empty `EXPO_PUBLIC_CONVEX_URL` draws
+  the misconfigured chip — the case that used to kill the app at launch; a real
+  deployment opens the room and draws the QR. Review separately confirmed the
+  crash is gone rather than moved (the app's one `useQuery` is unreachable
+  without a client) and that no sequence of failures reaches a double-open: a
+  20× remount storm held peak concurrency of the underlying mutation at 1.
+
+  Argued, not observed: the recovery *transition* itself — backend absent at
+  launch, then present, room appears untouched. Staging it honestly needs a
+  backend started mid-run or the Mac's network toggled, so it rests on the unit
+  tests plus Convex's own socket retry. The 4s patience and the 30s ceiling are
+  reasoned from round trips, not measured on a television. The Controller's
+  client still throws at import on a missing URL; that was left deliberately —
+  this task names the TV, and a phone has someone holding it — but it is the
+  obvious matching task if the symmetry is wanted.
 - [ ] Room expiry — AC: last player disconnects → after 10 minutes with no
   rejoin, the room and its players are deleted (integration test with mocked
   clock); the TV returns to a fresh pairing screen.

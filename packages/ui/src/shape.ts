@@ -50,4 +50,10 @@ export const stickerTilt = {
   badge: '-3deg',
   /** 1.5° — the TV's QR card. */
   qrCard: '1.5deg',
+  /**
+   * 2° — a status chip that replaces a line of caption text (the TV's
+   * "reconnecting" chip). Leans the other way from the badge above it, per the
+   * handoff's alternating sibling tilts.
+   */
+  statusChip: '2deg',
 } as const;

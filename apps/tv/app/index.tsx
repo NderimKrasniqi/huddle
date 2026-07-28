@@ -22,7 +22,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
-import { openRoom, type OpenRoom } from '../src/room';
+import { deployed, openRoom } from '../src/room';
+import {
+  keepOpeningRoom,
+  type OpenRoom,
+  type RoomOpening,
+  roomOpeningAtLaunch,
+  type RoomOpeningCaption,
+  roomOpeningCaption,
+} from '../src/room-opening';
 import {
   footerSeatCount,
   type RosterSeat,
@@ -73,9 +81,8 @@ const seatHighlightShadow: Record<
  * roster filling up underneath.
  */
 export default function TvPairingScreen() {
-  const { room, failed } = useOpenedRoom();
-  const roster = useRoster(room);
-  const arrivals = useArrivals(roster);
+  const opening = useRoomOpening();
+  const room = opening.kind === 'open' ? opening.room : undefined;
 
   return (
     <TvStage>
@@ -96,17 +103,21 @@ export default function TvPairingScreen() {
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
             </StickerSurface>
             <RoomCodeTiles code={room?.code} />
-            <Text style={styles.caption}>
-              {failed
-                ? 'Could not open a room — check the Huddle backend and relaunch.'
-                : 'Open Huddle on your phone and enter this code'}
-            </Text>
+            <PairingCaption caption={roomOpeningCaption(opening)} />
           </View>
 
           <RoomQrCard code={room?.code} />
         </View>
 
-        <RosterFooter roster={roster ?? []} arrivals={arrivals} />
+        {/* The roster is a live subscription, so it only exists once there is a
+            room to subscribe to — and a room can only be open on a launch that
+            has a Convex client for `ConvexProvider` to provide. Until then the
+            footer draws its empty seats from nothing. */}
+        {room === undefined ? (
+          <RosterFooter roster={[]} arrivals={undefined} />
+        ) : (
+          <RoomRoster room={room} />
+        )}
       </View>
     </TvStage>
   );
@@ -138,6 +149,35 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   );
 }
 
+/**
+ * The line under the tiles: the invitation to join, or — when there is no code
+ * to join with — what has gone wrong, as a Boardwalk status chip.
+ *
+ * Trouble is promoted from the caption's quiet muted line to a bordered yellow
+ * pill because of who is reading it and when: four blank code tiles are the
+ * least explicable thing this app can put on a television, and the sentence
+ * explaining them competes with a hero the size of the screen. The chip is
+ * assembled from parts the system already has — the handoff's chip accent, its
+ * pill radius, a TV card's 4px ink border and 6px offset shadow, a sticker tilt
+ * that leans against the badge above it — because the handoff draws no failure
+ * state for this screen at all (it draws a TV that is working).
+ */
+function PairingCaption({ caption }: { readonly caption: RoomOpeningCaption }) {
+  if (!caption.trouble) {
+    return <Text style={styles.caption}>{caption.text}</Text>;
+  }
+
+  return (
+    <StickerSurface
+      depth={shadowDepth.tvCard}
+      style={styles.troubleChip}
+      wrapperStyle={styles.troubleChipTilt}
+    >
+      <Text style={styles.troubleChipText}>{caption.text}</Text>
+    </StickerSurface>
+  );
+}
+
 /** The Join Link as a QR: scanning it opens the Controller straight into the room. */
 function RoomQrCard({ code }: { readonly code: string | undefined }) {
   return (
@@ -159,6 +199,18 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
       <Text style={styles.qrCaption}>or scan to join</Text>
     </StickerSurface>
   );
+}
+
+/**
+ * The room's roster, live. Mounted only once a room is open, which is what
+ * keeps the Convex subscription — and the `ConvexProvider` it needs above it —
+ * out of a launch that never reached a backend.
+ */
+function RoomRoster({ room }: { readonly room: OpenRoom }) {
+  const roster = useRoster(room);
+  const arrivals = useArrivals(roster);
+
+  return <RosterFooter roster={roster ?? []} arrivals={arrivals} />;
 }
 
 /**
@@ -277,39 +329,24 @@ function PlayerSeat({
 }
 
 /**
- * The room this TV opened. `openRoom` is memoised for the life of the app, so
- * this effect re-running — StrictMode, Fast Refresh, a remount — reads the same
- * room rather than minting another one.
+ * How the room this TV shows is getting on: opening, reconnecting, open, or
+ * never going to open because this build has no deployment.
+ *
+ * `keepOpeningRoom` owns the retrying, and `openRoom` is memoised for the life
+ * of the app — so this effect re-running (StrictMode, Fast Refresh, a remount)
+ * rejoins the attempt already in flight or reads the room already opened,
+ * rather than minting another one.
  */
-function useOpenedRoom(): { room: OpenRoom | undefined; failed: boolean } {
-  const [room, setRoom] = useState<OpenRoom>();
-  const [failed, setFailed] = useState(false);
+function useRoomOpening(): RoomOpening {
+  const [opening, setOpening] = useState<RoomOpening>(() => roomOpeningAtLaunch(deployed));
 
-  useEffect(() => {
-    let watching = true;
+  useEffect(
+    () => (deployed ? keepOpeningRoom(openRoom, setOpening) : undefined),
+    // `deployed` is fixed at bundle time, so this runs once per mount.
+    [],
+  );
 
-    openRoom().then(
-      (opened) => {
-        if (watching) {
-          setRoom(opened);
-        }
-      },
-      (error: unknown) => {
-        // The TV has no other channel to complain through, and the screen
-        // itself only has room for the short version.
-        console.error('Huddle TV could not open a room:', error);
-        if (watching) {
-          setFailed(true);
-        }
-      },
-    );
-
-    return () => {
-      watching = false;
-    };
-  }, []);
-
-  return { room, failed };
+  return opening;
 }
 
 /**
@@ -318,14 +355,13 @@ function useOpenedRoom(): { room: OpenRoom | undefined; failed: boolean } {
  * than on a poll the TV would have to be awake for — the roster redraws within
  * a round trip of the phone's tap.
  *
- * Until the room is open there is nothing to subscribe to. That, and the moment
- * before the first answer lands, are the `undefined` this hands on rather than
- * flattening to an empty room: a screen that has not been told who is here is
- * not a screen that has been told nobody is, and `useArrivals` is the part of
- * this one that has to tell the difference.
+ * The moment before the first answer lands is the `undefined` this hands on
+ * rather than flattening to an empty room: a screen that has not been told who
+ * is here is not a screen that has been told nobody is, and `useArrivals` is
+ * the part of this one that has to tell the difference.
  */
-function useRoster(room: OpenRoom | undefined): readonly RosterSeat[] | undefined {
-  return useQuery(api.players.roster, room === undefined ? 'skip' : { roomId: room.roomId });
+function useRoster(room: OpenRoom): readonly RosterSeat[] | undefined {
+  return useQuery(api.players.roster, { roomId: room.roomId });
 }
 
 /**
@@ -450,6 +486,27 @@ const styles = StyleSheet.create({
   caption: {
     color: colors.mutedText,
     fontFamily: fontFamily.body,
+    fontSize: 22,
+  },
+  // The caption's slot, in Boardwalk's chip accent, when the news is that
+  // nothing is working: a TV card's border and shadow because it is on a TV,
+  // and the pill radius every Boardwalk label wears.
+  troubleChip: {
+    paddingHorizontal: 26,
+    paddingVertical: 10,
+    backgroundColor: colors.yellow,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.pill,
+  },
+  troubleChipTilt: {
+    transform: [{ rotate: stickerTilt.statusChip }],
+  },
+  troubleChipText: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    // The caption's own size, which is well past the 18px a TV allows: this is
+    // the one line on the screen that has to be read and acted on.
     fontSize: 22,
   },
 

@@ -37,6 +37,13 @@ working must add it here.
 - **Open a room** — the TV-side act of getting the room for this launch:
   `createRoom` if none has been minted yet, otherwise the one already minted.
   `createRoom` (server) mints; `openRoom` (TV client) is create-exactly-once.
+  Opening can fail, and nobody can help it: the TV app is untouched after
+  launch, so `keepOpeningRoom` retries with backoff for as long as the
+  television is on and never gives up. What it is doing meanwhile is the
+  **Room Opening** — `opening`, `reconnecting`, `open`, or `misconfigured`
+  (this build was given no `EXPO_PUBLIC_CONVEX_URL`, so there is nothing to
+  retry against). `reconnecting` and `misconfigured` are what the pairing
+  screen's status chip says; the other two carry its ordinary invitation.
 - **Lobby** — the pre-game phase of a room (roster visible, Host picking a
   game). A room is `lobby → in-game → lobby`.
 - **Player** — a phone-holding participant in a room; session-only identity
