@@ -205,10 +205,24 @@ demoable by force-quitting apps mid-lobby.
   nickname — read-then-write inside a serializable transaction, so five phones
   racing for green produce one green. Verified against `convex-test`, including
   a contested run where ten players claim all ten colors at once.
-- [ ] The color picker on "You're in" — AC: the seated screen shows the 10
+- [x] The color picker on "You're in" — AC: the seated screen shows the 10
   swatches (44px circles, selected one carrying ink border + shadow); tapping
   one claims it; colors another player holds render at 30% opacity and cannot
   be taken; the player's own avatar takes the color they claimed.
+
+  Ten 44px circles wrap into two rows of five: a single row runs 500px before
+  any gap, on a screen that is 390. What is dimmed comes from the `roster`
+  subscription rather than from anything the phone remembers, so a swatch
+  claimed across the room goes unavailable here without this phone touching
+  anything — and the picker dims exactly what `claimColor` would refuse, since
+  both read the same answer. The refusal is still shown when two thumbs land
+  inside a round trip, which is the only one a player should ever meet.
+
+  The swatches carry no press state. Boardwalk has one "dimmed" treatment and
+  the picker already spends it on *somebody else holds this*, so dipping a free
+  swatch under a thumb would say the opposite of what is happening. The feedback
+  is the claim itself: the swatch takes the ink border and shadow the moment it
+  is the player's.
 - [ ] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
   player's claimed color with Bungee initials; a newly joined player's seat
   carries the pink "JUST JOINED!" treatment for ~4s. The handoff draws both on

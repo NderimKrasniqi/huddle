@@ -1,5 +1,5 @@
 import { api } from '@huddle/convex';
-import { ROOM_CODE_LENGTH } from '@huddle/game-core';
+import { type PlayerColorName, ROOM_CODE_LENGTH } from '@huddle/game-core';
 import {
   borderWidth,
   codeLetterColor,
@@ -7,6 +7,8 @@ import {
   fontFamily,
   letterSpacing,
   opacity,
+  type PlayerColor,
+  playerColor,
   playerInitials,
   radius,
   shadowDepth,
@@ -24,7 +26,9 @@ import {
   isCodeComplete,
   nicknameEntry,
 } from '../src/join-entry';
-import { type LobbyStanding, lobbyStanding, lobbyStatusText } from '../src/host';
+import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
+import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
+import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
 import { type ForegroundWatch, keepPresent } from '../src/presence';
@@ -343,11 +347,6 @@ function BlinkingCaret() {
  * handoff's reconnect rule is that a rejoining phone lands on the screen its
  * room's phase calls for, and in the lobby that is this one.
  *
- * The handoff puts a color picker on this screen. Color Claim is a Phase 2 task
- * and the server has nothing to claim a color with yet, so the picker is left
- * out and the avatar is a plain Boardwalk face — the same circle the TV draws
- * on its seats until a color is claimed.
- *
  * The Host gets the pill and a line saying the room is theirs, and nothing to
  * press: the handoff's host screen (§5) is a roster with a "Choose a game"
  * button, and both the roster and every control on it belong to the game
@@ -359,7 +358,10 @@ function BlinkingCaret() {
 function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const { code, nickname } = session;
   useHeartbeat();
-  const standing = useLobbyStanding(session);
+  const roster = useRoomRoster(session);
+  const standing = lobbyStanding(roster, session.playerId);
+  const claimed = yourColor(roster, session.playerId);
+  const face = claimed === undefined ? undefined : playerColor(claimed);
 
   return (
     <PhoneScreen>
@@ -375,11 +377,21 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         </View>
       </View>
 
-      <StickerSurface depth={shadowDepth.phoneHero} style={styles.avatar}>
-        <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
+      {/* The avatar is the claimed color the moment it is claimed, and a plain
+          Boardwalk face until then: a player lands on this screen before they
+          have picked anything, so the circle has to be drawable without one. */}
+      <StickerSurface
+        depth={shadowDepth.phoneHero}
+        style={[styles.avatar, face !== undefined && { backgroundColor: face.fill }]}
+      >
+        <Text style={[styles.avatarInitials, face !== undefined && { color: face.monogram }]}>
+          {playerInitials(nickname)}
+        </Text>
       </StickerSurface>
 
       <Text style={styles.title}>You’re in, {nickname}!</Text>
+
+      <ColorPicker roster={roster} session={session} />
 
       <StickerSurface
         depth={shadowDepth.phoneCard}
@@ -393,6 +405,113 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   );
 }
 
+/**
+ * YOUR COLOR (handoff §4): the ten swatches, and the tap that claims one.
+ *
+ * What is dimmed is read from the roster rather than remembered, so the picker
+ * shows what the room says right now — a swatch claimed across the room goes
+ * unavailable here without this phone touching anything. The claim is still
+ * refused server-side when two thumbs land inside a round trip of each other,
+ * which is the one refusal a player can actually meet, and it is said out loud
+ * rather than swallowed.
+ */
+function ColorPicker({
+  roster,
+  session,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly session: PlayerSession;
+}) {
+  const claimColor = useMutation(api.players.claimColor);
+  const [failure, setFailure] = useState<string>();
+  const swatches = pickerSwatches(roster, session.playerId);
+
+  async function claim(color: PlayerColorName) {
+    // The last refusal stops being true the moment another swatch is tried.
+    setFailure(undefined);
+
+    try {
+      // Read from the keystore rather than held in this screen's state, as the
+      // heartbeat does: the token identifies the player and nothing that
+      // renders needs it.
+      const sessionToken = await phoneSessionTokenStore.read();
+
+      if (sessionToken === null) {
+        // A phone that cannot say who it is cannot claim anything, and the
+        // server's own word for that is the one to show.
+        setFailure(rejectionMessage({ kind: 'notInRoom' }));
+        return;
+      }
+
+      await claimColor({ sessionToken, color });
+    } catch (error) {
+      setFailure(claimFailureMessage(error));
+    }
+  }
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>YOUR COLOR</Text>
+      <View style={styles.swatches}>
+        {swatches.map(({ name, state }) => (
+          <Swatch key={name} name={name} state={state} onPress={() => void claim(name)} />
+        ))}
+      </View>
+
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * One swatch: a 44px circle of the color, per the handoff — the player's own
+ * carrying Boardwalk's ink border and shadow, and one somebody else holds
+ * dimmed to the opacity Boardwalk dims anything unavailable to.
+ *
+ * A taken swatch is not pressable, which is the courtesy; `claimColor` is what
+ * makes it a rule.
+ */
+function Swatch({
+  name,
+  state,
+  onPress,
+}: {
+  readonly name: PlayerColorName;
+  readonly state: SwatchState;
+  readonly onPress: () => void;
+}) {
+  const color: PlayerColor = playerColor(name);
+  const taken = state === 'taken';
+
+  // No press state: the swatches carry Boardwalk's only "dimmed" treatment to
+  // mean *somebody else holds this*, so dipping a free one under a thumb would
+  // say the opposite of what is happening. The feedback is the claim itself —
+  // the swatch gains the ink border and the shadow the moment it is the
+  // player's, which is a round trip away.
+  return (
+    <Pressable
+      disabled={taken}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${name} color`}
+      accessibilityState={{ disabled: taken, selected: state === 'yours' }}
+    >
+      {state === 'yours' ? (
+        <StickerSurface
+          depth={shadowDepth.phoneSmall}
+          style={[styles.swatch, styles.swatchYours, { backgroundColor: color.fill }]}
+        />
+      ) : (
+        <View style={[styles.swatch, { backgroundColor: color.fill }, taken && styles.swatchTaken]} />
+      )}
+    </Pressable>
+  );
+}
+
 /** Boardwalk's HOST pill (handoff §5): ink fill, white Bungee, fully rounded. */
 function HostPill() {
   return (
@@ -403,17 +522,19 @@ function HostPill() {
 }
 
 /**
- * Whether this phone is running the room, live.
+ * Who else is in the room, live.
  *
- * It subscribes to the same roster the TV draws its seats from — the one query
- * that already says who the host is — and finds this player on it. So a
- * handover reaches the new host's phone as a push, within a round trip of the
- * room deciding it, rather than at the next launch.
+ * The seated screen subscribes to the same roster the TV draws its seats from,
+ * because everything on it that can change without this phone doing anything is
+ * on that one query: who is running the room, and which colors are spoken for.
+ * So a handover and a swatch claimed across the room both arrive as a push,
+ * within a round trip of the room deciding them, rather than at the next launch.
+ *
+ * An empty roster while the subscription is in flight is the right neutral: no
+ * host to name yet, and no color yet claimed by anybody.
  */
-function useLobbyStanding(session: PlayerSession): LobbyStanding {
-  const roster = useQuery(api.players.roster, { roomId: session.roomId });
-
-  return lobbyStanding(roster ?? [], session.playerId);
+function useRoomRoster(session: PlayerSession): readonly RosterSeat[] {
+  return useQuery(api.players.roster, { roomId: session.roomId }) ?? [];
 }
 
 /**
@@ -657,6 +778,32 @@ const styles = StyleSheet.create({
     // 128px, and the monogram keeps its proportion.
     fontSize: 42,
     lineHeight: 46,
+  },
+
+  // Ten 44px circles (the handoff's size) wrapped into two rows of five: a row
+  // of ten would run 500px wide before any gap, on a screen that is 390.
+  swatches: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+  },
+  // The handoff gives the selected swatch the ink border and the shadow; the
+  // shadow comes from the StickerSurface this is drawn on.
+  swatchYours: {
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+  },
+  // Boardwalk's treatment for something present but not available — the same
+  // 30% the TV dims an away player's face to.
+  swatchTaken: {
+    opacity: opacity.unavailable,
   },
 
   statusCard: {
