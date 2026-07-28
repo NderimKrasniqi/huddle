@@ -454,20 +454,29 @@ it.
   Convex bundles with but not Convex's own pipeline, so it is a proxy for the
   real build and not the real build.
 
-  Ending is a no-op where starting is a refusal. A second tap on "End game"
-  asks for the lobby the room is already in and there is nothing to tell the
-  person holding the phone; a second start would throw away the state of a game
-  in progress, so `alreadyInGame` refuses it. The Host check runs before the
-  Registry lookup, so a phone with no room control learns only that it is not
-  the Host and never whether the game it named exists.
+  Ending is unconditional where starting is refusable, and the two rules are
+  kept in different functions because of it: `phaseAfter(intent)` is the total
+  `lobby → in-game → lobby` machine, and `refusalToStart(phase, seated, range)`
+  is the whole of what can stop a start. A second tap on "End game" asks for the
+  lobby the room is already in and there is nothing to tell the person holding
+  the phone; a second *start* would throw away the state of a game in progress,
+  so `alreadyInGame` refuses it, and a party below `playerRange.min` gets
+  `notEnoughPlayers` carrying both numbers — the only useful thing to say is how
+  many more people have to join. The Host check runs before the Registry lookup,
+  so a phone with no room control learns only that it is not the Host and never
+  whether the game it named exists.
 
-  What this does not carry: `startGame` does not enforce `playerRange.min`, so
-  a room with one player can start a game trivia declares as 2–10 — no AC asks
-  for it and the Host's picker is where it belongs, but it is a real gap. The
-  `refused` branch in `endGame` is unreachable today, kept so a rule added to
-  `phaseAfter` later cannot be silently dropped at the call site; it is
-  deliberate dead code and untested by construction. Nothing renders any of
-  this yet — both clients still draw their lobbies, which is the task below.
+  A room too *large* for a game is deliberately not refused. The room cap is ten
+  and no installed game may declare a maximum above it, so the rule could not
+  fire today; and were a smaller game installed tomorrow, refusing at the tap
+  would strand a party, since Huddle has no way to remove a player. It belongs
+  in the Host's picker, which can decline to offer a game the room has outgrown
+  while there is still something the Host can do about it.
+
+  What this does not carry: nothing renders any of it yet — both clients still
+  draw their lobbies, which is the task below. The player count is every seat in
+  the room, Away ones included; excluding them is Phase 4's "Away players
+  in-game", and doing it here would have been building ahead of it.
 - [ ] TV and phones follow the room into the game (client half of the split) —
   AC: Host selects trivia and starts → TV and all phones switch to trivia
   screens within 1s; Host "End game" mid-game → everyone returns to the lobby,

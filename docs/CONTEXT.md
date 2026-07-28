@@ -59,8 +59,12 @@ working must add it here.
 - **Game Lifecycle** — the two Host-only writes that move a room between its
   phases: `startGame` (seeds the state from the module's initial-state factory)
   and `endGame` (clears it, leaving roster, Host and Room Code untouched).
-  Starting a game over a running one is refused; ending a game the room is not
-  playing is a no-op, because "End game" is a button a thumb can hit twice.
+  Starting is refused over a running game, and refused for a party smaller than
+  the game's `playerRange.min`; ending is unconditional, because "End game" is a
+  button a thumb can hit twice and the second tap asks for the lobby the room is
+  already in. A room too *large* for a game is not refused — Huddle cannot
+  remove a player, so that belongs in the Host's picker, where there is still
+  something to be done about it.
 - **Player** — a phone-holding participant in a room; session-only identity
   (nickname + claimed color), no account.
 - **Nickname** — the name a player types when joining, and the room's name for

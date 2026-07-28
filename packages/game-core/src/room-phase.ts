@@ -1,4 +1,4 @@
-import type { GameSettingsSchema } from './game-module';
+import type { GameSettingsSchema, PlayerRange } from './game-module';
 
 /**
  * Where a room stands between parties and games.
@@ -43,31 +43,67 @@ export type GameLifecycleRejection =
   /** No installed module answers to this id — see the Registry. */
   | { readonly kind: 'gameNotInstalled'; readonly gameId: string }
   /** Starting a game in a room that is already playing one. */
-  | { readonly kind: 'alreadyInGame' };
+  | { readonly kind: 'alreadyInGame' }
+  /**
+   * Fewer players in the room than the game declares it needs. Carries both
+   * numbers, because the only useful thing to say to the Host is how many more
+   * people have to join.
+   */
+  | { readonly kind: 'notEnoughPlayers'; readonly need: number; readonly have: number };
 
 /** What the Host asked the room to do. */
 export type GameLifecycleIntent = 'start' | 'end';
 
 /**
- * The phase a room reaches when the Host starts or ends a game, or the refusal
- * that leaves it where it is.
+ * The phase a room is in once the Host has started or ended a game.
  *
- * Only starting can be refused on phase. Ending a game the room is not playing
- * is a no-op rather than a rejection: "End game" is a button a thumb can hit
- * twice, and the second tap asks for the lobby the room is already in — there is
- * nothing to tell the person holding the phone, and the screen they want is the
- * screen they have. Starting is refused instead, because a second start would
- * throw away the state of the game in progress.
+ * Total, and deliberately so: neither transition can fail *as a transition*.
+ * What can fail is being allowed to start at all, and that is
+ * `refusalToStart` — kept apart so this stays the `lobby → in-game → lobby`
+ * machine the plan names and nothing else.
  */
-export function phaseAfter(
+export function phaseAfter(intent: GameLifecycleIntent): RoomPhase {
+  return intent === 'start' ? 'in-game' : 'lobby';
+}
+
+/**
+ * Why the room may not start this game right now, or `null` if it may.
+ *
+ * Both rules are here rather than at the mutation because both are the game's
+ * own business and neither needs a database: a room already playing must not
+ * have that game replaced by a second start, and a game declares the party it
+ * is playable by (`PlayerRange`).
+ *
+ * There is no matching rule for *ending*. A second tap on "End game" asks for
+ * the lobby the room is already in — there is nothing to tell the person
+ * holding the phone, and the screen they want is the screen they have — so
+ * ending is unconditional and has no refusal to check.
+ *
+ * Nor is there one for a room that is too *large* for a game. The room cap is
+ * ten and no installed game may declare a maximum above it
+ * (`registry.test.ts`), so today the rule could never fire; and were a smaller
+ * game installed tomorrow, refusing at the tap would strand a party with no
+ * remedy, since Huddle has no way to remove a player from a room. That belongs
+ * in the Host's picker, which can decline to offer a game the room has outgrown
+ * while there is still something the Host can do about it.
+ */
+export function refusalToStart(
   phase: RoomPhase,
-  intent: GameLifecycleIntent,
-): { readonly next: RoomPhase } | { readonly refused: GameLifecycleRejection } {
-  if (intent === 'end') {
-    return { next: 'lobby' };
+  seatedPlayers: number,
+  playerRange: PlayerRange,
+): GameLifecycleRejection | null {
+  // Asked first: it is a fact about the room, where the count is a fact about
+  // the party, and a room mid-game should hear the same refusal whoever is in
+  // it.
+  if (phase === 'in-game') {
+    return { kind: 'alreadyInGame' };
   }
 
-  return phase === 'in-game' ? { refused: { kind: 'alreadyInGame' } } : { next: 'in-game' };
+  if (seatedPlayers < playerRange.min) {
+    return { kind: 'notEnoughPlayers', need: playerRange.min, have: seatedPlayers };
+  }
+
+  return null;
 }
 
 /**

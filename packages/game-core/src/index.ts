@@ -44,6 +44,7 @@ export {
   type GameLifecycleIntent,
   type GameLifecycleRejection,
   phaseAfter,
+  refusalToStart,
   roomPhase,
   ROOM_PHASES,
   type RoomPhase,

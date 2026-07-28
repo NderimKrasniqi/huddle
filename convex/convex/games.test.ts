@@ -140,6 +140,36 @@ describe('the Host starting a game', () => {
     ).toEqual({ kind: 'notHost' });
   });
 
+  it('refuses a party smaller than the game is playable by', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    // One phone in the room, and trivia declares itself 2–10.
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.startGame, {
+          sessionToken: alone.sessionToken,
+          gameId: 'trivia',
+        }),
+      ),
+    ).toEqual({ kind: 'notEnoughPlayers', need: 2, have: 1 });
+    expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
+  });
+
+  it('lets the same room start once somebody else joins', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+    // The refusal has a remedy, and this is it — which is why it is a refusal
+    // and being too *large* for a game is not.
+    await t.mutation(api.games.startGame, { sessionToken: alone.sessionToken, gameId: 'trivia' });
+
+    expect(await t.query(api.games.running, { roomId: room.roomId })).not.toBeNull();
+  });
+
   it('refuses a phone whose seat is gone', async () => {
     const t = convexTest(schema, modules);
     await roomWithParty(t);

@@ -1,6 +1,6 @@
 import {
   defaultSettings,
-  phaseAfter,
+  refusalToStart,
   roomPhase,
   type GameLifecycleRejection,
   type GamePlayer,
@@ -108,13 +108,12 @@ export const startGame = mutation({
       });
     }
 
-    const transition = phaseAfter(roomPhase(room.game), 'start');
-
-    if ('refused' in transition) {
-      throw new ConvexError<GameLifecycleRejection>(transition.refused);
-    }
-
     const players = await playersFor(ctx, room._id);
+    const refusal = refusalToStart(roomPhase(room.game), players.length, game.metadata.playerRange);
+
+    if (refusal !== null) {
+      throw new ConvexError<GameLifecycleRejection>(refusal);
+    }
 
     await ctx.db.patch(room._id, {
       game: {
@@ -145,16 +144,11 @@ export const endGame = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const room = await roomThisPhoneRuns(ctx, args.sessionToken);
-    const transition = phaseAfter(roomPhase(room.game), 'end');
 
-    // `phaseAfter` never refuses an end; the branch is here so that a rule
-    // added to it later cannot be silently ignored at this call site.
-    if ('refused' in transition) {
-      throw new ConvexError<GameLifecycleRejection>(transition.refused);
-    }
-
-    // `undefined` is how Convex unsets an optional field, which is the whole of
-    // returning to the lobby.
+    // Unconditional: ending has no refusal to check (see `refusalToStart`), so
+    // there is nothing between the Host check and the patch. `undefined` is how
+    // Convex unsets an optional field, which is the whole of returning to the
+    // lobby — `phaseAfter('end')` is that field being absent.
     await ctx.db.patch(room._id, { game: undefined });
     return null;
   },
