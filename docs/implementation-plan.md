@@ -481,11 +481,51 @@ it.
   draw their lobbies, which is the task below. The player count is every seat in
   the room, Away ones included; excluding them is Phase 4's "Away players
   in-game", and doing it here would have been building ahead of it.
-- [ ] TV and phones follow the room into the game (client half of the split) —
+- [x] TV and phones follow the room into the game (client half of the split) —
   AC: Host selects trivia and starts → TV and all phones switch to trivia
   screens within 1s; Host "End game" mid-game → everyone returns to the lobby,
   room intact; both clients mount the module's screens out of the Registry
   without naming a game.
+
+  One function decides it on both clients. `runningGameScreen(running)` turns
+  the room's answer into one of three: the lobby, this module on this state, or
+  a game this build does not install. Neither client names a game — grep for
+  "trivia" across `apps/` and `convex/` finds one comment and no code — and the
+  Host's start control offers the Registry's entry by its metadata title, so the
+  carousel task replaces what is browsed rather than this control.
+
+  The in-flight moment counts as the lobby, deliberately: every client is
+  already on its lobby when it asks, so `undefined` draws what is on screen
+  instead of flashing something else on the way to it.
+
+  **Unknown Game is a real state, not a defensive branch.** A phone that has not
+  been updated can walk into a room whose TV has, and the reverse. Folding it
+  into the lobby would put a Room Code on a television for a room that is
+  mid-game, and invite a player to act on one — so both clients say the app is
+  behind instead.
+
+  Two subscriptions had to outlive the switch, and both were placed for it. The
+  phone's heartbeat sits above the screen's early returns, so a player mid-game
+  is still present and does not go Away while answering; the TV's `stillOpen`
+  moved up into `OpenRoomStage`, because a room that expires during a game still
+  has to send that television back to a fresh Room Code, and the subscription
+  would have unmounted with the lobby. `OpenRoomFooter` is gone, its work now
+  done a level up.
+
+  What this does not carry — and it is the AC's own headline. "Within 1s" is
+  **argued, not observed**: it rests on the same Convex subscription the roster
+  uses, which *has* been seen pushing a join to a television within a round
+  trip, but nothing here has been run on a simulator or a television. Trivia's
+  screens still draw nothing, so an in-game TV today is the game's title over an
+  empty Boardwalk canvas and an in-game phone is its title and, for the Host,
+  "End game" — the switch is visible, the game is not. Settling the timing
+  honestly needs the TV and a phone against the cloud dev deployment, watching
+  the Host's tap land on both.
+
+  Also untested by construction: every component added here is React, and this
+  repo tests logic rather than rendering. `runningGameScreen` and `startControl`
+  carry the decisions and are unit-tested; the wiring from a subscription to a
+  mounted screen rests on the typecheck and on the run that has not happened.
 - [ ] Synced game carousel — AC: host phone prev/next (or swipe) updates
   `browsingGameIndex` in room state; the TV carousel follows within 250ms
   (focused card treatment per handoff); non-host phones show "Now viewing

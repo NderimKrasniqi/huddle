@@ -2,6 +2,7 @@ export type { ColorRejection } from './color-rejection';
 // The Game Module interface: the whole of what the hub knows about a game, and
 // the reason a second game is an entry in the Registry rather than a change to
 // the hub.
+export { gamePlayersFrom } from './game-module';
 export type {
   ControllerGameScreenProps,
   GameEvent,
@@ -18,6 +19,7 @@ export type {
   GameSettingsSchema,
   GameSetup,
   PlayerRange,
+  RosterSeatForGame,
   TvGameScreenProps,
 } from './game-module';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';

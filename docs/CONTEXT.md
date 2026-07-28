@@ -65,6 +65,14 @@ working must add it here.
   already in. A room too *large* for a game is not refused — Huddle cannot
   remove a player, so that belongs in the Host's picker, where there is still
   something to be done about it.
+- **Game Stage** — the part of a client's screen a running game draws in: the
+  whole TV under the header, and the phone under its own. The frame around it is
+  the hub's and says only what Game Metadata already told it, so neither client
+  knows which game it is showing.
+- **Unknown Game** — a client in a room playing a game that client's build does
+  not install (`runningGameScreen`). Drawn as its own screen rather than as the
+  lobby, because a lobby would invite a player to act on a room that is mid-game.
+  Reachable whenever a phone or a TV is behind the rest of the room.
 - **Player** — a phone-holding participant in a room; session-only identity
   (nickname + claimed color), no account.
 - **Nickname** — the name a player types when joining, and the room's name for

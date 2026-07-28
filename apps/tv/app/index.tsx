@@ -1,5 +1,11 @@
 import { api } from '@huddle/convex';
-import { ROOM_CODE_LENGTH, roomJoinLink } from '@huddle/game-core';
+import {
+  gamePlayersFrom,
+  type GameModule,
+  ROOM_CODE_LENGTH,
+  roomJoinLink,
+} from '@huddle/game-core';
+import { runningGameScreen } from '@huddle/game-registry';
 import {
   borderWidth,
   codeLetterColor,
@@ -17,7 +23,7 @@ import {
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -84,6 +90,84 @@ export default function TvPairingScreen() {
   const { opening, reopen } = useRoomOpening();
   const room = opening.kind === 'open' ? opening.room : undefined;
 
+  // The screen's live subscriptions only exist once there is a room to
+  // subscribe to — and a room can only be open on a launch that has a Convex
+  // client for `ConvexProvider` to provide. Until then the pairing screen draws
+  // its empty seats from nothing.
+  if (room === undefined) {
+    return (
+      <PairingStage
+        opening={opening}
+        code={undefined}
+        footer={<RosterFooter roster={[]} arrivals={undefined} />}
+      />
+    );
+  }
+
+  // Keyed by the room, so a room that expires takes its seats and everything
+  // this screen watched happen in it away with it: the replacement starts as
+  // empty as a pairing screen on a fresh launch.
+  return <OpenRoomStage key={room.roomId} room={room} opening={opening} onExpired={reopen} />;
+}
+
+/**
+ * A television with a room open on it: the pairing screen, or the game the room
+ * is playing.
+ *
+ * The room's subscriptions live here rather than in either screen below,
+ * because they must outlive the switch between them. Expiry is the one that
+ * matters: a room that ends while a game is on screen still has to send this
+ * television back to a fresh Room Code, and a `stillOpen` subscription mounted
+ * inside the lobby would stop watching the moment the game started.
+ */
+function OpenRoomStage({
+  room,
+  opening,
+  onExpired,
+}: {
+  readonly room: OpenRoom;
+  readonly opening: RoomOpening;
+  readonly onExpired: (expired: OpenRoom) => void;
+}) {
+  const roster = useRoster(room);
+  const arrivals = useArrivals(roster);
+  useRoomExpiry(room, onExpired);
+
+  // What the room says it is playing. Its own subscription: this changes twice
+  // a game, where the roster changes on every join, claim and heartbeat.
+  const running = useQuery(api.games.running, { roomId: room.roomId });
+  const screen = runningGameScreen(running);
+
+  if (screen.kind === 'unknownGame') {
+    return <UnknownGameStage gameId={screen.gameId} />;
+  }
+
+  if (screen.kind === 'game') {
+    return <GameStage module={screen.module} state={screen.state} roster={roster ?? []} />;
+  }
+
+  return (
+    <PairingStage
+      opening={opening}
+      code={room.code}
+      footer={<RosterFooter roster={roster ?? []} arrivals={arrivals} />}
+    />
+  );
+}
+
+/**
+ * The Room Code, the QR and the roster: the television between games
+ * (docs/design/design-handoff.md §1 and §3).
+ */
+function PairingStage({
+  opening,
+  code,
+  footer,
+}: {
+  readonly opening: RoomOpening;
+  readonly code: string | undefined;
+  readonly footer: ReactNode;
+}) {
   return (
     <TvStage>
       <View style={styles.screen}>
@@ -102,25 +186,78 @@ export default function TvPairingScreen() {
             >
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
             </StickerSurface>
-            <RoomCodeTiles code={room?.code} />
+            <RoomCodeTiles code={code} />
             <PairingCaption caption={roomOpeningCaption(opening)} />
           </View>
 
-          <RoomQrCard code={room?.code} />
+          <RoomQrCard code={code} />
         </View>
 
-        {/* The screen's live subscriptions only exist once there is a room to
-            subscribe to — and a room can only be open on a launch that has a
-            Convex client for `ConvexProvider` to provide. Until then the footer
-            draws its empty seats from nothing. */}
-        {room === undefined ? (
-          <RosterFooter roster={[]} arrivals={undefined} />
-        ) : (
-          // Keyed by the room, so a room that expires takes its seats and
-          // everything this screen watched happen in it away with it: the
-          // replacement starts as empty as a pairing screen on a fresh launch.
-          <OpenRoomFooter key={room.roomId} room={room} onExpired={reopen} />
-        )}
+        {footer}
+      </View>
+    </TvStage>
+  );
+}
+
+/**
+ * The television with a game on it: the module's own screen, under a header
+ * that says only what `GameMetadata` already told the hub.
+ *
+ * Nothing here knows which game it is drawing. The module's TV screen draws
+ * nothing yet — the question, reveal and scoreboard screens are their own tasks
+ * later in this phase — so today this is the game's title over an empty
+ * Boardwalk canvas, which is what "not yet" honestly looks like from the hub.
+ */
+function GameStage({
+  module,
+  state,
+  roster,
+}: {
+  readonly module: GameModule;
+  readonly state: unknown;
+  readonly roster: readonly RosterSeat[];
+}) {
+  return (
+    <TvStage>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>
+            HUDDLE<Text style={styles.logoPeriod}>.</Text>
+          </Text>
+          <Text style={styles.gameTitle}>{module.metadata.title}</Text>
+        </View>
+
+        <View style={styles.gameStage}>
+          {module.screens.tv({ state, players: gamePlayersFrom(roster) })}
+        </View>
+      </View>
+    </TvStage>
+  );
+}
+
+/**
+ * The room is playing a game this television does not have — an un-updated TV
+ * in a room whose phones have moved on. Said out loud rather than drawn as a
+ * pairing screen, which would put a Room Code up for a room that is mid-game.
+ */
+function UnknownGameStage({ gameId }: { readonly gameId: string }) {
+  return (
+    <TvStage>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>
+            HUDDLE<Text style={styles.logoPeriod}>.</Text>
+          </Text>
+        </View>
+
+        <View style={styles.center}>
+          <StickerSurface depth={shadowDepth.phoneCard} style={styles.badge}>
+            <Text style={styles.badgeText}>UPDATE HUDDLE</Text>
+          </StickerSurface>
+          <Text style={styles.unknownGameText}>
+            This room is playing {gameId}, which this TV doesn’t have yet.
+          </Text>
+        </View>
       </View>
     </TvStage>
   );
@@ -213,20 +350,6 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
  * the `ConvexProvider` they need above them — out of a launch that never reached
  * a backend.
  */
-function OpenRoomFooter({
-  room,
-  onExpired,
-}: {
-  readonly room: OpenRoom;
-  readonly onExpired: (expired: OpenRoom) => void;
-}) {
-  const roster = useRoster(room);
-  const arrivals = useArrivals(roster);
-  useRoomExpiry(room, onExpired);
-
-  return <RosterFooter roster={roster ?? []} arrivals={arrivals} />;
-}
-
 /**
  * The roster under the code: a seat per player, and dashed empty ones for as
  * long as the room looks empty. A player's seat carries their nickname because
@@ -486,6 +609,26 @@ const styles = StyleSheet.create({
     color: colors.tangerine,
   },
 
+  // Bungee at the header's right end, opposite the wordmark: the game's name,
+  // which is the one thing the hub can say about a game it does not know.
+  gameTitle: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+  },
+  // Where the module draws — the whole stage under the header. A game that
+  // draws nothing leaves the Boardwalk canvas showing, which is the honest
+  // picture until the TV question screens land.
+  gameStage: {
+    flex: 1,
+    alignSelf: 'stretch',
+  },
+  unknownGameText: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.tv,
+    textAlign: 'center',
+  },
   center: {
     flex: 1,
     flexDirection: 'row',

@@ -1,5 +1,12 @@
 import { api } from '@huddle/convex';
-import { type PlayerColorName, ROOM_CODE_LENGTH } from '@huddle/game-core';
+import {
+  gamePlayersFrom,
+  type GameModule,
+  type GamePlayer,
+  type PlayerColorName,
+  ROOM_CODE_LENGTH,
+} from '@huddle/game-core';
+import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
 import {
   borderWidth,
   codeLetterColor,
@@ -29,6 +36,8 @@ import {
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
+import { startControl } from '../src/game-controls';
+import { startFailureMessage } from '../src/game-rejection';
 import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
@@ -364,6 +373,29 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const claimed = yourColor(roster, session.playerId);
   const face = playerFace(claimed);
 
+  // The room's own word on what it is playing. A separate subscription from the
+  // roster because the two change on entirely different beats — this twice a
+  // game, the roster on every join, claim and heartbeat.
+  const running = useQuery(api.games.running, { roomId: session.roomId });
+  const screen = runningGameScreen(running);
+
+  if (screen.kind === 'unknownGame') {
+    return <UnknownGameScreen code={code} gameId={screen.gameId} />;
+  }
+
+  if (screen.kind === 'game') {
+    return (
+      <InGameScreen
+        code={code}
+        module={screen.module}
+        state={screen.state}
+        roster={roster}
+        playerId={session.playerId}
+        youAreHost={standing.youAreHost}
+      />
+    );
+  }
+
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
@@ -403,6 +435,259 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
       >
         <View style={styles.statusDot} />
         <Text style={styles.statusText}>{lobbyStatusText(standing)}</Text>
+      </StickerSurface>
+
+      {standing.youAreHost ? <StartGameControl roster={roster} /> : null}
+    </PhoneScreen>
+  );
+}
+
+/**
+ * The Host's tap that starts the game (handoff §5's "Choose a game", with only
+ * one to choose).
+ *
+ * It offers the Registry's entry rather than a game it names, so the carousel
+ * task replaces what is browsed and not this control. The disabled state says
+ * what the room is waiting for — the server refuses a short party too, and that
+ * refusal is the rule; this is the courtesy of not making the Host find out by
+ * pressing.
+ */
+function StartGameControl({ roster }: { readonly roster: readonly RosterSeat[] }) {
+  const startGame = useMutation(api.games.startGame);
+  const [starting, setStarting] = useState(false);
+  const [failure, setFailure] = useState<string>();
+  const control = startControl(roster);
+
+  async function start() {
+    setStarting(true);
+    setFailure(undefined);
+
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+
+      if (sessionToken === null) {
+        setFailure('This phone has lost its seat — reopen the app to rejoin.');
+        return;
+      }
+
+      const game = GAME_REGISTRY[0];
+
+      if (game !== undefined) {
+        await startGame({ sessionToken, gameId: game.metadata.id });
+      }
+    } catch (error) {
+      setFailure(startFailureMessage(error));
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const pressable = control.enabled && !starting;
+
+  return (
+    <View style={styles.field}>
+      <Pressable
+        style={styles.stretch}
+        disabled={!pressable}
+        onPress={() => void start()}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !pressable }}
+      >
+        {({ pressed }) => (
+          <StickerSurface
+            depth={shadowDepth.phoneCard}
+            style={[styles.button, styles.startButton, pressed && styles.buttonPressed]}
+            wrapperStyle={[styles.stretch, !control.enabled && styles.buttonUnavailable]}
+          >
+            <Text style={styles.buttonLabel}>
+              {starting ? 'Starting…' : control.label}
+            </Text>
+          </StickerSurface>
+        )}
+      </Pressable>
+
+      {control.blockedBecause === undefined ? null : (
+        <Text style={styles.waitingFor}>{control.blockedBecause}</Text>
+      )}
+
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * The phone while a game is running: the game's own screen, and — for the Host
+ * — the way back to the lobby.
+ *
+ * The frame around the module is the hub's and says only what `GameMetadata`
+ * already told it, which is the point: this screen does not know what game it
+ * is drawing. The module's screen draws nothing yet; the phone's four answer
+ * buttons are their own task later in this phase.
+ */
+function InGameScreen({
+  code,
+  module,
+  state,
+  roster,
+  playerId,
+  youAreHost,
+}: {
+  readonly code: string;
+  readonly module: GameModule;
+  readonly state: unknown;
+  readonly roster: readonly RosterSeat[];
+  readonly playerId: PlayerSession['playerId'];
+  readonly youAreHost: boolean;
+}) {
+  const players = gamePlayersFrom(roster);
+  const player = players.find((seated) => seated.playerId === playerId);
+
+  return (
+    <PhoneScreen>
+      <View style={styles.seatedHeader}>
+        <Text style={styles.logoSmall}>
+          HUDDLE<Text style={styles.logoPeriod}>.</Text>
+        </Text>
+        <View style={styles.seatedHeaderEnd}>
+          {youAreHost ? <HostPill /> : null}
+          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+            <Text style={styles.codeChipText}>{code}</Text>
+          </StickerSurface>
+        </View>
+      </View>
+
+      <Text style={styles.title}>{module.metadata.title}</Text>
+
+      {/* The roster is a subscription and this player's seat can be a beat
+          behind it — but a game screen is drawn *for* somebody, so it waits for
+          the seat rather than inventing one. */}
+      {player === undefined ? null : (
+        <PlayerGameScreen module={module} state={state} player={player} />
+      )}
+
+      {youAreHost ? <EndGameControl /> : null}
+    </PhoneScreen>
+  );
+}
+
+/**
+ * The module's Controller screen, mounted on the state the room stored.
+ *
+ * `sendEvent` is the phone's way of telling the room what its player did. The
+ * mutation behind it arrives with the reducer task, which is also when the
+ * first module has an event to send — no screen calls this yet, and it is wired
+ * here as the shape the interface promises rather than left out of it.
+ */
+function PlayerGameScreen({
+  module,
+  state,
+  player,
+}: {
+  readonly module: GameModule;
+  readonly state: unknown;
+  readonly player: GamePlayer;
+}) {
+  return (
+    <View style={styles.gameStage}>
+      {module.screens.controller({ state, player, sendEvent: () => undefined })}
+    </View>
+  );
+}
+
+/** The Host's way back to the lobby, with the room and its roster intact. */
+function EndGameControl() {
+  const endGame = useMutation(api.games.endGame);
+  const [ending, setEnding] = useState(false);
+  const [failure, setFailure] = useState<string>();
+
+  async function end() {
+    setEnding(true);
+    setFailure(undefined);
+
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+
+      if (sessionToken === null) {
+        setFailure('This phone has lost its seat — reopen the app to rejoin.');
+        return;
+      }
+
+      await endGame({ sessionToken });
+    } catch (error) {
+      setFailure(startFailureMessage(error));
+    } finally {
+      setEnding(false);
+    }
+  }
+
+  return (
+    <View style={styles.field}>
+      <Pressable
+        style={styles.stretch}
+        disabled={ending}
+        onPress={() => void end()}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: ending }}
+      >
+        {({ pressed }) => (
+          <StickerSurface
+            depth={shadowDepth.phoneCard}
+            style={[styles.button, styles.endButton, pressed && styles.buttonPressed]}
+            wrapperStyle={styles.stretch}
+          >
+            <Text style={styles.buttonLabel}>{ending ? 'Ending…' : 'End game'}</Text>
+          </StickerSurface>
+        )}
+      </Pressable>
+
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * The room is playing a game this build does not have.
+ *
+ * An un-updated phone in a room whose TV has been updated. It is not the lobby,
+ * because a lobby would invite a player to act on a room that is mid-game.
+ */
+function UnknownGameScreen({
+  code,
+  gameId,
+}: {
+  readonly code: string;
+  readonly gameId: string;
+}) {
+  return (
+    <PhoneScreen>
+      <View style={styles.seatedHeader}>
+        <Text style={styles.logoSmall}>
+          HUDDLE<Text style={styles.logoPeriod}>.</Text>
+        </Text>
+        <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+          <Text style={styles.codeChipText}>{code}</Text>
+        </StickerSurface>
+      </View>
+
+      <Text style={styles.title}>Update Huddle</Text>
+
+      <StickerSurface
+        depth={shadowDepth.phoneCard}
+        style={styles.statusCard}
+        wrapperStyle={styles.stretch}
+      >
+        <Text style={styles.statusText}>
+          This room is playing {gameId}, which this phone doesn’t have yet. Watch the TV — you’ll
+          rejoin when they’re back in the lobby.
+        </Text>
       </StickerSurface>
     </PhoneScreen>
   );
@@ -821,6 +1106,27 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.row,
+  },
+  startButton: {
+    backgroundColor: colors.green,
+  },
+  // Boardwalk's "this ends something" surface, and the only punch button on a
+  // phone screen — it is meant to be found, not stumbled into.
+  endButton: {
+    backgroundColor: colors.punch,
+  },
+  waitingFor: {
+    alignSelf: 'stretch',
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  // Where the module draws. It claims the room left on the screen so a game can
+  // fill it, and stays out of the way of a game that draws nothing yet.
+  gameStage: {
+    alignSelf: 'stretch',
+    flex: 1,
   },
   statusDot: {
     width: 12,

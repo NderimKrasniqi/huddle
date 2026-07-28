@@ -42,6 +42,32 @@ export type GamePlayer = {
 };
 
 /**
+ * A seat as the room's roster states it — a `GamePlayer` with the one field a
+ * game is not given.
+ */
+export type RosterSeatForGame = GamePlayer & { readonly host: boolean };
+
+/**
+ * The room's roster as a game receives it: the same seats, minus `host`.
+ *
+ * Both clients need this to mount a game's screens, so it is written once here
+ * rather than twice. The server makes the same projection in `games.ts` and not
+ * through this function, because it builds it from `players` rows, which carry
+ * `_id` and no `host` at all — the field is the room's. What matters is the
+ * shape they agree on: a game is never handed the Host, on either side.
+ */
+export function gamePlayersFrom(
+  seats: readonly RosterSeatForGame[],
+): readonly GamePlayer[] {
+  return seats.map(({ playerId, nickname, away, color }) => ({
+    playerId,
+    nickname,
+    away,
+    color,
+  }));
+}
+
+/**
  * The floor every game event stands on: which player it came from.
  *
  * The hub is what puts a game event into a room, and it can only do that
