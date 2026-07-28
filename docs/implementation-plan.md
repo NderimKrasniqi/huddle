@@ -414,9 +414,13 @@ it.
   below. Trivia's entry is metadata and an honest zero: an empty settings
   schema, a `reduce` that returns the state it was given, and screens that draw
   nothing, each commented with the task that fills it. Its `estimatedMinutes`
-  is 5 rather than the handoff's "~12 min" chip, read as mock filler: ten
-  questions at a 20s countdown and a 5s reveal is about five minutes, and the
-  chip draws whatever the module declares.
+  is 5 rather than the handoff's "~12 min" chip: ten questions at a 20s
+  countdown and a 5s reveal is about five minutes, and sooner when everybody
+  has answered. The handoff mock is not filler — the "2–10 players" beside it
+  is trivia's real range — so the contradiction was resolved in the handoff
+  itself (§6), which now records that the carousel draws whatever
+  `GameMetadata` declares and that the mock's number is the chip's shape rather
+  than trivia's duration.
 - [x] Room phase & the game lifecycle mutations (server half of "Room state
   machine & game lifecycle", split because the original bundled three AC
   clauses across `convex/`, `game-core` and both apps) — AC: a room's phase is

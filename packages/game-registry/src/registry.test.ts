@@ -1,9 +1,28 @@
-import { ROOM_PLAYER_CAP, KEY_ART_COLOR_NAMES } from '@huddle/game-core';
+import {
+  ROOM_PLAYER_CAP,
+  KEY_ART_COLOR_NAMES,
+  type GameSettingsSchema,
+} from '@huddle/game-core';
 import { triviaGameModule } from '@huddle/game-trivia';
 import { describe, expect, it } from 'vitest';
 
 import { GAME_LOGIC_REGISTRY, gameLogicById } from './logic';
 import { GAME_REGISTRY } from './registry';
+
+/**
+ * The settings whose default is not one of the values they offer — the keys, so
+ * a failure names the setting rather than just denying a boolean.
+ *
+ * It is a function so the rule can be aimed at something other than the
+ * Registry: trivia declares no settings yet, so applied to what is installed
+ * today it looks at nothing at all, and a check that cannot fail is worth
+ * exactly as much as no check.
+ */
+function settingsDefaultingOutsideTheirOptions(schema: GameSettingsSchema): string[] {
+  return schema
+    .filter((setting) => !setting.options.some((option) => option.value === setting.defaultValue))
+    .map((setting) => setting.key);
+}
 
 /**
  * The Registry is the hub's whole list of games, so what is tested here is what
@@ -40,10 +59,25 @@ describe('the Registry', () => {
 
   it('leaves no setting without a value the Host has not chosen yet', () => {
     for (const { settingsSchema } of GAME_REGISTRY) {
-      for (const setting of settingsSchema) {
-        expect(setting.options.map((option) => option.value)).toContain(setting.defaultValue);
-      }
+      expect(settingsDefaultingOutsideTheirOptions(settingsSchema)).toEqual([]);
     }
+  });
+
+  it('would say so if a game did', () => {
+    // The rule above passes over trivia's empty schema without looking at
+    // anything, and will until Phase 4 gives trivia its settings. This is what
+    // makes it a rule in the meantime rather than a formality: the same check,
+    // against a game that breaks it.
+    expect(
+      settingsDefaultingOutsideTheirOptions([
+        {
+          key: 'scoring',
+          label: 'Scoring',
+          options: [{ value: 'flat', label: 'Flat' }],
+          defaultValue: 'speed',
+        },
+      ]),
+    ).toEqual(['scoring']);
   });
 });
 
