@@ -168,9 +168,16 @@ demoable by force-quitting apps mid-lobby.
   surfaces that exist — the phone's "You're in" screen gets the real pill and is
   told the room is theirs, everyone else is told whose it is by name (the
   handoff's §4 copy, which needed the host to be knowable); the TV's 72px
-  pairing seat takes the palette's own Host avatar tangerine, because a pill
-  wide enough to read across a room does not fit it, the same measurement that
-  kept the away badge off that seat. There is nothing yet for a host to press.
+  pairing seat says it in the palette's own Host avatar tangerine, because a
+  pill wide enough to read across a room does not fit it, the same measurement
+  that kept the away badge off that seat. That tangerine started as the circle's
+  fill and moved to its offset shadow in the colored-seats task below: the fill
+  became the player's claimed color, and `tangerine` is itself one of the ten a
+  player can claim, so a Host wearing it as a fill would have been
+  indistinguishable from whoever claimed it — the shadow, offset onto the
+  screen's cream, is the one channel none of the ten fills collide with. The
+  HOST pill still waits on the §3 lobby card either way. There is nothing yet
+  for a host to press.
 
   Every client learns the host from the `roster` projection, which is why a
   handover reaches the new host's phone as a push rather than at its next
@@ -223,11 +230,32 @@ demoable by force-quitting apps mid-lobby.
   swatch under a thumb would say the opposite of what is happening. The feedback
   is the claim itself: the swatch takes the ink border and shadow the moment it
   is the player's.
-- [ ] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
+- [x] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
   player's claimed color with Bungee initials; a newly joined player's seat
   carries the pink "JUST JOINED!" treatment for ~4s. The handoff draws both on
   the §3 lobby card, which does not exist yet — as with the HOST pill, they land
   on the pairing seat that does, and move to the card when it arrives.
+
+  The pink is the accent Offset Shadow the handoff's signature rules already
+  give that card (`8px 8px 0 #E23D6D`), not a pill: a pill wide enough to read
+  across a room still does not fit a 72px seat. The Host's tangerine moved onto
+  the same channel, because the circle's fill now says who a player *is* — see
+  the host task above.
+
+  Seen on the tvOS simulator, with players seated through `npx convex run`
+  against the cloud dev deployment: Ada's circle drew cobalt with a white "A"
+  and Grace Hopper's punch with an ink "GH", so the palette's paired monogram
+  inks are on screen and not merely in a unit test; the tangerine Host shadow
+  followed a real auto-transfer when Ada's heartbeat stopped; an away player's
+  seat still dimmed, shadow with circle. The four seconds are *measured*: four
+  screenshots 1.1s apart caught a joining player's pink shadow at roughly +1.2s,
+  +2.3s and +3.4s after the push, settled by +4.4s.
+
+  What that pass is carrying is the settle itself. `JUST_JOINED_MS` is pinned to
+  4000 by a unit test and the arrivals fold is tested hard, but the timer in
+  `useJustJoined` is a React hook with no test around it — a literal `400` in
+  its place would leave the suite green. So the "~4s" rests on inspection plus
+  the simulator run above, and would not survive a careless edit.
 - [ ] TV room-open resilience — AC: a TV that launches before the backend is
   reachable recovers on its own, with no human touching the remote (the TV app
   is defined as untouched after launch); `openRoom` already clears its memo on

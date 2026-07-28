@@ -9,6 +9,7 @@ import {
   opacity,
   type PlayerColor,
   playerColor,
+  playerFace,
   playerInitials,
   radius,
   shadowDepth,
@@ -361,7 +362,7 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const roster = useRoomRoster(session);
   const standing = lobbyStanding(roster, session.playerId);
   const claimed = yourColor(roster, session.playerId);
-  const face = claimed === undefined ? undefined : playerColor(claimed);
+  const face = playerFace(claimed);
 
   return (
     <PhoneScreen>
@@ -379,12 +380,14 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
 
       {/* The avatar is the claimed color the moment it is claimed, and a plain
           Boardwalk face until then: a player lands on this screen before they
-          have picked anything, so the circle has to be drawable without one. */}
+          have picked anything, so the circle has to be drawable without one.
+          Both answers come from `playerFace`, which is what stops this circle
+          and the same player's seat on the TV from disagreeing. */}
       <StickerSurface
         depth={shadowDepth.phoneHero}
-        style={[styles.avatar, face !== undefined && { backgroundColor: face.fill }]}
+        style={[styles.avatar, { backgroundColor: face.fill }]}
       >
-        <Text style={[styles.avatarInitials, face !== undefined && { color: face.monogram }]}>
+        <Text style={[styles.avatarInitials, { color: face.monogram }]}>
           {playerInitials(nickname)}
         </Text>
       </StickerSurface>
@@ -761,18 +764,19 @@ const styles = StyleSheet.create({
     marginRight: -letterSpacing.roomCode,
   },
 
+  // The fill and the monogram's ink both arrive from `playerFace`, so neither
+  // is stated here: a default would only ever be the answer it already gives
+  // for a player who has claimed nothing.
   avatar: {
     width: 128,
     height: 128,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
   },
   avatarInitials: {
-    color: colors.ink,
     fontFamily: fontFamily.display,
     // The TV's seat draws a 24px monogram in a 72px circle; this circle is
     // 128px, and the monogram keeps its proportion.

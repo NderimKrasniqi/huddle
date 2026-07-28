@@ -2,7 +2,7 @@ import { PLAYER_COLOR_NAMES } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
 import { colors } from './colors';
-import { playerColor, playerPalette } from './player-colors';
+import { playerColor, playerFace, playerPalette } from './player-colors';
 
 /**
  * The palette's two promises, held to arithmetic rather than to taste: ten
@@ -138,5 +138,25 @@ describe('the player palette', () => {
     expect(playerColor('tangerine').fill).toBe(colors.tangerine);
     expect(playerColor('yellow').fill).toBe(colors.yellow);
     expect(playerColor('green').fill).toBe(colors.green);
+  });
+});
+
+describe('the face a player is drawn with', () => {
+  it('is the color they claimed', () => {
+    for (const { name, ...claimed } of playerPalette) {
+      expect(playerFace(name)).toEqual(claimed);
+    }
+  });
+
+  it('is a plain Boardwalk card face until they have claimed one', () => {
+    // A player is seated the moment they join and picks a color afterwards, so
+    // every surface that draws one has to be drawable without one.
+    expect(playerFace(undefined)).toEqual({ fill: colors.surface, monogram: colors.ink });
+  });
+
+  it('sets that face’s monogram in something readable too', () => {
+    // The floor the ten claimable colors are held to, applied to the eleventh
+    // face — an unclaimed seat is read across the same room.
+    expect(contrast(playerFace(undefined).fill, playerFace(undefined).monogram)).toBeGreaterThan(3);
   });
 });

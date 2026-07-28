@@ -1,7 +1,14 @@
 import { ROOM_PLAYER_CAP } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
-import { footerSeatCount, footerSeatsWidth, rosterFooterText, seat } from './roster';
+import {
+  footerSeatCount,
+  footerSeatsWidth,
+  type RosterSeat,
+  rosterFooterText,
+  seat,
+  seatHighlight,
+} from './roster';
 
 /**
  * `tvDesignSize.width` from @huddle/ui, written out: that package's entry point
@@ -42,6 +49,36 @@ describe('the footer seat row', () => {
   it('measures a row of seats as seats plus the gaps between them', () => {
     expect(footerSeatsWidth(1)).toBe(seat.size);
     expect(footerSeatsWidth(4)).toBe(4 * seat.size + 3 * seat.gap);
+  });
+});
+
+describe('seatHighlight', () => {
+  /** A seated player, as `players.roster` serves one. */
+  const seatOf = (host: boolean): RosterSeat => ({
+    playerId: 'player-Ada' as RosterSeat['playerId'],
+    nickname: 'Ada',
+    away: false,
+    host,
+    color: 'lagoon',
+  });
+
+  it('carries nothing on an ordinary settled seat', () => {
+    expect(seatHighlight(seatOf(false), false)).toBeUndefined();
+  });
+
+  it('carries the arrival on a seat that has just been taken', () => {
+    expect(seatHighlight(seatOf(false), true)).toBe('justJoined');
+  });
+
+  it('says the Host is the Host once the arrival has settled', () => {
+    expect(seatHighlight(seatOf(true), false)).toBe('host');
+  });
+
+  it('lets the Host’s own arrival come first', () => {
+    // The first player in a room is both at once, and for those four seconds
+    // the news is that somebody is here at all — being the Host is still true
+    // afterwards, and nothing else is competing for the seat.
+    expect(seatHighlight(seatOf(true), true)).toBe('justJoined');
   });
 });
 

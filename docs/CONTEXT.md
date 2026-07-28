@@ -48,9 +48,13 @@ working must add it here.
   (Phase 2) the Host's rows on their phone. Served in join order by the
   `roster` query, which projects each player rather than handing over the row.
 - **Seat** — one place on the TV's roster: a dashed empty circle until a player
-  takes it, then their avatar and nickname. A room has ten of them
-  (`ROOM_PLAYER_CAP` in game-core, the plan's pinned cap); the pairing screen's
-  footer always draws at least the handoff's four.
+  takes it, then their claimed color with their Bungee initials, and the
+  nickname under it. A room has ten of them (`ROOM_PLAYER_CAP` in game-core, the
+  plan's pinned cap); the pairing screen's footer always draws at least the
+  handoff's four. Because the circle's fill is now the player, everything else
+  a seat has to say rides its Offset Shadow — punch for Just Joined, tangerine
+  for the Host — which is the one channel none of the ten fills can collide
+  with. Both stand in for pills the §3 lobby card will draw properly.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
   active player on disconnect. Plays games like any other player. Held as the
@@ -91,6 +95,15 @@ working must add it here.
   the TV's pairing seats are specified as avatar and nickname only), carried
   onto every surface that lists players because presence is news wherever a
   player is drawn.
+- **Just Joined** — the pink treatment a Seat wears for about four seconds after
+  its player appears (the handoff's avatar pop-in), then settles. A fact about
+  what one screen has watched, not about the room: the TV works it out by
+  comparing the roster snapshots it has been pushed, since the room does not
+  record when a seat was taken and a server timestamp would be read against a
+  television's own clock. Seats already taken when a screen starts watching are
+  greeted by nobody. Distinct from an **Arrival** (`noteArrivals`, `isArrival`),
+  which is the permanent fact that this screen watched the seat being taken;
+  Just Joined is the four seconds that fact earns, counted by the seat itself.
 - **Game Module** — a self-contained game implementation behind the game-core
   interface (metadata, settings schema, reducer, TV/phone screens). Games are
   modules; the hub never contains game logic.

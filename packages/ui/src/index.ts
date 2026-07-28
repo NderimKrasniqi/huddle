@@ -5,7 +5,7 @@ export { codeLetterColor, codeTileTilt } from './code-tile';
 export { colors, type ColorToken } from './colors';
 export { boardwalkFonts } from './fonts';
 export { tvDesignSize, tvStageScale, type WindowSize } from './layout';
-export { type PlayerColor, playerColor, playerPalette } from './player-colors';
+export { type PlayerColor, playerColor, playerFace, playerPalette } from './player-colors';
 export { shadowDepth, stickerShadowRect, type ShadowRect } from './shadows';
 export { borderWidth, opacity, radius, stickerTilt } from './shape';
 export { fontFamily, letterSpacing, minBodyFontSize } from './typography';

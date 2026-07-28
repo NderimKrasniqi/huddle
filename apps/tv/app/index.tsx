@@ -9,6 +9,7 @@ import {
   letterSpacing,
   minBodyFontSize,
   opacity,
+  playerFace,
   playerInitials,
   radius,
   shadowDepth,
@@ -16,13 +17,20 @@ import {
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
-import type { FunctionReturnType } from 'convex/server';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
 import { openRoom, type OpenRoom } from '../src/room';
-import { footerSeatCount, rosterFooterText, seat } from '../src/roster';
+import {
+  footerSeatCount,
+  type RosterSeat,
+  rosterFooterText,
+  seat,
+  seatHighlight,
+  type SeatHighlight,
+} from '../src/roster';
 import { TvStage } from '../src/tv-stage';
 
 /** The QR's edge, per the handoff ("~196px QR"). */
@@ -32,10 +40,32 @@ const QR_SIZE = 196;
 const FOOTER_TEXT_LINE = 28;
 
 /**
- * One taken seat of the TV's roster, taken from the query that serves it — the
- * TV draws what the backend says a seat is, and never its own idea of one.
+ * How a seat wears its news: Boardwalk's accent offset shadow, which is the
+ * system's own way of highlighting a card — the handoff's signature rules give
+ * the "JUST JOINED!" card an 8px shadow in punch pink.
+ *
+ * It rides the shadow rather than the border, where the §3 lobby card puts it,
+ * because on a card the border is spare and on a seat it is not: the circle's
+ * fill is the player's claimed color and its ink border is what makes the circle
+ * a Boardwalk object at all. The shadow — offset outside the circle, onto the
+ * screen's cream — is the one channel none of the ten fills can collide with.
+ *
+ * The Host's tangerine moves here from the circle's fill for that same reason.
+ * The fill now says who a player is, and `tangerine` is one of the ten colors
+ * anybody can claim, so a Host wearing it as a fill was about to be
+ * indistinguishable from whoever claimed it. The palette still names tangerine
+ * for the Host ("Brand accent, Host avatar"), and the HOST pill it stands in for
+ * still waits on the §3 lobby card, which has the width to draw one.
  */
-type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
+const seatHighlightShadow: Record<
+  SeatHighlight,
+  { readonly depth: number; readonly color: string }
+> = {
+  justJoined: { depth: shadowDepth.tvCardHighlight, color: colors.punch },
+  // A step shallower than an arrival, so a phone landing mid-party visibly
+  // lifts above the seat that is merely running the room.
+  host: { depth: shadowDepth.tvCard, color: colors.tangerine },
+};
 
 /**
  * The TV — Pairing screen (docs/design/design-handoff.md §1): the Room Code in
@@ -45,6 +75,7 @@ type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
 export default function TvPairingScreen() {
   const { room, failed } = useOpenedRoom();
   const roster = useRoster(room);
+  const arrivals = useArrivals(roster);
 
   return (
     <TvStage>
@@ -75,7 +106,7 @@ export default function TvPairingScreen() {
           <RoomQrCard code={room?.code} />
         </View>
 
-        <RosterFooter roster={roster} />
+        <RosterFooter roster={roster ?? []} arrivals={arrivals} />
       </View>
     </TvStage>
   );
@@ -140,7 +171,13 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
  * from it: the room still holds their place, and the count under the seats is
  * how many phones are in the room, not how many are awake.
  */
-function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
+function RosterFooter({
+  roster,
+  arrivals,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly arrivals: Arrivals | undefined;
+}) {
   return (
     <View style={styles.footer}>
       <View style={styles.seats}>
@@ -150,10 +187,12 @@ function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
             <EmptySeat key={`empty-${position}`} />
           ) : (
             <PlayerSeat
+              // Keyed by the player, so a seat belongs to one of them for as
+              // long as they are in the room: it is the seat's own mount that
+              // starts the four seconds below.
               key={player.playerId}
-              nickname={player.nickname}
-              away={player.away}
-              host={player.host}
+              player={player}
+              arrived={arrivals !== undefined && isArrival(arrivals, player.playerId)}
             />
           );
         })}
@@ -173,47 +212,58 @@ function EmptySeat() {
 }
 
 /**
- * A player in their seat: Boardwalk's avatar circle with Bungee initials, the
- * nickname under it, and the handoff's status dot on the circle's edge — green
- * while the room is hearing from their phone. The circle takes the player's
- * claimed color in Phase 2's color-claim task; until a color is claimed there
- * is nothing to claim it with, so the circle stays a plain Boardwalk card face.
+ * A player in their seat: their claimed color as the circle, their initials on
+ * it in Bungee, the nickname under it, and the handoff's status dot on the
+ * circle's edge — green while the room is hearing from their phone.
  *
- * The Host's circle is tangerine, which the palette names for exactly this
- * ("Brand accent, Host avatar"). The handoff's HOST pill belongs to the §3
- * lobby card and the §5 roster row, and a pill wide enough to read across a
- * room does not fit a 72px seat — the same measurement that kept the away badge
- * off this screen. The color says it in the space there is, and moves aside for
- * the pill when the cards it was drawn for land.
+ * The circle is a plain Boardwalk card face until a color is claimed, because a
+ * player is seated the moment they join and the picker is the next screen their
+ * phone shows them; `playerFace` is where both answers live, so a seat and the
+ * hero avatar on that phone are never the same player in two different colors.
+ * The monogram's own color comes with the fill: one ink cannot be read on all
+ * ten (see `packages/ui/src/player-colors.ts`).
+ *
+ * Whatever else the seat has to say rides the offset shadow — an arrival in
+ * punch pink, the Host in tangerine — for the reasons `seatHighlightShadow`
+ * gives. An ordinary seat has no shadow at all, which is how the handoff draws
+ * the footer's circles.
  *
  * Away dims the face the way Boardwalk dims anything present but not available,
- * and mutes the dot. The nickname is not dimmed with them — it is the one thing
- * on the seat that has to be read from a sofa, and ink at 30% over the screen
- * color falls below any legible contrast. It takes the muted text color the
- * footer count is already set in, which says the same thing and survives the
- * room. The dot stays at full strength, because it is what is doing the saying.
+ * and mutes the dot; the dimming goes on the wrapper so that a Host's shadow
+ * fades with the circle it falls from. The nickname is not dimmed with them —
+ * it is the one thing on the seat that has to be read from a sofa, and ink at
+ * 30% over the screen color falls below any legible contrast. It takes the
+ * muted text color the footer count is already set in, which says the same
+ * thing and survives the room. The dot stays at full strength, because it is
+ * what is doing the saying.
  */
 function PlayerSeat({
-  nickname,
-  away,
-  host,
+  player,
+  arrived,
 }: {
-  readonly nickname: string;
-  readonly away: boolean;
-  readonly host: boolean;
+  readonly player: RosterSeat;
+  readonly arrived: boolean;
 }) {
+  const { nickname, away, color } = player;
+  const justJoined = useJustJoined(arrived);
+  const face = playerFace(color);
+  const highlight = seatHighlight(player, justJoined);
+  const news = highlight === undefined ? undefined : seatHighlightShadow[highlight];
+
   return (
     <View style={styles.seat}>
-      <View
-        style={[
-          styles.avatar,
-          styles.avatarTaken,
-          host && styles.avatarHost,
-          away && styles.avatarAway,
-        ]}
+      <StickerSurface
+        // No news, no shadow: a seat with nothing to say is the flat circle the
+        // handoff's pairing footer draws.
+        depth={news?.depth ?? 0}
+        shadowColor={news?.color}
+        style={[styles.avatar, styles.avatarTaken, { backgroundColor: face.fill }]}
+        wrapperStyle={away ? styles.avatarAway : undefined}
       >
-        <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
-      </View>
+        <Text style={[styles.avatarInitials, { color: face.monogram }]}>
+          {playerInitials(nickname)}
+        </Text>
+      </StickerSurface>
       {/* A sibling of the circle rather than a child of it. The dot sits half
           off the circle's edge, which is precisely the geometry a rounded
           parent would be entitled to clip; positioning it against the seat
@@ -268,16 +318,62 @@ function useOpenedRoom(): { room: OpenRoom | undefined; failed: boolean } {
  * than on a poll the TV would have to be awake for — the roster redraws within
  * a round trip of the phone's tap.
  *
- * Until the room is open there is nothing to subscribe to, and an unopened room
- * and an empty one draw the same seats anyway.
+ * Until the room is open there is nothing to subscribe to. That, and the moment
+ * before the first answer lands, are the `undefined` this hands on rather than
+ * flattening to an empty room: a screen that has not been told who is here is
+ * not a screen that has been told nobody is, and `useArrivals` is the part of
+ * this one that has to tell the difference.
  */
-function useRoster(room: OpenRoom | undefined): readonly RosterSeat[] {
-  const roster = useQuery(
-    api.players.roster,
-    room === undefined ? 'skip' : { roomId: room.roomId },
-  );
+function useRoster(room: OpenRoom | undefined): readonly RosterSeat[] | undefined {
+  return useQuery(api.players.roster, room === undefined ? 'skip' : { roomId: room.roomId });
+}
 
-  return roster ?? [];
+/**
+ * Who this screen has watched arrive, kept up with the roster.
+ *
+ * Folded during render rather than in an effect, because it is derived from the
+ * roster and nothing else: the first snapshot to land is the baseline, and every
+ * one after it is compared with what was already on the screen. `noteArrivals`
+ * hands back the identical value whenever a snapshot seats nobody — which is
+ * most of them, since claiming a color and going away both push a fresh roster —
+ * so this settles on the render after a join and holds still through everything
+ * else.
+ */
+function useArrivals(roster: readonly RosterSeat[] | undefined): Arrivals | undefined {
+  const [arrivals, setArrivals] = useState<Arrivals>();
+  const noted = roster === undefined ? arrivals : noteArrivals(arrivals, roster);
+
+  if (noted !== arrivals) {
+    setArrivals(noted);
+  }
+
+  return noted;
+}
+
+/**
+ * A seat's four seconds of "JUST JOINED!", counted from the moment the seat
+ * appears — which is this component mounting, since the footer keys a seat to
+ * its player.
+ *
+ * The screen holds a clock nobody has to agree with, so this is a timer rather
+ * than a timestamp: a seat settles when nothing at all has happened, and nothing
+ * happening is precisely what a live query never reports. A seat the screen did
+ * not watch arrive never starts one.
+ */
+function useJustJoined(arrived: boolean): boolean {
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (!arrived) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setSettled(true), JUST_JOINED_MS);
+
+    return () => clearTimeout(timer);
+  }, [arrived]);
+
+  return arrived && !settled;
 }
 
 // Every measurement below is the handoff's own, at its 1280×720 design size;
@@ -414,15 +510,11 @@ const styles = StyleSheet.create({
     borderColor: colors.mutedBorder,
     borderStyle: 'dashed',
   },
+  // The fill is the player's claimed color and arrives with the seat; the ink
+  // border is what every Boardwalk surface is drawn with, and stays put through
+  // all ten of them.
   avatarTaken: {
-    backgroundColor: colors.surface,
     borderColor: colors.ink,
-  },
-  // The palette's own Host avatar color. The monogram stays ink: on tangerine
-  // that is a ~6.6:1 contrast, where white would be ~2.6:1 and unreadable from
-  // a sofa.
-  avatarHost: {
-    backgroundColor: colors.tangerine,
   },
   // Boardwalk's own treatment for something present but not available: the
   // handoff dims a claimed color swatch to 30%, and an away player's face is
@@ -447,8 +539,8 @@ const styles = StyleSheet.create({
   statusDotAway: {
     backgroundColor: colors.mutedBorder,
   },
+  // The monogram's own color comes with the fill, from `playerFace`.
   avatarInitials: {
-    color: colors.ink,
     fontFamily: fontFamily.display,
     fontSize: 24,
     // Bungee's line box runs taller than its caps; pinning it centres the
