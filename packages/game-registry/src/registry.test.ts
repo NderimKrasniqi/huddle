@@ -2,6 +2,7 @@ import { ROOM_PLAYER_CAP, KEY_ART_COLOR_NAMES } from '@huddle/game-core';
 import { triviaGameModule } from '@huddle/game-trivia';
 import { describe, expect, it } from 'vitest';
 
+import { GAME_LOGIC_REGISTRY, gameLogicById } from './logic';
 import { GAME_REGISTRY } from './registry';
 
 /**
@@ -43,5 +44,40 @@ describe('the Registry', () => {
         expect(setting.options.map((option) => option.value)).toContain(setting.defaultValue);
       }
     }
+  });
+});
+
+/**
+ * The rules-only view the Convex server imports. It is a second list rather
+ * than a projection of the first — that is what keeps the screens out of the
+ * server bundle — so the thing worth testing is that the two never drift.
+ */
+describe('the Registry the server reads', () => {
+  it('installs the same games, in the same order', () => {
+    expect(GAME_LOGIC_REGISTRY.map((game) => game.metadata.id)).toEqual(
+      GAME_REGISTRY.map((game) => game.metadata.id),
+    );
+  });
+
+  it('is the same rules the clients hold, not a copy of them', () => {
+    // Identity, not equality: a module is its logic with screens laid on top,
+    // so a second object here would be a second set of rules to keep in step.
+    for (const [index, logic] of GAME_LOGIC_REGISTRY.entries()) {
+      const module = GAME_REGISTRY[index];
+
+      expect(module?.reduce).toBe(logic.reduce);
+      expect(module?.createInitialState).toBe(logic.createInitialState);
+      expect(module?.metadata).toBe(logic.metadata);
+    }
+  });
+
+  it('finds a game by the id a phone names', () => {
+    expect(gameLogicById('trivia')).toBe(GAME_LOGIC_REGISTRY[0]);
+  });
+
+  it('answers for a game it does not install, rather than throwing', () => {
+    // "No such game" is what a room turns into its refusal, so it has to be a
+    // value the caller can look at.
+    expect(gameLogicById('charades')).toBeUndefined();
   });
 });

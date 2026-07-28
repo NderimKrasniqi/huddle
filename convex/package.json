@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@huddle/game-core": "workspace:*",
+    "@huddle/game-registry": "workspace:*",
     "convex": "^1.42.3"
   },
   "devDependencies": {

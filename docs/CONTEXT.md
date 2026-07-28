@@ -48,6 +48,19 @@ working must add it here.
   screen's status chip says; the other two carry its ordinary invitation.
 - **Lobby** — the pre-game phase of a room (roster visible, Host picking a
   game). A room is `lobby → in-game → lobby`.
+- **Room Phase** — which of those two a room is in (`ROOM_PHASES`). It is not a
+  stored field: a room holding a Running Game is `in-game` and a room holding
+  none is in its `lobby`, so the phase is read off the game (`roomPhase`). One
+  fact written once — there is no such row as an in-game room with nothing
+  running.
+- **Running Game** — what a room in a game holds: the `gameId` of the installed
+  module and the game's own `state`, which the hub stores and returns without
+  ever reading. Absent on a room in its lobby.
+- **Game Lifecycle** — the two Host-only writes that move a room between its
+  phases: `startGame` (seeds the state from the module's initial-state factory)
+  and `endGame` (clears it, leaving roster, Host and Room Code untouched).
+  Starting a game over a running one is refused; ending a game the room is not
+  playing is a no-op, because "End game" is a button a thumb can hit twice.
 - **Player** — a phone-holding participant in a room; session-only identity
   (nickname + claimed color), no account.
 - **Nickname** — the name a player types when joining, and the room's name for
@@ -136,6 +149,14 @@ working must add it here.
   holds all three opaquely — which is why the interface's members that touch
   them are declared as methods, so a `GameModule<TriviaState, …>` sits in a
   list of `GameModule<unknown, …>`.
+- **Game Logic** — a module without its screens (`GameLogic`: metadata,
+  settings schema, initial-state factory, reducer). The half that runs inside a
+  Convex mutation, and the reason a module is split: screens are properties of
+  an object and do not tree-shake, so a server importing whole modules would
+  bundle the React Native of every installed game. The Registry ships both
+  views through separate entry points — `@huddle/game-registry` for the
+  clients, `@huddle/game-registry/logic` for the server — and they are the same
+  objects, not copies.
 - **Game Metadata** — everything the hub can say about a game without playing
   it, and the whole of its carousel card: id (what a room stores when a game is
   picked), title, Key Art, player range, estimated minutes, and the genre

@@ -417,10 +417,62 @@ it.
   is 5 rather than the handoff's "~12 min" chip, read as mock filler: ten
   questions at a 20s countdown and a 5s reveal is about five minutes, and the
   chip draws whatever the module declares.
-- [ ] Room state machine & game lifecycle — AC: room states are `lobby →
-  in-game → lobby`; Host selects trivia and starts → TV and all phones switch
-  to trivia screens within 1s; Host "End game" mid-game → everyone returns to
-  the lobby, room intact.
+- [x] Room phase & the game lifecycle mutations (server half of "Room state
+  machine & game lifecycle", split because the original bundled three AC
+  clauses across `convex/`, `game-core` and both apps) — AC: a room's phase is
+  `lobby → in-game → lobby`, stored on the room with the running game's id and
+  its state; `startGame` is Host-only, refuses a game the Registry does not
+  install and a room already in a game, and seeds the state from the module's
+  initial-state factory; `endGame` is Host-only and returns the room to the
+  lobby with its roster, host and Room Code intact; integration tests cover
+  both, the refusals, and that a non-Host cannot call either.
+
+  The phase is not a column. A room holding a game is in a game and a room
+  holding none is in its lobby, so `rooms.game` — `{ gameId, state }`, optional
+  — is the whole of it, and `roomPhase` reads the phase off it. A stored phase
+  beside a stored game would be one fact written twice, with an in-game room
+  holding nothing as the row that says so; this way that row cannot be spelled.
+  It also makes each transition a single patch, so neither can half-succeed.
+  `state` is `v.any()`, because it belongs to the game: the hub stores and
+  returns it without reading it, which is what keeps a second game out of the
+  schema.
+
+  **The module had to be split, and that changed the task above.** `reduce` and
+  `createInitialState` run server-side, so Convex must import the Registry —
+  but a module's screens are *properties* of it, and properties do not
+  tree-shake, so importing whole modules would have put React Native in the
+  server bundle two tasks before trivia's screens exist. `GameLogic` (metadata,
+  settings schema, factory, reducer) is now the half the server reads and
+  `GameModule extends GameLogic` adds the screens; trivia and the Registry each
+  ship both through separate entry points, and the two lists are the same
+  objects rather than copies (asserted by identity, not equality).
+
+  **Checked rather than argued:** bundling `convex/games.ts` with esbuild puts
+  `triviaGameLogic` and `GAME_LOGIC_REGISTRY` in the output and leaves
+  `screens` and `triviaGameModule` out of it entirely — the `exports` seam is
+  honoured, not hoped for. That is esbuild run directly, which is the tool
+  Convex bundles with but not Convex's own pipeline, so it is a proxy for the
+  real build and not the real build.
+
+  Ending is a no-op where starting is a refusal. A second tap on "End game"
+  asks for the lobby the room is already in and there is nothing to tell the
+  person holding the phone; a second start would throw away the state of a game
+  in progress, so `alreadyInGame` refuses it. The Host check runs before the
+  Registry lookup, so a phone with no room control learns only that it is not
+  the Host and never whether the game it named exists.
+
+  What this does not carry: `startGame` does not enforce `playerRange.min`, so
+  a room with one player can start a game trivia declares as 2–10 — no AC asks
+  for it and the Host's picker is where it belongs, but it is a real gap. The
+  `refused` branch in `endGame` is unreachable today, kept so a rule added to
+  `phaseAfter` later cannot be silently dropped at the call site; it is
+  deliberate dead code and untested by construction. Nothing renders any of
+  this yet — both clients still draw their lobbies, which is the task below.
+- [ ] TV and phones follow the room into the game (client half of the split) —
+  AC: Host selects trivia and starts → TV and all phones switch to trivia
+  screens within 1s; Host "End game" mid-game → everyone returns to the lobby,
+  room intact; both clients mount the module's screens out of the Registry
+  without naming a game.
 - [ ] Synced game carousel — AC: host phone prev/next (or swipe) updates
   `browsingGameIndex` in room state; the TV carousel follows within 250ms
   (focused card treatment per handoff); non-host phones show "Now viewing

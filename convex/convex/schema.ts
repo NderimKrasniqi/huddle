@@ -44,6 +44,29 @@ export default defineSchema({
      * room with no host is a room that cannot start a game.
      */
     hostPlayerId: v.optional(v.id('players')),
+    /**
+     * The game this room is playing, and the state it is at — absent while the
+     * room is in its lobby.
+     *
+     * The room's phase is read off this rather than stored beside it: a room
+     * holding a game is in a game, a room holding none is in its lobby, and
+     * written this way there is no such row as an in-game room with nothing
+     * running (see `roomPhase` in game-core). One field, so `startGame` and
+     * `endGame` are each a single patch that cannot half-succeed.
+     *
+     * `state` is `v.any()` because it belongs to the game and not to the room:
+     * the hub stores and returns it without reading it, which is the whole of
+     * what makes a second game an entry in the Registry rather than a schema
+     * change here. The module's own types are what give it shape, on both
+     * sides of the wire.
+     */
+    game: v.optional(
+      v.object({
+        /** Which installed module — `GameMetadata.id`, as the Registry knows it. */
+        gameId: v.string(),
+        state: v.any(),
+      }),
+    ),
     // A room's age is `_creationTime`, and its expiry needs no field of its own:
     // the ten minutes run from the last heartbeat the room heard, which is
     // already written down as the newest `lastSeenAt` among its players. A

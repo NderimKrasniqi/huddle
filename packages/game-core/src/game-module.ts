@@ -157,7 +157,7 @@ export type ControllerGameScreenProps<State, Event extends GameEvent> = {
  * hole, and what it is doing there is storing and reloading a game's state
  * without reading it.
  */
-export interface GameModule<
+export interface GameLogic<
   State = unknown,
   Event extends GameEvent = GameEvent,
   Settings = unknown,
@@ -172,6 +172,26 @@ export interface GameModule<
    * everything it needs arrives in `state` and `event`.
    */
   reduce(state: State, event: Event): State;
+}
+
+/**
+ * A game's rules and its two screens: the whole module, as a client holds it.
+ *
+ * The screens are separated from the rules above rather than declared beside
+ * them because the two run in different places. `reduce` and
+ * `createInitialState` run inside Convex mutations, so the server imports a
+ * Registry of `GameLogic` and nothing else; the screens are React Native and
+ * belong only to the TV app and the Controller. They cannot share one object:
+ * a module's screens are properties of it, and properties do not tree-shake —
+ * a server importing the whole module would bundle the user interface of every
+ * installed game. See `@huddle/game-registry`, which ships the two lists
+ * through separate entry points for exactly this reason.
+ */
+export interface GameModule<
+  State = unknown,
+  Event extends GameEvent = GameEvent,
+  Settings = unknown,
+> extends GameLogic<State, Event, Settings> {
   /**
    * The two faces of a running game. Both are React components — plain
    * functions of their props — so the hub mounts them without knowing what
@@ -191,3 +211,11 @@ export interface GameModule<
  * TV and on the Host's phone.
  */
 export type GameRegistry = readonly GameModule[];
+
+/**
+ * The same installed games as the server holds them: rules only, no screens.
+ *
+ * Ordered identically to `GameRegistry` — they are two views of one list, and
+ * `@huddle/game-registry` is where that is held true.
+ */
+export type GameLogicRegistry = readonly GameLogic[];
