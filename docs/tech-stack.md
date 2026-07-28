@@ -49,10 +49,36 @@ packages for game modules and the protocol.
   headroom trivia doesn't need; Cloudflare Durable Objects — more assembly
   (presence, persistence, client) for no MVP gain; Firebase — authoritative
   logic awkward, and lock-in without Convex's DX.
+- **Notes that cost time if forgotten:**
+  - **A new required field will not push onto rows that lack it.** Convex
+    validates every existing document against the schema at push time and
+    aborts the whole push — functions included — if one fails. The symptom is
+    `convex dev` refusing to deploy with a validation error naming the table
+    and the field, on a working tree where nothing looks wrong.
+  - **It bit once, on `sessionToken`, and is resolved.** Phase 2's rejoin task
+    made `players.sessionToken` required while the dev deployment
+    `nderim-krasniqi:huddle:dev` still held seven player rows from Phase 1 join
+    tests, minted before the field existed; presence then added `lastSeenAt`
+    and `away` to the same table before any push had been attempted. Clearing
+    `players` once resolved all three at once, and the push then added the
+    `by_session_token` index cleanly. Those rows were testing junk — nothing in
+    the product outlives a party.
+  - **How to clear a table from the CLI**, since the dashboard is not the only
+    way: `npx convex import --table <name> --replace -y <file>` with a file
+    containing `[]` deletes every row (it reports the delete count before it
+    runs). `npx convex data <name>` shows what is there first — look before
+    you clear, because this is not reversible.
+  - The field stays required rather than optional on purpose: every player row
+    is created by `joinRoom`, which always mints a token, so a player without
+    one is a player who could never rejoin — a state worth failing on, not one
+    worth modelling.
 
 ### Authentication
 - **Choice:** None. Random session token generated on first join, stored in the
   phone app, identifies the player for rejoin. Host is a flag on a player row.
+  The token is minted server-side by `joinRoom` and kept on the phone by
+  `expo-secure-store` (iOS Keychain / Android Keystore) — it must outlive a
+  force-quit, and it is the one value Huddle holds that acts as a credential.
 - **Why:** Scope: no accounts, ephemeral identity, rejoin-with-score-intact. A
   token in app storage is the entire requirement.
 - **Alternatives considered:** Convex Auth / Clerk — rejected: nothing to
@@ -130,8 +156,46 @@ packages for game modules and the protocol.
 - **Alternatives considered:** EAS Build — convenient but paid/queued; revisit
   if local builds become a time sink.
 
+### Local Toolchain
+- **Choice:** Homebrew for both halves. Apple: Xcode 26.5 with the iOS and tvOS
+  simulators. Android: `brew install openjdk@17` plus the
+  `android-studio` and `android-commandlinetools` casks, with the SDK
+  provisioned by `sdkmanager` into `~/Library/Android/sdk` — platform-tools 37,
+  emulator 36.6.11, platforms 35 and 36, build-tools 35.0.0 and 36.0.0, and the
+  `system-images;android-36;android-tv;x86_64` TV image. Gradle pulls NDK
+  27.1.12297006 itself on the first build, which only succeeds because the SDK
+  licences were accepted up front (`sdkmanager --licenses`).
+- **Why:** the command-line tools are what makes the Android setup scriptable
+  and reproducible, and Android Studio is kept alongside them for the GUI that
+  a headless CLI cannot give — logcat, the layout inspector, and the AVD
+  manager — which the Philips TV work will want.
+- **Notes that cost time if forgotten:**
+  - `openjdk@17` is keg-only, so `JAVA_HOME` must be set explicitly to
+    `/usr/local/opt/openjdk@17`; `/usr/libexec/java_home` will not find it.
+    Both it and `ANDROID_HOME` are exported from `~/.zshrc`.
+  - The emulator AVD is `huddle_tv`, on the `tv_1080p` profile. Wait for
+    `adb shell getprop sys.boot_completed` to return `1` before building —
+    `expo run:android` fails outright against a device that is merely
+    *attached*, not booted.
+  - **A config change needs `prebuild --clean`.** `expo run:android` reuses an
+    existing `android/` and does not re-apply config plugins, so it will build
+    and install happily while silently ignoring the change — the symptom is a
+    green build that behaves exactly as before. `pnpm --filter @huddle/tv
+    prebuild --platform android --clean` is what actually regenerates it;
+    verify against `android/app/src/main/res/values/` rather than trusting the
+    build.
+  - `reactNativeArchitectures` defaults to all four ABIs. Exporting
+    `ORG_GRADLE_PROJECT_reactNativeArchitectures=x86_64` builds only what the
+    emulator can run; the full set is only needed for the Philips TV (arm64)
+    and is much slower. A clean x86_64-only debug build is ~10 minutes.
+  - Only `android-36` ships a 64-bit Android TV image, so on an Intel Mac the
+    emulator runs an API level well above the real Philips target. See the
+    caveats on the toolchain task in implementation-plan.md.
+
 ### Notable Libraries
 - `expo-camera` — QR scan on the phone for joining (with manual room-code entry
   as fallback).
 - `convex/react` — live queries; the entire client data layer.
+- `expo-secure-store` — the Controller's Session Token across launches (see
+  Authentication above).
 - `react-native-qrcode-svg` — QR render on the TV.

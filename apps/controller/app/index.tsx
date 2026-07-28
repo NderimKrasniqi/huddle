@@ -1,21 +1,23 @@
 import { api } from '@huddle/convex';
-import { ROOM_CODE_LENGTH } from '@huddle/game-core';
+import { type PlayerColorName, ROOM_CODE_LENGTH } from '@huddle/game-core';
 import {
   borderWidth,
   codeLetterColor,
   colors,
   fontFamily,
   letterSpacing,
-  offsetShadow,
   opacity,
+  type PlayerColor,
+  playerColor,
   playerInitials,
   radius,
   shadowDepth,
 } from '@huddle/ui';
-import { useMutation } from 'convex/react';
+import { StickerSurface } from '@huddle/ui/native';
+import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   activeCodeCell,
@@ -24,14 +26,40 @@ import {
   isCodeComplete,
   nicknameEntry,
 } from '../src/join-entry';
+import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
+import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
+import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
+import { type ForegroundWatch, keepPresent } from '../src/presence';
+import {
+  joinScreenState,
+  type PlayerSession,
+  rememberSession,
+  resumeSession,
+} from '../src/session';
+import { phoneSessionTokenStore } from '../src/session-store';
 
 /** How long the caret in the active cell rests between showing and hiding. */
 const CARET_BLINK_MS = 530;
 
 /** How far a pressed button travels into its own shadow. */
 const PRESS_TRAVEL = 2;
+
+/**
+ * React Native's `AppState`, in the shape `keepPresent` watches: whether the app
+ * is in front of its owner right now, and word of it whenever that changes.
+ *
+ * Only `active` counts as the foreground. iOS reports `inactive` while the app
+ * switcher or a call banner sits over the app — nobody is playing then either,
+ * and a glance away that brief is absorbed by the ten seconds the room waits
+ * before it says anything about anybody.
+ */
+const watchAppForeground: ForegroundWatch = (onChange) => {
+  onChange(AppState.currentState === 'active');
+  const watching = AppState.addEventListener('change', (state) => onChange(state === 'active'));
+  return () => watching.remove();
+};
 
 /**
  * The Controller's first screen (docs/design/design-handoff.md §2 and §4): the
@@ -46,30 +74,70 @@ export default function JoinScreen() {
   // (`app/join/[code].tsx`). It is the only difference a scanned join makes —
   // the nickname is still typed.
   const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();
+  const convex = useConvex();
+
+  // The seat this phone already holds: `undefined` while its Session Token and
+  // the room are still being asked, `null` once the answer is that it holds
+  // none. A player who force-quit mid-party is nobody's new arrival, so the
+  // join form is what this screen falls back to rather than what it opens with.
+  const [session, setSession] = useState<PlayerSession | null>();
+
+  useEffect(() => {
+    // Safe on every mount, unlike the TV's `openRoom`: rejoining reads, so a
+    // remount asks the same question again instead of taking a second seat.
+    // It may answer twice — a bounded blank screen first, the room's real word
+    // whenever it lands (see `resumeSession`) — and this state takes both.
+    return resumeSession(
+      phoneSessionTokenStore,
+      (sessionToken) => convex.query(api.players.session, { sessionToken }),
+      // A late answer fills a blank, and never overwrites a seat. Between the
+      // deadline and the room finally answering, the player may have joined
+      // somewhere else — and the room they are in now beats the one they were
+      // in then, whichever order the two arrive in.
+      (late) => setSession((current) => current ?? late),
+    );
+  }, [convex]);
+
+  const state = joinScreenState(session, linkedCode ?? '');
+
+  if (state.kind === 'restoring') {
+    // Nothing yet — the launch is already blank behind the root layout's font
+    // gate, on a window painted the Boardwalk canvas. Drawing the join form
+    // here instead would flash the wrong screen at every player who is in fact
+    // already in the room. It is bounded: `resumeSession` will say "no seat"
+    // rather than let a phone that cannot reach the backend wait for ever.
+    return null;
+  }
+
+  if (state.kind === 'seated') {
+    return <YoureInScreen session={state.session} />;
+  }
 
   // Keyed by the link so a second Join Link scanned while this screen is
   // already open starts the form over on the room it names, rather than leaving
-  // the first room's code in tiles the player thinks they just replaced. A
-  // typed join has no link and so a constant key: nothing remounts under
-  // somebody's thumbs.
-  return <JoinForm key={linkedCode ?? ''} linkedCode={linkedCode ?? ''} />;
+  // the first room's code in tiles the player thinks they just replaced — which
+  // covers the phone that already holds a seat and has just scanned another
+  // room's TV, since `joinScreenState` sends that scan here. A typed join has
+  // no link and so a constant key: nothing remounts under somebody's thumbs.
+  return <JoinForm key={linkedCode ?? ''} linkedCode={linkedCode ?? ''} onSeated={setSession} />;
 }
 
-function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
+function JoinForm({
+  linkedCode,
+  onSeated,
+}: {
+  readonly linkedCode: string;
+  readonly onSeated: (session: PlayerSession) => void;
+}) {
   const prefilledCode = codeEntry(linkedCode);
 
   const [code, setCode] = useState(prefilledCode);
   const [nickname, setNickname] = useState('');
   const [joining, setJoining] = useState(false);
   const [failure, setFailure] = useState<string>();
-  const [seatedAs, setSeatedAs] = useState<string>();
 
   const nameField = useRef<TextInput>(null);
   const joinRoom = useMutation(api.players.joinRoom);
-
-  if (seatedAs !== undefined) {
-    return <YoureInScreen code={code} nickname={seatedAs} />;
-  }
 
   // A rejection is about what the fields held when Join was tapped, so it stops
   // being true the moment either field changes: "Ada is already in that room"
@@ -96,8 +164,13 @@ function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
     setFailure(undefined);
 
     try {
-      await joinRoom({ code, nickname: claimed });
-      setSeatedAs(claimed);
+      // The token goes to the phone's storage and the seat goes to the screen:
+      // it is what this player is identified by from now on, and nothing that
+      // renders needs to hold it. The nickname shown is the room's, not the one
+      // typed — the same value a rejoin would come back with.
+      const { sessionToken, ...seat } = await joinRoom({ code, nickname: claimed });
+      await rememberSession(phoneSessionTokenStore, sessionToken);
+      onSeated(seat);
     } catch (error) {
       // Every reason the room can refuse is one the player can act on, so the
       // rejection is read for its kind and shown, not logged and swallowed.
@@ -125,9 +198,13 @@ function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
 
       <View style={styles.field}>
         <Text style={styles.label}>YOUR NAME</Text>
-        {/* The Boardwalk surface is the wrapper's, not the field's: React
-            Native only accepts a hard offset shadow on a view style. */}
-        <View style={styles.nameField}>
+        {/* The Boardwalk surface is the wrapper's, not the field's: the shadow
+            is cast by a view, and a TextInput owns its own text box. */}
+        <StickerSurface
+          depth={shadowDepth.phoneSmall}
+          style={styles.nameField}
+          wrapperStyle={styles.stretch}
+        >
           <TextInput
             ref={nameField}
             style={styles.nameInput}
@@ -146,22 +223,28 @@ function JoinForm({ linkedCode }: { readonly linkedCode: string }) {
             }}
             accessibilityLabel="Your name"
           />
-        </View>
+        </StickerSurface>
       </View>
 
       <View style={styles.field}>
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            !ready && styles.buttonUnavailable,
-            pressed && styles.buttonPressed,
-          ]}
+          style={styles.stretch}
           disabled={!ready || joining}
           onPress={() => void join()}
           accessibilityRole="button"
           accessibilityState={{ disabled: !ready || joining }}
         >
-          <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join →'}</Text>
+          {({ pressed }) => (
+            <StickerSurface
+              depth={shadowDepth.phoneCard}
+              style={[styles.button, pressed && styles.buttonPressed]}
+              // Dimming belongs to the whole sticker: fading the face alone
+              // would leave a solid shadow under a ghosted button.
+              wrapperStyle={[styles.stretch, !ready && styles.buttonUnavailable]}
+            >
+              <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join →'}</Text>
+            </StickerSurface>
+          )}
         </Pressable>
 
         {failure === undefined ? null : (
@@ -260,42 +343,220 @@ function BlinkingCaret() {
 
 /**
  * The room's answer (handoff §4): the code they are in, their avatar, and their
- * name in the room's own words.
+ * name in the room's own words. It is also where a relaunched app opens — the
+ * handoff's reconnect rule is that a rejoining phone lands on the screen its
+ * room's phase calls for, and in the lobby that is this one.
  *
- * The handoff puts a color picker on this screen. Color Claim is a Phase 2 task
- * and the server has nothing to claim a color with yet, so the picker is left
- * out and the avatar is a plain Boardwalk face — the same circle the TV draws
- * on its seats until a color is claimed.
+ * The Host gets the pill and a line saying the room is theirs, and nothing to
+ * press: the handoff's host screen (§5) is a roster with a "Choose a game"
+ * button, and both the roster and every control on it belong to the game
+ * lifecycle in Phase 3. Until then this screen is where a player finds out they
+ * are running the room — including when they become the host mid-party, which
+ * is why the standing is read from a live query rather than from the answer
+ * that seated them.
  */
-function YoureInScreen({
-  code,
-  nickname,
-}: {
-  readonly code: string;
-  readonly nickname: string;
-}) {
+function YoureInScreen({ session }: { readonly session: PlayerSession }) {
+  const { code, nickname } = session;
+  useHeartbeat();
+  const roster = useRoomRoster(session);
+  const standing = lobbyStanding(roster, session.playerId);
+  const claimed = yourColor(roster, session.playerId);
+  const face = claimed === undefined ? undefined : playerColor(claimed);
+
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
         <Text style={styles.logoSmall}>
           HUDDLE<Text style={styles.logoPeriod}>.</Text>
         </Text>
-        <View style={styles.codeChip}>
-          <Text style={styles.codeChipText}>{code}</Text>
+        <View style={styles.seatedHeaderEnd}>
+          {standing.youAreHost ? <HostPill /> : null}
+          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+            <Text style={styles.codeChipText}>{code}</Text>
+          </StickerSurface>
         </View>
       </View>
 
-      <View style={styles.avatar}>
-        <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
-      </View>
+      {/* The avatar is the claimed color the moment it is claimed, and a plain
+          Boardwalk face until then: a player lands on this screen before they
+          have picked anything, so the circle has to be drawable without one. */}
+      <StickerSurface
+        depth={shadowDepth.phoneHero}
+        style={[styles.avatar, face !== undefined && { backgroundColor: face.fill }]}
+      >
+        <Text style={[styles.avatarInitials, face !== undefined && { color: face.monogram }]}>
+          {playerInitials(nickname)}
+        </Text>
+      </StickerSurface>
 
       <Text style={styles.title}>You’re in, {nickname}!</Text>
 
-      <View style={styles.statusCard}>
+      <ColorPicker roster={roster} session={session} />
+
+      <StickerSurface
+        depth={shadowDepth.phoneCard}
+        style={styles.statusCard}
+        wrapperStyle={styles.stretch}
+      >
         <View style={styles.statusDot} />
-        <Text style={styles.statusText}>Eyes on the TV — your name is up there now.</Text>
-      </View>
+        <Text style={styles.statusText}>{lobbyStatusText(standing)}</Text>
+      </StickerSurface>
     </PhoneScreen>
+  );
+}
+
+/**
+ * YOUR COLOR (handoff §4): the ten swatches, and the tap that claims one.
+ *
+ * What is dimmed is read from the roster rather than remembered, so the picker
+ * shows what the room says right now — a swatch claimed across the room goes
+ * unavailable here without this phone touching anything. The claim is still
+ * refused server-side when two thumbs land inside a round trip of each other,
+ * which is the one refusal a player can actually meet, and it is said out loud
+ * rather than swallowed.
+ */
+function ColorPicker({
+  roster,
+  session,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly session: PlayerSession;
+}) {
+  const claimColor = useMutation(api.players.claimColor);
+  const [failure, setFailure] = useState<string>();
+  const swatches = pickerSwatches(roster, session.playerId);
+
+  async function claim(color: PlayerColorName) {
+    // The last refusal stops being true the moment another swatch is tried.
+    setFailure(undefined);
+
+    try {
+      // Read from the keystore rather than held in this screen's state, as the
+      // heartbeat does: the token identifies the player and nothing that
+      // renders needs it.
+      const sessionToken = await phoneSessionTokenStore.read();
+
+      if (sessionToken === null) {
+        // A phone that cannot say who it is cannot claim anything, and the
+        // server's own word for that is the one to show.
+        setFailure(rejectionMessage({ kind: 'notInRoom' }));
+        return;
+      }
+
+      await claimColor({ sessionToken, color });
+    } catch (error) {
+      setFailure(claimFailureMessage(error));
+    }
+  }
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>YOUR COLOR</Text>
+      <View style={styles.swatches}>
+        {swatches.map(({ name, state }) => (
+          <Swatch key={name} name={name} state={state} onPress={() => void claim(name)} />
+        ))}
+      </View>
+
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * One swatch: a 44px circle of the color, per the handoff — the player's own
+ * carrying Boardwalk's ink border and shadow, and one somebody else holds
+ * dimmed to the opacity Boardwalk dims anything unavailable to.
+ *
+ * A taken swatch is not pressable, which is the courtesy; `claimColor` is what
+ * makes it a rule.
+ */
+function Swatch({
+  name,
+  state,
+  onPress,
+}: {
+  readonly name: PlayerColorName;
+  readonly state: SwatchState;
+  readonly onPress: () => void;
+}) {
+  const color: PlayerColor = playerColor(name);
+  const taken = state === 'taken';
+
+  // No press state: the swatches carry Boardwalk's only "dimmed" treatment to
+  // mean *somebody else holds this*, so dipping a free one under a thumb would
+  // say the opposite of what is happening. The feedback is the claim itself —
+  // the swatch gains the ink border and the shadow the moment it is the
+  // player's, which is a round trip away.
+  return (
+    <Pressable
+      disabled={taken}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${name} color`}
+      accessibilityState={{ disabled: taken, selected: state === 'yours' }}
+    >
+      {state === 'yours' ? (
+        <StickerSurface
+          depth={shadowDepth.phoneSmall}
+          style={[styles.swatch, styles.swatchYours, { backgroundColor: color.fill }]}
+        />
+      ) : (
+        <View style={[styles.swatch, { backgroundColor: color.fill }, taken && styles.swatchTaken]} />
+      )}
+    </Pressable>
+  );
+}
+
+/** Boardwalk's HOST pill (handoff §5): ink fill, white Bungee, fully rounded. */
+function HostPill() {
+  return (
+    <View style={styles.hostPill}>
+      <Text style={styles.hostPillText}>HOST</Text>
+    </View>
+  );
+}
+
+/**
+ * Who else is in the room, live.
+ *
+ * The seated screen subscribes to the same roster the TV draws its seats from,
+ * because everything on it that can change without this phone doing anything is
+ * on that one query: who is running the room, and which colors are spoken for.
+ * So a handover and a swatch claimed across the room both arrive as a push,
+ * within a round trip of the room deciding them, rather than at the next launch.
+ *
+ * An empty roster while the subscription is in flight is the right neutral: no
+ * host to name yet, and no color yet claimed by anybody.
+ */
+function useRoomRoster(session: PlayerSession): readonly RosterSeat[] {
+  return useQuery(api.players.roster, { roomId: session.roomId }) ?? [];
+}
+
+/**
+ * Says this phone is still here, for as long as its owner is on a screen that
+ * holds a seat — the green dot on the TV's roster is the room repeating it back.
+ *
+ * It hangs off the seated screen rather than the app's root because holding a
+ * seat is exactly the condition: a phone on the join form has nothing to be
+ * present as. The token is read from the keystore inside `keepPresent`, which
+ * is what keeps it out of this screen's state (see `resumeSession`).
+ */
+function useHeartbeat(): void {
+  const heartbeat = useMutation(api.players.heartbeat);
+
+  useEffect(
+    () =>
+      keepPresent(
+        phoneSessionTokenStore,
+        (sessionToken) => heartbeat({ sessionToken }),
+        watchAppForeground,
+      ),
+    [heartbeat],
   );
 }
 
@@ -392,6 +653,13 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
 
+  // A StickerSurface wrapper sits between a full-width surface and its parent,
+  // so the stretch has to be asked for on the wrapper as well as the surface —
+  // otherwise the wrapper shrink-wraps and the card stops filling the column.
+  stretch: {
+    alignSelf: 'stretch',
+  },
+
   nameField: {
     alignSelf: 'stretch',
     justifyContent: 'center',
@@ -399,7 +667,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.input,
-    boxShadow: offsetShadow(shadowDepth.phoneSmall),
   },
   nameInput: {
     // 50 inside the wrapper's two 3px borders is the handoff's 56px field.
@@ -422,16 +689,16 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.button,
-    boxShadow: offsetShadow(shadowDepth.phoneCard),
   },
   buttonUnavailable: {
     opacity: opacity.unavailable,
   },
-  // Boardwalk's press: the button travels into its own shadow, which shortens
-  // by exactly as far as the button moved.
+  // Boardwalk's press: the button travels into its own shadow. The shadow is a
+  // rectangle sitting still behind it, so moving the face is the whole effect —
+  // what shows past the edge shortens by exactly as far as the button went, and
+  // no second shadow value has to be kept in step with this one.
   buttonPressed: {
     transform: [{ translateX: PRESS_TRAVEL }, { translateY: PRESS_TRAVEL }],
-    boxShadow: offsetShadow(shadowDepth.phoneCard - PRESS_TRAVEL),
   },
   buttonLabel: {
     color: colors.surface,
@@ -452,6 +719,30 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     justifyContent: 'space-between',
   },
+  // The pill and the code chip travel together at the header's right end, so
+  // the row stays a logo and a status group however many badges land in it.
+  seatedHeaderEnd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  hostPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.ink,
+    borderRadius: radius.pill,
+  },
+  hostPillText: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    // The size this screen already sets its uppercase labels at, so the pill
+    // reads as the code chip's sibling rather than shouting over it.
+    fontSize: 13,
+    letterSpacing: letterSpacing.label,
+    // The label's letter spacing trails its last letter; pulling it back keeps
+    // the word centred in the pill.
+    marginRight: -letterSpacing.label,
+  },
   codeChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -459,7 +750,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.chip,
-    boxShadow: offsetShadow(shadowDepth.phoneSmall),
   },
   codeChipText: {
     color: colors.cobalt,
@@ -480,7 +770,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
-    boxShadow: offsetShadow(shadowDepth.phoneHero),
   },
   avatarInitials: {
     color: colors.ink,
@@ -489,6 +778,32 @@ const styles = StyleSheet.create({
     // 128px, and the monogram keeps its proportion.
     fontSize: 42,
     lineHeight: 46,
+  },
+
+  // Ten 44px circles (the handoff's size) wrapped into two rows of five: a row
+  // of ten would run 500px wide before any gap, on a screen that is 390.
+  swatches: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+  },
+  // The handoff gives the selected swatch the ink border and the shadow; the
+  // shadow comes from the StickerSurface this is drawn on.
+  swatchYours: {
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+  },
+  // Boardwalk's treatment for something present but not available — the same
+  // 30% the TV dims an away player's face to.
+  swatchTaken: {
+    opacity: opacity.unavailable,
   },
 
   statusCard: {
@@ -502,7 +817,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.row,
-    boxShadow: offsetShadow(shadowDepth.phoneCard),
   },
   statusDot: {
     width: 12,

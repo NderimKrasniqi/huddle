@@ -9,7 +9,13 @@
 - Foundation rule: hub code never imports from a game module except through the
   game-core interface; games never import hub internals.
 - Design rule: all styling comes from the Boardwalk theme package
-  (docs/design/design-handoff.md is the spec); no hex value outside it.
+  (docs/design/design-handoff.md is the spec); no hex value outside it. The
+  one exception is each app's Expo config, which needs a window
+  `backgroundColor` before any React view exists and cannot import the token
+  (Expo transpiles `app.config.ts` and then `require`s it, so an imported
+  `.ts` is never transpiled). Those literals are allowed only where they equal
+  a Boardwalk value, and `color-literals.test.ts` enforces both that and their
+  agreement with the token each app's root screen paints.
 
 ## Definition of Done
 A task is done when its acceptance criteria pass as tests (unit/integration per
@@ -84,22 +90,144 @@ plumbing (monorepo, Convex, both apps, theme, CI) exists.
 ## Phase 2 — A room that survives a party
 Goal: identity, Host, disconnects, and expiry behave like scope demands;
 demoable by force-quitting apps mid-lobby.
-- [ ] Session token rejoin — AC: player force-quits and reopens the app → back
+- [x] Session token rejoin — AC: player force-quits and reopens the app → back
   in the room as the same player (same player row, same nickname); the roster
   never shows a duplicate.
-- [ ] Presence & away badge — AC: phone backgrounded ≥10s → TV roster marks
+
+  Rejoin is a *read*, not a join: a returning phone presents its Session Token
+  and asks which seat is already its own, which is structurally why the roster
+  cannot grow a duplicate. `joinRoom` mints the token, the `session` query
+  resolves it to a seat, and the `roster` projection keeps it off the TV.
+
+  Tests and types only — the observable half of the AC has not been seen. A
+  force-quit demo needs the dev deployment's `players` table cleared (it holds
+  Phase-1 rows minted before `sessionToken` existed, and the push aborts on
+  them — written up in `docs/tech-stack.md`), then a schema push and a
+  Controller dev build. The 4-second patience before the join screen gives up
+  waiting on an unreachable backend is reasoned from round trips, not measured
+  on a phone.
+
+  Two consequences accepted rather than solved. A player can still take a
+  second seat if the backend is unreachable for the full 4 seconds *and* they
+  deliberately retype a different nickname — retyping their own name hits
+  `nameTaken` while their first row still holds it. And joining room B while
+  seated in room A orphans A's row, holding one of its ten seats until presence
+  and room expiry clean it up. Both are written up in `resumeSession`'s
+  docstring.
+- [x] Presence & away badge — AC: phone backgrounded ≥10s → TV roster marks
   that player "away" within a further 5s; foregrounding clears it within 5s;
   active players show the green status dot per the handoff.
-- [ ] Host role & auto-transfer — AC: first player to join is flagged Host
+
+  Two constants carry the AC, derived rather than picked: a 3s heartbeat and a
+  13s away threshold. A phone goes quiet *between* beats, so the room acts no
+  earlier than 13 − 3 = 10s (never premature) and no later than 13s, leaving 2s
+  of the AC's 15 for the scheduler and the push to the TV. Both bounds are
+  pinned against the scope's literal seconds, and review confirmed by mutation
+  that they fail if either drifts.
+
+  Away is a *scheduled write*, not a comparison made at read time: a Convex
+  query re-runs when its rows change, not when time passes, so a roster
+  deriving away-ness from a timestamp would show a full room of present players
+  until somebody joined. Exactly one check is pending per present player —
+  "away" is precisely "no check pending" — and that is now asserted against
+  `_scheduled_functions` rather than only documented. The beat is keyed on the
+  Session Token, not the `playerId` the roster hands out, so no client can hold
+  another player present; there is no API path by which one client learns
+  another's token.
+
+  The away *visual* is a judgement call, not the handoff's: it specifies no
+  away state for a TV seat, and an "AWAY" pill at the 18px TV minimum would
+  overhang a 72px seat. The avatar dims to `opacity.unavailable`, the dot mutes,
+  and the nickname goes to `colors.mutedText` rather than dimming — ink at 30%
+  over the screen colour measures ~1.8:1, unreadable across a room. A real pill
+  belongs with the §3 lobby cards when they land.
+
+  Verified against `convex-test` on a fake clock, and the schema is now pushed
+  to the dev deployment — but the real scheduler's punctuality, which the 2s of
+  slack exists for, is still reasoned rather than measured.
+- [x] Host role & auto-transfer — AC: first player to join is flagged Host
   (HOST pill on TV card and roster row) and their phone shows host controls;
   Host disconnects → the longest-connected active player becomes Host within
   15s; original host rejoins → they are a regular player.
-- [ ] Color claim — AC: the "You're in" screen shows 10 swatches (palette
-  extends the Boardwalk accents to 10 distinct player colors in
-  `packages/ui`); tapping claims the color server-side; two players cannot
-  hold the same color (claimed swatches render at 30% opacity); TV card shows
-  a circle of the claimed color with Bungee initials; a newly joined player's
-  TV card holds the pink "JUST JOINED!" treatment for ~4s.
+
+  The Host is a pointer on the room (`hostPlayerId`), not a flag on a player, so
+  "exactly one host" is structural rather than maintained. It moves inside
+  `markAway`: a host who has gone quiet is a host who has left, since the room
+  cannot tell those apart, and riding the away check is what makes the handover
+  punctual — the plan's 15s are the 10–13s `AWAY_AFTER_MS` already spends, with
+  the rest left for the scheduler. The successor is the earliest-joined player
+  the room is still hearing from, measured off `lastSeenAt` rather than the
+  `away` flag: with a whole party putting phones down at once, every check comes
+  due together, and the flag would hand the room to a player the room was about
+  to give up on. A room with nobody beating keeps its away host — being away is
+  not resigning, and a hostless room can never be started.
+
+  Both surfaces the AC names are later screens: the HOST pill belongs to the §3
+  TV lobby card and the §5 phone roster row, and the host controls it describes
+  (pick game, settings, start) are Phase 3 tasks. So the role is drawn on the
+  surfaces that exist — the phone's "You're in" screen gets the real pill and is
+  told the room is theirs, everyone else is told whose it is by name (the
+  handoff's §4 copy, which needed the host to be knowable); the TV's 72px
+  pairing seat takes the palette's own Host avatar tangerine, because a pill
+  wide enough to read across a room does not fit it, the same measurement that
+  kept the away badge off that seat. There is nothing yet for a host to press.
+
+  Every client learns the host from the `roster` projection, which is why a
+  handover reaches the new host's phone as a push rather than at its next
+  launch. Verified against `convex-test` on a fake clock.
+  Color claim was split into the three below during implementation: it bundled a
+  palette, a server rule and two screens, and each of those is a piece that can
+  be reviewed and reverted on its own. The acceptance criteria are unchanged,
+  only divided.
+- [x] Player palette & claiming a color — AC: `packages/ui` extends the
+  Boardwalk accents to 10 distinct player colors, each legible as an avatar
+  fill under Bungee initials; a `claimColor` mutation records a player's choice;
+  two players in a room cannot hold the same color, and the rule holds under
+  simultaneous claims; the claimed color reaches every client on the `roster`
+  projection.
+
+  The palette is split across two packages on purpose: game-core holds the ten
+  *names*, because which swatch was tapped is protocol both sides share, and
+  `packages/ui` holds what each one looks like, because that is the only place a
+  color may be written down. `packages/ui` keys its palette off game-core's list
+  so there is one list, and gained a dependency on game-core to do it.
+
+  Both palette promises are held to arithmetic rather than to the eye: every
+  pair is ≥12 ΔE apart (CIE76), and every color carries the ink its monogram is
+  set in — one text color cannot serve ten fills, since ink on cobalt measures
+  2.8:1 and white on yellow 1.4:1. The floor is WCAG's 3:1 for large text, which
+  is what 24–42px Bungee is; the worst pair in fact measures 4.2:1. `punch` and
+  `plum` are the reason the floor is not 4.5 — neither clears it against any
+  monogram, and dropping two Boardwalk accents to satisfy a threshold written
+  for body text would have been the wrong trade.
+
+  `claimColor` enforces one color per room the way `joinRoom` enforces one
+  nickname — read-then-write inside a serializable transaction, so five phones
+  racing for green produce one green. Verified against `convex-test`, including
+  a contested run where ten players claim all ten colors at once.
+- [x] The color picker on "You're in" — AC: the seated screen shows the 10
+  swatches (44px circles, selected one carrying ink border + shadow); tapping
+  one claims it; colors another player holds render at 30% opacity and cannot
+  be taken; the player's own avatar takes the color they claimed.
+
+  Ten 44px circles wrap into two rows of five: a single row runs 500px before
+  any gap, on a screen that is 390. What is dimmed comes from the `roster`
+  subscription rather than from anything the phone remembers, so a swatch
+  claimed across the room goes unavailable here without this phone touching
+  anything — and the picker dims exactly what `claimColor` would refuse, since
+  both read the same answer. The refusal is still shown when two thumbs land
+  inside a round trip, which is the only one a player should ever meet.
+
+  The swatches carry no press state. Boardwalk has one "dimmed" treatment and
+  the picker already spends it on *somebody else holds this*, so dipping a free
+  swatch under a thumb would say the opposite of what is happening. The feedback
+  is the claim itself: the swatch takes the ink border and shadow the moment it
+  is the player's.
+- [ ] Colored seats and "JUST JOINED!" on the TV — AC: a seat's circle is its
+  player's claimed color with Bungee initials; a newly joined player's seat
+  carries the pink "JUST JOINED!" treatment for ~4s. The handoff draws both on
+  the §3 lobby card, which does not exist yet — as with the HOST pill, they land
+  on the pairing seat that does, and move to the card when it arrives.
 - [ ] TV room-open resilience — AC: a TV that launches before the backend is
   reachable recovers on its own, with no human touching the remote (the TV app
   is defined as untouched after launch); `openRoom` already clears its memo on
@@ -218,8 +346,9 @@ runs without touching a dev tool.
     `LinkPreview`, `RouterToolbar`) — none of which the TV app uses. Routing
     is JavaScript: the app bundles 1698 modules and renders.
 
-  Still open: Android — see the toolchain task directly below.
-- [ ] Android toolchain & the TV app on an emulator (split out of "Real-device
+  Android was the piece still open here, and the toolchain task directly below
+  has since closed it: the hub renders on an Android TV emulator too.
+- [x] Android toolchain & the TV app on an emulator (split out of "Real-device
   builds" below, which bundled three targets and silently assumed a toolchain
   that does not exist) — AC: a JDK, the Android SDK and an Android TV system
   image are installed; `pnpm --filter @huddle/tv android` builds and launches
@@ -230,6 +359,147 @@ runs without touching a dev tool.
   remote-control focus model are unverified there. Expect differences the
   Apple simulators cannot show — `boxShadow` support, Bungee rendering, and
   D-pad focus above all.
+
+  Done: the toolchain is installed (see tech-stack.md's Local Toolchain for the
+  exact versions and the reproducible setup) and the hub has been watched
+  running on an Android TV emulator. The pairing screen rendered room `SPZJ`
+  complete with Bungee and Space Grotesk, the per-letter tile colours, the
+  ±1–2° sticker tilts, and the hard offset shadows — so `boxShadow` does work
+  under Fabric on this image, and the Google-Fonts loading path is not
+  Apple-only. Two joins were then seated live, `Grace` and `Milo`, taking the
+  footer to "2 of 10 joined" with no reload, so the Convex subscription is
+  real on Android too.
+
+  The Boardwalk scaling survives the platform change for a non-obvious
+  reason worth recording: the `tv_1080p` profile is 1920×1080 at density 320,
+  which React Native sees as 960×540 **dp**, where tvOS handed the app
+  1920×1080 pt. `tvStageScale` therefore resolves to exactly 0.75, and 0.75 dp
+  × 2 lands on 1.5 physical pixels per design pixel — precisely the "×1.5 for
+  1080p" the handoff asks for. Nothing needed changing, but the app is hitting
+  that number by a different route than on tvOS.
+
+  Three things this did **not** establish:
+  - **The API level is wrong for the target, deliberately.** `android-36` is
+    the only 64-bit Android TV image offered, and this is an Intel Mac; the
+    rest are 32-bit x86. Android 16 is far newer than any Philips TV, so this
+    validates the toolchain, the renderer and the font path — not the API
+    level the real hub will run. `boxShadow` needs API 28+, which is the one
+    thing an older Philips could still fail.
+  - **D-pad focus is still completely unexercised.** The pairing screen has
+    nothing focusable, which is by design (see "TV app remote surface"), so
+    the emulator could not test the focus model even in principle. It stays
+    open until a TV screen has a control on it.
+  - **The 667 ms figure is an upper bound, not a latency.** The first
+    screenshot to complete after `joinRoom` returned — 667 ms later — already
+    showed `Milo`, but a single `screencap` round-trip is itself ~650 ms of
+    that, and the clock started when the mutation returned rather than when a
+    phone tapped Join. It bounds the TV's update inside the 1 s criterion
+    without measuring it, so the Phase 1 caveat narrows rather than clears.
+
+  One defect found, filed on the design fidelity pass above rather than fixed
+  here: `"userInterfaceStyle": "light"` in `apps/tv/app.json` is a silent
+  no-op on Android. `expo prebuild` says so outright — "userInterfaceStyle:
+  Install expo-system-ui in your project to enable this feature" — and the
+  consequence is visible at launch, where the window sits at the platform's
+  default dark grey instead of the Boardwalk canvas until the fonts resolve
+  and `TvLayout` stops returning `null`. On a television that is a black flash
+  on every cold start.
+- [x] Both apps open on the Boardwalk canvas (found on the Android emulator
+  during the toolchain task above, and split out of the design fidelity pass
+  so it is fixed once rather than noticed again on every screen) — AC:
+  `expo-system-ui` is installed in both apps, so `userInterfaceStyle` is no
+  longer a silent no-op on Android; each app's Expo config declares a window
+  `backgroundColor` equal to the token its own root screen paints
+  (`colors.screen` for the TV, `colors.canvas` for the Controller); unit tests
+  tie those literals both to the Boardwalk palette and to the root screens, so
+  the two cannot drift; and a cold start on the Android TV emulator shows the
+  cream window rather than the platform's dark grey while the fonts resolve.
+
+  Verified by capturing the same frame of the launch sequence before and after:
+  the flat window that sits behind `TvLayout`'s `null` while the fonts resolve
+  was `#2E2E2E` and is now `#F7F1E6`, and the pairing screen still renders
+  after it. `prebuild` generates `activityBackground` into `colors.xml` and
+  points `android:windowBackground` at it, which is the mechanism.
+
+  Two things to be straight about. The Controller's half is config and unit
+  tests only — that app has never been built for Android at all, so its
+  `colors.canvas` window is asserted, not seen. And the fix addresses the
+  window *behind* the React view; the very first frame is still the splash
+  theme's own white, which is a separate treatment the design fidelity pass
+  owns.
+- [x] Sticker tilts render cleanly on tvOS — AC: the ±1–2° rotations Boardwalk
+  puts on the code tiles, the badge and the QR card no longer leave stepped
+  borders on Apple TV; a rotated edge shows continuously varying coverage row
+  to row rather than holding one position and jumping.
+
+  `CALayer.allowsEdgeAntialiasing` is false by default and a layer carrying a
+  transform is composited without antialiasing, so every tilted card had a
+  visibly stepped outline — Apple-only, because Android's RenderThread already
+  antialiases transformed layers. Measured on tile 1's left border: before, 21
+  consecutive rows reported the edge at exactly `x=213` at full ink and then
+  jumped a pixel, with no intermediate values anywhere; after, coverage ramps
+  every row (`27, 31, 39, 46, 54 … 145`), matching Android's profile.
+  `ios.infoPlist.UIViewEdgeAntialiasing` turns it on app-wide; `expo config
+  --type introspect` confirms prebuild emits the key. Apple documents a
+  rendering cost, which does not matter on these near-static screens. Only the
+  TV app needs it — nothing in the Controller is rotated.
+
+  Found by eye first, and the pale hairline reported alongside it turned out to
+  be a *different* bug on both platforms — see the task below.
+- [x] Hard offset shadows leave a pale seam where they meet the border (both
+  platforms, so not the tvOS antialiasing issue above) — AC: the junction
+  between a card's ink border and its ink shadow is solid ink, with no lighter
+  row between them.
+
+  Measured at a tile's bottom border, scanning down: ink `27`, then one row at
+  `83` on tvOS / `69` on Android, then ink `27` again — roughly a fifth of the
+  background bleeding through a boundary that should be solid, on every bordered
+  surface in the product. Unaffected by `UIViewEdgeAntialiasing`.
+
+  The cause is on the surface itself, not in the shadow. A view that both fills
+  and strokes paints its `backgroundColor` across the whole rounded rect and
+  then strokes the border inside it; at the antialiased boundary the background
+  out-covers the stroke, so a sub-pixel sliver of *fill* escapes outside the
+  ink. The seam therefore takes the fill colour, which is the evidence: the
+  white tiles leak white (`(84,84,81)` is 75% ink over white, not over cream)
+  and the tangerine badge leaks orange (`(70,44,24)`). Predicting that the badge
+  would leak orange before looking is what confirmed it.
+
+  Three earlier diagnoses were wrong and should not be re-tried. (1) tvOS
+  `allowsEdgeAntialiasing` — a real but separate bug, fixed in the task above,
+  and it never touched this hairline. (2) An outset `box-shadow` being clipped
+  to exclude the border box, leaving two coincident antialiased edges on one
+  curve: drawing the shadow as an opaque sibling rect instead left the seam
+  byte-identical at `84`. (3) The surface's outer edge blending with the screen:
+  growing the shadow 1px under that edge also left it byte-identical. An earlier
+  revision of this entry stated (2) as fact; it was not.
+
+  The fix is `StickerSurface` (`@huddle/ui/native`), which every bordered
+  surface in both apps now goes through — 3 on the TV, 6 on the Controller. It
+  sets the surface's own background to the border colour, makes the border
+  transparent while keeping its width so the content box does not move, and lays
+  the fill in behind the content, leaving nothing lighter than ink able to
+  escape past the edge. It also draws the shadow as a sibling rectangle, which
+  is why `shadows.ts` now returns a rect rather than a `boxShadow` — kept
+  because it is equivalent and keeps that module Node-testable, *not* because it
+  fixes anything.
+
+  Both platforms measured clean. On tvOS, an A/B on the Apple TV 4K simulator:
+  the junction reads as one solid ink band, and temporarily restoring the old
+  fill-and-stroke rendering puts the hairline back into the identical crop of
+  the identical scene. On the Android TV emulator, scanning the pixels: down a
+  tile's bottom border, 14 unbroken rows of ink `27` from fill to cream with no
+  lighter row; across a tile's right border, the same; and down the tangerine
+  badge, 11 unbroken rows with no orange escaping past the ink — the badge being
+  the surface whose leak identified the cause.
+
+  Two things this does *not* establish. The same A/B on Android did **not**
+  reproduce the seam: with fill-and-stroke restored, the junction stayed solid.
+  So Android confirms the fix is clean, not that it is what made it clean — the
+  reproduction there probably needs the original `boxShadow` path, which no
+  longer exists to restore. And the Controller's 6 converted surfaces have never
+  been run on any device; they are converted, type-checked and unit-tested, and
+  nothing more. Both are for the design fidelity pass to close.
 - [ ] Real-device builds — AC: locally built APK installs and runs on the
   Philips Android TV; locally built APK runs on an Android phone; iOS
   controller build runs via Xcode on a physical iPhone and is uploaded to

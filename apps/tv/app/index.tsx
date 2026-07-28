@@ -8,12 +8,13 @@ import {
   fontFamily,
   letterSpacing,
   minBodyFontSize,
-  offsetShadow,
+  opacity,
   playerInitials,
   radius,
   shadowDepth,
   stickerTilt,
 } from '@huddle/ui';
+import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
 import type { FunctionReturnType } from 'convex/server';
 import { useEffect, useState } from 'react';
@@ -56,9 +57,13 @@ export default function TvPairingScreen() {
 
         <View style={styles.center}>
           <View style={styles.codeGroup}>
-            <View style={styles.badge}>
+            <StickerSurface
+              depth={shadowDepth.phoneCard}
+              style={styles.badge}
+              wrapperStyle={styles.badgeTilt}
+            >
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
-            </View>
+            </StickerSurface>
             <RoomCodeTiles code={room?.code} />
             <Text style={styles.caption}>
               {failed
@@ -85,14 +90,18 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   return (
     <View style={styles.tiles}>
       {Array.from({ length: ROOM_CODE_LENGTH }, (_unused, position) => (
-        <View
+        <StickerSurface
           key={position}
-          style={[styles.tile, { transform: [{ rotate: codeTileTilt(position) }] }]}
+          depth={shadowDepth.tvCard}
+          style={styles.tile}
+          // The tilt goes on the wrapper: rotating the tile alone would swing
+          // it off its own shadow.
+          wrapperStyle={{ transform: [{ rotate: codeTileTilt(position) }] }}
         >
           <Text style={[styles.tileLetter, { color: codeLetterColor(position) }]}>
             {code?.charAt(position) ?? ''}
           </Text>
-        </View>
+        </StickerSurface>
       ))}
     </View>
   );
@@ -101,7 +110,11 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
 /** The Join Link as a QR: scanning it opens the Controller straight into the room. */
 function RoomQrCard({ code }: { readonly code: string | undefined }) {
   return (
-    <View style={styles.qrCard}>
+    <StickerSurface
+      depth={shadowDepth.tvCard}
+      style={styles.qrCard}
+      wrapperStyle={styles.qrCardTilt}
+    >
       <View style={styles.qr}>
         {code === undefined ? null : (
           <QRCode
@@ -113,7 +126,7 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
         )}
       </View>
       <Text style={styles.qrCaption}>or scan to join</Text>
-    </View>
+    </StickerSurface>
   );
 }
 
@@ -122,6 +135,10 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
  * long as the room looks empty. A player's seat carries their nickname because
  * that is the point of the screen — the room's own name for them, up on the TV,
  * the moment their phone lands.
+ *
+ * An away player keeps their seat. Presence is drawn on it, never subtracted
+ * from it: the room still holds their place, and the count under the seats is
+ * how many phones are in the room, not how many are awake.
  */
 function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
   return (
@@ -132,7 +149,12 @@ function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
           return player === undefined ? (
             <EmptySeat key={`empty-${position}`} />
           ) : (
-            <PlayerSeat key={player.playerId} nickname={player.nickname} />
+            <PlayerSeat
+              key={player.playerId}
+              nickname={player.nickname}
+              away={player.away}
+              host={player.host}
+            />
           );
         })}
       </View>
@@ -151,18 +173,53 @@ function EmptySeat() {
 }
 
 /**
- * A player in their seat: Boardwalk's avatar circle with Bungee initials, and
- * the nickname under it. The circle takes the player's claimed color in Phase
- * 2's color-claim task; until a color is claimed there is nothing to claim it
- * with, so the circle stays a plain Boardwalk card face.
+ * A player in their seat: Boardwalk's avatar circle with Bungee initials, the
+ * nickname under it, and the handoff's status dot on the circle's edge — green
+ * while the room is hearing from their phone. The circle takes the player's
+ * claimed color in Phase 2's color-claim task; until a color is claimed there
+ * is nothing to claim it with, so the circle stays a plain Boardwalk card face.
+ *
+ * The Host's circle is tangerine, which the palette names for exactly this
+ * ("Brand accent, Host avatar"). The handoff's HOST pill belongs to the §3
+ * lobby card and the §5 roster row, and a pill wide enough to read across a
+ * room does not fit a 72px seat — the same measurement that kept the away badge
+ * off this screen. The color says it in the space there is, and moves aside for
+ * the pill when the cards it was drawn for land.
+ *
+ * Away dims the face the way Boardwalk dims anything present but not available,
+ * and mutes the dot. The nickname is not dimmed with them — it is the one thing
+ * on the seat that has to be read from a sofa, and ink at 30% over the screen
+ * color falls below any legible contrast. It takes the muted text color the
+ * footer count is already set in, which says the same thing and survives the
+ * room. The dot stays at full strength, because it is what is doing the saying.
  */
-function PlayerSeat({ nickname }: { readonly nickname: string }) {
+function PlayerSeat({
+  nickname,
+  away,
+  host,
+}: {
+  readonly nickname: string;
+  readonly away: boolean;
+  readonly host: boolean;
+}) {
   return (
     <View style={styles.seat}>
-      <View style={[styles.avatar, styles.avatarTaken]}>
+      <View
+        style={[
+          styles.avatar,
+          styles.avatarTaken,
+          host && styles.avatarHost,
+          away && styles.avatarAway,
+        ]}
+      >
         <Text style={styles.avatarInitials}>{playerInitials(nickname)}</Text>
       </View>
-      <Text style={styles.seatName} numberOfLines={1}>
+      {/* A sibling of the circle rather than a child of it. The dot sits half
+          off the circle's edge, which is precisely the geometry a rounded
+          parent would be entitled to clip; positioning it against the seat
+          instead leaves nothing for either platform to decide. */}
+      <View style={[styles.statusDot, away && styles.statusDotAway]} />
+      <Text style={[styles.seatName, away && styles.seatNameAway]} numberOfLines={1}>
         {nickname}
       </Text>
     </View>
@@ -263,7 +320,8 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
-    boxShadow: offsetShadow(shadowDepth.phoneCard),
+  },
+  badgeTilt: {
     transform: [{ rotate: stickerTilt.badge }],
   },
   badgeText: {
@@ -285,7 +343,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.card,
-    boxShadow: offsetShadow(shadowDepth.tvCard),
   },
   tileLetter: {
     fontFamily: fontFamily.display,
@@ -308,7 +365,8 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.card,
-    boxShadow: offsetShadow(shadowDepth.tvCard),
+  },
+  qrCardTilt: {
     transform: [{ rotate: stickerTilt.qrCard }],
   },
   qr: {
@@ -360,6 +418,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.ink,
   },
+  // The palette's own Host avatar color. The monogram stays ink: on tangerine
+  // that is a ~6.6:1 contrast, where white would be ~2.6:1 and unreadable from
+  // a sofa.
+  avatarHost: {
+    backgroundColor: colors.tangerine,
+  },
+  // Boardwalk's own treatment for something present but not available: the
+  // handoff dims a claimed color swatch to 30%, and an away player's face is
+  // the same kind of statement. Only the circle — text at this opacity stops
+  // being readable across a room, which is the one thing a TV cannot afford.
+  avatarAway: {
+    opacity: opacity.unavailable,
+  },
+  // On the lower-right of the avatar circle, where the handoff puts the online
+  // dot. Absolute against the seat, whose width is the circle's own.
+  statusDot: {
+    position: 'absolute',
+    top: seat.size - seat.statusDot - seat.statusInset,
+    right: seat.statusInset,
+    width: seat.statusDot,
+    height: seat.statusDot,
+    backgroundColor: colors.green,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.pill,
+  },
+  statusDotAway: {
+    backgroundColor: colors.mutedBorder,
+  },
   avatarInitials: {
     color: colors.ink,
     fontFamily: fontFamily.display,
@@ -375,6 +462,9 @@ const styles = StyleSheet.create({
     // smallest size Boardwalk allows on a TV and clipped if it runs past.
     fontSize: minBodyFontSize.tv,
     lineHeight: seat.nameLine,
+  },
+  seatNameAway: {
+    color: colors.mutedText,
   },
   footerText: {
     color: colors.mutedText,

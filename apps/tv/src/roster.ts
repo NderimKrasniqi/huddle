@@ -25,6 +25,14 @@ export const seat = {
   nameGap: 8,
   /** The nickname's reserved line. */
   nameLine: 22,
+  /**
+   * The presence dot's diameter, sitting on the avatar's lower-right (the
+   * handoff's green online dot). Eighteen leaves a 12px core inside Boardwalk's
+   * 3px ink border — the size the phone's own status dot is drawn at.
+   */
+  statusDot: 18,
+  /** How far the dot is tucked in from the seat's corner, onto the circle's edge. */
+  statusInset: 2,
 } as const;
 
 /**

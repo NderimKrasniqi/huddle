@@ -53,14 +53,44 @@ working must add it here.
   footer always draws at least the handoff's four.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
-  active player on disconnect. Plays games like any other player.
+  active player on disconnect. Plays games like any other player. Held as the
+  room's `hostPlayerId` rather than a flag on a player, so a room has exactly
+  one by construction. "Disconnect" is the room's only signal for it — the Host
+  going Away — and "longest-connected" is join order, so a player who dropped
+  out and came back keeps the place they always had. A room whose players have
+  all gone quiet keeps its away Host: being away is not resigning.
 - **Controller** — the phone app. Not "remote".
 - **TV app** — the hub client on the television; a pure renderer of room
   state; holds no player record; untouched after launch.
 - **Session Token** — random token stored on the phone that identifies a
-  player for rejoining; the entirety of Huddle's "auth".
-- **Away** — presence state of a player whose phone is disconnected or
-  backgrounded; games never wait for away players.
+  player for rejoining; the entirety of Huddle's "auth". Minted by `joinRoom`
+  (`generateSessionToken` in game-core), returned to that one phone, and kept
+  in the device keystore. Never on the Roster: the `roster` projection is what
+  keeps it off the TV.
+- **Rejoin** — a phone returning to the seat it already holds, by presenting
+  its Session Token; the `session` query answers with that seat or with
+  nothing. It is a read, not a join: force-quitting does not give up a seat, so
+  a rejoining player is never a second player row and the roster never grows a
+  duplicate. The Controller rejoins before it will show anyone a Join Screen —
+  the one exception being a Join Link scanned for a *different* room, which is
+  a player who has walked to another TV and is let through to the form.
+- **Heartbeat** — the "still here" a seated Controller sends every
+  `HEARTBEAT_INTERVAL_MS` while it is in the foreground, identified by the
+  Session Token (`players.heartbeat`). Stopping is how a phone says it is gone:
+  the room has no other signal, so backgrounding, a force-quit and a dropped
+  network are one event to it. The interval and the Away deadline are pinned
+  together in game-core's `presence.ts`, because neither means anything alone.
+- **Away** — presence state of a player the room has stopped hearing from.
+  Set by the room's own scheduled check (`markAway`) once `AWAY_AFTER_MS` has
+  passed since that player's last Heartbeat, and cleared by the next one. An
+  away player keeps their seat, their score and their Session Token; games
+  never wait for them.
+- **Status Dot** — the dot on a player's avatar saying whether the room is
+  hearing from their phone: Boardwalk green when it is, muted when they are
+  Away. Boardwalk's online dot (the handoff draws it on the Host's roster rows;
+  the TV's pairing seats are specified as avatar and nickname only), carried
+  onto every surface that lists players because presence is news wherever a
+  player is drawn.
 - **Game Module** — a self-contained game implementation behind the game-core
   interface (metadata, settings schema, reducer, TV/phone screens). Games are
   modules; the hub never contains game logic.
@@ -80,7 +110,18 @@ working must add it here.
 - **Victory Screen** — end-of-game final standings on the TV; ties share the
   top rank.
 - **Color Claim** — a player's server-validated selection of a unique color
-  swatch; their avatar is that color with their initials.
+  swatch; their avatar is that color with their initials. Unique within a room
+  and first-to-ask-wins, like a Nickname; tapping a second swatch moves a player
+  rather than adding one, and frees the first. A player has no color until they
+  pick one — the picker is the screen they land on.
+- **Player Palette** — the ten claimable colors: Boardwalk's five accents plus
+  five more around the hue wheel. game-core names them (`PLAYER_COLOR_NAMES`)
+  because a name is protocol; `packages/ui` says what each looks like, because a
+  value is Boardwalk's. Ten because a room seats ten. Each carries the ink its
+  Bungee initials are set in — one text color cannot read on all ten.
+- **Color Rejection** — why `claimColor` refused a swatch: `colorTaken`,
+  `colorUnknown`, or `notInRoom`. The Join Rejection's shape and thrown the same
+  way, so the picker tells them apart by `kind`.
 - **Boardwalk** — Huddle's design system (docs/design/design-handoff.md):
   cream canvas, ink borders, hard offset shadows, sticker rotations, Bungee +
   Space Grotesk. Implemented as `packages/ui`, the only place a color may be
