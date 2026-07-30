@@ -14,6 +14,7 @@ import { watchedScreen, type WatchedScreen } from './watching';
 
 const ADA = 'p1';
 const GRACE = 'p2';
+const LINUS = 'p3';
 
 function player(playerId: string, nickname: string): GamePlayer {
   return { playerId, nickname, away: false };
@@ -34,15 +35,20 @@ function answering(state: TriviaState, playerId: string, optionIndex: number): T
   });
 }
 
-/** The correct option for whichever question is up. */
-function correctOption(state: TriviaState): number {
+/** Whichever question is up, or a failure if the game has run out of them. */
+function questionUp(state: TriviaState) {
   const question = state.questions[state.questionIndex];
 
   if (question === undefined) {
     throw new Error('the game has run out of questions');
   }
 
-  return question.correctIndex;
+  return question;
+}
+
+/** The correct option for whichever question is up. */
+function correctOption(state: TriviaState): number {
+  return questionUp(state).correctIndex;
 }
 
 /** Both players answer, which ends the question and puts the reveal up. */
@@ -52,6 +58,65 @@ function playedOut(state: TriviaState, adaOption: number, graceOption: number): 
 
 function screenOf(state: TriviaState): WatchedScreen {
   return watchedScreen(state, ROSTER);
+}
+
+/**
+ * A whole game played out: everybody answers every question the way `answerOf`
+ * says, and the reveal is ended each time.
+ *
+ * The answers are derived from whichever option is right rather than fixed, so
+ * a player meant to be wrong cannot stumble into scoring on the one question
+ * their fixed button happens to answer.
+ *
+ * Counted out by the questions rather than run until the game says it is
+ * finished: a game that stopped ending its questions would spin here forever,
+ * and a synchronous spin hangs the run instead of failing it — Vitest's timeout
+ * cannot interrupt one. Bounded, the same bug is a red test.
+ */
+function playedToTheEnd(
+  players: readonly GamePlayer[],
+  answerOf: (player: GamePlayer, correct: number, optionCount: number) => number,
+): TriviaState {
+  let state = gameWith(...players);
+  const questionCount = state.questions.length;
+
+  for (let asked = 0; asked < questionCount && state.phase !== 'finished'; asked += 1) {
+    const question = questionUp(state);
+
+    // The last of these ends the question and puts the reveal up.
+    for (const seated of players) {
+      state = answering(
+        state,
+        seated.playerId,
+        answerOf(seated, question.correctIndex, question.options.length),
+      );
+    }
+
+    state = triviaGameLogic.reduce(state, {
+      kind: 'advance',
+      playerId: players[0]?.playerId ?? '',
+      questionIndex: state.questionIndex,
+      phase: 'reveal',
+    });
+  }
+
+  if (state.phase !== 'finished') {
+    throw new Error('the game did not finish within its own questions');
+  }
+
+  return state;
+}
+
+/**
+ * Everyone answers correctly except the players named, who answer wrongly.
+ *
+ * The wrong answer is the next option round, counted against however many
+ * options the question has: an index past the end is not a wrong answer but no
+ * answer at all, since the reducer refuses it and the question never ends.
+ */
+function everyoneRightExcept(...wrong: readonly string[]) {
+  return (seated: GamePlayer, correct: number, optionCount: number): number =>
+    wrong.includes(seated.playerId) ? (correct + 1) % optionCount : correct;
 }
 
 describe('a question on the television', () => {
@@ -162,41 +227,6 @@ describe('the reveal on the television', () => {
       ['Ada', 0],
     ]);
   });
-});
-
-describe('a television with no question up', () => {
-  it('shows the final scoreboard once the game is over', () => {
-    let state = gameWith(...ROSTER);
-    const advanceOf = (from: TriviaState): TriviaState =>
-      triviaGameLogic.reduce(from, {
-        kind: 'advance',
-        playerId: ADA,
-        questionIndex: from.questionIndex,
-        phase: from.phase,
-      });
-
-    // Play the set out: answer, reveal, move on, three times over. Grace's
-    // answer is derived from the right one rather than fixed, or she would
-    // stumble into scoring on whichever question happens to answer to it.
-    for (let question = 0; question < 3; question += 1) {
-      const right = correctOption(state);
-      state = playedOut(state, right, (right + 1) % 4);
-      state = advanceOf(state);
-    }
-
-    const screen = screenOf(state);
-
-    expect(screen.kind).toBe('finished');
-
-    if (screen.kind !== 'finished') {
-      return;
-    }
-
-    expect(screen.scoreboard.map((row) => [row.nickname, row.score])).toEqual([
-      ['Ada', 300],
-      ['Grace', 0],
-    ]);
-  });
 
   it('still names a player the roster has lost, rather than drawing a blank seat', () => {
     const asked = gameWith(...ROSTER);
@@ -210,5 +240,78 @@ describe('a television with no question up', () => {
 
     expect(screen.scoreboard).toHaveLength(2);
     expect(screen.scoreboard.map((row) => row.nickname)).toEqual(['Ada', 'Player']);
+  });
+});
+
+describe('the Victory Screen', () => {
+  /** The finished screen, or a failure if the game is not over. */
+  function victoryOf(
+    state: TriviaState,
+    players: readonly GamePlayer[],
+  ): Extract<WatchedScreen, { kind: 'finished' }> {
+    const screen = watchedScreen(state, players);
+
+    if (screen.kind !== 'finished') {
+      throw new Error('expected a finished game');
+    }
+
+    return screen;
+  }
+
+  it('places the final standings, highest first', () => {
+    const screen = victoryOf(playedToTheEnd(ROSTER, everyoneRightExcept(GRACE)), ROSTER);
+
+    expect(screen.standings.map((row) => [row.nickname, row.score, row.rank])).toEqual([
+      ['Ada', 300, 1],
+      ['Grace', 0, 2],
+    ]);
+  });
+
+  it('celebrates the winner by name', () => {
+    const screen = victoryOf(playedToTheEnd(ROSTER, everyoneRightExcept(GRACE)), ROSTER);
+
+    expect(screen.headline).toBe('Ada wins!');
+    expect(screen.standings.filter((row) => row.winner).map((row) => row.nickname)).toEqual(['Ada']);
+  });
+
+  it('gives tied players the same top rank, and skips the rank they took between them', () => {
+    const party = [player(ADA, 'Ada'), player(GRACE, 'Grace'), player(LINUS, 'Linus')];
+    const screen = victoryOf(playedToTheEnd(party, everyoneRightExcept(LINUS)), party);
+
+    // "Ties share the top rank" (docs/CONTEXT.md): two winners are both first,
+    // and the player behind them is third rather than second.
+    expect(screen.standings.map((row) => [row.nickname, row.rank, row.winner])).toEqual([
+      ['Ada', 1, true],
+      ['Grace', 1, true],
+      ['Linus', 3, false],
+    ]);
+  });
+
+  it('says the game was tied rather than picking one of the players who tied', () => {
+    const party = [player(ADA, 'Ada'), player(GRACE, 'Grace'), player(LINUS, 'Linus')];
+    const screen = victoryOf(playedToTheEnd(party, everyoneRightExcept(LINUS)), party);
+
+    expect(screen.headline).toBe('It’s a tie!');
+  });
+
+  it('ties a whole room that scored nothing, rather than crowning the first seat', () => {
+    // Everybody wrong on every question is a real game, not a degenerate one —
+    // and the standings are then all on 0, which is a ten-way tie for the win.
+    const screen = victoryOf(playedToTheEnd(ROSTER, everyoneRightExcept(ADA, GRACE)), ROSTER);
+
+    expect(screen.headline).toBe('It’s a tie!');
+    expect(screen.standings.map((row) => [row.score, row.rank, row.winner])).toEqual([
+      [0, 1, true],
+      [0, 1, true],
+    ]);
+  });
+
+  it('still names a player the roster has lost, rather than drawing a blank row', () => {
+    const played = playedToTheEnd(ROSTER, everyoneRightExcept(GRACE));
+    // Grace's phone is gone, but the game she played — and lost — is not
+    // rewritten by her leaving.
+    const screen = victoryOf(played, [player(ADA, 'Ada')]);
+
+    expect(screen.standings.map((row) => row.nickname)).toEqual(['Ada', 'Player']);
   });
 });

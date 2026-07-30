@@ -41,6 +41,25 @@ export type ScoreRow = {
   readonly score: number;
 };
 
+/**
+ * One row of the Victory Screen: a scoreboard row and where it finished.
+ *
+ * The rank is decided here rather than on the screen for the reason the
+ * standings' *order* is decided in the rules: it is one answer to "who won",
+ * and a renderer working it out is a renderer that can disagree with the next
+ * one to draw it.
+ */
+export type FinalStanding = ScoreRow & {
+  /**
+   * Competition rank, so ties share the top one (docs/CONTEXT.md, Victory
+   * Screen): two players level on the highest score are both 1st, and the
+   * player behind them is 3rd — the rank they took between them is spent.
+   */
+  readonly rank: number;
+  /** Took the top rank. More than one of these is a game that tied. */
+  readonly winner: boolean;
+};
+
 export type WatchedScreen =
   /** A question is up and the room is answering it. */
   | {
@@ -63,8 +82,13 @@ export type WatchedScreen =
       readonly verdicts: readonly PlayerVerdict[];
       readonly scoreboard: readonly ScoreRow[];
     }
-  /** The game is over; the Victory Screen is its own task. */
-  | { readonly kind: 'finished'; readonly scoreboard: readonly ScoreRow[] };
+  /** The Victory Screen: who won, and where everybody finished. */
+  | {
+      readonly kind: 'finished';
+      /** The celebration, in words: the winner's name, or that nobody won alone. */
+      readonly headline: string;
+      readonly standings: readonly FinalStanding[];
+    };
 
 /**
  * The roster as a lookup, so a scoreboard of ten does not scan the roster ten
@@ -92,6 +116,49 @@ function scoreboardOf(state: TriviaState, players: readonly GamePlayer[]): reado
       score: standing.score,
     };
   });
+}
+
+/**
+ * The scoreboard with everybody's place on it.
+ *
+ * The order is the standings' own, untouched — the ranks are read off it rather
+ * than sorted for, which is what keeps the Victory Screen and the running
+ * scoreboard telling one story. A rank starts wherever a new score first
+ * appears, so equal scores keep the rank of the first of them and the run of
+ * ranks they used up is skipped: 1, 1, 3.
+ */
+function finalStandings(state: TriviaState, players: readonly GamePlayer[]): readonly FinalStanding[] {
+  let rank = 0;
+  let scoreAtRank: number | undefined;
+
+  return scoreboardOf(state, players).map((row, index) => {
+    if (row.score !== scoreAtRank) {
+      rank = index + 1;
+      scoreAtRank = row.score;
+    }
+
+    return { ...row, rank, winner: rank === 1 };
+  });
+}
+
+/**
+ * What the Victory Screen says out loud.
+ *
+ * A tie is not named player by player: with ten seats a room can tie any number
+ * of ways — everybody wrong on every question ties all ten on nothing — and a
+ * headline that listed them would be a paragraph rather than a celebration.
+ */
+function victoryHeadline(standings: readonly FinalStanding[]): string {
+  const winners = standings.filter((standing) => standing.winner);
+  const [first] = winners;
+
+  // Nobody played, which a game of trivia cannot be — it needs two seats to
+  // start. The honest line rather than a crown with no head under it.
+  if (first === undefined) {
+    return 'Game over';
+  }
+
+  return winners.length === 1 ? `${first.nickname} wins!` : 'It’s a tie!';
 }
 
 function optionsOf(
@@ -139,7 +206,9 @@ export function watchedScreen(
   // A finished game, and — as in `answerScreen` — a question index past the end
   // of the questions, which is the type system's question and not the game's.
   if (state.phase === 'finished' || question === undefined) {
-    return { kind: 'finished', scoreboard: scoreboardOf(state, players) };
+    const standings = finalStandings(state, players);
+
+    return { kind: 'finished', headline: victoryHeadline(standings), standings };
   }
 
   const questionNumber = state.questionIndex + 1;

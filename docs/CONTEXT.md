@@ -259,8 +259,17 @@ working must add it here.
   one phone whose screen locking stalls the room.
 - **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
   or `speed` (`100 + round(100 × secondsRemaining / 20)`).
-- **Victory Screen** — end-of-game final standings on the TV; ties share the
-  top rank.
+- **Victory Screen** — the last thing the television shows of a game of trivia:
+  the Standings with everybody's place on them, and a **Headline** over them
+  celebrating whoever won. A place is a `FinalStanding` — a scoreboard row, its
+  rank, and whether it won — ranked in competition style, so ties share the top
+  rank and spend the ranks they took between them: 1, 1, 3. A **winner** is any
+  player on the top rank, so a game has as many winners as tied for it, and the
+  headline then says "It's a tie!" rather than naming them: ten seats can tie
+  any number of ways, and a party that answered every question wrongly ties all
+  ten on nothing. The headline is copy computed in the rules beside the ranks,
+  the way the Answer Screen's Eyes up lines are, so that who won and what the
+  room is told about it are one answer and not two.
 - **Color Claim** — a player's server-validated selection of a unique color
   swatch; their avatar is that color with their initials. Unique within a room
   and first-to-ask-wins, like a Nickname; tapping a second swatch moves a player

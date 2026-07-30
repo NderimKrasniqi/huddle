@@ -671,9 +671,42 @@ it.
   every `StickerSurface` needs an explicit `borderColor`, since the surface
   paints its band from that field — which is the kind of thing only a screen
   someone has looked at can settle.
-- [ ] Victory & return to lobby — AC: after the last question the TV shows
-  final standings (winner celebrated, ties share the top rank); Host's "Back
-  to lobby" returns everyone to the lobby with the same roster.
+  Victory & return to lobby was split into the two below during
+  implementation: it bundled a television screen with a hub mutation and a
+  Host control on the phone, which are separate layers that can be reviewed
+  and reverted on their own. The acceptance criteria are unchanged, only
+  divided.
+- [x] Victory Screen — AC: after the last question the TV shows final
+  standings (winner celebrated, ties share the top rank).
+
+  Who won is decided in `watching.ts` and not on the screen, for the reason the
+  standings' order already was: it is one answer to "who won", and a renderer
+  working it out is a renderer that can disagree with the next one to draw it.
+  So the ranks, who counts as a winner, and the Headline's words are all
+  asserted in `watching.test.ts` — single winner, two-way tie, a whole room that
+  scored nothing tying ten ways, and a player whose phone left mid-game.
+
+  The Headline is the decision the AC did not settle: "winner celebrated" does
+  not say what a screen says when four people tie. It says "It's a tie!" rather
+  than naming them, because ten seats can tie any number of ways and the list
+  would be a paragraph rather than a celebration. Recorded in docs/CONTEXT.md so
+  the next screen needing end-of-game copy finds it.
+
+  Every winner is drawn at the same size as everyone else, the celebration
+  riding Boardwalk's accent offset shadow instead — a card per winner would run
+  a ten-way tie off the stage.
+
+  What this does not carry: **the screen has not run on a television.** Review
+  drove the real component through a played-out game with a throwaway probe and
+  read the text it renders, which is how "ties share the top rank" was checked
+  against the screen rather than only the data behind it — but that probe is
+  deleted and is not a test, and the repo does not test renderers
+  (docs/tech-stack.md). **A full ten-seat room likely overflows the 720px
+  stage** at five rows of placings, as the reveal's verdicts already do at that
+  size; the comment in `tv-screen.tsx` says so rather than claiming a fit. Both
+  are play-test questions.
+- [ ] Back to lobby — AC: the Host's "Back to lobby" returns everyone to the
+  lobby with the same roster.
 
 ## Phase 4 — Full trivia: packs, timers, settings
 Goal: trivia as scoped — curated pack, countdowns, host-tunable settings —

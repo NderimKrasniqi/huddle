@@ -9,6 +9,7 @@ import {
   playerFace,
   radius,
   shadowDepth,
+  stickerTilt,
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { StyleSheet, Text, View } from 'react-native';
@@ -16,6 +17,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { TriviaState } from './logic';
 import {
   watchedScreen,
+  type FinalStanding,
   type PlayerVerdict,
   type ScoreRow,
   type WatchedOption,
@@ -90,6 +92,71 @@ function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
   );
 }
 
+/**
+ * One player's finish: their place, their name, and what they scored.
+ *
+ * Everyone is drawn at the same size, winners included, because a room can tie
+ * any number of ways — a party that answered every question wrongly ties all ten
+ * seats on nothing — and a screen that grew a card per winner would run off a
+ * 720px stage on a game that really happens. The celebration rides the
+ * treatment instead: Boardwalk's accent offset shadow, which is how the system
+ * highlights a card everywhere else (handoff, "Signature style rules"), plus
+ * the headline above naming who earned it.
+ */
+function Placing({ standing }: { readonly standing: FinalStanding }) {
+  return (
+    <StickerSurface
+      depth={standing.winner ? shadowDepth.tvCardHighlight : shadowDepth.tvCard}
+      shadowColor={standing.winner ? colors.punch : colors.ink}
+      style={styles.placing}
+      wrapperStyle={styles.placingBlock}
+    >
+      <View style={[styles.rank, standing.winner ? styles.rankWinner : null]}>
+        <Text style={styles.rankText}>{standing.rank}</Text>
+      </View>
+      <NamePill nickname={standing.nickname} color={standing.color} />
+      <Text style={[styles.score, styles.placingScore]}>{standing.score}</Text>
+    </StickerSurface>
+  );
+}
+
+/**
+ * The Victory Screen (docs/CONTEXT.md): the final standings with the winner
+ * celebrated, and the last thing the television shows before the Host takes the
+ * room back to its lobby.
+ *
+ * Every decision on it — the order, the ranks, who counts as a winner, and the
+ * headline's words — comes from `watchedScreen`, where it can be asserted. This
+ * draws them.
+ */
+function Victory({
+  headline,
+  standings,
+}: {
+  readonly headline: string;
+  readonly standings: readonly FinalStanding[];
+}) {
+  return (
+    <View style={styles.stage}>
+      <StickerSurface
+        depth={shadowDepth.tvCard}
+        style={styles.finalBadge}
+        wrapperStyle={styles.finalBadgeBlock}
+      >
+        <Text style={styles.finalBadgeText}>FINAL SCORES</Text>
+      </StickerSurface>
+
+      <Text style={styles.headline}>{headline}</Text>
+
+      <View style={styles.placings}>
+        {standings.map((standing) => (
+          <Placing key={standing.playerId} standing={standing} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /** "Question 2 of 3" — where the room is in the set. */
 function QuestionCount({ at, of }: { readonly at: number; readonly of: number }) {
   return (
@@ -105,14 +172,7 @@ export function TriviaTvScreen({ state, players }: TvGameScreenProps<TriviaState
   const screen = watchedScreen(state, players);
 
   if (screen.kind === 'finished') {
-    // The Victory Screen proper — the winner celebrated, ties sharing the top
-    // rank — is its own task. This is the scoreboard, standing in.
-    return (
-      <View style={styles.stage}>
-        <Text style={styles.question}>Final scores</Text>
-        <Scoreboard rows={screen.scoreboard} />
-      </View>
-    );
+    return <Victory headline={screen.headline} standings={screen.standings} />;
   }
 
   return (
@@ -269,5 +329,78 @@ const styles = StyleSheet.create({
     fontSize: 26,
     minWidth: 72,
     textAlign: 'right',
+  },
+
+  // The Victory Screen. Boardwalk's badge tilt on the label, the winner's name
+  // in the largest display type on the television, and the placings under it.
+  finalBadgeBlock: {
+    transform: [{ rotate: stickerTilt.badge }],
+  },
+  finalBadge: {
+    backgroundColor: colors.tangerine,
+    borderColor: colors.ink,
+    borderRadius: radius.pill,
+    borderWidth: borderWidth.thick,
+    paddingHorizontal: 26,
+    paddingVertical: 10,
+  },
+  finalBadgeText: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    letterSpacing: letterSpacing.badge,
+  },
+  headline: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 52,
+    textAlign: 'center',
+  },
+  placings: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+    justifyContent: 'center',
+  },
+  // Two across, as the options are: it is as wide as the stage allows beside a
+  // headline. It does not follow that ten of them fit — five rows deep runs a
+  // full room tight against the 720px stage, and likely past it, as the
+  // reveal's verdicts already do at that size. A screen someone has played on
+  // settles that, not arithmetic here.
+  placingBlock: {
+    width: '46%',
+  },
+  placing: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderRadius: radius.row,
+    borderWidth: borderWidth.thick,
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  rank: {
+    alignItems: 'center',
+    backgroundColor: colors.canvas,
+    borderRadius: radius.pill,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  rankWinner: {
+    backgroundColor: colors.yellow,
+  },
+  rankText: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+  },
+  // Pushed to the far end of the row, so every score on the screen lines up
+  // however long the nickname beside it is.
+  placingScore: {
+    marginLeft: 'auto',
   },
 });
