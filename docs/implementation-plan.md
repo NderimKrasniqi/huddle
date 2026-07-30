@@ -746,7 +746,7 @@ it.
 ## Phase 4 — Full trivia: packs, timers, settings
 Goal: trivia as scoped — curated pack, countdowns, host-tunable settings —
 ready for a real game night.
-- [ ] Question-pack format & curated pack — AC: Zod schema for pack (id,
+- [x] Question-pack format & curated pack — AC: Zod schema for pack (id,
   title, version, questions[text, 4 options, correctIndex, category,
   difficulty]); a malformed pack fails `pnpm validate:packs` and CI; the
   shipped curated pack passes and contains ≥100 questions across ≥4

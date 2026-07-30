@@ -95,5 +95,8 @@ the TV is the stage, phones are minimal controllers. Game logic runs server-side
   same system.
 
 ## Open Questions
-- Minimum viable size of the curated question pack (100? 300?) — decide during
-  content authoring.
+- ~~Minimum viable size of the curated question pack (100? 300?)~~ — settled at
+  120, six categories of 20. Twenty is the longest game trivia offers, so a
+  category of twenty is the smallest one a Host can filter to without the game
+  repeating itself; more categories, not deeper ones, is what the pack grows by
+  next.

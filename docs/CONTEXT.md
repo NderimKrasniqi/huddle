@@ -219,7 +219,29 @@ working must add it here.
   runs server-side in Convex mutations.
 - **Question Pack** — versioned data file of trivia questions (text, 4
   options, correctIndex, category, difficulty). The only way trivia gets
-  content; every future source emits packs. Not "quiz".
+  content; every future source emits packs. Not "quiz". A pack is a `.json`
+  file in `packages/packs/packs/` holding an `id` (a lowercase slug, which is
+  also its file name), a `title`, a `version` and its questions, and it is
+  `questionPackSchema` — one Zod schema — that says so: the format validates
+  and types from the same declaration, so `QuestionPack` cannot grow a field
+  that nothing checks.
+- **Pack Question** — one question as a pack holds it (`PackQuestion`): what
+  the rules need to ask it, plus the two fields only a pack has a use for. Its
+  **category** is free text, because the Host's filter is built from whatever
+  categories a pack happens to use; its **difficulty** is `easy`, `medium` or
+  `hard`, which is an author's sorting aid and nothing the rules read. A game's
+  category (Game Metadata) is not one of these.
+- **Curated Pack** — the pack that ships in the repo (`CURATED_PACK`,
+  `huddle-classics`): 120 questions across six categories, 20 apiece, so that
+  the longest game trivia offers never repeats itself even inside one filtered
+  category. Its answers sit in all four positions on purpose — a pack answered
+  "always the first button" is one a player can win without reading it.
+- **Pack Validation** — `pnpm validate:packs`: the Question Pack schema pointed
+  at a directory of pack files, and a CI gate. It exists because a pack is
+  hand-written data, which no amount of typechecking sees. It reports every
+  problem in every pack rather than stopping at the first, and exits non-zero
+  if a file is malformed, unparseable, or if the directory holds no packs at
+  all — a mistyped path that validated nothing would otherwise read as a pass.
 - **Inline Questions** — the three questions written into the trivia module
   (`INLINE_QUESTIONS`) that every game is dealt until Phase 4's curated pack
   replaces them. Deliberately not a Question Pack: a pack is a versioned file

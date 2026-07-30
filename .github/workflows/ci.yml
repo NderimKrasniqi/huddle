@@ -58,5 +58,8 @@ jobs:
       - name: Integration tests
         run: pnpm test:integration
 
-      # Pack validation (`pnpm validate:packs`) joins the gates in Phase 4, when
-      # the Question Pack schema exists — see docs/implementation-plan.md.
+      # Question Packs are hand-written data files, so nothing about them is
+      # typechecked: this is the gate that keeps a malformed one — three
+      # options, an answer index pointing nowhere — out of the repo.
+      - name: Validate packs
+        run: pnpm validate:packs
