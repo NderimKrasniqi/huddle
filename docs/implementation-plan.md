@@ -755,12 +755,21 @@ ready for a real game night.
   players who haven't answered when it expires score +0 for that question;
   reveal triggers at expiry or when all active players have answered,
   whichever comes first (integration test with mocked scheduler).
-- [ ] Settings schema & lobby settings UI — AC: trivia declares settings
-  {scoring: flat|speed (default flat), questionCount: 5|10|20 (default 10),
-  category: all|<pack categories> (default all)}; the Host phone renders this
-  UI generically from the schema; a non-Host phone never sees settings
-  controls; a started game uses exactly the chosen settings (e.g. category
-  "Movies" yields only Movies questions, count 5 yields exactly 5).
+- [ ] Settings schema & a game started from it (server half of the split) —
+  AC: trivia declares settings {scoring: flat|speed (default flat),
+  questionCount: 5|10|20 (default 10), category: all|<pack categories>
+  (default all)}; the schema is generic in `game-core`, not trivia-shaped;
+  `startGame` refuses settings that the declaring game's schema rejects, and
+  defaults anything absent; a started game uses exactly the chosen settings,
+  drawing from the curated pack — category "Movies" yields only Movies
+  questions, count 5 yields exactly 5. This is the task that first wires
+  `@huddle/packs` into trivia in place of its `INLINE_QUESTIONS`.
+- [ ] Lobby settings UI (the other half of the split) — AC: the Host phone
+  renders the settings controls generically from whatever schema the chosen
+  game declares — nothing in the renderer names trivia or any of its
+  settings; a non-Host phone never sees settings controls; changing a
+  control updates what the room will start with, and every phone's carousel
+  keeps working while the Host is choosing.
 - [ ] Speed scoring mode — AC (unit tests): correct answer scores
   `100 + round(100 × secondsRemaining / 20)`; e.g. correct with 15s left
   = 175, correct at 0s left = 100, wrong at any time = 0; flat mode unchanged
