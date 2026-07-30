@@ -803,9 +803,26 @@ runs without touching a dev tool.
 
   Worth noting about the failing runs, as the only pattern left: all three were
   in the first minutes of a session, two of them after a fast refresh, and one
-  on the first render after the session's first cold Metro bundle. A stale or
-  half-written font asset in Metro's cache would fit; that is a hypothesis, not
-  a finding.
+  on the first render after the session's first cold Metro bundle.
+
+  **A deliberate reproduction attempt failed.** Eleven cold launches over two
+  methods on 2026-07-30: five with the letter hardcoded, and six on the real
+  product path — Metro cache cleared, the code arriving from the server after
+  mount, screenshotting the first render — which is as close to the original
+  conditions as the setup gets. Every tile drew. The codes were random and
+  happened to contain no I (`APME`, `XCBV`, `HMBS`, `SFHT`, `NJGG`, `RSGG`),
+  so that run tested "any blank tile" rather than the I specifically.
+
+  Two mechanisms were considered and do not survive the evidence: a truncated
+  or half-loaded font asset (it would blank a contiguous run of glyph ids, but
+  A/H at 2/37 drew while I at 39 did not, and J/L/T at 40/43/51 drew), and a
+  `Text` whose content changes after mount (the `AIHI` and `IJLT` runs were
+  hardcoded at mount and still failed).
+
+  So the next person should not start from a theory. Start by catching it: it
+  has only ever appeared in the first minutes of a session, so the cheapest
+  instrument is a screenshot on every launch for a while, kept until one comes
+  back with a hole in it.
 
   It is not cosmetic — the Room Code is the only way a phone joins, and a blank
   tile makes the room unjoinable from the television. But a fix cannot be
