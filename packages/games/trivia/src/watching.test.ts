@@ -1,7 +1,7 @@
 import type { GamePlayer } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
-import { triviaGameLogic, type TriviaState } from './logic';
+import { QUESTION_SECONDS, triviaGameLogic, type TriviaState } from './logic';
 import { watchedScreen, type WatchedScreen } from './watching';
 
 /**
@@ -158,6 +158,19 @@ describe('a question on the television', () => {
 
     expect([opening.answered, opening.playerCount]).toEqual([0, 2]);
     expect([oneIn.answered, oneIn.playerCount]).toEqual([1, 2]);
+  });
+
+  it('says how long the room has, so the countdown counts the rule’s seconds', () => {
+    const screen = screenOf(gameWith(...ROSTER));
+
+    if (screen.kind !== 'question') {
+      throw new Error('expected a question');
+    }
+
+    // The same number the room's own clock runs on. A television counting down
+    // from a number of its own would be a countdown that hit zero while the
+    // question was still live, or held at zero while the room waited.
+    expect(screen.countdownSeconds).toBe(QUESTION_SECONDS);
   });
 });
 

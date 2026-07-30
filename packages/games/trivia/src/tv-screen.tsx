@@ -12,6 +12,7 @@ import {
   stickerTilt,
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TriviaState } from './logic';
@@ -168,6 +169,51 @@ function QuestionCount({ at, of }: { readonly at: number; readonly of: number })
   );
 }
 
+/**
+ * The Question Timer as the room watches it run out.
+ *
+ * The seconds are counted here rather than read out of the room's state,
+ * because the room's clock is the server's — the hub schedules the deadline
+ * (`convex/convex/games.ts`) — and a television counting towards a server
+ * timestamp would be counting on its own clock, which nothing holds in step
+ * with the room's. So the rules say how many seconds (`countdownSeconds`) and
+ * this counts them from the moment this screen was handed the question.
+ *
+ * That starts a round trip late, which is the safe direction: this count
+ * reaches zero a moment *after* the room's does, so the reveal is what takes
+ * the number off the screen rather than the number sitting at zero waiting for
+ * it. Being early would be the visible bug — a countdown that hit zero while
+ * four buttons were still live.
+ *
+ * Its `key` is the question, so a new question remounts it and the seconds
+ * start over as a fact of the tree rather than through an effect that has to
+ * remember to reset them.
+ */
+function Countdown({ seconds }: { readonly seconds: number }) {
+  const [secondsLeft, setSecondsLeft] = useState(seconds);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      // Floored rather than allowed to run negative: the room may take a moment
+      // past zero to say so, and a television showing "-2" would be reporting
+      // its own lateness as news.
+      setSecondsLeft((left) => Math.max(0, left - 1));
+    }, 1000);
+
+    return () => clearInterval(tick);
+  }, []);
+
+  return (
+    <StickerSurface
+      depth={shadowDepth.tvCard}
+      style={styles.countdown}
+      wrapperStyle={styles.countdownBlock}
+    >
+      <Text style={styles.countdownText}>{secondsLeft}</Text>
+    </StickerSurface>
+  );
+}
+
 export function TriviaTvScreen({ state, players }: TvGameScreenProps<TriviaState>) {
   const screen = watchedScreen(state, players);
 
@@ -180,11 +226,14 @@ export function TriviaTvScreen({ state, players }: TvGameScreenProps<TriviaState
       <View style={styles.header}>
         <QuestionCount at={screen.questionNumber} of={screen.questionCount} />
         {screen.kind === 'question' ? (
-          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.answeredChip}>
-            <Text style={styles.chipText}>
-              {screen.answered}/{screen.playerCount} ANSWERED
-            </Text>
-          </StickerSurface>
+          <>
+            <StickerSurface depth={shadowDepth.phoneSmall} style={styles.answeredChip}>
+              <Text style={styles.chipText}>
+                {screen.answered}/{screen.playerCount} ANSWERED
+              </Text>
+            </StickerSurface>
+            <Countdown key={screen.questionNumber} seconds={screen.countdownSeconds} />
+          </>
         ) : null}
       </View>
 
@@ -242,6 +291,32 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 20,
     letterSpacing: letterSpacing.badge,
+  },
+  // The countdown tile, built like a Room Code tile because it is the same
+  // thing on a television: one number the whole room reads at once. Tilted as
+  // Boardwalk tilts cards and badges — the two chips beside it sit square, so
+  // there is nothing here for the handoff's alternating siblings to alternate
+  // against.
+  countdownBlock: {
+    transform: [{ rotate: stickerTilt.countdownTile }],
+  },
+  countdown: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderRadius: radius.card,
+    borderWidth: borderWidth.thick,
+    justifyContent: 'center',
+    // Wide enough for two digits, so the tile does not shrink under the number
+    // as the seconds run out.
+    minWidth: 88,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  countdownText: {
+    color: colors.cobalt,
+    fontFamily: fontFamily.display,
+    fontSize: 36,
   },
   question: {
     color: colors.ink,

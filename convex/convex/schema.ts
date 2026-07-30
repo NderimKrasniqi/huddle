@@ -65,6 +65,24 @@ export default defineSchema({
         /** Which installed module — `GameMetadata.id`, as the Registry knows it. */
         gameId: v.string(),
         state: v.any(),
+        /**
+         * The room's clock for the beat it is on: the scheduled function that
+         * will raise the module's Game Deadline, absent on a beat that has none
+         * (see `windGameClock` in games.ts).
+         *
+         * Stored so that it can be *cancelled*. At most one deadline is pending
+         * for a room and it belongs to the beat the room is on, which is what
+         * makes ending a game enough to stop its countdown — a clock left
+         * running would fire into whatever the room did next, and a Host who
+         * restarts the same game inside twenty seconds would watch its first
+         * question reveal itself early.
+         *
+         * It lives inside `game` rather than beside it so that it goes with the
+         * game in the same patch: there is no room row holding a clock for a
+         * game it is not playing. It is not part of the `running` query — the
+         * clients are shown the game's state and nothing about the scheduler.
+         */
+        deadline: v.optional(v.id('_scheduled_functions')),
       }),
     ),
     /**

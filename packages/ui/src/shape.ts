@@ -69,4 +69,11 @@ export const stickerTilt = {
    * focused one does not out-lean the loudest sticker on the screen.
    */
   carouselSideCard: '-2deg',
+  /**
+   * 2° — trivia's countdown tile, the one number a whole room reads at once.
+   * Its own entry rather than the status chip's, per this table's rule: two
+   * surfaces sharing a number is how one of them ends up re-tilted by a change
+   * meant for the other.
+   */
+  countdownTile: '2deg',
 } as const;

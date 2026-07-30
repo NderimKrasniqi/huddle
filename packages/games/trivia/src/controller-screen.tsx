@@ -131,8 +131,10 @@ function useRevealBeat(
 
   // What the beat *is*, rather than which object it is: this changes only when
   // the room moves to another beat, which is exactly when the timer should
-  // start over.
-  const beatKey = beat === undefined ? null : `${beat.event.questionIndex}:${beat.event.phase}`;
+  // start over. It is the rules' own name for the beat (`GameDeadline`), the
+  // same one the server winds its clock by, so the two cannot disagree about
+  // when a beat has changed.
+  const beatKey = beat?.beat ?? null;
   const afterMs = beat?.afterMs;
 
   useEffect(() => {

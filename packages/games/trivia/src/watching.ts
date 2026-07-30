@@ -1,6 +1,6 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/game-core';
 
-import type { TriviaState } from './logic';
+import { QUESTION_SECONDS, type TriviaState } from './logic';
 
 /**
  * The television as data: what the room is looking at, given the state the room
@@ -71,6 +71,18 @@ export type WatchedScreen =
       /** The "3/5 answered" chip: how many are in, out of how many are playing. */
       readonly answered: number;
       readonly playerCount: number;
+      /**
+       * How long the room gets on this question — the length of the countdown,
+       * not what is left of it.
+       *
+       * What is left is the television's own count, because the room's clock is
+       * the server's (see `questionTimer`) and a TV reading a server timestamp
+       * would be reading it against a television's clock. So the rules say how
+       * many seconds, the screen counts them from the moment it is handed the
+       * question, and the reveal arriving is what ends the count — never the
+       * count itself.
+       */
+      readonly countdownSeconds: number;
     }
   /** The answer, who got it, and where that leaves everybody. */
   | {
@@ -239,5 +251,6 @@ export function watchedScreen(
       Object.hasOwn(state.answers, standing.playerId),
     ).length,
     playerCount: state.standings.length,
+    countdownSeconds: QUESTION_SECONDS,
   };
 }

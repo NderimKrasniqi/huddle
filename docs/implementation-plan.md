@@ -751,7 +751,7 @@ ready for a real game night.
   difficulty]); a malformed pack fails `pnpm validate:packs` and CI; the
   shipped curated pack passes and contains ≥100 questions across ≥4
   categories.
-- [ ] Question timer — AC: each question runs a 20s countdown shown on the TV;
+- [x] Question timer — AC: each question runs a 20s countdown shown on the TV;
   players who haven't answered when it expires score +0 for that question;
   reveal triggers at expiry or when all active players have answered,
   whichever comes first (integration test with mocked scheduler).

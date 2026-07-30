@@ -5,6 +5,7 @@ export type { ColorRejection } from './color-rejection';
 export { gamePlayersFrom } from './game-module';
 export type {
   ControllerGameScreenProps,
+  GameDeadline,
   GameEvent,
   GameKeyArt,
   GameLogic,

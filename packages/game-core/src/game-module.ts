@@ -68,7 +68,8 @@ export function gamePlayersFrom(
 }
 
 /**
- * The floor every game event stands on: which player it came from.
+ * The floor every game event stands on: which player it came from, if a player
+ * came into it at all.
  *
  * The hub is what puts a game event into a room, and it can only do that
  * generically if every event answers the one question the hub is able to
@@ -76,9 +77,43 @@ export function gamePlayersFrom(
  * into a player. So a phone never names itself and is never believed when it
  * does: the mutation that carries an event to `reduce` is what fills this in
  * from the token it was called with.
+ *
+ * Absent means the room itself. A `GameDeadline` running out is an event nobody
+ * sent, and there is no phone behind the scheduled mutation that raises it —
+ * naming a player there would be the room speaking in somebody's name. No
+ * client can produce one, because the mutation that carries a phone's event
+ * writes this field over whatever arrived, so an absent player is always the
+ * room and never a claim.
  */
 export type GameEvent = {
-  readonly playerId: GamePlayerId;
+  readonly playerId?: GamePlayerId;
+};
+
+/**
+ * A game's own clock: what it does when nobody does anything, and how long the
+ * room waits first.
+ *
+ * A reducer may not reach for a clock, so a game that has to end a beat by
+ * itself — trivia's twenty-second question — cannot do it from inside `reduce`.
+ * It declares the deadline instead and the hub schedules it, which is the whole
+ * of how a countdown runs without the hub knowing what a question is.
+ *
+ * `event` is addressed to the beat it ends, exactly as a phone's event is: a
+ * deadline can fire into a beat that has already been left (the room answered
+ * early and moved on), and the module's own rules are what make that land as
+ * nothing.
+ *
+ * `beat` names the beat being timed, and is the one thing about a deadline the
+ * hub can read. Two deadlines with the same `beat` are the same deadline, so
+ * the room arms it once when it enters that beat — a countdown re-armed on
+ * every event would be a beat that never ended while anybody was still acting
+ * on it.
+ */
+export type GameDeadline<Event extends GameEvent = GameEvent> = {
+  readonly beat: string;
+  /** How long from now, so nothing here reads a clock either. */
+  readonly afterMs: number;
+  readonly event: Event;
 };
 
 /** How many players a game is playable with. */
@@ -198,6 +233,16 @@ export interface GameLogic<
    * everything it needs arrives in `state` and `event`.
    */
   reduce(state: State, event: Event): State;
+  /**
+   * The clock this game wants running on the beat `state` is on, if it wants
+   * one. Optional: a game where nothing expires declares none, and a room
+   * playing it moves only when somebody moves it.
+   *
+   * Pure, like `reduce`, and asked in the same mutation that wrote the state —
+   * so it answers in milliseconds from now rather than at a timestamp, and no
+   * part of a game module ever reads the time.
+   */
+  deadline?(state: State): GameDeadline<Event> | undefined;
 }
 
 /**

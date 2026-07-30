@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type {
+  GameLogic,
   GameMetadata,
   GameModule,
   GamePlayer,
@@ -67,6 +68,35 @@ const coinToss: GameModule<CoinTossState, CoinTossEvent, CoinTossSettings> = {
   },
 };
 
+/**
+ * The other shape of game the interface has to fit: one whose beat ends on the
+ * room's own clock rather than on a player doing anything. Rules only — a
+ * deadline is the server's business, and the server holds games without their
+ * screens.
+ */
+type EggTimerEvent = { readonly playerId?: string; readonly kind: 'ding' };
+
+const eggTimer: GameLogic<{ readonly rung: number }, EggTimerEvent> = {
+  metadata: {
+    id: 'egg-timer',
+    title: 'Egg Timer',
+    keyArt: { color: 'green' },
+    playerRange: { min: 1, max: 10 },
+    estimatedMinutes: 1,
+    category: 'Chance',
+  },
+  settingsSchema: [],
+  createInitialState: () => ({ rung: 0 }),
+  reduce: (state) => ({ rung: state.rung + 1 }),
+  deadline: (state) => ({
+    beat: `rung ${state.rung}`,
+    afterMs: 60_000,
+    // Nobody sent it, and that is the point: the room raises it when the clock
+    // runs out, and there is no phone behind it to name.
+    event: { kind: 'ding' },
+  }),
+};
+
 function player(playerId: string, nickname: string): GamePlayer {
   return { playerId, nickname, away: false };
 }
@@ -120,11 +150,29 @@ describe('the Game Module interface', () => {
     expect(keyArt).toBeDefined();
   });
 
-  it('rejects an event that does not say which player it came from', () => {
-    // @ts-expect-error - Event must extend GameEvent
-    const anonymous: GameModule<CoinTossState, { readonly call: 'heads' }> | null = null;
+  it('takes a game that ends its own beat on a clock', () => {
+    // What the hub reads off a deadline, and all it can: how long to wait, and
+    // which beat is being waited on — one deadline per beat, armed once.
+    const first = eggTimer.deadline?.({ rung: 0 });
+    const second = eggTimer.deadline?.({ rung: 1 });
 
-    expect(anonymous).toBeNull();
+    expect(first?.afterMs).toBe(60_000);
+    expect(first?.beat).not.toBe(second?.beat);
+    // The room raised it, so it names no player — see `GameEvent`.
+    expect(first?.event.playerId).toBeUndefined();
+  });
+
+  it('lets a game declare no clock at all', () => {
+    // Optional, so a game where nothing expires says nothing. The hub asks
+    // every game and takes silence for an answer.
+    expect(coinToss.deadline).toBeUndefined();
+  });
+
+  it('rejects an event whose player is not the room’s idea of one', () => {
+    // @ts-expect-error - Event must extend GameEvent
+    const numbered: GameModule<CoinTossState, { readonly playerId: number }> | null = null;
+
+    expect(numbered).toBeNull();
   });
 
   it('rejects a reducer that returns something other than the game state', () => {

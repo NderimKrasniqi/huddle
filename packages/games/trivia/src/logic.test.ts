@@ -1,7 +1,14 @@
 import type { GamePlayer } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
-import { REVEAL_SECONDS, revealBeat, triviaGameLogic, type TriviaState } from './logic';
+import {
+  QUESTION_SECONDS,
+  questionTimer,
+  REVEAL_SECONDS,
+  revealBeat,
+  triviaGameLogic,
+  type TriviaState,
+} from './logic';
 import { INLINE_QUESTIONS } from './questions';
 
 /**
@@ -369,5 +376,87 @@ describe('the beat that ends a reveal', () => {
     // question. The nine other phones that sent the same thing are why the
     // room did not wait for her.
     expect(triviaGameLogic.reduce(movedOn, beat.event)).toBe(movedOn);
+  });
+});
+
+/**
+ * The Question Timer: the twenty seconds a question stays up, and the `advance`
+ * that ends it.
+ *
+ * Tested here for the reason the reveal's beat is — a mis-addressed deadline is
+ * inert by design, so getting it wrong throws nothing and hangs the question
+ * forever — and for one more that is its own. This clock is the *room's* and
+ * not a phone's: the hub schedules it server-side, so nobody is looking at the
+ * screen it runs on, and a question that never ended would be ten phones
+ * showing four dead buttons with no way to say so.
+ */
+describe('the clock a question runs on', () => {
+  /** The timer a room on this state would have running, or a failure. */
+  function timerOn(state: TriviaState) {
+    const timer = questionTimer(state);
+
+    if (timer === undefined) {
+      throw new Error('a question on screen must have a clock running on it');
+    }
+
+    return timer;
+  }
+
+  it('gives the room the plan’s twenty seconds', () => {
+    expect(QUESTION_SECONDS).toBe(20);
+    expect(timerOn(gameWith(ADA, GRACE)).afterMs).toBe(QUESTION_SECONDS * 1000);
+  });
+
+  it('comes from the room rather than from any player', () => {
+    // Nobody sent it: it is the clock running out, which is exactly what an
+    // absent `playerId` says (`GameEvent`). A trivia event that named a player
+    // here would be the room impersonating whoever it happened to pick.
+    expect(timerOn(gameWith(ADA, GRACE)).event.playerId).toBeUndefined();
+  });
+
+  it('is addressed to the question on screen, so the room actually moves on', () => {
+    const asked = gameWith(ADA, GRACE);
+    const answered = answering(asked, ADA, rightAnswerTo(asked));
+    const expired = triviaGameLogic.reduce(answered, timerOn(asked).event);
+
+    expect(expired.phase).toBe('reveal');
+    // The whole of what expiry costs: whoever did not answer scores what a
+    // wrong answer scores.
+    expect(scoreOf(expired, ADA)).toBe(100);
+    expect(scoreOf(expired, GRACE)).toBe(0);
+  });
+
+  it('names one beat per question, however many answers land while it runs', () => {
+    const asked = gameWith(ADA, GRACE);
+    const halfAnswered = answering(asked, ADA, rightAnswerTo(asked));
+
+    // What the hub compares to decide whether to arm a clock. Same beat means
+    // the twenty seconds are already running: a question that started them
+    // again on every answer would be a question that never ended while anybody
+    // was still pressing buttons.
+    expect(timerOn(halfAnswered).beat).toBe(timerOn(asked).beat);
+    expect(timerOn(advancing(advancing(asked))).beat).not.toBe(timerOn(asked).beat);
+  });
+
+  it('is nothing on a beat the room is not being timed on', () => {
+    const asked = gameWith(ADA, GRACE);
+    // The reveal is ended by the phones (`revealBeat`), not by the room's own
+    // clock, and a finished game has no next beat at all.
+    const revealed = advancing(asked);
+
+    expect(questionTimer(revealed)).toBeUndefined();
+    expect(questionTimer({ ...revealed, phase: 'finished' })).toBeUndefined();
+  });
+
+  it('is inert when it fires on a question the room has already left', () => {
+    const asked = gameWith(ADA, GRACE);
+    const timer = timerOn(asked);
+    // Everybody answered with seconds to spare, so the room revealed the
+    // question itself. The deadline still fires; it must do nothing, or the
+    // room would lose the reveal it is in the middle of reading.
+    const revealed = answering(answering(asked, ADA, 0), GRACE, 0);
+
+    expect(revealed.phase).toBe('reveal');
+    expect(triviaGameLogic.reduce(revealed, timer.event)).toBe(revealed);
   });
 });

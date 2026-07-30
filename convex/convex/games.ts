@@ -2,14 +2,17 @@ import {
   defaultSettings,
   refusalToStart,
   roomPhase,
+  type GameEvent,
   type GameLifecycleRejection,
+  type GameLogic,
   type GamePlayer,
 } from '@huddle/game-core';
 import { browsingIndex, gameLogicById } from '@huddle/game-registry/logic';
 import { ConvexError, v } from 'convex/values';
 
+import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
-import { mutation, type MutationCtx, query } from './_generated/server';
+import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 
 /**
  * The game lifecycle: the Host starting a game, and the Host ending it.
@@ -98,6 +101,135 @@ async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePl
 }
 
 /**
+ * Which beat of a running game has a clock on it, as the module names it — or
+ * `undefined` where the beat has none.
+ *
+ * The one thing the hub can read about a game's state, and it reads it only to
+ * compare: two states on the same beat are one countdown, so the room arms it
+ * when it *enters* that beat and not again. Without that, a question would gain
+ * another twenty seconds every time somebody pressed a button on it.
+ */
+function timedBeat(game: GameLogic, state: unknown): string | undefined {
+  return game.deadline?.(state)?.beat;
+}
+
+/**
+ * Stops whatever clock the room had running.
+ *
+ * A deadline that has already fired is past cancelling, and Convex says so by
+ * doing nothing.
+ */
+async function stopGameClock(ctx: MutationCtx, room: Doc<'rooms'>): Promise<void> {
+  const pending = room.game?.deadline;
+
+  if (pending !== undefined) {
+    await ctx.scheduler.cancel(pending);
+  }
+}
+
+/**
+ * Winds the room's clock for the beat it is entering: stops the last beat's,
+ * and schedules this beat's deadline if the module declares one.
+ *
+ * This is the whole of how a countdown runs in a room the hub knows nothing
+ * about. The module says how long to wait and what to raise
+ * (`GameDeadline`), the scheduler does the waiting, and `reachDeadline` puts
+ * the event back through the same rules a phone's tap goes through.
+ *
+ * It has to be the server's clock and not a phone's: a beat ended from a
+ * Controller is a beat that stalls when every phone in the room is face-down on
+ * a table, which is exactly what the reveal still does.
+ */
+async function windGameClock(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  game: GameLogic,
+  state: unknown,
+): Promise<Id<'_scheduled_functions'> | undefined> {
+  await stopGameClock(ctx, room);
+
+  const deadline = game.deadline?.(state);
+
+  if (deadline === undefined) {
+    return undefined;
+  }
+
+  return await ctx.scheduler.runAfter(deadline.afterMs, internal.games.reachDeadline, {
+    roomId: room._id,
+    gameId: game.metadata.id,
+    event: deadline.event,
+  });
+}
+
+/**
+ * Puts an event to the running game's rules, keeps whatever they make of it,
+ * and winds the room's clock to the beat that leaves it on.
+ *
+ * Both ways an event reaches a game come through here — a phone's tap
+ * (`sendEvent`) and the room's own clock (`reachDeadline`) — because every rule
+ * below is true of both. Which is also the point: a countdown expiring is an
+ * ordinary game event that happens to have no player behind it, judged by the
+ * same reducer and refused in the same way.
+ */
+async function playGameEvent(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  event: GameEvent,
+): Promise<void> {
+  const running = room.game;
+
+  // A thumb that landed just after the Host ended the game, or a phone that has
+  // not heard yet. There is nothing to tell the person holding it — the screen
+  // they tapped has already gone — so this is silence, not a refusal.
+  if (running === undefined) {
+    return;
+  }
+
+  // A room playing a game this build does not install: possible only across a
+  // deployment, and not something a phone can be told anything useful about.
+  const game = gameLogicById(running.gameId);
+
+  if (game === undefined) {
+    return;
+  }
+
+  const next = game.reduce(running.state, event);
+
+  // A module that does not recognise an event returns no state at all, and an
+  // exhaustive switch over its own events is how it does that. Storing
+  // `undefined` here would let one unrecognised event erase the game the room
+  // is playing, so nothing arriving from a phone is ever stored unexamined.
+  if (next === undefined) {
+    return;
+  }
+
+  // The rules refuse by returning the state they were given, so an identical
+  // state means nothing happened — and writing it anyway would wake every
+  // subscription in the room to redraw what they are already showing.
+  if (next === running.state) {
+    return;
+  }
+
+  // A beat the room was already on keeps the clock it started with: answering a
+  // question does not buy the room another twenty seconds to answer it in.
+  //
+  // Unless it has none pending, which is a beat whose clock is stopped while the
+  // module still asks for one. Two things reach that: a module whose deadline
+  // event moves the state *without* leaving the beat — a tick, which
+  // `reachDeadline` hands on with the fired deadline dropped — and a room that
+  // was dealt its beat by a deployment older than this field. Keeping
+  // `undefined` in either case stops the clock for good, and in silence, since
+  // a beat that never expires throws nothing and fails no test.
+  const sameBeat = timedBeat(game, next) === timedBeat(game, running.state);
+  const deadline =
+    sameBeat && running.deadline !== undefined
+      ? running.deadline
+      : await windGameClock(ctx, room, game, next);
+
+  await ctx.db.patch(room._id, { game: { gameId: running.gameId, state: next, deadline } });
+}
+
+/**
  * The Host starts a game: the room leaves its lobby holding the module's
  * opening state, and every client follows it there.
  *
@@ -131,15 +263,16 @@ export const startGame = mutation({
       throw new ConvexError<GameLifecycleRejection>(refusal);
     }
 
-    await ctx.db.patch(room._id, {
-      game: {
-        gameId: game.metadata.id,
-        state: game.createInitialState({
-          players,
-          settings: defaultSettings(game.settingsSchema),
-        }),
-      },
+    const state = game.createInitialState({
+      players,
+      settings: defaultSettings(game.settingsSchema),
     });
+    // The first beat's clock starts with the game, so a room that has been
+    // dealt a question is already being counted down at the moment every screen
+    // in it draws that question.
+    const deadline = await windGameClock(ctx, room, game, state);
+
+    await ctx.db.patch(room._id, { game: { gameId: game.metadata.id, state, deadline } });
 
     return null;
   },
@@ -161,6 +294,11 @@ export const endGame = mutation({
   handler: async (ctx, args) => {
     const room = await roomThisPhoneRuns(ctx, args.sessionToken);
 
+    // The game's clock stops with the game. A deadline left pending would fire
+    // into whatever the room did next, and a Host who starts the same game
+    // again inside its countdown would watch its first question reveal itself
+    // seconds after the room was dealt it.
+    await stopGameClock(ctx, room);
     // Unconditional: ending has no refusal to check (see `refusalToStart`), so
     // there is nothing between the Host check and the patch. `undefined` is how
     // Convex unsets an optional field, which is the whole of returning to the
@@ -214,46 +352,53 @@ export const sendEvent = mutation({
   handler: async (ctx, args) => {
     const { player, room } = await seatThisPhoneHolds(ctx, args.sessionToken);
 
-    // A thumb that landed just after the Host ended the game, or a phone that
-    // has not heard yet. There is nothing to tell the person holding it — the
-    // screen they tapped has already gone — so this is silence, not a refusal.
-    if (room.game === undefined) {
-      return null;
-    }
-
-    // A room playing a game this build does not install: possible only across a
-    // deployment, and not something a phone can be told anything useful about.
-    const game = gameLogicById(room.game.gameId);
-
-    if (game === undefined) {
-      return null;
-    }
-
     // The player is named here and nowhere else. A phone may put whatever it
     // likes in the event — this overwrites it with the seat the Session Token
     // holds, so naming somebody else is a claim the hub simply does not read
     // (see `GameEvent`, which calls the field a claim rather than an identity).
-    const next = game.reduce(room.game.state, {
-      ...(args.event as object),
-      playerId: player._id,
-    });
+    // Writing it on every event is also what keeps an *absent* player honest:
+    // no phone can produce one, so it always means the room itself.
+    await playGameEvent(ctx, room, { ...(args.event as object), playerId: player._id });
+    return null;
+  },
+});
 
-    // A module that does not recognise an event returns no state at all, and an
-    // exhaustive switch over its own events is how it does that. Storing
-    // `undefined` here would let one unrecognised event erase the game the room
-    // is playing, so nothing arriving from a phone is ever stored unexamined.
-    if (next === undefined) {
+/**
+ * The room's clock running out on the beat it was watching.
+ *
+ * Internal, because it is the room talking to itself, exactly as `markAway` is:
+ * a deadline reached is not something any phone gets to declare. What it
+ * carries is the module's own event, addressed to the beat that armed it, so a
+ * deadline that fires onto a beat the room has already left is refused by the
+ * rules and writes nothing — which is how a question that ends either at expiry
+ * or on its last answer, whichever comes first, needs no coordination between
+ * the two.
+ *
+ * The game id is checked as well as the room: a deadline belongs to the game
+ * that armed it, and a room that has moved on to another is not the room that
+ * scheduled this.
+ */
+export const reachDeadline = internalMutation({
+  args: { roomId: v.id('rooms'), gameId: v.string(), event: v.any() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+    const running = room?.game;
+
+    // The room expired, returned to its lobby, or is playing something else.
+    if (room === null || running === undefined || running.gameId !== args.gameId) {
       return null;
     }
 
-    // The rules refuse by returning the state they were given, so an identical
-    // state means nothing happened — and writing it anyway would wake every
-    // subscription in the room to redraw what they are already showing.
-    if (next === room.game.state) {
-      return null;
-    }
-
-    await ctx.db.patch(room._id, { game: { gameId: room.game.gameId, state: next } });
+    // The deadline reaching the room is by definition no longer pending: it is
+    // this mutation. So the room is handed on without it, and the beat this
+    // event starts winds a fresh clock instead of trying to cancel the one it
+    // is running inside.
+    await playGameEvent(
+      ctx,
+      { ...room, game: { ...running, deadline: undefined } },
+      args.event as GameEvent,
+    );
     return null;
   },
 });
@@ -286,7 +431,11 @@ export const browsing = query({
  * a question would otherwise re-render on every heartbeat in the room.
  *
  * `null` is the lobby. The clients get the game's state opaque and hand it
- * straight to the module's screen, exactly as the server stored it.
+ * straight to the module's screen, exactly as the server stored it — and
+ * nothing else the room keeps beside it: the pending deadline is the room's own
+ * bookkeeping with its scheduler, and a screen reading it would be counting
+ * down against a clock it has no way to compare with (see `Countdown` in
+ * trivia's TV screen, which counts its own seconds for that reason).
  */
 export const running = query({
   args: { roomId: v.id('rooms') },
@@ -294,6 +443,10 @@ export const running = query({
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
 
-    return room?.game ?? null;
+    if (room?.game === undefined) {
+      return null;
+    }
+
+    return { gameId: room.game.gameId, state: room.game.state };
   },
 });

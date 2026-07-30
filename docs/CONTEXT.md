@@ -203,7 +203,21 @@ working must add it here.
   the module's own but every one of them names the player it came from
   (`GameEvent`), because that is the one thing the hub can settle generically:
   a Controller presents its Session Token and the room turns it into a player.
-  A phone naming itself is a claim, never an identification.
+  A phone naming itself is a claim, never an identification. The player is
+  *absent* on one kind of event only — a Game Deadline reaching the room, which
+  nobody sent. No phone can produce that absence, since the hub writes the field
+  over whatever arrives, so it always means the room itself.
+- **Game Deadline** — what a Game Module does when nobody does anything, and how
+  long the room waits first (`GameDeadline`, `GameLogic.deadline`): a Game Event
+  to raise, the milliseconds to wait, and the name of the **beat** being timed.
+  A reducer has no clock, so a beat that must end by itself cannot end from
+  inside `reduce`; the module declares the deadline and the hub schedules it,
+  which is how a countdown runs in a hub that does not know what a question is.
+  The beat name is the only part the hub reads: two deadlines naming the same
+  beat are one deadline, so the room arms it on *entering* that beat and not
+  again — a clock re-armed on every event would be a beat that never ended while
+  anybody was still acting on it. Optional: a game where nothing expires
+  declares none.
 - **Registry** — the list of installed game modules the hub renders (carousel,
   metadata), held in order because the carousel browses it by index. Adding a
   game = adding a registry entry. It is `packages/game-registry` and not part
@@ -253,7 +267,7 @@ working must add it here.
 - **Advance** — trivia's "the room moves on from what is on screen": it ends a
   reveal, or ends a question the room has stopped waiting on (whoever has not
   answered scores what a wrong answer scores). A Game Event like an answer,
-  because a reducer has no clock — Phase 4's question timer is what will send it
+  because a reducer has no clock — the Question Timer is what sends it
   unprompted. Addressed to the beat it ends (the question *and* the phase), the
   way an answer is addressed to its question: nothing owns the signal, so every
   source of it races every other, and a bare "move on" arriving a beat late
@@ -290,7 +304,26 @@ working must add it here.
   cannot come from the television, and from *every* playing phone rather than a
   nominated one: the event is addressed to the beat it ends, so the first to
   arrive moves the room and the rest do nothing. One nominated phone would be
-  one phone whose screen locking stalls the room.
+  one phone whose screen locking stalls the room. Still the phones' clock, and
+  the last one: the Question Timer moved the other beat to the room.
+- **Question Timer** — the twenty seconds a question stays up, and the `advance`
+  that ends it (`questionTimer`, `QUESTION_SECONDS`). Trivia's Game Deadline, so
+  unlike the Reveal Beat it is the *room's* clock: the hub schedules it, and it
+  therefore fires for a room whose every phone is face-down on a table. Whoever
+  has not answered when it does scores what a wrong answer scores, because the
+  Reveal never asks how a question ended, only what was answered before it did.
+  It races the last player's answer and neither has to know: both are an
+  `advance` addressed to the beat they end, so whichever arrives first reveals
+  the question and the other lands on a beat that no longer matches. It names no
+  player — nobody sent it.
+- **Countdown** — the Question Timer as the television draws it: a number
+  counting the rule's seconds down, started when that screen was handed the
+  question rather than against a deadline in the state. The room's clock is the
+  server's, and a TV counting towards a server timestamp would be counting on
+  its own clock, which nothing holds in step (the reason a Seat's Just Joined is
+  worked out the way it is). Counting from the question arriving starts a round
+  trip late, which is the safe direction — the reveal takes the number off the
+  screen, rather than the number sitting at zero waiting for it.
 - **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
   or `speed` (`100 + round(100 × secondsRemaining / 20)`).
 - **Victory Screen** — the last thing the television shows of a game of trivia:

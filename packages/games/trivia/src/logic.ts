@@ -1,4 +1,4 @@
-import type { GameLogic, GamePlayerId } from '@huddle/game-core';
+import type { GameDeadline, GameLogic, GamePlayerId } from '@huddle/game-core';
 
 import { INLINE_QUESTIONS, type TriviaQuestion } from './questions';
 
@@ -14,6 +14,17 @@ import { INLINE_QUESTIONS, type TriviaQuestion } from './questions';
 
 /** What a correct answer is worth in the flat Scoring Mode. */
 export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
+
+/**
+ * How long a question stays up before the room stops waiting for it — the
+ * plan's pinned twenty seconds, counted down on the television.
+ *
+ * A rule of the game like `REVEAL_SECONDS`, and the same number twice over: the
+ * room's clock runs on it (`questionTimer`) and the TV's countdown draws it, so
+ * a countdown that reached zero while the question was still live would be two
+ * numbers that had drifted rather than one rule.
+ */
+export const QUESTION_SECONDS = 20;
 
 /**
  * How long the Reveal stays up before the room moves to the next question.
@@ -71,16 +82,18 @@ export type TriviaState = {
  * question one or nothing at all, never whatever is on screen when it lands.
  *
  * `advance` is the room finishing a beat — a reveal ending, or a question the
- * room stops waiting on. It carries a `playerId` because every Game Event does:
- * the hub delivers events on behalf of the phone that sent them.
+ * room stops waiting on. Its `playerId` is optional because both kinds of
+ * sender exist: a phone's timer at the end of a reveal names the phone, and the
+ * Question Timer names nobody, because the room's own clock running out is not
+ * something anybody did.
  *
  * It is addressed the same way, and has to be: it is the room's only "move on"
- * signal and nothing owns it, so every source of it races every other — Phase
- * 4's countdown, a Host skipping ahead, and a "next" on any of ten phones. It
- * names both the question it is ending and the beat of it, because a bare
- * "move on" arriving a beat late lands on the next question and reveals it to a
- * room that has not read it yet, losing a whole question and the scores from
- * it. Naming both makes the second of two thumbs a beat apart do nothing.
+ * signal and nothing owns it, so every source of it races every other — the
+ * question's countdown, a Host skipping ahead, and a "next" on any of ten
+ * phones. It names both the question it is ending and the beat of it, because
+ * a bare "move on" arriving a beat late lands on the next question and reveals
+ * it to a room that has not read it yet, losing a whole question and the scores
+ * from it. Naming both makes the second of two thumbs a beat apart do nothing.
  */
 export type TriviaEvent =
   | {
@@ -91,11 +104,31 @@ export type TriviaEvent =
     }
   | {
       readonly kind: 'advance';
-      readonly playerId: GamePlayerId;
+      /** Absent when the room's own clock raised it: see `questionTimer`. */
+      readonly playerId?: GamePlayerId;
       readonly questionIndex: number;
       /** The beat being ended: the question on screen, or its reveal. */
       readonly phase: TriviaPhase;
     };
+
+/**
+ * The `advance` a clock sends. Both of trivia's produce exactly this — a
+ * `GameDeadline<TriviaEvent>` would let either of them start returning an
+ * answer, which is not a thing a clock can send.
+ */
+type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;
+
+/**
+ * The beat a state is on, named: which question, and which half of it.
+ *
+ * What a clock is set for. Both of trivia's — the room's Question Timer and the
+ * phones' Reveal Beat — key off this one function, so "the same beat" means one
+ * thing however it is being timed, and the hub can tell whether a state it has
+ * just written started a new one (`GameDeadline`).
+ */
+function beatOf(state: TriviaState): string {
+  return `${state.questionIndex}:${state.phase}`;
+}
 
 /** The scoreboard order: highest first, ties left in the order they had. */
 function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStanding[] {
@@ -256,6 +289,9 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent> = {
         return advanced(state, event);
     }
   },
+  // The room's own clock, which the hub schedules and no phone has to be awake
+  // for. `questionTimer` is where what it does is decided and tested.
+  deadline: questionTimer,
 };
 
 /**
@@ -277,14 +313,13 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent> = {
 export function revealBeat(
   state: TriviaState,
   playerId: GamePlayerId,
-):
-  | { readonly afterMs: number; readonly event: Extract<TriviaEvent, { kind: 'advance' }> }
-  | undefined {
+): GameDeadline<TriviaAdvance> | undefined {
   if (state.phase !== 'reveal') {
     return undefined;
   }
 
   return {
+    beat: beatOf(state),
     afterMs: REVEAL_SECONDS * 1000,
     event: {
       kind: 'advance',
@@ -293,6 +328,42 @@ export function revealBeat(
       // fires, which is exactly what makes a late send harmless.
       questionIndex: state.questionIndex,
       phase: 'reveal',
+    },
+  };
+}
+
+/**
+ * The Question Timer: the twenty seconds a question runs, and the `advance`
+ * that ends it when they are up.
+ *
+ * This is trivia's Game Deadline, so unlike the Reveal Beat above it is the
+ * *room's* clock and not the phones'. The hub schedules it server-side, which
+ * is what makes it the one beat in trivia that ends for a room whose every
+ * phone is face-down on a table. Whoever has not answered when it fires scores
+ * what a wrong answer scores, which is nothing — `revealed` does not ask how a
+ * question ended, only what was answered before it did.
+ *
+ * The two ways a question can end therefore race, which is what the room wants
+ * of them: the last player answering reveals it early, and this fires
+ * afterwards onto a beat that no longer matches and does nothing. Nobody has to
+ * cancel anything for that to hold — the address is what makes it safe, as it
+ * is for every other `advance`.
+ *
+ * No player is named. Nobody sent it, and an absent `playerId` is exactly how
+ * `GameEvent` says so.
+ */
+export function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
+  if (state.phase !== 'question') {
+    return undefined;
+  }
+
+  return {
+    beat: beatOf(state),
+    afterMs: QUESTION_SECONDS * 1000,
+    event: {
+      kind: 'advance',
+      questionIndex: state.questionIndex,
+      phase: 'question',
     },
   };
 }

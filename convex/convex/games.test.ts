@@ -1,8 +1,9 @@
 import type { GameLifecycleRejection } from '@huddle/game-core';
 import { GAME_REGISTRY } from '@huddle/game-registry';
+import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
@@ -113,6 +114,47 @@ async function playToTheFinalScores(
   }
 
   throw new Error('the game never reached its final scores');
+}
+
+/** The state of the game the room is playing, or a failure if it is playing none. */
+async function stateOf(t: Backend, roomId: Id<'rooms'>) {
+  const running = await t.query(api.games.running, { roomId });
+
+  if (running === null) {
+    throw new Error('this room is in its lobby, not in a game');
+  }
+
+  return running.state;
+}
+
+/**
+ * How long the module gives the room on the beat this state is on.
+ *
+ * Asked of the module rather than written down here, because that is what the
+ * hub does: the twenty seconds are trivia's number and are pinned in trivia's
+ * own tests (`QUESTION_SECONDS`). What these tests are about is that the room
+ * waits exactly as long as the game it is running says, and not a beat less.
+ */
+function clockOn(state: unknown): number {
+  const afterMs = gameLogicById('trivia')?.deadline?.(state)?.afterMs;
+
+  if (afterMs === undefined) {
+    throw new Error('this beat has no clock running on it');
+  }
+
+  return afterMs;
+}
+
+/**
+ * Lets `ms` of the party go by, and runs whatever the room had scheduled for it.
+ *
+ * Only meaningful under fake timers — the suite below installs them, because
+ * what it is about is twenty-second countdowns and a suite that waited for them
+ * would take minutes to say so.
+ */
+async function elapse(t: Backend, ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms);
+  await t.finishInProgressScheduledFunctions();
 }
 
 /** The room's own id for the player it knows by this nickname. */
@@ -539,6 +581,183 @@ describe('a player’s event in the running game', () => {
 
     expect(Object.keys((await t.query(api.games.running, { roomId }))?.state.answers ?? {}))
       .toHaveLength(2);
+  });
+});
+
+/**
+ * The room's own clock — the half of a Question Timer that the module cannot
+ * carry, since a reducer has no clock and a television cannot speak.
+ *
+ * Every test here runs against the real scheduler convex-test emulates, with
+ * time faked: a countdown suite that waited twenty real seconds a test would
+ * cost more than the thing it protects. What is being asserted is that the room
+ * moves on *by itself* — no phone sends anything below except an answer — which
+ * is the whole point of moving this beat off the phones.
+ */
+describe('the clock a question runs on', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The option that scores, for the question the room is on. */
+  function correctAnswerTo(state: { questions: { correctIndex: number }[]; questionIndex: number }) {
+    return state.questions[state.questionIndex]?.correctIndex ?? 0;
+  }
+
+  it('reveals the question when its time runs out, scoring nothing for whoever did not answer', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const ada = await playerIdOf(t, roomId, 'Ada');
+    const grace = await playerIdOf(t, roomId, 'Grace');
+    const asked = await stateOf(t, roomId);
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
+    });
+
+    // A second short of the deadline: the room is still waiting on Grace,
+    // whose phone is in her pocket.
+    await elapse(t, clockOn(asked) - 1000);
+    expect((await stateOf(t, roomId)).phase).toBe('question');
+
+    await elapse(t, 1000);
+
+    const revealed = await stateOf(t, roomId);
+
+    expect(revealed.phase).toBe('reveal');
+    // Grace scores what a wrong answer scores. Nothing on any phone sent this
+    // — the room ended the question on its own.
+    expect(revealed.standings).toEqual([
+      { playerId: ada, score: 100 },
+      { playerId: grace, score: 0 },
+    ]);
+  });
+
+  it('reveals as soon as everybody has answered, without waiting for the clock', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const asked = await stateOf(t, roomId);
+
+    for (const sessionToken of [tokens.Ada ?? '', tokens.Grace ?? '']) {
+      await t.mutation(api.games.sendEvent, {
+        sessionToken,
+        event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
+      });
+    }
+
+    expect((await stateOf(t, roomId)).phase).toBe('reveal');
+
+    // The clock still fires, long after the room stopped needing it. It is
+    // addressed to a question that has been revealed, so it must land as
+    // nothing: acting on it would cut the reveal short and take the room to a
+    // question nobody had read.
+    await elapse(t, clockOn(asked) * 2);
+
+    const still = await stateOf(t, roomId);
+
+    expect(still.phase).toBe('reveal');
+    expect(still.questionIndex).toBe(0);
+  });
+
+  it('does not give a question more time because somebody answered it', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const asked = await stateOf(t, roomId);
+
+    // A thumb landing with a second to spare. The countdown belongs to the
+    // question, not to the last thing that happened during it — a clock re-armed
+    // on every answer would be a question a party could keep alive forever.
+    await elapse(t, clockOn(asked) - 1000);
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
+    });
+    await elapse(t, 1000);
+
+    expect((await stateOf(t, roomId)).phase).toBe('reveal');
+  });
+
+  it('starts a fresh clock on the question after the reveal', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await elapse(t, clockOn(await stateOf(t, roomId)));
+
+    // The Reveal Beat, which still comes from a phone (docs/CONTEXT.md).
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'advance', questionIndex: 0, phase: 'reveal' },
+    });
+
+    const second = await stateOf(t, roomId);
+
+    expect(second.questionIndex).toBe(1);
+    expect(second.phase).toBe('question');
+
+    await elapse(t, clockOn(second) - 1000);
+    expect((await stateOf(t, roomId)).phase).toBe('question');
+
+    await elapse(t, 1000);
+
+    const revealed = await stateOf(t, roomId);
+
+    expect(revealed.phase).toBe('reveal');
+    expect(revealed.questionIndex).toBe(1);
+  });
+
+  it('winds a clock for a beat that is running without one', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const asked = await stateOf(t, roomId);
+
+    // A question on screen with nothing pending on it. Trivia cannot reach this
+    // by itself — its deadline always leaves the beat — but the hub is generic
+    // and two things do: a module whose deadline ticks without moving the beat,
+    // and a room dealt its question by a deployment older than the field this
+    // clock is stored in. Both would stop counting in silence.
+    await t.run(async (ctx) => {
+      const room = await ctx.db.get(roomId);
+
+      if (room?.game?.deadline === undefined) {
+        throw new Error('a question on screen should have a clock pending on it');
+      }
+
+      await ctx.scheduler.cancel(room.game.deadline);
+      await ctx.db.patch(roomId, { game: { gameId: room.game.gameId, state: room.game.state } });
+    });
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
+    });
+    await elapse(t, clockOn(asked));
+
+    expect((await stateOf(t, roomId)).phase).toBe('reveal');
+  });
+
+  it('stops with the game, so a room that starts another gets its full time', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const clock = clockOn(await stateOf(t, roomId));
+
+    await elapse(t, clock - 1000);
+    await t.mutation(api.games.endGame, { sessionToken: tokens.Ada ?? '' });
+    await t.mutation(api.games.startGame, { sessionToken: tokens.Ada ?? '', gameId: 'trivia' });
+
+    // The first game's clock comes due a second from now, addressed to question
+    // one of a game that is over — and the new game is on question one too, so
+    // the address alone cannot save it. Ending a game has to stop its clock, or
+    // a Host who restarts one watches its first question reveal itself early.
+    await elapse(t, clock - 1000);
+    expect((await stateOf(t, roomId)).phase).toBe('question');
+
+    await elapse(t, 1000);
+    expect((await stateOf(t, roomId)).phase).toBe('reveal');
   });
 });
 
