@@ -705,8 +705,43 @@ it.
   stage** at five rows of placings, as the reveal's verdicts already do at that
   size; the comment in `tv-screen.tsx` says so rather than claiming a fit. Both
   are play-test questions.
-- [ ] Back to lobby — AC: the Host's "Back to lobby" returns everyone to the
+- [x] Back to lobby — AC: the Host's "Back to lobby" returns everyone to the
   lobby with the same roster.
+
+  Most of this was already standing: `endGame` has been Host-only and
+  unconditional since the hub phase, and the roster survives structurally
+  rather than by care — `players` holds nickname, color, away and token, and
+  every score lives in `rooms.game.state`, so returning to the lobby drops the
+  scoreboard because there is nowhere else it could have been. What this task
+  added is the phone's control saying the true thing, and tests that hold the
+  AC's own words instead of trusting that arrangement.
+
+  "The same roster" is now pinned by a test that claims colors before playing
+  the game out, which the pre-existing one did not: review checked by patching
+  `endGame` to clear every color on its way out, and only the new test went
+  red. Host-only was checked the same way, by swapping the Host lookup for the
+  ordinary one.
+
+  Available on every beat, not only after the Victory Screen — the prior task
+  left a room whose phones all backgrounded stalling on the reveal with this as
+  its only way out, so a control that waited for a finish would not reach the
+  case it exists for. That also settles the copy: the hub never reads game
+  state, so the label has to be true on all beats, and "End game" is false on
+  the beat after a game has ended.
+
+  It also closed a dead end it was not asked to: a Host whose build lacks the
+  room's game was told they would rejoin when everyone returned to the lobby —
+  waiting on themselves, with nothing in the room able to move it. The Unknown
+  Game card now carries the control for the Host. The §3 lobby card stays
+  deferred.
+
+  What this does not carry: **nothing has run on a phone.** That the control
+  renders at all, and only for the Host, is a `.tsx` condition and untested by
+  the repo's rule — the server refusal underneath it is what is actually
+  guarded. The button keeps the punch face, which is right for discarding a
+  game in progress and arguably alarming on the Victory Screen where the action
+  is benign, and there is no confirmation on a mid-game return. Both are
+  play-test questions rather than rules anyone has decided.
 
 ## Phase 4 — Full trivia: packs, timers, settings
 Goal: trivia as scoped — curated pack, countdowns, host-tunable settings —

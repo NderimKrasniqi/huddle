@@ -66,7 +66,7 @@ export function rejectionMessage(rejection: GameLifecycleRejection): string {
 }
 
 /** What to show when `startGame` or `endGame` throws, whatever it threw. */
-export function startFailureMessage(error: unknown): string {
+export function lifecycleFailureMessage(error: unknown): string {
   return error instanceof ConvexError && isGameLifecycleRejection(error.data)
     ? rejectionMessage(error.data)
     : UNEXPECTED_FAILURE;

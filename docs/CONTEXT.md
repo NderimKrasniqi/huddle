@@ -60,11 +60,23 @@ working must add it here.
   phases: `startGame` (seeds the state from the module's initial-state factory)
   and `endGame` (clears it, leaving roster, Host and Room Code untouched).
   Starting is refused over a running game, and refused for a party smaller than
-  the game's `playerRange.min`; ending is unconditional, because "End game" is a
-  button a thumb can hit twice and the second tap asks for the lobby the room is
-  already in. A room too *large* for a game is not refused — Huddle cannot
+  the game's `playerRange.min`; ending is unconditional, because Back to lobby
+  is a button a thumb can hit twice and the second tap asks for the lobby the
+  room is already in. A room too *large* for a game is not refused — Huddle cannot
   remove a player, so that belongs in the Host's picker, where there is still
   something to be done about it.
+- **Back to lobby** — the Host's control on their phone while a game runs, and
+  the whole of the Game Lifecycle's `endGame` from the room's side: the room
+  returns to its lobby with the same Roster — every player, their Nickname and
+  their Color Claim — while the game's own state, the scoreboard included, is
+  left behind, because that state is the only place it ever was. One label on
+  every beat of every game rather than "End game" while playing and something
+  else on the Victory Screen: the hub never reads a game's state, so the phone
+  cannot know which beat the room is on, and "End game" is false on the beat
+  after a game has ended where this is true on all of them. Offered on every
+  screen a Host can be in-game on, the Unknown Game one included — a Host with
+  no way back is a room with no way back, and a room stalled on a Reveal every
+  phone has stopped counting has no other.
 - **Carousel** — the TV's game browser (handoff §6): the focused card with its
   neighbours either side. It draws whatever `browsingGameIndex` names, so the
   television follows the room rather than any one phone.

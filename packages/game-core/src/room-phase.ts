@@ -74,8 +74,8 @@ export function phaseAfter(intent: GameLifecycleIntent): RoomPhase {
  * have that game replaced by a second start, and a game declares the party it
  * is playable by (`PlayerRange`).
  *
- * There is no matching rule for *ending*. A second tap on "End game" asks for
- * the lobby the room is already in — there is nothing to tell the person
+ * There is no matching rule for *ending*. A second tap on "Back to lobby" asks
+ * for the lobby the room is already in — there is nothing to tell the person
  * holding the phone, and the screen they want is the screen they have — so
  * ending is unconditional and has no refusal to check.
  *

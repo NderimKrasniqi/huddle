@@ -58,6 +58,63 @@ async function roomPlaying(
   return { roomId: room.roomId, tokens };
 }
 
+/**
+ * The room plays its game out: every question answered and every reveal ended,
+ * so the room arrives at the beat its Victory Screen is on.
+ *
+ * The beats are read back one at a time, the way the phones read them, rather
+ * than driven off the module's question list — so this plays whatever the room
+ * was dealt, however many questions that turns out to be.
+ */
+async function playToTheFinalScores(
+  t: Backend,
+  roomId: Id<'rooms'>,
+  tokens: Record<string, string>,
+): Promise<void> {
+  const phones = Object.values(tokens);
+  const [firstPhone] = phones;
+
+  if (firstPhone === undefined) {
+    throw new Error('a room with nobody in it has no game to play');
+  }
+
+  // A bound rather than a limit: three inline questions are six beats, and a
+  // game that never finishes should fail this test instead of hanging it.
+  for (let beat = 0; beat < 100; beat += 1) {
+    const state = (await t.query(api.games.running, { roomId }))?.state;
+
+    if (state === undefined || state.phase === 'finished') {
+      return;
+    }
+
+    if (state.phase === 'question') {
+      // The first phone answers correctly and the rest do not, so the scoreboard
+      // the Host leaves behind is one somebody actually won.
+      const correct = state.questions[state.questionIndex].correctIndex;
+
+      for (const [index, sessionToken] of phones.entries()) {
+        await t.mutation(api.games.sendEvent, {
+          sessionToken,
+          event: {
+            kind: 'answer',
+            questionIndex: state.questionIndex,
+            optionIndex: index === 0 ? correct : (correct + 1) % 4,
+          },
+        });
+      }
+    } else {
+      // The Reveal Beat, which in a real room comes from whichever phone's timer
+      // fires first.
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: firstPhone,
+        event: { kind: 'advance', questionIndex: state.questionIndex, phase: state.phase },
+      });
+    }
+  }
+
+  throw new Error('the game never reached its final scores');
+}
+
 /** The room's own id for the player it knows by this nickname. */
 async function playerIdOf(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<string> {
   const roster = await t.query(api.players.roster, { roomId });
@@ -240,6 +297,75 @@ describe('the Host ending the game', () => {
     expect(await t.query(api.players.roster, { roomId })).toEqual(before);
     expect(await t.run(async (ctx) => (await ctx.db.get(roomId))?.code)).toBe(code);
     expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+
+  it('brings a played-out game back to the same roster, and leaves its scores behind', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const tokens: Record<string, string> = {};
+
+    for (const [nickname, color] of [
+      ['Ada', 'cobalt'],
+      ['Grace', 'punch'],
+      ['Linus', 'lime'],
+    ] as const) {
+      const seated = await t.mutation(api.players.joinRoom, { code: room.code, nickname });
+      await t.mutation(api.players.claimColor, { sessionToken: seated.sessionToken, color });
+      tokens[nickname] = seated.sessionToken;
+    }
+
+    const host = tokens.Ada ?? '';
+    const lobby = await t.query(api.players.roster, { roomId: room.roomId });
+
+    await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+    await playToTheFinalScores(t, room.roomId, tokens);
+
+    // The game really was played: somebody is ahead on the scoreboard the Host
+    // is about to leave, which is what makes the assertions below mean anything.
+    const played = await t.query(api.games.running, { roomId: room.roomId });
+    expect(played?.state.phase).toBe('finished');
+    expect(played?.state.standings[0].score).toBeGreaterThan(0);
+
+    await t.mutation(api.games.endGame, { sessionToken: host });
+
+    expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
+    // "The same roster" is the AC's own words, and this is the whole of what one
+    // holds: the same seats in the same order, with the nicknames and the
+    // claimed colors they had in the lobby, and the same Host among them.
+    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual(lobby);
+    // The scores do not follow anybody back. They were only ever in
+    // `game.state`, which is the field ending clears — so the next game starts
+    // from the module's factory and not from what the last one left. Read as a
+    // boolean because `t.run` hands an absent field back as `null`.
+    const stillHoldsAGame = await t.run(async (ctx) => {
+      const row = await ctx.db.get(room.roomId);
+
+      return row !== null && row.game !== undefined;
+    });
+
+    expect(stillHoldsAGame).toBe(false);
+  });
+
+  it('ends a beat the room has no other way out of', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    for (const sessionToken of Object.values(tokens)) {
+      await t.mutation(api.games.sendEvent, {
+        sessionToken,
+        event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+      });
+    }
+
+    // The room is on a Reveal, whose `advance` comes from the phones themselves
+    // — so a room with every phone backgrounded stalls here and nothing in it
+    // can move. This is why the control is on every beat of a game and not only
+    // on the last one: it is the only way out of this one.
+    expect((await t.query(api.games.running, { roomId }))?.state.phase).toBe('reveal');
+
+    await t.mutation(api.games.endGame, { sessionToken: tokens.Ada ?? '' });
+
+    expect(await t.query(api.games.running, { roomId })).toBeNull();
   });
 
   it('refuses a phone that is not the Host', async () => {

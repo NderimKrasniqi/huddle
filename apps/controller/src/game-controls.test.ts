@@ -2,7 +2,7 @@ import type { RosterSeatForGame } from '@huddle/game-core';
 import { GAME_REGISTRY } from '@huddle/game-registry';
 import { describe, expect, it } from 'vitest';
 
-import { gameToStart, startControl } from './game-controls';
+import { backToLobbyLabel, gameToStart, startControl } from './game-controls';
 
 function party(size: number): RosterSeatForGame[] {
   return Array.from({ length: size }, (_unused, index) => ({
@@ -65,5 +65,18 @@ describe('the Host’s start control', () => {
     // The same count `startGame` uses — excluding away players is Phase 4's
     // "Away players in-game", and the two must not disagree before then.
     expect(startControl(withOneAway, 0).enabled).toBe(true);
+  });
+});
+
+describe('the Host’s way back to the lobby', () => {
+  it('says where it goes rather than what it ends', () => {
+    // One label for every beat of every game, because the hub never reads a
+    // game's state and so cannot know which beat the room is on. "End game" is
+    // false on the beat after a game has ended; this is true on all of them.
+    expect(backToLobbyLabel(false)).toBe('Back to lobby');
+  });
+
+  it('says the room is on its way while the tap is in flight', () => {
+    expect(backToLobbyLabel(true)).toBe('Returning…');
   });
 });

@@ -43,8 +43,8 @@ import {
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
-import { gameToStart, startControl } from '../src/game-controls';
-import { startFailureMessage } from '../src/game-rejection';
+import { backToLobbyLabel, gameToStart, startControl } from '../src/game-controls';
+import { lifecycleFailureMessage } from '../src/game-rejection';
 import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
@@ -387,7 +387,9 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const screen = runningGameScreen(running);
 
   if (screen.kind === 'unknownGame') {
-    return <UnknownGameScreen code={code} gameId={screen.gameId} />;
+    return (
+      <UnknownGameScreen code={code} gameId={screen.gameId} youAreHost={standing.youAreHost} />
+    );
   }
 
   if (screen.kind === 'game') {
@@ -616,7 +618,7 @@ function StartGameControl({
         await startGame({ sessionToken, gameId: game.id });
       }
     } catch (error) {
-      setFailure(startFailureMessage(error));
+      setFailure(lifecycleFailureMessage(error));
     } finally {
       setStarting(false);
     }
@@ -665,8 +667,8 @@ function StartGameControl({
  *
  * The frame around the module is the hub's and says only what `GameMetadata`
  * already told it, which is the point: this screen does not know what game it
- * is drawing. The module's screen draws nothing yet; the phone's four answer
- * buttons are their own task later in this phase.
+ * is drawing — nor which beat of it the player is on, which is why the Host's
+ * control below reads the same on all of them.
  */
 function InGameScreen({
   code,
@@ -709,7 +711,7 @@ function InGameScreen({
         <PlayerGameScreen module={module} state={state} player={player} />
       )}
 
-      {youAreHost ? <EndGameControl /> : null}
+      {youAreHost ? <BackToLobbyControl /> : null}
     </PhoneScreen>
   );
 }
@@ -770,14 +772,29 @@ function PlayerGameScreen({
   );
 }
 
-/** The Host's way back to the lobby, with the room and its roster intact. */
-function EndGameControl() {
+/**
+ * Back to lobby (docs/CONTEXT.md): the Host's way out of a running game, with
+ * the room and its roster intact.
+ *
+ * On every beat the Host can be on, and deliberately: the room's other way
+ * forward is the Reveal Beat, which comes from the phones, so a room whose
+ * phones have all gone quiet has nothing left that can move it. This is the only
+ * thing that can, and a control that only appeared once the game was over would
+ * not be there for the beat that needs it.
+ *
+ * It keeps the punch face it wore as "End game", because on all but the last
+ * beat it is still throwing away a game in progress — what changed is the word,
+ * which now says where the room goes rather than mis-stating what it is doing
+ * (see `backToLobbyLabel`). The roster, the Host and the Room Code survive it;
+ * only the game's own state, the scoreboard included, is left behind.
+ */
+function BackToLobbyControl() {
   const endGame = useMutation(api.games.endGame);
-  const [ending, setEnding] = useState(false);
+  const [returning, setReturning] = useState(false);
   const [failure, setFailure] = useState<string>();
 
-  async function end() {
-    setEnding(true);
+  async function backToLobby() {
+    setReturning(true);
     setFailure(undefined);
 
     try {
@@ -790,9 +807,9 @@ function EndGameControl() {
 
       await endGame({ sessionToken });
     } catch (error) {
-      setFailure(startFailureMessage(error));
+      setFailure(lifecycleFailureMessage(error));
     } finally {
-      setEnding(false);
+      setReturning(false);
     }
   }
 
@@ -800,18 +817,18 @@ function EndGameControl() {
     <View style={styles.field}>
       <Pressable
         style={styles.stretch}
-        disabled={ending}
-        onPress={() => void end()}
+        disabled={returning}
+        onPress={() => void backToLobby()}
         accessibilityRole="button"
-        accessibilityState={{ disabled: ending }}
+        accessibilityState={{ disabled: returning }}
       >
         {({ pressed }) => (
           <StickerSurface
             depth={shadowDepth.phoneCard}
-            style={[styles.button, styles.endButton, pressed && styles.buttonPressed]}
+            style={[styles.button, styles.backToLobbyButton, pressed && styles.buttonPressed]}
             wrapperStyle={styles.stretch}
           >
-            <Text style={styles.buttonLabel}>{ending ? 'Ending…' : 'End game'}</Text>
+            <Text style={styles.buttonLabel}>{backToLobbyLabel(returning)}</Text>
           </StickerSurface>
         )}
       </Pressable>
@@ -830,23 +847,41 @@ function EndGameControl() {
  *
  * An un-updated phone in a room whose TV has been updated. It is not the lobby,
  * because a lobby would invite a player to act on a room that is mid-game.
+ *
+ * The Host gets their way back here too. Everybody else on this screen is
+ * waiting for the room to return to its lobby, and if the phone that runs the
+ * room is the one that is behind, then without this it is waiting on itself —
+ * a room that nothing in it can move.
  */
 function UnknownGameScreen({
   code,
   gameId,
+  youAreHost,
 }: {
   readonly code: string;
   readonly gameId: string;
+  readonly youAreHost: boolean;
 }) {
+  // The news itself is the same for everybody in the room; only what there is to
+  // do about it differs, so the two lines are one sentence and a tail rather
+  // than two sentences to keep in step.
+  const behind = `This room is playing ${gameId}, which this phone doesn’t have yet.`;
+  const whatToDo = youAreHost
+    ? 'It is still your room, though — take everyone back to the lobby, or update Huddle to play along.'
+    : 'Watch the TV — you’ll rejoin when they’re back in the lobby.';
+
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
         <Text style={styles.logoSmall}>
           HUDDLE<Text style={styles.logoPeriod}>.</Text>
         </Text>
-        <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
-          <Text style={styles.codeChipText}>{code}</Text>
-        </StickerSurface>
+        <View style={styles.seatedHeaderEnd}>
+          {youAreHost ? <HostPill /> : null}
+          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+            <Text style={styles.codeChipText}>{code}</Text>
+          </StickerSurface>
+        </View>
       </View>
 
       <Text style={styles.title}>Update Huddle</Text>
@@ -857,10 +892,11 @@ function UnknownGameScreen({
         wrapperStyle={styles.stretch}
       >
         <Text style={styles.statusText}>
-          This room is playing {gameId}, which this phone doesn’t have yet. Watch the TV — you’ll
-          rejoin when they’re back in the lobby.
+          {behind} {whatToDo}
         </Text>
       </StickerSurface>
+
+      {youAreHost ? <BackToLobbyControl /> : null}
     </PhoneScreen>
   );
 }
@@ -1341,7 +1377,7 @@ const styles = StyleSheet.create({
   },
   // Boardwalk's "this ends something" surface, and the only punch button on a
   // phone screen — it is meant to be found, not stumbled into.
-  endButton: {
+  backToLobbyButton: {
     backgroundColor: colors.punch,
   },
   waitingFor: {

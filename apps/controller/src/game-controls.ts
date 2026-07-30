@@ -60,3 +60,21 @@ export function startControl(
 
   return { label: `Start ${game.title}`, enabled: true, blockedBecause: undefined };
 }
+
+/**
+ * What the Host's way out of a running game says (docs/CONTEXT.md, "Back to
+ * lobby").
+ *
+ * One label on every beat, and it names where the room goes rather than what it
+ * is leaving: the hub never reads a game's state, so this phone cannot know
+ * whether the room is mid-question or looking at its final scores. "End game" is
+ * false on the last of those — the game has already ended — where "Back to
+ * lobby" is true on all of them.
+ *
+ * The second label is the tap in flight. A Host who cannot see that the first
+ * one landed presses again, and while `endGame` is happy to be asked twice (see
+ * `phaseAfter`), a button that looks untouched is a button that looks broken.
+ */
+export function backToLobbyLabel(returning: boolean): string {
+  return returning ? 'Returning…' : 'Back to lobby';
+}
