@@ -773,6 +773,33 @@ ready for a real game night.
 ## Phase 5 — Party-ready
 Goal: the app matches the Boardwalk design on real hardware; a full game night
 runs without touching a dev tool.
+- [ ] The letter I does not draw in Bungee on tvOS — AC: a Room Code
+  containing "I" is fully readable on the television, and the fix is proved by
+  an A/B of the identical crop rather than one screenshot that looks right.
+
+  Observed on the tvOS simulator on 2026-07-30, the first time the pairing
+  screen was run since the Boardwalk work: room code `OVAI` drew as `O V A _`,
+  with the fourth tile empty. It is the character and nothing else — rendering
+  a fixed `AIHI` blanked both I's across two positions and two accent colors,
+  while `IJLT` drew J, L and T and dropped only the I, and the live code `MMBH`
+  drew all four tiles. So position, `codeLetterColor` and `StickerSurface` are
+  all ruled out.
+
+  The font is ruled out too, which is why this needs a real investigation
+  rather than a swap: in `Bungee_400Regular.ttf` the I is glyph 39 with a
+  normal advance of 605, one contour and a full-height bbox of (53,0)-(551,720)
+  — the same shape of record as J and L, which draw. Something between RN's
+  `Text` and CoreText is dropping it on tvOS.
+
+  This is not cosmetic: the Room Code is how a phone joins at all, so roughly
+  one code in seven (any of four positions over a 26-letter alphabet) is
+  unreadable off the television. Every Bungee I in the app is suspect for the
+  same reason, including player initials. Two escape routes if the render path
+  cannot be fixed: drop I from `ROOM_CODE_ALPHABET` — which the alphabet's own
+  comment currently argues against, since it keeps I precisely because the
+  codes carry no digits for it to be confused with — or set the tiles in a
+  different face. Both change a documented decision, so neither should be taken
+  before the cause is known.
 - [ ] Design fidelity pass — AC: hub screens (pairing, join, lobby ×3,
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the
