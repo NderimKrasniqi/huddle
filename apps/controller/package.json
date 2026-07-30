@@ -4,11 +4,12 @@
   "private": true,
   "description": "Huddle Controller app: the phone client every player joins a room with.",
   "main": "expo-router/entry",
+  "//scripts": "The Controller runs its Metro on 8082; the TV keeps the default 8081. A game needs both apps up at once, and a debug build asks whichever port it was built against for its bundle — so left on the same port the phone silently loads the *television's* bundle and draws a shrunken pairing screen. Nothing errors, which is what makes it expensive to spot. RCT_METRO_PORT is the one the native build bakes in, so it has to be set on `ios` as well, and the two must agree. LC_ALL is CocoaPods 1.17 on Ruby 4, which crashes in `Pod::Config#installation_root` without a UTF-8 locale — the same reason the TV sets it, and the only one of the TV's two variables this app needs.",
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "prebuild": "expo prebuild",
+    "start": "expo start --port 8082",
+    "android": "expo run:android --port 8082",
+    "ios": "RCT_METRO_PORT=8082 LC_ALL=en_US.UTF-8 expo run:ios --port 8082",
+    "prebuild": "LC_ALL=en_US.UTF-8 expo prebuild",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

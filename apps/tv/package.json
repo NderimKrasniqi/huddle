@@ -4,7 +4,7 @@
   "private": true,
   "description": "Huddle TV app: the hub client on the television.",
   "main": "expo-router/entry",
-  "//scripts": "The Apple builds carry two environment variables the Controller does not need. REACT_NATIVE_NODE_MODULES_DIR is react-native-svg's documented escape hatch: its podspec resolves `react-native/package.json`, lands in `react-native-tvos/` because of the alias below, looks for a sibling `react-native/` that pnpm never created, and dies on `File.join(nil, ...)` with `no implicit conversion of nil into String`. Pointing it at this app's own node_modules \u2014 where pnpm does put a `react-native` symlink \u2014 is what lets `pod install` finish. LC_ALL is for CocoaPods 1.17 on Ruby 4, which crashes in `Pod::Config#installation_root` without a UTF-8 locale.",
+  "//scripts": "The Apple builds carry two environment variables the Controller does not need. REACT_NATIVE_NODE_MODULES_DIR is react-native-svg's documented escape hatch: its podspec resolves `react-native/package.json`, lands in `react-native-tvos/` because of the alias below, looks for a sibling `react-native/` that pnpm never created, and dies on `File.join(nil, ...)` with `no implicit conversion of nil into String`. Pointing it at this app's own node_modules \u2014 where pnpm does put a `react-native` symlink \u2014 is what lets `pod install` finish. LC_ALL is for CocoaPods 1.17 on Ruby 4, which crashes in `Pod::Config#installation_root` without a UTF-8 locale. This app keeps Metro's default 8081 and the Controller takes 8082, so both can run at once during a game; see that app's own note for what sharing a port does.",
   "scripts": {
     "start": "EXPO_TV=1 expo start",
     "android": "EXPO_TV=1 expo run:android",

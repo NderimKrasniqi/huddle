@@ -773,33 +773,46 @@ ready for a real game night.
 ## Phase 5 — Party-ready
 Goal: the app matches the Boardwalk design on real hardware; a full game night
 runs without touching a dev tool.
-- [ ] The letter I does not draw in Bungee on tvOS — AC: a Room Code
-  containing "I" is fully readable on the television, and the fix is proved by
-  an A/B of the identical crop rather than one screenshot that looks right.
+- [ ] A Room Code tile sometimes draws empty on tvOS — AC: reproduce a blank
+  tile deliberately, then prove the fix by an A/B of the identical crop rather
+  than by one screenshot that looks right. **Do not act on the "letter I"
+  theory below — it was tested and is wrong.**
 
-  Observed on the tvOS simulator on 2026-07-30, the first time the pairing
-  screen was run since the Boardwalk work: room code `OVAI` drew as `O V A _`,
-  with the fourth tile empty. It is the character and nothing else — rendering
-  a fixed `AIHI` blanked both I's across two positions and two accent colors,
-  while `IJLT` drew J, L and T and dropped only the I, and the live code `MMBH`
-  drew all four tiles. So position, `codeLetterColor` and `StickerSurface` are
-  all ruled out.
+  Seen three times on the tvOS simulator on 2026-07-30, the first time the
+  pairing screen had been run since the Boardwalk work: room code `OVAI` drew
+  as `O V A _`. Rendering a fixed `AIHI` then blanked both I's across two
+  positions and two accent colors, and `IJLT` drew J, L and T and dropped only
+  the I, while the live code `MMBH` drew all four tiles. That looked conclusive
+  and it is what the first version of this task claimed.
 
-  The font is ruled out too, which is why this needs a real investigation
-  rather than a swap: in `Bungee_400Regular.ttf` the I is glyph 39 with a
-  normal advance of 605, one contour and a full-height bbox of (53,0)-(551,720)
-  — the same shape of record as J and L, which draw. Something between RN's
-  `Text` and CoreText is dropping it on tvOS.
+  **It does not survive retesting.** Later the same session, a bare `I` in all
+  four tiles drew correctly on five consecutive fresh launches, as did `I`
+  followed by a zero-width space, `I` followed by a space, and `HI`. So the
+  glyph is not the variable and the letter-specific reading is disproven —
+  which also matches "TRIVIA" having rendered its own I's correctly on the
+  television throughout the failing runs. Whatever this is, it is intermittent
+  and something other than the character decides it.
 
-  This is not cosmetic: the Room Code is how a phone joins at all, so roughly
-  one code in seven (any of four positions over a 26-letter alphabet) is
-  unreadable off the television. Every Bungee I in the app is suspect for the
-  same reason, including player initials. Two escape routes if the render path
-  cannot be fixed: drop I from `ROOM_CODE_ALPHABET` — which the alphabet's own
-  comment currently argues against, since it keeps I precisely because the
-  codes carry no digits for it to be confused with — or set the tiles in a
-  different face. Both change a documented decision, so neither should be taken
-  before the cause is known.
+  Ruled out with evidence, so nobody pays for it twice: the font
+  (`Bungee_400Regular.ttf` has I at glyph 39, one contour, advance 605, bbox
+  (53,0)-(551,720) — the same shape of record as J and L); GSUB's `vert`
+  feature (it covers 375 glyphs including A and H, which never failed, and its
+  target for I is a normal 74-byte glyph); `codeLetterColor`; tile position;
+  and a font-loading race at the layout, since `apps/tv/app/_layout.tsx` already
+  holds the first frame until `useFonts` resolves.
+
+  Worth noting about the failing runs, as the only pattern left: all three were
+  in the first minutes of a session, two of them after a fast refresh, and one
+  on the first render after the session's first cold Metro bundle. A stale or
+  half-written font asset in Metro's cache would fit; that is a hypothesis, not
+  a finding.
+
+  It is not cosmetic — the Room Code is the only way a phone joins, and a blank
+  tile makes the room unjoinable from the television. But a fix cannot be
+  chosen until it reproduces on demand, and the two escape routes floated
+  earlier (dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in
+  another face) would both change a documented decision to chase a cause that
+  has now been disproven.
 - [ ] Design fidelity pass — AC: hub screens (pairing, join, lobby ×3,
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the
