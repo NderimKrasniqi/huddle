@@ -7,6 +7,7 @@ import {
   type GameLifecycleRejection,
   type GameLogic,
   type GamePlayer,
+  type GamePlayerId,
 } from '@huddle/game-core';
 import { browsingIndex, gameLogicById } from '@huddle/game-registry/logic';
 import { ConvexError, v } from 'convex/values';
@@ -99,6 +100,34 @@ async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePl
     away: player.away,
     color: player.color,
   }));
+}
+
+/**
+ * Who in the room has gone Away, for the rules that are about to be handed an
+ * event.
+ *
+ * Read at the event rather than kept anywhere, because presence changes on its
+ * own beat — a phone goes quiet and `markAway` writes it, with no game event in
+ * sight — so a game handed a list it was told about earlier would be waiting
+ * for a phone the room stopped hearing from ten seconds ago. It is the same
+ * seats `playersFor` collects, which is a game's whole view of the roster.
+ *
+ * The cost, written down so it is not rediscovered: this puts the room's whole
+ * `players` range in the read set of *every* game event, and `heartbeat` writes
+ * a row in that range every three seconds per phone. So an answer can now lose
+ * an OCC race it could not lose before, and the odds scale with the roster
+ * rather than with how hard the room is playing — ten phones is about three
+ * writes a second against a read set held for the length of one mutation.
+ * Convex retries the loser and the reducer is pure, so a retried answer is the
+ * same answer; the alternative is presence the rules cannot see.
+ */
+async function awayPlayersIn(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePlayerId[]> {
+  const seated = await ctx.db
+    .query('players')
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
+    .collect();
+
+  return seated.filter((player) => player.away).map((player) => player._id);
 }
 
 /**
@@ -224,10 +253,15 @@ async function playGameEvent(
     return;
   }
 
-  // The clock is read here and nowhere else, and written over whatever the
-  // event arrived with — a phone claiming to have answered faster than it did
+  // The clock and the room's away seats are read here and nowhere else, and
+  // both are written over whatever the event arrived with — a phone claiming to
+  // have answered faster than it did, or claiming somebody else has gone quiet,
   // is a claim, exactly as a phone naming a player is (see `GameEvent`).
-  const next = game.reduce(running.state, { ...event, msRemaining: clockRemaining(running) });
+  const next = game.reduce(running.state, {
+    ...event,
+    msRemaining: clockRemaining(running),
+    awayPlayerIds: await awayPlayersIn(ctx, room._id),
+  });
 
   // A module that does not recognise an event returns no state at all, and an
   // exhaustive switch over its own events is how it does that. Storing

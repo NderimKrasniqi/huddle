@@ -143,7 +143,14 @@ working must add it here.
   Set by the room's own scheduled check (`markAway`) once `AWAY_AFTER_MS` has
   passed since that player's last Heartbeat, and cleared by the next one. An
   away player keeps their seat, their score and their Session Token; games
-  never wait for them.
+  never wait for them. In a running game that means the beat's denominator —
+  trivia's "3/5 answered" — counts everyone the room is still hearing from plus
+  anyone whose answer is already in, so a phone going quiet never subtracts an
+  answer the room has, and a phone coming back counts itself in by answering.
+  Being away is never a bar to acting: a player who returns mid-question may
+  answer it while its timer runs. A room where nobody is counted — every phone
+  away, nothing answered — waits out its Game Deadline rather than ending the
+  beat, since "everybody has answered" is vacuously true of nobody.
 - **Deserted** — a room whose every player is Away: the room's own reading of
   "everybody has left", and the only one available to it, since going quiet is
   all it ever learns about a phone. Noticed inside `markAway`, because the last

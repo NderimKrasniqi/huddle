@@ -969,6 +969,61 @@ describe('the clock a question runs on', () => {
     });
   });
 
+  /**
+   * The room telling the rules who it has stopped hearing from, which is the
+   * half of "games never wait for an away player" a module cannot carry:
+   * presence is on the room's players and changes without any game event, so
+   * who is Away has to arrive with the event (`GameEvent.awayPlayerIds`).
+   *
+   * What a game makes of it is that game's business and is tested where its
+   * rules are. What is asserted here is that the room reads the away flags it
+   * keeps, and reads nothing a phone says about anybody's presence.
+   */
+  describe('and the away players it names', () => {
+    it('hands the rules the seats the room has stopped hearing from', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+      const asked = await stateOf(t, roomId);
+
+      // Grace's phone is face-down on the table, so the room has marked her
+      // away — exactly what `markAway` writes when a Heartbeat stops.
+      await t.run(async (ctx) => {
+        await ctx.db.patch(grace as Id<'players'>, { away: true });
+      });
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Ada ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
+      });
+
+      // Revealed on Ada's answer alone, with the whole question still on the
+      // clock: a room with one quiet phone does not sit out every countdown.
+      expect((await stateOf(t, roomId)).phase).toBe('reveal');
+    });
+
+    it('never believes a phone about who is away', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+      const asked = await stateOf(t, roomId);
+
+      // A phone writing Grace out of the question it is answering. The hub
+      // writes this field over whatever arrived, as it does the player and the
+      // clock, so the room goes on waiting for the phone it is hearing from.
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Ada ?? '',
+        event: {
+          kind: 'answer',
+          questionIndex: 0,
+          optionIndex: correctAnswerTo(asked),
+          awayPlayerIds: [grace],
+        },
+      });
+
+      expect((await stateOf(t, roomId)).phase).toBe('question');
+    });
+  });
+
   it('stops with the game, so a room that starts another gets its full time', async () => {
     const t = convexTest(schema, modules);
     const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');

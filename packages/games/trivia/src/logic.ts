@@ -152,6 +152,16 @@ export type TriviaEvent =
        * Absent where the room could not say — see `secondsLeftOn`.
        */
       readonly msRemaining?: number;
+      /**
+       * Who the room had stopped hearing from when this reached the rules — the
+       * hub's, like `msRemaining`, and for the same reason: presence is the
+       * room's and a reducer holds only the game.
+       *
+       * It is on the answer alone because ending a question early is the only
+       * rule in trivia that waits for anybody. Absent means the room could not
+       * say, and trivia then waits for the whole scoreboard.
+       */
+      readonly awayPlayerIds?: readonly GamePlayerId[];
     }
   | {
       readonly kind: 'advance';
@@ -190,6 +200,45 @@ function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStan
 
 function isPlaying(state: TriviaState, playerId: GamePlayerId): boolean {
   return state.standings.some((standing) => standing.playerId === playerId);
+}
+
+/**
+ * How many players the current question is counted against — the "3/5 answered"
+ * denominator: everyone the room is still hearing from, plus anyone already in.
+ *
+ * Away is subtracted because a room cannot be waiting for a phone it has
+ * stopped hearing from (docs/CONTEXT.md: a game never waits for an away
+ * player), and an answer already given is added back because it is already
+ * given: a count that dropped a player the moment their phone went quiet would
+ * be the television losing an answer the room has.
+ *
+ * Who is Away is the room's and arrives with the event (`TriviaEvent`), so a
+ * room that said nothing is a room with nobody away — the whole scoreboard, and
+ * what trivia waited for before it was ever told.
+ *
+ * It lives with the rules rather than on the screen because it *is* the rule
+ * the reveal turns on: the question ends when this many answers are in
+ * (`answersIn`), so the chip reading `n/n` and the reveal happening are one
+ * fact and not two that agree. The television reads it off the roster it is
+ * handed (`TvGameScreenProps`) and the reducer off the away list it is handed,
+ * and neither can arrive at a different number from the same room.
+ */
+export function playersCounted(
+  state: TriviaState,
+  awayPlayerIds: readonly GamePlayerId[] | undefined,
+): number {
+  const away = new Set(awayPlayerIds);
+
+  return state.standings.filter(
+    (standing) =>
+      !away.has(standing.playerId) || Object.hasOwn(state.answers, standing.playerId),
+  ).length;
+}
+
+/** How many of the current question's answers are in: the chip's numerator. */
+export function answersIn(state: TriviaState): number {
+  return state.standings.filter((standing) => Object.hasOwn(state.answers, standing.playerId))
+    .length;
 }
 
 /**
@@ -297,12 +346,23 @@ function answerTaken(
     [event.playerId]: secondsLeftOn(event.msRemaining),
   };
   const answered = { ...state, answers, answerSeconds };
+  // The chip's own two numbers, read off the state this answer just made: the
+  // question ends the moment they are equal, which is what makes "the reveal
+  // happens when the television reads n/n" one rule rather than two.
+  const counted = playersCounted(answered, event.awayPlayerIds);
 
-  // The last player to answer ends the question: there is nobody left to wait
-  // for, so the room is not made to sit through a countdown it is done with.
-  return state.standings.every((standing) => Object.hasOwn(answers, standing.playerId))
-    ? revealed(answered)
-    : answered;
+  // The last player the room is still hearing from ends the question: there is
+  // nobody left to wait for, so the room is not made to sit through a countdown
+  // it is done with. A phone that comes back is not shut out — answering is
+  // judged above, where being away is never asked about — and it counts itself
+  // back in by answering, since an answer already given is always counted.
+  //
+  // A room where nobody is counted is the exception, and it is what the zero
+  // guards: everybody away with nothing answered makes "every counted player
+  // has answered" true of nobody, and a question would reveal itself the
+  // instant it went up. That room is left to its Question Timer, which is the
+  // one clock nobody has to be awake for.
+  return counted > 0 && answersIn(answered) === counted ? revealed(answered) : answered;
 }
 
 /** The room moves on from the beat this event named. */

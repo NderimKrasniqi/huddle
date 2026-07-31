@@ -104,6 +104,23 @@ export type GameEvent = {
    * means; trivia pays no bonus.
    */
   readonly msRemaining?: number;
+  /**
+   * Which of the room's players are Away, as the room reads it at the moment
+   * this event lands.
+   *
+   * The hub's, and written over whatever arrived for the same reason `playerId`
+   * is: a phone writing somebody out of a question is a claim, and the room is
+   * the only thing that knows who it has stopped hearing from. It is here
+   * rather than in any module's own event because presence is the *room's* —
+   * it lives on the players, not in any game's state, and it changes while no
+   * game event is being sent at all, so a game that must never wait for a quiet
+   * phone (docs/CONTEXT.md, Away) has no other way to be told.
+   *
+   * Absent means the room could not say, which is a room dealt its beat by a
+   * deployment older than this field. A game that reads it decides what nothing
+   * means; trivia waits for everybody, exactly as it did before there was one.
+   */
+  readonly awayPlayerIds?: readonly GamePlayerId[];
 };
 
 /**

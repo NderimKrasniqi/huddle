@@ -25,6 +25,11 @@ function player(playerId: string, nickname: string): GamePlayer {
   return { playerId, nickname, away: false };
 }
 
+/** The same player, with the room no longer hearing from their phone. */
+function away(seated: GamePlayer): GamePlayer {
+  return { ...seated, away: true };
+}
+
 const ROSTER = [player(ADA, 'Ada'), player(GRACE, 'Grace')];
 
 function gameWith(...players: readonly GamePlayer[]): TriviaState {
@@ -169,6 +174,54 @@ describe('a question on the television', () => {
     expect([oneIn.answered, oneIn.playerCount]).toEqual([1, 2]);
   });
 
+  it('counts nobody the room has stopped hearing from into the denominator', () => {
+    const asked = gameWith(...ROSTER);
+    // Grace's phone has gone quiet: the room is waiting for one player, and the
+    // chip has to say so or it counts down to a number it never reaches.
+    const screen = watchedScreen(asked, [player(ADA, 'Ada'), away(player(GRACE, 'Grace'))]);
+
+    if (screen.kind !== 'question') {
+      throw new Error('expected a question');
+    }
+
+    expect([screen.answered, screen.playerCount]).toEqual([0, 1]);
+  });
+
+  it('keeps an answer already in, from a phone that has gone quiet since', () => {
+    const asked = gameWith(...ROSTER);
+    const screen = watchedScreen(answering(asked, GRACE, 0), [
+      player(ADA, 'Ada'),
+      away(player(GRACE, 'Grace')),
+    ]);
+
+    if (screen.kind !== 'question') {
+      throw new Error('expected a question');
+    }
+
+    // Grace is not being waited for, but she is in: a chip that dropped her
+    // would be the television losing an answer the room already has.
+    expect([screen.answered, screen.playerCount]).toEqual([1, 2]);
+  });
+
+  it('counts nobody at all in a room whose every phone has gone quiet', () => {
+    const asked = gameWith(...ROSTER);
+    const quiet = [away(player(ADA, 'Ada')), away(player(GRACE, 'Grace'))];
+    const opening = watchedScreen(asked, quiet);
+    // One of them wakes up and answers, which counts them back in — the room is
+    // then waiting for exactly the player who has already answered, and the
+    // reveal happens on that answer (see `logic.test.ts`).
+    const oneBack = watchedScreen(answering(asked, ADA, 0), quiet);
+
+    if (opening.kind !== 'question' || oneBack.kind !== 'question') {
+      throw new Error('expected questions');
+    }
+
+    // Nobody in and nobody counted: the chip agrees with a room that is waiting
+    // on its Question Timer rather than on anybody.
+    expect([opening.answered, opening.playerCount]).toEqual([0, 0]);
+    expect([oneBack.answered, oneBack.playerCount]).toEqual([1, 1]);
+  });
+
   it('says how long the room has, so the countdown counts the rule’s seconds', () => {
     const screen = screenOf(gameWith(...ROSTER));
 
@@ -247,6 +300,25 @@ describe('the reveal on the television', () => {
     expect(screen.scoreboard.map((row) => [row.nickname, row.score])).toEqual([
       ['Grace', 100],
       ['Ada', 0],
+    ]);
+  });
+
+  it('marks the row of a player the room has stopped hearing from', () => {
+    const asked = gameWith(...ROSTER);
+    const screen = watchedScreen(playedOut(asked, 0, 1), [
+      player(ADA, 'Ada'),
+      away(player(GRACE, 'Grace')),
+    ]);
+
+    if (screen.kind !== 'reveal') {
+      throw new Error('expected a reveal');
+    }
+
+    // The Status Dot the roster draws, on the surface the game lists players
+    // on: presence is news wherever a player is drawn.
+    expect(screen.scoreboard.map((row) => [row.nickname, row.away])).toEqual([
+      ['Ada', false],
+      ['Grace', true],
     ]);
   });
 

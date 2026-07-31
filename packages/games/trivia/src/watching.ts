@@ -1,6 +1,6 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/game-core';
 
-import { QUESTION_SECONDS, type TriviaState } from './logic';
+import { answersIn, playersCounted, QUESTION_SECONDS, type TriviaState } from './logic';
 
 /**
  * The television as data: what the room is looking at, given the state the room
@@ -39,6 +39,12 @@ export type ScoreRow = {
   readonly nickname: string;
   readonly color: GamePlayer['color'];
   readonly score: number;
+  /**
+   * Whether the room has stopped hearing from their phone, for the row's Status
+   * Dot. A player the roster has lost entirely is drawn present: the room is
+   * saying nothing about them either way, and the game they played stands.
+   */
+  readonly away: boolean;
 };
 
 /**
@@ -126,8 +132,14 @@ function scoreboardOf(state: TriviaState, players: readonly GamePlayer[]): reado
       nickname: seated?.nickname ?? 'Player',
       color: seated?.color,
       score: standing.score,
+      away: seated?.away ?? false,
     };
   });
+}
+
+/** The roster's away seats, as the rules count them (`playersCounted`). */
+function awayIn(players: readonly GamePlayer[]): readonly GamePlayerId[] {
+  return players.filter((player) => player.away).map((player) => player.playerId);
 }
 
 /**
@@ -244,13 +256,14 @@ export function watchedScreen(
     questionCount,
     text: question.text,
     options: optionsOf(question, false),
-    // Counted off the standings rather than the roster: the standings are who
-    // is *playing*, and a phone that joined mid-game is seated without being in
+    // Both numbers are the rules' own, and neither is worked out again here:
+    // the reveal happens exactly when these two are equal (`answerTaken`), so a
+    // chip counted on the screen could disagree with the game it is counting.
+    // Off the standings rather than the roster, too — the standings are who is
+    // *playing*, and a phone that joined mid-game is seated without being in
     // the game it walked in on.
-    answered: state.standings.filter((standing) =>
-      Object.hasOwn(state.answers, standing.playerId),
-    ).length,
-    playerCount: state.standings.length,
+    answered: answersIn(state),
+    playerCount: playersCounted(state, awayIn(players)),
     countdownSeconds: QUESTION_SECONDS,
   };
 }

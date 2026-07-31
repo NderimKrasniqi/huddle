@@ -3,6 +3,8 @@ import { CURATED_PACK } from '@huddle/packs';
 import { describe, expect, it } from 'vitest';
 
 import {
+  answersIn,
+  playersCounted,
   QUESTION_SECONDS,
   questionTimer,
   REVEAL_SECONDS,
@@ -102,6 +104,28 @@ function answering(
     questionIndex: state.questionIndex,
     optionIndex,
     msRemaining,
+  });
+}
+
+/**
+ * The same answer, in a room the hub says has gone quiet — the away list is the
+ * room's and rides the event (`GameEvent`), so it is named at the tap.
+ *
+ * Left off `answering` above, since a room with everybody present is what every
+ * other rule here is about.
+ */
+function answeringWhileAway(
+  state: TriviaState,
+  playerId: string,
+  optionIndex: number,
+  awayPlayerIds: readonly string[],
+): TriviaState {
+  return triviaGameLogic.reduce(state, {
+    kind: 'answer',
+    playerId,
+    questionIndex: state.questionIndex,
+    optionIndex,
+    awayPlayerIds,
   });
 }
 
@@ -541,6 +565,88 @@ describe('the clock a question runs on', () => {
 
     expect(revealed.phase).toBe('reveal');
     expect(triviaGameLogic.reduce(revealed, timer.event)).toBe(revealed);
+  });
+});
+
+/**
+ * Who a question waits for, which is everybody the room is still hearing from.
+ *
+ * Away is the room's reading and not the game's, so it arrives on the answer
+ * event the way the clock does, and every test here hands it over the way
+ * `sendEvent` does.
+ */
+describe('a player the room has stopped hearing from', () => {
+  const LINUS = 'p3';
+
+  it('is not waited for: the question ends on the last answer the room can expect', () => {
+    const asked = gameWith(ADA, GRACE);
+    const revealed = answeringWhileAway(asked, ADA, rightAnswerTo(asked), [GRACE]);
+
+    // Without this the room sits through the whole twenty seconds every time a
+    // phone is face-down on the table, which is the interim the Question Timer
+    // was bounding.
+    expect(revealed.phase).toBe('reveal');
+    expect(scoreOf(revealed, ADA)).toBe(100);
+    // Away scores exactly what no answer scores, which is what it is.
+    expect(scoreOf(revealed, GRACE)).toBe(0);
+  });
+
+  it('may still answer the question they came back to, while it is up', () => {
+    const asked = gameWith(ADA, GRACE, LINUS);
+    // Grace's phone woke up and answered before the room heard her Heartbeat,
+    // so the room still has her down as away. Being away is not being out.
+    const back = answeringWhileAway(asked, GRACE, rightAnswerTo(asked), [GRACE]);
+
+    expect(back.phase).toBe('question');
+    expect(back.answers).toEqual({ [GRACE]: rightAnswerTo(asked) });
+
+    const revealed = answeringWhileAway(back, ADA, wrongAnswerTo(asked), [GRACE, LINUS]);
+
+    expect(revealed.phase).toBe('reveal');
+    expect(scoreOf(revealed, GRACE)).toBe(100);
+  });
+
+  it('cannot undo the reveal their return lands after', () => {
+    const asked = gameWith(ADA, GRACE);
+    const revealed = answeringWhileAway(asked, ADA, rightAnswerTo(asked), [GRACE]);
+    // Back a beat too late: the question she is answering is already revealed,
+    // and a reveal the room has read cannot be taken back off the television.
+    const late = answeringWhileAway(revealed, GRACE, rightAnswerTo(asked), []);
+
+    expect(late).toBe(revealed);
+    expect(scoreOf(late, GRACE)).toBe(0);
+  });
+
+  it('leaves a room where every phone has gone quiet to its Question Timer', () => {
+    const asked = gameWith(ADA, GRACE);
+
+    // Nobody counted and nothing answered: the question would otherwise be up
+    // with nobody left to wait for, which would reveal it the instant it went
+    // up. The room's own clock is what ends this one.
+    expect(playersCounted(asked, [ADA, GRACE])).toBe(0);
+    expect(advancing(asked).phase).toBe('reveal');
+  });
+
+  it('ends the question on the answer of the one player who came back to it', () => {
+    const asked = gameWith(ADA, GRACE);
+    const oneBack = answeringWhileAway(asked, ADA, rightAnswerTo(asked), [ADA, GRACE]);
+
+    // The other end of the same room: answering counts Ada back in, and she is
+    // then the whole of who the question is waiting for — which is exactly what
+    // the television is saying while she does it (see `watching.test.ts`).
+    expect(playersCounted(oneBack, [ADA, GRACE])).toBe(1);
+    expect(answersIn(oneBack)).toBe(1);
+    expect(oneBack.phase).toBe('reveal');
+    expect(scoreOf(oneBack, ADA)).toBe(100);
+  });
+
+  it('is waited for when the room could not say who is away at all', () => {
+    const asked = gameWith(ADA, GRACE);
+
+    // No away list is a room that did not say, which is every room dealt its
+    // question by a deployment older than the field: it waits for everybody,
+    // exactly as it did before there was one.
+    expect(answering(asked, ADA, rightAnswerTo(asked)).phase).toBe('question');
   });
 });
 

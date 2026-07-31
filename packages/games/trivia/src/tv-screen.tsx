@@ -80,12 +80,37 @@ function VerdictRow({ verdict }: { readonly verdict: PlayerVerdict }) {
   );
 }
 
+/**
+ * The Status Dot beside a scoreboard name: Boardwalk green while the room is
+ * hearing from that phone, muted once it has gone quiet.
+ *
+ * The same badge the pairing roster wears on its seats, because presence is
+ * news wherever a player is drawn (docs/CONTEXT.md, Status Dot) — and here it
+ * is also the answer to a question the scoreboard raises by itself: a player
+ * whose score has stopped moving is either losing or away, and the room can
+ * only tell from the dot.
+ *
+ * The dot alone: the handoff specifies presence as the dot and nothing else,
+ * and the treatments the TV's seats add around it do not carry here. A seat
+ * dims the avatar circle and mutes a nickname set in ink on the screen color;
+ * this name is set on the player's own color, where muting the ink would leave
+ * text on a fill it was never checked against and dimming the pill would take
+ * the player's color down with it — the one thing on the row that says who it
+ * belongs to.
+ */
+function StatusDot({ away }: { readonly away: boolean }) {
+  return <View style={[styles.statusDot, away && styles.statusDotAway]} />;
+}
+
 function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
   return (
     <View style={styles.scoreboard}>
       {rows.map((row) => (
         <View key={row.playerId} style={styles.scoreRow}>
-          <NamePill nickname={row.nickname} color={row.color} />
+          <View style={styles.scoreName}>
+            <StatusDot away={row.away} />
+            <NamePill nickname={row.nickname} color={row.color} />
+          </View>
           <Text style={styles.score}>{row.score}</Text>
         </View>
       ))}
@@ -388,6 +413,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     justifyContent: 'space-between',
+  },
+  // The dot and the name travel together, so the row's `space-between` puts one
+  // group against the score rather than spreading three things across the row.
+  scoreName: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  // Boardwalk's online dot at the size the TV's pairing seats draw it: eighteen
+  // across, with a 12px core inside the ink border.
+  statusDot: {
+    width: 18,
+    height: 18,
+    backgroundColor: colors.green,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.pill,
+  },
+  statusDotAway: {
+    backgroundColor: colors.mutedBorder,
   },
   namePill: {
     borderRadius: radius.pill,

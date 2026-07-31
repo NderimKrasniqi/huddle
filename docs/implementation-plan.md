@@ -774,7 +774,7 @@ ready for a real game night.
   `100 + round(100 × secondsRemaining / 20)`; e.g. correct with 15s left
   = 175, correct at 0s left = 100, wrong at any time = 0; flat mode unchanged
   at 100.
-- [ ] Away players in-game — AC: an away player is excluded from "3/5
+- [x] Away players in-game — AC: an away player is excluded from "3/5
   answered" denominators; their scoreboard row shows the away badge; a player
   who returns mid-question may answer that question if its timer is still
   running.
