@@ -822,6 +822,13 @@ runs without touching a dev tool.
   empty is the room code not having arrived yet — the QR card is empty in
   those frames too — not four holes.
 
+  **It is not dev-only — it ships.** A Release build (`expo run:ios
+  --configuration Release`, embedded bundle, no Metro) drew room `RJBI` as
+  `R J B _` on its first launch, QR fully drawn so the code had arrived. So
+  this reaches users, and a blank tile makes the room unjoinable from the
+  television. That removes the "wait and see whether it only happens in dev"
+  option and makes a mitigation urgent even ahead of the mechanism.
+
   Next: the mechanism is still unknown, so a fix still cannot be chosen. But
   the two escape routes previously ruled out for chasing a disproven cause —
   dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in another face —
