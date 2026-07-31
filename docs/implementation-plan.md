@@ -1048,12 +1048,203 @@ and two animations — one checkbox that could not be reviewed or committed as
 one thing. The four below are the same AC, in the order a screen has to
 satisfy them. Nothing was added or dropped.
 
-- [ ] Design fidelity — hub screens against the mock — AC: the hub screens
+- [x] Design fidelity — hub screens against the mock — AC: the hub screens
   (pairing, join, lobby ×3, carousel ×3) are spot-checked side-by-side against
   the Boardwalk mock in `docs/design/design-handoff.md`, on a simulator, with
   the discrepancies either fixed or written down as deliberate departures and
   why. A screen that was drawn from the handoff but never *compared* with it
   counts as unchecked.
+
+  Compared on 2026-07-31, on the Apple TV 4K (3rd generation) and iPhone 17
+  simulators against the cloud dev deployment. The frames are committed at
+  `tools/design-fidelity/`, with the device, build and scale in its README, so
+  the comparison is re-readable without a simulator. **Six of the eight screens
+  were driven by a real client** — the TV app opened its own rooms, and the
+  Controller typed its way through §2, §4, §5, §7 and §8 on the phone; the
+  players who had to already be in the room (a Host for a player's-eye §4/§8,
+  a second seat to enable the start control) were **seeded** with
+  `players:joinRoom` from the CLI. The §3 TV lobby and the §5 phone roster could
+  not be driven or seeded, for the reason below: they are not built.
+
+  **What was compared.** Every measurement the handoff writes down for these
+  eight sections — sizes, weights, colors, spacing, borders, radii, shadow
+  depths, tilts and copy — read off the rendered frame where it is a pixel and
+  off the `StyleSheet.create` block where it is plainly in the source. The
+  pairing screen and the join screen come back clean at that standard: the
+  96px gap between the code group and the QR card, the 148×176 tiles on a 166px
+  pitch, the 196px QR inside its 252px card, the 72px dashed seats, the 64×80
+  phone cells on a 76px pitch, and the accent order cobalt/tangerine/punch/green
+  all measure what the handoff asks for.
+
+  **Fixed, and each traceable to a line of the handoff.**
+  - §7's primary button was `colors.green`; the handoff says "Primary cobalt
+    button". The override is gone and the button is the same cobalt as §2's
+    Join, which is what makes them one control in two places. (The label is
+    still "Start <Game>" rather than the handoff's "Select <Game>" — see the
+    departures.)
+  - §7's selected-game block was a title and a position and nothing else; the
+    handoff's is "title + meta". It now carries the meta, from
+    `browsedGameMeta` — the same three facts the §6 chips draw, read off
+    `GameMetadata` so the phone and the television describe one game the same
+    way, and a new game teaches both by declaring its own metadata. Only the
+    *facts* are shared, though: the phrasing around them (`<min>–<max>
+    players`, `~<n> min`) is spelled out in `game-controls.ts` and again in the
+    TV's chips, so *rewording* the summary is still two edits. Extracting the
+    phrasing was out of scope for a fidelity pass.
+  - §8's "Now viewing <Game>" was a bare bold line. The handoff draws it as a
+    status card with the green dot, under a caption ("Your phone becomes the
+    controller the moment the game starts") that was missing altogether. Both
+    are now there, on the same Boardwalk surface the lobby's own status card
+    uses.
+
+  **Written down as departures, with the reason.**
+  - **§3 TV — Lobby does not exist**, and this is the largest single gap
+    between the mock and the product. It is the decision the user made in the
+    synced-carousel task above — the focused card is 520px of a 720px stage, so
+    the carousel and a roster of 216×264 player cards cannot share a screen —
+    and the television therefore goes pairing → carousel at the first join. Two
+    consequences are worth naming here rather than leaving implied: the §1
+    footer's *filled* seats are only ever seen for the round trip between a
+    join landing and the carousel replacing the screen, so the colored seats
+    and the four-second "JUST JOINED!" that Phase 2 built are on a screen a
+    party barely sees; and the HOST pill, the JUST JOINED! pill and the away
+    pill that three earlier tasks each deferred to "the §3 lobby card" are
+    deferred to a screen that is not coming. Whether they belong on the
+    carousel's footer instead is a design decision this pass did not have the
+    authority to take; it is carried into the open task below rather than left
+    in this one.
+  - **§5 Phone — Host lobby is a section, not a screen.** The handoff's roster
+    rows (40px avatar, HOST pill / online dot / pink NEW! pill), its "Your room"
+    heading, its "<n> players in — you can start anytime" footer and its
+    "Choose a game →" button are all absent; the Host gets §4's screen with the
+    HOST pill in the header and §7's picker underneath. The picker and the start
+    control landed in Phase 3 against §7, and nothing has ever built the roster.
+    A phone roster is not a fidelity fix — it is a screen — so it is recorded
+    here rather than smuggled into this pass, and carried into the open task
+    below.
+  - **§7's mini key art** is still not drawn, and the arrows still flank the
+    title rather than sitting under a card. The handoff pins no size for a mini
+    key art, so drawing one means inventing a measurement the mock does not
+    give, which is the exact thing this task exists to catch. The meta added
+    above wraps to two lines in the 178pt the middle column has between two
+    76px buttons, which is the same width pressure that put the handoff's card
+    *above* the arrow row; restructuring the picker that way is the change this
+    departure is really deferring.
+  - **§8's heading and 88px avatar.** A waiting player keeps §4's "You're in,
+    <Name>!" and its 128px avatar rather than gaining "<Host> is choosing…" and
+    an 88px one, because §4 and §8 are one screen here and a screen cannot have
+    two headings. The result is two green-dot status cards stacked — the room's
+    "Eyes on the TV — <Host> is about to pick a game" and the carousel's "Now
+    viewing <Game>" — which reads acceptably and is visible in
+    `07-phone-player-lobby-after.png` for anyone who disagrees.
+  - **Both phone screens are vertically centred** in `PhoneScreen`, which on a
+    402pt iPhone leaves the join form floating with ~200pt of canvas above it.
+    The handoff gives no vertical rhythm for a phone screen, so there is no line
+    to trace a change to; it is named because it is the first thing the eye
+    notices in `02-phone-join-empty.png` and the next person should not have to
+    re-notice it.
+
+  **Found, measured, and left open — §6's active page dot is camouflaged by the
+  focused card's shadow.** Every number below is read off `04-tv-carousel.png`
+  at ×3, so it is checkable without a simulator — with one exception, marked
+  where it falls: the browsing line's 28pt box is React Native's default for
+  `fontSize: 22` with no explicit `lineHeight`, inferred rather than measured.
+  On the 720pt stage the card's
+  ink border runs y=110→630 and its 10px cobalt offset shadow to 640; the
+  page-dot row runs y=628→640. They overlap by 12pt.
+
+  *What is actually wrong.* Not occlusion — `carouselFooter` is a later sibling
+  than `carousel` in `apps/tv/app/index.tsx`, so the dots paint **on top** of
+  the shadow, and the frame shows it: at design y=634 the ink runs are
+  x=624–627 and x=653–656 with cobalt between them, which is the dot's own
+  border over the shadow. The defect is **camouflage**. The active dot is a
+  cobalt pill on a cobalt shadow, so its fill vanishes into the shadow and only
+  its ink border survives — the indicator reads as a hollow ink rectangle
+  rather than as a filled pill.
+
+  *The stage is over-subscribed by 14pt, not exactly full.* header (112) + card
+  (520) + shadow (10) + dots (12) + gap (16) + browsing line (28) + footer (36)
+  = **734**. The header is 112, not 98: the room chip's ink box measures
+  y=28→84, so 56pt tall, and `carouselHeader` adds `paddingVertical: 28` either
+  side. (98 is what the header would be if the *logo* set its height; the chip
+  is taller, so it does not. The card's ink border starting at y=110 confirms
+  112 independently.) The 14 splits 2 above the card and 12 below.
+
+  *Where the 14pt lives — and it is not a pinned number.* All of it is header
+  chrome the handoff never measures: the chip's 8pt vertical padding, its 4px
+  ink borders, and a `paddingVertical` of 28 that is *already* a departure from
+  §1's pinned 36. No §6 number has to give way to close this, so it is a
+  fidelity fix in unpinned space, not a design decision — the earlier reading
+  of this arithmetic was wrong on that point.
+
+  *Why it is still open: the centring tax.* The card is centred in a `flex: 1`
+  row spanning `[H, 628]`, so card top = H/2 + 54 and shadow bottom = H/2 +
+  584. Every point freed anywhere buys half a point of clearance — which is why
+  the two nudges that were tried (`paddingBottom: shadowDepth.tvHero` on the
+  row, `paddingTop: shadowDepth.tvHero` on the footer) each moved the card up
+  5pt and left 7pt of overlap. Zero clearance needs H ≤ 88, i.e. 24pt from the
+  header: `paddingVertical` 28 → 16, which moves *further* from §1's 36 to buy
+  a shadow edge that exactly touches the dots. Comfortable clearance costs 48.
+  Paying 24pt of the header's breathing room for 0pt of daylight is a worse
+  screen, so it was not taken.
+
+  *The fix that does buy daylight, for whoever picks this up.* Put the dots and
+  the browsing line on one row instead of stacking them — §6's "page dots +
+  '<Host> is browsing on their phone'" permits it, and it costs the header
+  nothing. `carouselFooter` becomes `flexDirection: 'row'` and its height goes
+  92 → 64 (28 + the 36 padding), the row grows to `[112, 656]`, the card lands
+  at 124→644 with its shadow to 654, and the dots sit at 664: **10pt of
+  daylight**, with every pinned §6 number intact. It is two properties, not
+  one: `carouselFooter` centres its children today only because it is a column
+  with `alignItems: 'center'`, and `styles.screen` stretches it across the full
+  1280pt — so turning it into a row hands that property the cross axis and
+  packs the dots and the line against the left edge unless
+  `justifyContent: 'center'` goes on with it. Every vertical number above
+  survives that; only the horizontal consequence is new. And it is a
+  TV edit, and this pass rebuilt no tvOS binary (see "Not carried") — shipping
+  an unverified layout change to the one screen the party stares at is not
+  worth saving the next person a build. It is carried into the open task below.
+
+  *Not the fix:* recolouring the card's shadow or the active dot would kill the
+  camouflage outright, since the dot paints on top. But §6 pins both — "10px
+  cobalt offset shadow" and "active = cobalt pill with ink border" — so *that*
+  one really would be a decision about which of the mock's numbers gives way.
+
+  **One inaccuracy corrected in passing**: the color picker's comment claimed
+  ten 44px swatches "wrap into two rows of five". They wrap 6 + 4 on an iPhone
+  17 — how many fit is the phone's width, not a number the code decides — and
+  the comment now says so. `04-tv-carousel.png` also shows the focused card
+  drawing its title twice, once in the key art and once in the info block; that
+  is what the handoff asks for (Key Art *is* a color block with its Bungee title
+  on it, and §6 gives the info block its own 34px title), so it is left as
+  drawn.
+
+  **Not carried.** Nothing here was checked on a television or a phone —
+  simulators only, at ×3 in both cases, so the ×1.5-for-1080p path the Android
+  toolchain task measured is untested by this pass. The TV app was never
+  rebuilt: every change this task made is in the Controller, and the two TV
+  edits that were tried were reverted, so the tvOS binary that produced
+  `01-tv-pairing.png` and `04-tv-carousel.png` is the one at HEAD. `StickerSurface`
+  was not touched, so the pale-seam fix is undisturbed by construction rather
+  than by re-measurement. The siblings below own what this pass did not look
+  at: the three departures it could not close (next task), then trivia's
+  screens, TV legibility, and the two animations.
+- [ ] Design fidelity — close the three hub departures this pass recorded — AC:
+  the three gaps the comparison above measured and left open are each either
+  built or closed out with a decision recorded against a handoff line, so they
+  stop living only in the prose of a finished task. They are: (a) §6's page-dot
+  collision on the TV carousel — the one-edit footer fix is written out above
+  (`carouselFooter` to `flexDirection: 'row'`, which buys 10pt of daylight
+  without touching a pinned §6 number), and it needs a tvOS build and a capture
+  beside `04-tv-carousel.png` because this is the screen the party looks at;
+  (b) the HOST pill, the JUST JOINED! pill and the away pill, which three
+  earlier tasks each deferred to the §3 TV lobby — a screen the synced-carousel
+  decision means is not coming, so they need a home on the carousel's footer or
+  an explicit decision that the television stops saying these things; (c) §5's
+  phone roster, which nothing has ever built — the Host currently gets §4's
+  screen, and either the roster rows land or the handoff section is marked as
+  dropped and why. Nothing here is a new feature; (a) is a nudge, (b) and (c)
+  are decisions with a small amount of drawing behind them.
 - [ ] Design fidelity — trivia screens on theme tokens only — AC: the trivia
   screens extend Boardwalk using only theme tokens from `packages/ui` — no
   literal colors, radii, border widths, shadow depths or font families at a

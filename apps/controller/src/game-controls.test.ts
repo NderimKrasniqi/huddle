@@ -2,7 +2,17 @@ import type { RosterSeatForGame } from '@huddle/game-core';
 import { GAME_REGISTRY } from '@huddle/game-registry';
 import { describe, expect, it } from 'vitest';
 
-import { backToLobbyLabel, gameToStart, startControl } from './game-controls';
+import {
+  backToLobbyLabel,
+  browsedGameMeta,
+  gameToStart,
+  NOW_VIEWING_CAPTION,
+  nowViewingLine,
+  startControl,
+} from './game-controls';
+
+/** The installed game these tests read their expectations off. */
+const installed = GAME_REGISTRY[0]!.metadata;
 
 function party(size: number): RosterSeatForGame[] {
   return Array.from({ length: size }, (_unused, index) => ({
@@ -65,6 +75,40 @@ describe('the Host’s start control', () => {
     // The same count `startGame` uses — excluding away players is Phase 4's
     // "Away players in-game", and the two must not disagree before then.
     expect(startControl(withOneAway, 0).enabled).toBe(true);
+  });
+});
+
+describe('the meta beside a browsed game’s title', () => {
+  it('is the three facts the TV draws as chips, in the TV’s own wording', () => {
+    // The handoff gives the §6 chips and the §7 card the same three facts, so
+    // the phone and the television describe one game the same way. Read off
+    // `GameMetadata` rather than written down here, for the reason the start
+    // control is: naming a game on a phone is what the interface exists to
+    // avoid.
+    expect(browsedGameMeta(installed)).toBe(
+      `${installed.playerRange.min}–${installed.playerRange.max} players · ` +
+        `~${installed.estimatedMinutes} min · ${installed.category}`,
+    );
+  });
+
+  it('separates the three with the same middle dot every time', () => {
+    // One separator, so a game with a longer category never reads as a
+    // different list from the one above it.
+    expect(browsedGameMeta(installed).split(' · ')).toHaveLength(3);
+  });
+});
+
+describe('what a player who is not running the room is told', () => {
+  it('names the card the room is looking at', () => {
+    expect(nowViewingLine(installed)).toBe(`Now viewing ${installed.title}`);
+  });
+
+  it('says what their phone is about to become (handoff §8)', () => {
+    // The handoff's own caption, word for word: it is the whole answer to
+    // "there is nothing to press here", which is what this screen looks like.
+    expect(NOW_VIEWING_CAPTION).toBe(
+      'Your phone becomes the controller the moment the game starts',
+    );
   });
 });
 

@@ -16,6 +16,46 @@ export function gameToStart(browsingAt: number): GameMetadata | undefined {
   return carouselWindow(browsingAt)?.focused.metadata;
 }
 
+/**
+ * The meta under a browsed game's title on the Host's picker
+ * (docs/design/design-handoff.md §7, "Selected-game card (mini key art + title
+ * + meta)").
+ *
+ * It is the same three facts the §6 carousel draws as chips, read off
+ * `GameMetadata` rather than written down here, so the phone and the television
+ * describe one game and a new game teaches both at once by declaring its own
+ * metadata. Only the *facts* are shared, though: the phrasing around them
+ * (`<min>–<max> players`, `~<n> min`) is spelled out here and again in the TV's
+ * chips, so rewording the summary is still two edits.
+ */
+export function browsedGameMeta(metadata: GameMetadata): string {
+  const { playerRange, estimatedMinutes, category } = metadata;
+
+  return [
+    `${playerRange.min}–${playerRange.max} players`,
+    `~${estimatedMinutes} min`,
+    category,
+  ].join(' · ');
+}
+
+/**
+ * The caption under §8's status card — the handoff's own copy, and the whole
+ * answer to "there is nothing to press here", which is what that screen looks
+ * like. It says nothing about which game is up, so it is the same sentence on
+ * every card and lives here rather than behind a game.
+ */
+export const NOW_VIEWING_CAPTION =
+  'Your phone becomes the controller the moment the game starts';
+
+/**
+ * Which card a phone that is not running the room is watching
+ * (docs/design/design-handoff.md §8) — the one half of that screen that does
+ * depend on the game.
+ */
+export function nowViewingLine(metadata: GameMetadata): string {
+  return `Now viewing ${metadata.title}`;
+}
+
 /** What the Host's start control says and whether it can be pressed. */
 export type StartControl = {
   readonly label: string;

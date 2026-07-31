@@ -46,7 +46,14 @@ import {
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
-import { backToLobbyLabel, gameToStart, startControl } from '../src/game-controls';
+import {
+  backToLobbyLabel,
+  browsedGameMeta,
+  gameToStart,
+  NOW_VIEWING_CAPTION,
+  nowViewingLine,
+  startControl,
+} from '../src/game-controls';
 import { lifecycleFailureMessage } from '../src/game-rejection';
 import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { joinFailureMessage } from '../src/join-rejection';
@@ -564,7 +571,8 @@ function HostGamePicker({
         <RoundButton label="‹" enabled={back !== undefined} onPress={() => void browse(back)} />
         <View style={styles.pickedGame}>
           <Text style={styles.pickedTitle}>{browsing.focused.metadata.title}</Text>
-          <Text style={styles.pickedMeta}>
+          <Text style={styles.pickedMeta}>{browsedGameMeta(browsing.focused.metadata)}</Text>
+          <Text style={styles.pickedPosition}>
             {browsing.index + 1} / {browsing.total}
           </Text>
         </View>
@@ -702,11 +710,29 @@ function SettingOption({
   );
 }
 
-/** Phone — Player waiting (handoff §8): the card the room is looking at. */
+/**
+ * Phone — Player waiting (handoff §8): the card the room is looking at, on the
+ * status card the handoff draws it on, and the line saying what this phone is
+ * about to become.
+ *
+ * It is the same Boardwalk surface as the lobby's own status card above it —
+ * white, green dot, one line — because it is the same kind of statement: the
+ * room is doing something and this phone is watching. The handoff draws §8 as a
+ * screen of its own; here it is the tail of §4, for the reason the Host's
+ * picker is (see `LobbyGameControls`).
+ */
 function NowViewing({ browsing }: { readonly browsing: CarouselWindow }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.nowViewing}>Now viewing {browsing.focused.metadata.title}</Text>
+      <StickerSurface
+        depth={shadowDepth.phoneCard}
+        style={styles.statusCard}
+        wrapperStyle={styles.stretch}
+      >
+        <View style={styles.statusDot} />
+        <Text style={styles.statusText}>{nowViewingLine(browsing.focused.metadata)}</Text>
+      </StickerSurface>
+      <Text style={styles.nowViewingCaption}>{NOW_VIEWING_CAPTION}</Text>
     </View>
   );
 }
@@ -804,7 +830,7 @@ function StartGameControl({
         {({ pressed }) => (
           <StickerSurface
             depth={shadowDepth.phoneCard}
-            style={[styles.button, styles.startButton, pressed && styles.buttonPressed]}
+            style={[styles.button, pressed && styles.buttonPressed]}
             wrapperStyle={[styles.stretch, !control.enabled && styles.buttonUnavailable]}
           >
             <Text style={styles.buttonLabel}>
@@ -1450,8 +1476,11 @@ const styles = StyleSheet.create({
     lineHeight: 46,
   },
 
-  // Ten 44px circles (the handoff's size) wrapped into two rows of five: a row
-  // of ten would run 500px wide before any gap, on a screen that is 390.
+  // Ten 44px circles (the handoff's size), wrapped: a row of ten runs 500px
+  // before any gap, on a phone that is 390–430 wide. How many land on the first
+  // row is the phone's business and not a number written down here — an iPhone
+  // 17 takes six, a 390pt phone five — which is why they are centred rather
+  // than laid out in a grid a narrower screen would break.
   swatches: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1525,7 +1554,20 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     textAlign: 'center',
   },
+  // The handoff's "title + meta" on the selected-game card (§7): the same three
+  // facts the TV's carousel chips carry, on one line because a phone's card is
+  // as wide as a thumb and three chips would wrap into a paragraph.
   pickedMeta: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  // Where in the list the card is — the handoff puts this between the arrows
+  // ("Prev/next round buttons 76px … with '2 / 3' between") but pins no weight
+  // for it, so it keeps the one it has always had rather than gaining emphasis
+  // this pass has no line to trace.
+  pickedPosition: {
     color: colors.mutedText,
     fontFamily: fontFamily.bodyMedium,
     fontSize: 15,
@@ -1537,12 +1579,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
   },
-  // What a player who is not running the room is told about the carousel: the
-  // card the Host is on, which is the card on the television.
-  nowViewing: {
-    color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
+  // The line under §8's status card. The picker's hint sizing, because it is
+  // the same kind of aside — something true about the screen rather than
+  // something on it.
+  nowViewingCaption: {
+    alignSelf: 'stretch',
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
     textAlign: 'center',
   },
   // The settings group sits between the picker and the start button, and is
@@ -1592,9 +1636,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
   },
 
-  startButton: {
-    backgroundColor: colors.green,
-  },
   // Boardwalk's "this ends something" surface, and the only punch button on a
   // phone screen — it is meant to be found, not stumbled into.
   backToLobbyButton: {
