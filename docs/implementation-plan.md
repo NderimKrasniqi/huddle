@@ -784,19 +784,113 @@ ready for a real game night.
 ## Phase 5 — Party-ready
 Goal: the app matches the Boardwalk design on real hardware; a full game night
 runs without touching a dev tool.
-- [ ] A Room Code tile sometimes draws empty on tvOS — AC: reproduce a blank
+- [x] A Room Code tile sometimes draws empty on tvOS — AC: reproduce a blank
   tile deliberately, then prove the fix by an A/B of the identical crop rather
   than by one screenshot that looks right.
 
-  **A mitigation landed on 2026-07-31; the AC above is not met and this task
-  stays open.** `ROOM_CODE_ALPHABET` was dropped to A–Z without I and renamed
+  **Found and fixed on 2026-07-31. Read this block first: everything below it is
+  the trail that led here, and every line of it saying the mechanism is unknown
+  is superseded by this one.**
+
+  **The mechanism, and it is not really about the letter I.** React Native
+  measures an *empty* `<Text>` by substituting a placeholder string, and the
+  placeholder is the single character **"I"** —
+  `ensurePlaceholderIfEmpty_DO_NOT_USE` in ReactCommon's
+  `attributedstring/PlaceholderAttributedString.h`. `TextLayoutManager::measure`
+  (`textlayoutmanager/platform/ios/.../TextLayoutManager.mm`) measures that
+  placeholder, zeroes the width of the result because the real string was empty,
+  and then stores the zeroed result in the measure cache **under the
+  placeholder's own key** — the attributed string (its text and the attributes
+  that affect layout), the paragraph attributes, and the layout constraints. So
+  every empty tile files "this text reads I and is 0pt wide" in the cache, and an
+  I arriving afterwards under those same three gets a cache hit on it, lays out
+  0pt wide, and paints nothing. Every earlier
+  observation falls straight out of that: only I; only when the letter was not in
+  the first committed render (nothing else files the poisoned entry); surviving a
+  remount, since the cache belongs to the layout manager rather than to any node;
+  and shipping in Release.
+
+  Measured rather than argued. With `onLayout` and `onTextLayout` on the tile
+  letters, a blank tile reports a *view* box of `0.00 × 96.00` while its own text
+  line reports `53.24 / 96.00`: the glyph was laid out, and the box it had to
+  live in was zero. A character sweep on the same after-mount path then separates
+  the string from the glyph — `"I"` blanks, while `"i"` (36.50pt, the same width
+  as the failing `"I"` at that size), `"1"`, `"l"`, `"."`, `"II"`, `"AI"`, `"IA"`
+  and `"I "` all draw. It is the string "I", exactly and alone, because that is
+  the placeholder and not because it is a letter.
+
+  **The fix** is `codeLetterBox` (`packages/ui/src/code-tile.ts`), spread into
+  the TV tile's letter style: `alignSelf: 'stretch'` with `textAlign: 'center'`,
+  so a letter's box is its tile's and never its glyph's. A measured width that
+  comes back wrong then decides nothing. It is deliberately *not* the "render the
+  tiles only once the code is known" gate the previous note pointed at: that gate
+  would have paid for correctness with the no-reflow decision, and it would only
+  hold for as long as nothing else on the surface files a poisoned "I". The
+  comment about drawing the tiles before the code arrives therefore stands
+  unchanged, and is now explained rather than merely asserted.
+
+  **The A/B the AC asks for.** `tools/blank-tile-repro.patch` is the
+  deterministic repro as a patch (pinned `RIJI`, delivered after mount);
+  `tools/blank-tile-watch.py --keep LABEL` saves the *same* fixed crop of the
+  tile row on every launch. Same instrument, same repro, same rectangle, eight
+  launches either side of the one-line change:
+
+  | | tile 0 `R` | tile 1 `I` | tile 2 `J` | tile 3 `I` |
+  |---|---|---|---|---|
+  | before, 900ms delivery (4 runs) | 17.45% | **4.88%** | 13.68% | **5.49%** |
+  | before, 60ms delivery (4 runs) | 17.45% | **4.88%** | 13.68% | **5.49%** |
+  | after, 900ms delivery (4 runs) | 17.45% | 13.68% | 13.68% | 14.32% |
+  | after, 60ms delivery (4 runs) | 17.45% | 13.68% | 13.68% | 14.32% |
+
+  The crops themselves are committed at `tools/blank-tile-ab/`, so the A/B is
+  readable by anyone without a tvOS simulator; the tool's own output directory
+  stays ignored.
+
+  8/8 blank before, 0/8 after, at both delivery timings — the same 8/8 and 6/6
+  the repro used to give. An empty tile keeps only its border, which is the
+  ~5% reading; the I's ink is the ~14%. That `R` and `J` hold to the same two
+  numbers across all sixteen runs is the other half of the check: the fix moved
+  nothing that was already drawing. Three further launches on the real product
+  path (server-dealt code, `BOAD` among them) drew all four.
+
+  **It did not cost the reflow the old comment was protecting.** The tiles are
+  still drawn empty before the code arrives, so there is nothing to reflow, and
+  the instrument now checks that rather than trusting it: on every run where a
+  pre-code frame was caught it reports `row held` — the four tile boxes are at
+  identical pixel coordinates before the code lands and after.
+
+  **Still open, and narrowly.** The fault is React Native's, not Huddle's, and
+  it is fixed here only where it was seen: any other `<Text>` in either app that
+  goes from empty to exactly "I" in the same metrics and constraints would blank
+  the same way. The Controller's Join Screen cells render *no* `<Text>` at all
+  while a cell is empty, so they never file the poisoned entry — read off
+  `apps/controller/app/index.tsx`, not observed on a phone. They carry
+  `codeLetterBox` anyway, so the rule holds wherever a Room Code letter is drawn
+  rather than in one app by design and the other by accident; that it draws the
+  same pixels is measured on the TV (the `R` and `J` tiles hold their ink to
+  0.01% across all sixteen A/B runs) and inferred on the phone, whose cells are
+  the same construction with room to spare — a 58px content box for a glyph that
+  is at most ~31px at that size. The Controller is not installed on a simulator
+  here and was not rebuilt for it. Nothing was reported upstream. A code minted before PR #8 was not resurrected to watch it draw
+  (nothing can mint an I any more), but such a code is exactly the pinned repro:
+  an I-holding code delivered after mount, which now draws 8/8. Whether the
+  minting alphabet should take I back now that the tile is fixed is a separate
+  decision and was deliberately left alone.
+
+  **A mitigation landed on 2026-07-31 (superseded above — it is no longer the
+  only thing standing between a room and a blank tile).** `ROOM_CODE_ALPHABET`
+  was dropped to A–Z without I and renamed
   `ROOM_CODE_MINT_ALPHABET` (`packages/game-core/src/room-code.ts`), so no
   newly minted code can contain the failing glyph. What it does *not* buy: the
   rendering fault is untouched and its mechanism still unknown, so a code
   minted before the change still holds an I and its tile still blanks, and the
   next letter to hit the same fault would not be caught by this. It is a
   narrower alphabet, not a fix, and the A/B the AC asks for is still owed by
-  whoever finds the mechanism.
+  whoever finds the mechanism. (All of that was true when it was written and
+  the last two sentences are now spent: the mechanism is at the top of this
+  task, an I delivered after mount draws, and there is no "next letter" — the
+  fault was never about the alphabet, only ever about the one string React
+  Native measures empty text with.)
 
   Reading a code stayed at the full A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`, which
   is what the join screen's `codeEntry` filters by) on purpose: rooms minted
@@ -888,7 +982,11 @@ runs without touching a dev tool.
   The unexplored lead on the fault itself is rendering the tiles only once the
   code is known, so the letter is present in the first commit, which the
   current "draw empty tiles so the screen does not reflow" comment deliberately
-  rules out.
+  rules out. (Superseded: the mechanism was found the same day and is at the
+  top of this task. The lead was sound about *why* — the letter has to miss the
+  poisoned cache entry — and was not taken, because taking the letter's width
+  from its tile fixes it without spending the reflow decision. Setting the
+  tiles in another face would never have worked: the face is not the variable.)
 
   Seen three times on the tvOS simulator on 2026-07-30, the first time the
   pairing screen had been run since the Boardwalk work: room code `OVAI` drew

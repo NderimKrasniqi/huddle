@@ -14,8 +14,10 @@ working must add it here.
   encoded in its QR deep link (`huddle://join/<code>`). Minted server-side by
   `createRoom`, which redraws until the code is held by no live room; an
   expired room's code returns to the pool. It is minted from A–Z *without I*
-  (`ROOM_CODE_MINT_ALPHABET`) — a mitigation for a tvOS tile that draws an I
-  blank, not a fix; the bug is open in the plan. A code may still be *read* as
+  (`ROOM_CODE_MINT_ALPHABET`) — a mitigation for a tvOS tile that drew an I
+  blank, which has outlived the bug: the tile itself is fixed (Code Letter Box),
+  so the narrower alphabet is now a spare belt rather than the only one, and
+  taking I back is its own decision. A code may still be *read* as
   any of A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`), because rooms minted before the I
   came out are still live and still have to be typeable off a television.
 - **Join Link** — the `huddle://join/<code>` deep link that puts a phone into a
@@ -430,6 +432,16 @@ working must add it here.
   blurred (`Npx Npx 0 <color>`), ink by default and an accent color for
   highlights. Always produced by `offsetShadow()` in `packages/ui`; never
   `elevation` and never a blur.
+- **Code Letter Box** — Boardwalk's rule that a Room Code letter takes its box
+  from its tile and never from its own glyph (`codeLetterBox` in `packages/ui`:
+  `alignSelf: 'stretch'` with `textAlign: 'center'`). The tiles are fixed cells
+  with one centred letter, so measuring the glyph was always the longer route to
+  the same pixels — and on tvOS it was a broken one. React Native measures an
+  empty `<Text>` by substituting the placeholder string "I", zeroes that width
+  because the string was empty, and caches the result under the *placeholder's*
+  key — the attributed string, the paragraph attributes and the layout
+  constraints — so a real I arriving later under all three was laid out 0pt wide
+  and painted nothing. That was the blank Room Code tile.
 - **Color tokens** — Boardwalk names its palette by role, and code uses those
   names, never a generic color word: `canvas`, `screen`, `surface`, `ink`,
   `mutedText`, `mutedBorder`, `cobalt`, `tangerine`, `punch`, `green`,

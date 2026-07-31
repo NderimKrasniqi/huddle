@@ -8,6 +8,7 @@ import {
 import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/game-registry';
 import {
   borderWidth,
+  codeLetterBox,
   codeLetterColor,
   codeTileTilt,
   colors,
@@ -404,6 +405,10 @@ function UnknownGameStage({ gameId }: { readonly gameId: string }) {
  * One tile per letter, in Boardwalk's per-position color and tilt. The tiles
  * are drawn before the code arrives so the screen does not reflow around it —
  * on a local backend the room opens well inside a couple of frames.
+ *
+ * Drawing them empty first is what used to blank an I on tvOS, and the decision
+ * survives the fix rather than being traded for it: the letter takes its box
+ * from the tile (`codeLetterBox`), so nothing here depends on measuring a glyph.
  */
 function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   return (
@@ -959,6 +964,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
   },
   tileLetter: {
+    // The letter fills its tile and is centred in it, rather than sizing itself
+    // to its own glyph — which is what keeps an I from vanishing on tvOS. See
+    // `codeLetterBox`; it carries the whole story.
+    ...codeLetterBox,
     fontFamily: fontFamily.display,
     fontSize: 88,
     // Bungee's line box is taller than its caps; pinning it keeps the letter

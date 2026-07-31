@@ -18,6 +18,7 @@ import {
 } from '@huddle/game-registry';
 import {
   borderWidth,
+  codeLetterBox,
   codeLetterColor,
   colors,
   fontFamily,
@@ -1289,6 +1290,13 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   tileLetter: {
+    // As on the TV's tiles, and for the same reason there: a Room Code letter
+    // takes its box from its cell, never from its own glyph. These cells cannot
+    // blank the way the TV's did — an empty one renders a caret or nothing at
+    // all, never an empty `<Text>`, so they never file the measurement that
+    // poisons an I — but the rule is the rule, and one of them keeping it by
+    // accident is not worth the difference.
+    ...codeLetterBox,
     fontFamily: fontFamily.display,
     fontSize: 36,
     // As on the TV's tiles: Bungee rides low in its own line box unless the

@@ -10,6 +10,21 @@ A Room Code tile is a white rounded card on the pairing screen. A drawn letter
 covers a few percent of the card in a saturated accent colour; a blank tile is
 white all the way across. We find the four cards by scanning for wide white
 runs on the tile row, then measure non-white coverage inside each.
+
+Usage:
+
+    blank-tile-watch.py [runs] [--keep LABEL]
+
+`--keep` is the A/B mode the task's AC asks for: every launch keeps the *same*
+fixed crop of the tile row — the same pixel rectangle before and after a fix,
+since the fix is not allowed to move the row — under `blank-watch/LABEL-NN.png`,
+whether or not the frame was judged blank. Run it either side of the change and
+compare the crops and the per-tile numbers, rather than trusting one screenshot
+that looks right.
+
+It also reports the tile boxes *before* the code arrives beside the boxes after,
+which is the no-reflow check: the tiles are drawn empty so the screen does not
+move when the code lands, and `pre==post` is that claim measured.
 """
 
 import subprocess
@@ -77,7 +92,14 @@ def ink_fraction(img, box):
     return ink / total if total else 0.0
 
 
-def one_launch(n):
+def row_crop(img):
+    """The tile row as a fixed rectangle — the same pixels in every frame."""
+    w, h = img.size
+    return img.crop((int(w * ROW_LEFT), int(h * ROW_TOP),
+                     int(w * ROW_RIGHT), int(h * ROW_BOTTOM)))
+
+
+def one_launch(n, keep=None):
     subprocess.run(["xcrun", "simctl", "terminate", TV_UDID, BUNDLE],
                    capture_output=True)
     time.sleep(1)
@@ -96,7 +118,7 @@ def one_launch(n):
     # tile reads empty. Wait for two consecutive readings to agree instead. A
     # genuinely blank tile is stable and still reported; a half-drawn frame is
     # not, and gets another look.
-    img, boxes, inks, last = None, [], [], None
+    img, boxes, inks, last, pre_boxes = None, [], [], None, None
     deadline = time.time() + 45
     while time.time() < deadline:
         time.sleep(2)
@@ -112,8 +134,12 @@ def one_launch(n):
         inks = [ink_fraction(img, b) for b in boxes]
         # All four empty is the room code not having arrived yet — the QR card
         # is empty in those frames too. That is a legitimate waiting state, not
-        # a hole, so keep waiting rather than reporting four blanks.
+        # a hole, so keep waiting rather than reporting four blanks. It is also
+        # the frame the no-reflow check wants: where the tiles sat before the
+        # code landed.
         if all(f < BLANK_BELOW for f in inks):
+            if pre_boxes is None:
+                pre_boxes = boxes
             last = None
             continue
         rounded = [round(f, 3) for f in inks]
@@ -128,22 +154,40 @@ def one_launch(n):
     blanks = [i for i, f in enumerate(inks) if f < BLANK_BELOW]
 
     pretty = " ".join(f"{f*100:5.2f}%" for f in inks)
+    reflow = ""
+    if pre_boxes is not None and len(boxes) == 4:
+        moved = [i for i in range(4) if pre_boxes[i] != boxes[i]]
+        reflow = "  row moved: " + str(moved) if moved else "  row held"
+    if keep is not None:
+        crop = OUT / f"{keep}-{n:02d}.png"
+        row_crop(img).save(crop)
+        pretty += f"  {crop.name}"
+
     if len(boxes) != 4:
         print(f"{n:3d}  tiles={len(boxes)} (not the pairing screen?)  {pretty}")
         shot.unlink(missing_ok=True)
         return False
     if blanks:
-        print(f"{n:3d}  *** BLANK TILE at {blanks} ***  {pretty}  KEPT {shot.name}")
+        print(f"{n:3d}  *** BLANK TILE at {blanks} ***  {pretty}{reflow}  KEPT {shot.name}")
         return True
-    print(f"{n:3d}  ok   {pretty}")
+    print(f"{n:3d}  ok   {pretty}{reflow}")
     shot.unlink(missing_ok=True)
     return False
 
 
 if __name__ == "__main__":
-    runs = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    args = sys.argv[1:]
+    keep = None
+    if "--keep" in args:
+        at = args.index("--keep")
+        if at + 1 >= len(args):
+            sys.exit("--keep needs a label: blank-tile-watch.py [runs] --keep before-900")
+        keep = args[at + 1]
+        args = args[:at] + args[at + 2:]
+    runs = int(args[0]) if args else 10
+
     caught = 0
     for n in range(1, runs + 1):
-        if one_launch(n):
+        if one_launch(n, keep=keep):
             caught += 1
     print(f"\n{runs} launches, {caught} with a blank tile.")
