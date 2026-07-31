@@ -1,0 +1,897 @@
+{
+  "id": "huddle-classics",
+  "title": "Huddle Classics",
+  "version": 1,
+  "questions": [
+    {
+      "text": "Which 1975 Steven Spielberg film made audiences afraid of the water?",
+      "options": ["Jaws", "Piranha", "Orca", "The Abyss"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who directed \"Pulp Fiction\"?",
+      "options": ["Martin Scorsese", "Quentin Tarantino", "Guy Ritchie", "Robert Rodriguez"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In \"The Matrix\", which colour pill does Neo swallow?",
+      "options": ["Blue", "Green", "Red", "Yellow"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which film won the first Academy Award for Best Animated Feature?",
+      "options": ["Monsters, Inc.", "Spirited Away", "Toy Story", "Shrek"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the fictional African nation in \"Black Panther\" called?",
+      "options": ["Sokovia", "Wakanda", "Zamunda", "Genovia"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which actor played Jack Dawson in \"Titanic\"?",
+      "options": ["Brad Pitt", "Matt Damon", "Leonardo DiCaprio", "Johnny Depp"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "\"Here's looking at you, kid\" is a line from which film?",
+      "options": ["Citizen Kane", "Gone with the Wind", "The Maltese Falcon", "Casablanca"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which studio made \"Toy Story\"?",
+      "options": ["Pixar", "DreamWorks", "Illumination", "Blue Sky"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who composed the score for the original \"Star Wars\"?",
+      "options": ["Hans Zimmer", "Ennio Morricone", "John Williams", "Danny Elfman"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In \"The Shining\", which word does Danny scrawl on the door?",
+      "options": ["MURDER", "DANGER", "ROSEBUD", "REDRUM"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which South Korean film won the Academy Award for Best Picture in 2020?",
+      "options": ["Parasite", "Oldboy", "Burning", "Train to Busan"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who directed \"Psycho\", \"Vertigo\" and \"The Birds\"?",
+      "options": ["Orson Welles", "Alfred Hitchcock", "Billy Wilder", "Fritz Lang"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In \"Back to the Future\", which car is turned into a time machine?",
+      "options": ["Ford Mustang", "Chevrolet Impala", "Pontiac Firebird", "DeLorean DMC-12"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which animated film follows a rat who dreams of becoming a chef?",
+      "options": ["Ratatouille", "Flushed Away", "Chicken Run", "Bee Movie"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who played Hannibal Lecter in \"The Silence of the Lambs\"?",
+      "options": ["Jeremy Irons", "Anthony Hopkins", "Michael Caine", "Ian McKellen"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which hobbit does Elijah Wood play in \"The Lord of the Rings\"?",
+      "options": ["Bilbo Baggins", "Samwise Gamgee", "Frodo Baggins", "Peregrin Took"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which film features a character called Tyler Durden?",
+      "options": ["Fight Club", "Se7en", "American Psycho", "Trainspotting"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In \"Jurassic Park\", what fills the gaps in the dinosaur DNA?",
+      "options": ["Lizard DNA", "Bird DNA", "Frog DNA", "Crocodile DNA"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "\"Run, Forrest, run!\" is a line from which 1994 film?",
+      "options": ["Rain Man", "Forrest Gump", "The Green Mile", "Big"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who directed the animated film \"Spirited Away\"?",
+      "options": ["Isao Takahata", "Makoto Shinkai", "Mamoru Hosoda", "Hayao Miyazaki"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which band recorded \"Bohemian Rhapsody\"?",
+      "options": ["Queen", "Led Zeppelin", "The Rolling Stones", "The Who"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many strings does a standard violin have?",
+      "options": ["Three", "Four", "Five", "Six"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which singer is known as the King of Pop?",
+      "options": ["Elvis Presley", "Prince", "Michael Jackson", "James Brown"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which instrument has 88 keys?",
+      "options": ["The organ", "The harpsichord", "The accordion", "The piano"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who wrote and recorded \"Like a Rolling Stone\"?",
+      "options": ["Neil Young", "Bob Dylan", "Bruce Springsteen", "Leonard Cohen"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which group won the 1974 Eurovision Song Contest with \"Waterloo\"?",
+      "options": ["Roxette", "Ace of Base", "ABBA", "a-ha"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does the musical marking \"forte\" instruct a player to do?",
+      "options": ["Play softly", "Play faster", "Play slower", "Play loudly"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which Beatles album cover shows the band on a zebra crossing?",
+      "options": ["Abbey Road", "Let It Be", "Revolver", "Rubber Soul"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who composed \"The Four Seasons\"?",
+      "options": [
+        "Johann Sebastian Bach",
+        "George Frideric Handel",
+        "Antonio Vivaldi",
+        "Wolfgang Amadeus Mozart"
+      ],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which rapper released \"The Marshall Mathers LP\"?",
+      "options": ["Jay-Z", "Nas", "Dr. Dre", "Eminem"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many lines does a musical staff have?",
+      "options": ["Five", "Four", "Six", "Seven"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which singer was born Stefani Germanotta?",
+      "options": ["Katy Perry", "Lady Gaga", "Sia", "Pink"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "\"Smells Like Teen Spirit\" was released by which band?",
+      "options": ["Pearl Jam", "Soundgarden", "Alice in Chains", "Nirvana"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Reggae music originated in which country?",
+      "options": ["Jamaica", "Cuba", "Trinidad and Tobago", "Barbados"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who composed the opera \"The Magic Flute\"?",
+      "options": [
+        "Giuseppe Verdi",
+        "Wolfgang Amadeus Mozart",
+        "Richard Wagner",
+        "Giacomo Puccini"
+      ],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which group did Beyoncé front before going solo?",
+      "options": ["TLC", "En Vogue", "Destiny's Child", "The Supremes"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which instrument is Yo-Yo Ma famous for playing?",
+      "options": ["The cello", "The violin", "The piano", "The flute"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which 1969 music festival was held on a farm in upstate New York?",
+      "options": ["Monterey Pop", "The Isle of Wight Festival", "Woodstock", "Altamont"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who sang \"Rolling in the Deep\"?",
+      "options": ["Amy Winehouse", "Adele", "Duffy", "Florence Welch"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many symphonies did Beethoven complete?",
+      "options": ["Five", "Seven", "Twelve", "Nine"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the chemical symbol for gold?",
+      "options": ["Au", "Ag", "Gd", "Go"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many bones are there in the adult human body?",
+      "options": ["198", "206", "230", "187"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which planet is known as the Red Planet?",
+      "options": ["Venus", "Jupiter", "Mars", "Mercury"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which gas do plants take in from the air to photosynthesise?",
+      "options": ["Oxygen", "Nitrogen", "Hydrogen", "Carbon dioxide"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the hardest naturally occurring substance on Earth?",
+      "options": ["Quartz", "Diamond", "Titanium", "Obsidian"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does DNA stand for?",
+      "options": [
+        "Dinucleic acid",
+        "Diribonucleic acid",
+        "Deoxyribonucleic acid",
+        "Deoxyribose nucleic anhydride"
+      ],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who published the theory of general relativity?",
+      "options": ["Isaac Newton", "Niels Bohr", "Max Planck", "Albert Einstein"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Roughly how fast does light travel in a vacuum?",
+      "options": [
+        "300,000 km per second",
+        "30,000 km per second",
+        "3,000 km per second",
+        "3 million km per second"
+      ],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which blood type is known as the universal donor?",
+      "options": ["AB positive", "A positive", "O negative", "B negative"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the largest organ of the human body?",
+      "options": ["The liver", "The lungs", "The brain", "The skin"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which element has atomic number 1?",
+      "options": ["Hydrogen", "Helium", "Carbon", "Oxygen"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which force keeps the planets in orbit around the Sun?",
+      "options": ["Magnetism", "Gravity", "Friction", "Air resistance"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many chambers does the human heart have?",
+      "options": ["Two", "Three", "Six", "Four"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "At sea level, at what temperature does water boil?",
+      "options": ["100°C", "90°C", "110°C", "80°C"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which gas makes up about 78% of the Earth's atmosphere?",
+      "options": ["Oxygen", "Nitrogen", "Argon", "Carbon dioxide"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the study of fossils called?",
+      "options": ["Archaeology", "Geology", "Palaeontology", "Anthropology"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which subatomic particle carries a negative charge?",
+      "options": ["The electron", "The proton", "The neutron", "The positron"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which part of a cell is described as its powerhouse?",
+      "options": ["The nucleus", "The ribosome", "The mitochondrion", "The Golgi apparatus"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which vitamin does skin make when it is exposed to sunlight?",
+      "options": ["Vitamin C", "Vitamin D", "Vitamin A", "Vitamin B12"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Roughly how long does sunlight take to reach the Earth?",
+      "options": ["About 8 seconds", "About 8 hours", "About 80 minutes", "About 8 minutes"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which year did the Berlin Wall fall?",
+      "options": ["1989", "1987", "1991", "1993"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who was the first person to walk on the Moon?",
+      "options": ["Buzz Aldrin", "Neil Armstrong", "Yuri Gagarin", "Michael Collins"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which empire built Machu Picchu?",
+      "options": ["The Aztecs", "The Maya", "The Inca", "The Olmec"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which year did the Titanic sink?",
+      "options": ["1905", "1918", "1920", "1912"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who was the first President of the United States?",
+      "options": ["Thomas Jefferson", "George Washington", "John Adams", "Benjamin Franklin"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which civilisation built the pyramids at Giza?",
+      "options": ["The Greeks", "The Romans", "The Egyptians", "The Persians"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which century did the French Revolution begin?",
+      "options": ["The 16th", "The 17th", "The 19th", "The 18th"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who delivered the \"I Have a Dream\" speech in 1963?",
+      "options": [
+        "Martin Luther King Jr.",
+        "Malcolm X",
+        "Frederick Douglass",
+        "Thurgood Marshall"
+      ],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which war was ended by the Treaty of Versailles?",
+      "options": [
+        "The Second World War",
+        "The Crimean War",
+        "The First World War",
+        "The Franco-Prussian War"
+      ],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which British monarch reigned the longest?",
+      "options": ["Victoria", "George III", "Henry VIII", "Elizabeth II"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which country gave the Statue of Liberty to the United States?",
+      "options": ["France", "Britain", "Spain", "Italy"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Nelson Mandela became president of which country?",
+      "options": ["Kenya", "South Africa", "Nigeria", "Zimbabwe"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which year did the Second World War end?",
+      "options": ["1943", "1944", "1946", "1945"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Whose expedition was the first to sail all the way around the world?",
+      "options": [
+        "Ferdinand Magellan",
+        "Christopher Columbus",
+        "Vasco da Gama",
+        "James Cook"
+      ],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "The Rosetta Stone was the key to deciphering which writing system?",
+      "options": ["Cuneiform", "Egyptian hieroglyphs", "Linear B", "Mayan glyphs"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which Roman city was buried by the eruption of Mount Vesuvius in AD 79?",
+      "options": ["Carthage", "Ephesus", "Pompeii", "Syracuse"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who led the Soviet Union during the Cuban Missile Crisis?",
+      "options": [
+        "Nikita Khrushchev",
+        "Joseph Stalin",
+        "Leonid Brezhnev",
+        "Mikhail Gorbachev"
+      ],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which year was the Magna Carta sealed?",
+      "options": ["1066", "1348", "1215", "1492"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which year did the American Civil War begin?",
+      "options": ["1776", "1861", "1812", "1865"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which ship carried the Pilgrims to America in 1620?",
+      "options": ["Santa María", "Endeavour", "Beagle", "Mayflower"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the capital of Australia?",
+      "options": ["Canberra", "Sydney", "Melbourne", "Perth"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which is the largest ocean on Earth?",
+      "options": ["The Atlantic", "The Pacific", "The Indian", "The Arctic"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Mount Everest sits on the border between Nepal and which country?",
+      "options": ["India", "Bhutan", "China", "Pakistan"],
+      "correctIndex": 2,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which is the smallest country in the world by area?",
+      "options": ["Monaco", "San Marino", "Liechtenstein", "Vatican City"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which is the largest hot desert in the world?",
+      "options": ["The Gobi", "The Sahara", "The Kalahari", "The Atacama"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "The Great Barrier Reef lies off the coast of which country?",
+      "options": ["Indonesia", "The Philippines", "Australia", "Fiji"],
+      "correctIndex": 2,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the capital of Canada?",
+      "options": ["Toronto", "Vancouver", "Montreal", "Ottawa"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Egypt lies mostly on which continent?",
+      "options": ["Africa", "Asia", "Europe", "South America"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which Nordic country is famous for its fjords?",
+      "options": ["Sweden", "Denmark", "Norway", "Finland"],
+      "correctIndex": 2,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which is the largest island in the world?",
+      "options": ["New Guinea", "Borneo", "Madagascar", "Greenland"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which river flows through Paris?",
+      "options": ["The Seine", "The Rhône", "The Loire", "The Rhine"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the capital of Brazil?",
+      "options": ["Rio de Janeiro", "Brasília", "São Paulo", "Salvador"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which US state is the largest by area?",
+      "options": ["Texas", "California", "Montana", "Alaska"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which mountain range is the traditional divide between Europe and Asia?",
+      "options": ["The Urals", "The Alps", "The Pyrenees", "The Carpathians"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "The city of Marrakesh is in which country?",
+      "options": ["Algeria", "Morocco", "Tunisia", "Egypt"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the official language of Brazil?",
+      "options": ["Spanish", "French", "Portuguese", "Italian"],
+      "correctIndex": 2,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which is the largest freshwater lake in the world by surface area?",
+      "options": ["Lake Superior", "Lake Victoria", "Lake Baikal", "Lake Michigan"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "The Atacama Desert lies on which continent?",
+      "options": ["Africa", "Asia", "South America", "Australia"],
+      "correctIndex": 2,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which strait separates Europe from Africa at their closest point?",
+      "options": [
+        "The Bosphorus",
+        "The Strait of Gibraltar",
+        "The Strait of Hormuz",
+        "The Bering Strait"
+      ],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the capital of New Zealand?",
+      "options": ["Auckland", "Christchurch", "Dunedin", "Wellington"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Sushi originated in which country?",
+      "options": ["Japan", "China", "Korea", "Thailand"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the main ingredient of guacamole?",
+      "options": ["Cucumber", "Avocado", "Pea", "Courgette"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which spice is the most expensive in the world by weight?",
+      "options": ["Vanilla", "Cardamom", "Saffron", "Cinnamon"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which pastry are profiteroles made from?",
+      "options": ["Puff pastry", "Filo pastry", "Shortcrust pastry", "Choux pastry"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Espresso coffee originated in which country?",
+      "options": ["France", "Italy", "Portugal", "Turkey"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which nut is marzipan made from?",
+      "options": ["Hazelnut", "Walnut", "Almond", "Cashew"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is tofu made from?",
+      "options": ["Chickpeas", "Rice", "Lentils", "Soybeans"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Traditional cider is made from which fruit?",
+      "options": ["Apples", "Pears", "Grapes", "Cherries"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Parmigiano-Reggiano is made from the milk of which animal?",
+      "options": ["Sheep", "Goat", "Cow", "Buffalo"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which vegetable gives borscht its deep red colour?",
+      "options": ["Red cabbage", "Tomato", "Red pepper", "Beetroot"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which country produces more coffee than any other?",
+      "options": ["Brazil", "Colombia", "Vietnam", "Ethiopia"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which herb flavours a mojito?",
+      "options": ["Basil", "Mint", "Lemongrass", "Coriander"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Japanese sake is brewed from which grain?",
+      "options": ["Barley", "Wheat", "Millet", "Rice"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does \"al dente\" describe?",
+      "options": [
+        "Pasta cooked firm to the bite",
+        "Bread baked twice",
+        "Meat served rare",
+        "A sauce reduced by half"
+      ],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which cheese tops a traditional pizza Margherita?",
+      "options": ["Cheddar", "Mozzarella", "Gruyère", "Feta"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which herb is the base of pesto alla genovese?",
+      "options": ["Parsley", "Oregano", "Basil", "Thyme"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many standard bottles of wine are there in a magnum?",
+      "options": ["Two", "Three", "Four", "Six"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "The croissant is generally credited to which country?",
+      "options": ["France", "Belgium", "Austria", "Switzerland"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the main ingredient of hummus?",
+      "options": ["Lentils", "Chickpeas", "White beans", "Broad beans"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which sauce is made from egg yolk, butter and lemon juice?",
+      "options": ["Béchamel", "Velouté", "Espagnole", "Hollandaise"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    }
+  ]
+}

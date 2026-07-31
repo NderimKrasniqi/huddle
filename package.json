@@ -11,17 +11,20 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:unit": "vitest run --project packages --project apps",
-    "test:integration": "vitest run --project convex"
+    "test:integration": "vitest run --project convex",
+    "validate:packs": "tsx packages/packs/src/validate-packs.ts"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
     "@huddle/game-core": "workspace:*",
+    "@huddle/game-registry": "workspace:*",
     "@huddle/game-trivia": "workspace:*",
     "@huddle/packs": "workspace:*",
     "@huddle/ui": "workspace:*",
     "convex-test": "^0.0.54",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.0",
+    "tsx": "^4.23.1",
     "typescript": "~5.9.3",
     "vitest": "^4.1.10"
   }

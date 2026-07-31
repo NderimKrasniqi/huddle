@@ -115,6 +115,14 @@ are iPhone-sized (~390×844).
   focused card 440×520px, 4px ink border, **10px cobalt offset shadow**, art
   area + info block: title Bungee 34px, chips "2–10 players" / "~12 min" /
   category (yellow chip).
+  - The chip *values* are the module's, not this document's: the carousel draws
+    whatever `GameMetadata` declares (player range, estimated minutes,
+    category), so a second game changes them without changing this layout. The
+    three above are trivia's, and two of them are still exact. "~12 min" is
+    not: trivia declares 5, which is what its scoped settings produce — ten
+    questions at a 20s countdown and a 5s reveal, and the reveal comes sooner
+    when everybody has answered. Treat the mock's number as the chip's *shape*
+    (a tilde and a unit, sized for 2–3 digits) rather than trivia's duration.
 - Footer: page dots (active = cobalt pill with ink border) + "<Host> is
   browsing on their phone".
 

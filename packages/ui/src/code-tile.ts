@@ -1,4 +1,4 @@
-import { colors } from './colors';
+import { accentFace } from './accent-face';
 
 /**
  * A Room Code is rendered one letter per tile — on the TV's pairing screen and,
@@ -12,18 +12,12 @@ import { colors } from './colors';
  * out-of-range hole that a 4-letter code cannot produce anyway.
  */
 
-/** The color the letter in position `index` is drawn in. */
+/**
+ * The color the letter in position `index` is drawn in — the accent cycle, of
+ * which this is the oldest use rather than a second copy (`accent-face.ts`).
+ */
 export function codeLetterColor(index: number): string {
-  switch (Math.abs(index) % 4) {
-    case 0:
-      return colors.cobalt;
-    case 1:
-      return colors.tangerine;
-    case 2:
-      return colors.punch;
-    default:
-      return colors.green;
-  }
+  return accentFace(index).fill;
 }
 
 /** The sticker tilt of the tile in position `index`, ready for `rotate`. */

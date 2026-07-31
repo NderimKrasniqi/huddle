@@ -44,6 +44,73 @@ export default defineSchema({
      * room with no host is a room that cannot start a game.
      */
     hostPlayerId: v.optional(v.id('players')),
+    /**
+     * The game this room is playing, and the state it is at — absent while the
+     * room is in its lobby.
+     *
+     * The room's phase is read off this rather than stored beside it: a room
+     * holding a game is in a game, a room holding none is in its lobby, and
+     * written this way there is no such row as an in-game room with nothing
+     * running (see `roomPhase` in game-core). One field, so `startGame` and
+     * `endGame` are each a single patch that cannot half-succeed.
+     *
+     * `state` is `v.any()` because it belongs to the game and not to the room:
+     * the hub stores and returns it without reading it, which is the whole of
+     * what makes a second game an entry in the Registry rather than a schema
+     * change here. The module's own types are what give it shape, on both
+     * sides of the wire.
+     */
+    game: v.optional(
+      v.object({
+        /** Which installed module — `GameMetadata.id`, as the Registry knows it. */
+        gameId: v.string(),
+        state: v.any(),
+        /**
+         * The room's clock for the beat it is on: the scheduled function that
+         * will raise the module's Game Deadline, absent on a beat that has none
+         * (see `windGameClock` in games.ts).
+         *
+         * Stored so that it can be *cancelled*. At most one deadline is pending
+         * for a room and it belongs to the beat the room is on, which is what
+         * makes ending a game enough to stop its countdown — a clock left
+         * running would fire into whatever the room did next, and a Host who
+         * restarts the same game inside twenty seconds would watch its first
+         * question reveal itself early.
+         *
+         * It lives inside `game` rather than beside it so that it goes with the
+         * game in the same patch: there is no room row holding a clock for a
+         * game it is not playing. It is not part of the `running` query — the
+         * clients are shown the game's state and nothing about the scheduler.
+         */
+        deadline: v.optional(v.id('_scheduled_functions')),
+        /**
+         * When that deadline comes due, so that what is left of it can be
+         * *read* as well as cancelled: the hub times every event against this
+         * and hands the remainder to the rules (`GameEvent.msRemaining`), which
+         * is the whole of how a game can pay for answering quickly without a
+         * reducer ever touching a clock.
+         *
+         * Written and cleared with `deadline` above, since a room holding one
+         * without the other is a clock that cannot be read or cannot be
+         * stopped. Absent on a beat with no clock, and on a room dealt its beat
+         * by a deployment older than this field — which reads as an event the
+         * room could not time, and never as an event that arrived instantly.
+         */
+        deadlineAt: v.optional(v.number()),
+      }),
+    ),
+    /**
+     * Which card the Host is browsing in the lobby: a position in the Registry's
+     * ordered list, which the TV's carousel follows.
+     *
+     * An index and not a game id, because browsing is a walk along an ordered
+     * list — "the third card" has to mean the same thing on the television and
+     * on the phone, and ids would leave the two to agree on an order
+     * separately. Absent means nobody has browsed yet, which reads as the first
+     * card; `browsingIndex` in game-registry is what turns either into a
+     * position this build actually has.
+     */
+    browsingGameIndex: v.optional(v.number()),
     // A room's age is `_creationTime`, and its expiry needs no field of its own:
     // the ten minutes run from the last heartbeat the room heard, which is
     // already written down as the newest `lastSeenAt` among its players. A

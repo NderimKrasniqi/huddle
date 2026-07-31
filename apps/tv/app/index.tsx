@@ -1,5 +1,11 @@
 import { api } from '@huddle/convex';
-import { ROOM_CODE_LENGTH, roomJoinLink } from '@huddle/game-core';
+import {
+  gamePlayersFrom,
+  type GameModule,
+  ROOM_CODE_LENGTH,
+  roomJoinLink,
+} from '@huddle/game-core';
+import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/game-registry';
 import {
   borderWidth,
   codeLetterColor,
@@ -17,7 +23,7 @@ import {
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -84,6 +90,99 @@ export default function TvPairingScreen() {
   const { opening, reopen } = useRoomOpening();
   const room = opening.kind === 'open' ? opening.room : undefined;
 
+  // The screen's live subscriptions only exist once there is a room to
+  // subscribe to — and a room can only be open on a launch that has a Convex
+  // client for `ConvexProvider` to provide. Until then the pairing screen draws
+  // its empty seats from nothing.
+  if (room === undefined) {
+    return (
+      <PairingStage
+        opening={opening}
+        code={undefined}
+        footer={<RosterFooter roster={[]} arrivals={undefined} />}
+      />
+    );
+  }
+
+  // Keyed by the room, so a room that expires takes its seats and everything
+  // this screen watched happen in it away with it: the replacement starts as
+  // empty as a pairing screen on a fresh launch.
+  return <OpenRoomStage key={room.roomId} room={room} opening={opening} onExpired={reopen} />;
+}
+
+/**
+ * A television with a room open on it: the pairing screen, or the game the room
+ * is playing.
+ *
+ * The room's subscriptions live here rather than in either screen below,
+ * because they must outlive the switch between them. Expiry is the one that
+ * matters: a room that ends while a game is on screen still has to send this
+ * television back to a fresh Room Code, and a `stillOpen` subscription mounted
+ * inside the lobby would stop watching the moment the game started.
+ */
+function OpenRoomStage({
+  room,
+  opening,
+  onExpired,
+}: {
+  readonly room: OpenRoom;
+  readonly opening: RoomOpening;
+  readonly onExpired: (expired: OpenRoom) => void;
+}) {
+  const roster = useRoster(room);
+  const arrivals = useArrivals(roster);
+  useRoomExpiry(room, onExpired);
+
+  // What the room says it is playing. Its own subscription: this changes twice
+  // a game, where the roster changes on every join, claim and heartbeat.
+  const running = useQuery(api.games.running, { roomId: room.roomId });
+  const screen = runningGameScreen(running);
+  // Which card the Host is on. Its own subscription, and the one the AC times:
+  // the room writes it on a tap and Convex pushes it here.
+  const browsingAt = useQuery(api.games.browsing, { roomId: room.roomId });
+
+  if (screen.kind === 'unknownGame') {
+    return <UnknownGameStage gameId={screen.gameId} />;
+  }
+
+  if (screen.kind === 'game') {
+    return <GameStage module={screen.module} state={screen.state} roster={roster ?? []} />;
+  }
+
+  // A room nobody has joined is still inviting people in, so it keeps the big
+  // code and the QR. The moment there is a player there is a Host, and the
+  // television becomes what that Host is browsing — the code stays reachable in
+  // the header chip, which is where the handoff's lobby and carousel both keep
+  // it (§3, §6).
+  const seats = roster ?? [];
+  const browsing = carouselWindow(browsingAt ?? 0);
+
+  if (seats.length > 0 && browsing !== undefined) {
+    return <CarouselStage window={browsing} code={room.code} roster={seats} />;
+  }
+
+  return (
+    <PairingStage
+      opening={opening}
+      code={room.code}
+      footer={<RosterFooter roster={seats} arrivals={arrivals} />}
+    />
+  );
+}
+
+/**
+ * The Room Code, the QR and the roster: the television between games
+ * (docs/design/design-handoff.md §1 and §3).
+ */
+function PairingStage({
+  opening,
+  code,
+  footer,
+}: {
+  readonly opening: RoomOpening;
+  readonly code: string | undefined;
+  readonly footer: ReactNode;
+}) {
   return (
     <TvStage>
       <View style={styles.screen}>
@@ -102,25 +201,200 @@ export default function TvPairingScreen() {
             >
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
             </StickerSurface>
-            <RoomCodeTiles code={room?.code} />
+            <RoomCodeTiles code={code} />
             <PairingCaption caption={roomOpeningCaption(opening)} />
           </View>
 
-          <RoomQrCard code={room?.code} />
+          <RoomQrCard code={code} />
         </View>
 
-        {/* The screen's live subscriptions only exist once there is a room to
-            subscribe to — and a room can only be open on a launch that has a
-            Convex client for `ConvexProvider` to provide. Until then the footer
-            draws its empty seats from nothing. */}
-        {room === undefined ? (
-          <RosterFooter roster={[]} arrivals={undefined} />
-        ) : (
-          // Keyed by the room, so a room that expires takes its seats and
-          // everything this screen watched happen in it away with it: the
-          // replacement starts as empty as a pairing screen on a fresh launch.
-          <OpenRoomFooter key={room.roomId} room={room} onExpired={reopen} />
-        )}
+        {footer}
+      </View>
+    </TvStage>
+  );
+}
+
+/**
+ * TV — Game carousel (docs/design/design-handoff.md §6): the game the Host is
+ * browsing, with its neighbours either side, and the room's code still on the
+ * header so somebody arriving late can still get in.
+ *
+ * The television is a renderer here as everywhere else — it draws the index the
+ * room stored, and the Host's phone is the only thing that moves it. Nothing on
+ * this screen knows which game it is showing: the card is `GameMetadata`, which
+ * is what metadata is for.
+ */
+function CarouselStage({
+  window,
+  code,
+  roster,
+}: {
+  readonly window: CarouselWindow;
+  readonly code: string;
+  readonly roster: readonly RosterSeat[];
+}) {
+  const host = roster.find((seat) => seat.host);
+
+  return (
+    <TvStage>
+      <View style={styles.screen}>
+        <View style={styles.carouselHeader}>
+          <Text style={styles.logo}>
+            HUDDLE<Text style={styles.logoPeriod}>.</Text>
+          </Text>
+          <View style={styles.roomChipGroup}>
+            <Text style={styles.roomChipLabel}>room</Text>
+            <StickerSurface depth={shadowDepth.tvCard} style={styles.roomChip}>
+              <Text style={styles.roomChipText}>{code}</Text>
+            </StickerSurface>
+          </View>
+        </View>
+
+        <View style={styles.carousel}>
+          {/* The side cards are absent rather than duplicated with one game
+              installed — `carouselWindow` is what decides that, and this just
+              draws what it was handed. */}
+          <SideKeyArt game={window.previous} />
+          <FocusedGameCard game={window.focused} />
+          <SideKeyArt game={window.next} />
+        </View>
+
+        <View style={styles.carouselFooter}>
+          <View style={styles.pageDots}>
+            {Array.from({ length: window.total }, (_unused, position) => (
+              <View
+                key={position}
+                style={[styles.pageDot, position === window.index && styles.pageDotActive]}
+              />
+            ))}
+          </View>
+          <Text style={styles.browsingLine}>
+            {host === undefined
+              ? 'Picking a game…'
+              : `${host.nickname} is browsing on their phone`}
+          </Text>
+        </View>
+      </View>
+    </TvStage>
+  );
+}
+
+/**
+ * The focused card: key art over the title and its chips (handoff §6 — 440×520,
+ * 4px ink border, 10px cobalt offset shadow).
+ */
+function FocusedGameCard({ game }: { readonly game: GameModule }) {
+  const { title, keyArt, playerRange, estimatedMinutes, category } = game.metadata;
+
+  return (
+    <StickerSurface
+      depth={shadowDepth.tvHero}
+      shadowColor={colors.cobalt}
+      style={styles.focusedCard}
+    >
+      <View style={[styles.keyArt, { backgroundColor: colors[keyArt.color] }]}>
+        <Text style={styles.keyArtTitle}>{title}</Text>
+      </View>
+
+      <View style={styles.cardInfo}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <View style={styles.chips}>
+          <Chip text={`${playerRange.min}–${playerRange.max} players`} />
+          <Chip text={`~${estimatedMinutes} min`} />
+          <Chip text={category} tone={colors.yellow} />
+        </View>
+      </View>
+    </StickerSurface>
+  );
+}
+
+/** A neighbouring card: key art alone, dimmed, tilted and stood back (§6). */
+function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
+  if (game === undefined) {
+    // Nothing rather than a placeholder: an empty slot beside the focused card
+    // would read as a game that failed to draw.
+    return null;
+  }
+
+  return (
+    <View style={styles.sideCardWrapper}>
+      <View style={[styles.sideCard, { backgroundColor: colors[game.metadata.keyArt.color] }]}>
+        <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** One meta chip under a card's title. */
+function Chip({ text, tone }: { readonly text: string; readonly tone?: string }) {
+  return (
+    <View style={[styles.chip, tone === undefined ? null : { backgroundColor: tone }]}>
+      <Text style={styles.chipText}>{text}</Text>
+    </View>
+  );
+}
+
+/**
+ * The television with a game on it: the module's own screen, under a header
+ * that says only what `GameMetadata` already told the hub.
+ *
+ * Nothing here knows which game it is drawing — the header is metadata and the
+ * stage below it is the module's.
+ */
+function GameStage({
+  module,
+  state,
+  roster,
+}: {
+  readonly module: GameModule;
+  readonly state: unknown;
+  readonly roster: readonly RosterSeat[];
+}) {
+  // Mounted as a component rather than called as a function, so a game's screen
+  // owns its own hooks instead of registering them on this one's list.
+  const TvScreen = module.screens.tv;
+
+  return (
+    <TvStage>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>
+            HUDDLE<Text style={styles.logoPeriod}>.</Text>
+          </Text>
+          <Text style={styles.gameTitle}>{module.metadata.title}</Text>
+        </View>
+
+        <View style={styles.gameStage}>
+          <TvScreen state={state} players={gamePlayersFrom(roster)} />
+        </View>
+      </View>
+    </TvStage>
+  );
+}
+
+/**
+ * The room is playing a game this television does not have — an un-updated TV
+ * in a room whose phones have moved on. Said out loud rather than drawn as a
+ * pairing screen, which would put a Room Code up for a room that is mid-game.
+ */
+function UnknownGameStage({ gameId }: { readonly gameId: string }) {
+  return (
+    <TvStage>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>
+            HUDDLE<Text style={styles.logoPeriod}>.</Text>
+          </Text>
+        </View>
+
+        <View style={styles.center}>
+          <StickerSurface depth={shadowDepth.phoneCard} style={styles.badge}>
+            <Text style={styles.badgeText}>UPDATE HUDDLE</Text>
+          </StickerSurface>
+          <Text style={styles.unknownGameText}>
+            This room is playing {gameId}, which this TV doesn’t have yet.
+          </Text>
+        </View>
       </View>
     </TvStage>
   );
@@ -213,20 +487,6 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
  * the `ConvexProvider` they need above them — out of a launch that never reached
  * a backend.
  */
-function OpenRoomFooter({
-  room,
-  onExpired,
-}: {
-  readonly room: OpenRoom;
-  readonly onExpired: (expired: OpenRoom) => void;
-}) {
-  const roster = useRoster(room);
-  const arrivals = useArrivals(roster);
-  useRoomExpiry(room, onExpired);
-
-  return <RosterFooter roster={roster ?? []} arrivals={arrivals} />;
-}
-
 /**
  * The roster under the code: a seat per player, and dashed empty ones for as
  * long as the room looks empty. A player's seat carries their nickname because
@@ -486,6 +746,175 @@ const styles = StyleSheet.create({
     color: colors.tangerine,
   },
 
+  // Bungee at the header's right end, opposite the wordmark: the game's name,
+  // which is the one thing the hub can say about a game it does not know.
+  // Header as the handoff's lobby: logo left, "room" + code chip right.
+  carouselHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    paddingHorizontal: 56,
+    paddingVertical: 28,
+  },
+  roomChipGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roomChipLabel: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.tv,
+  },
+  roomChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.chip,
+  },
+  roomChipText: {
+    color: colors.cobalt,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    letterSpacing: letterSpacing.roomCode,
+    marginRight: -letterSpacing.roomCode,
+  },
+
+  carousel: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 28,
+  },
+  // 440×520 with the ink border and the cobalt offset shadow (§6).
+  focusedCard: {
+    width: 440,
+    height: 520,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.cardLarge,
+  },
+  keyArt: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  keyArtTitle: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    fontSize: 46,
+    lineHeight: 52,
+    textAlign: 'center',
+  },
+  cardInfo: {
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 22,
+    backgroundColor: colors.surface,
+  },
+  cardTitle: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 38,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.chip,
+  },
+  chipText: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.tv,
+  },
+
+  // 300×400 at half opacity and stood back, per §6. The tilt comes from
+  // Boardwalk's own sticker rotation rather than a number invented here.
+  sideCardWrapper: {
+    opacity: opacity.carouselSideCard,
+    transform: [{ scale: 0.94 }, { rotate: stickerTilt.carouselSideCard }],
+  },
+  sideCard: {
+    width: 300,
+    height: 400,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thick,
+    borderRadius: radius.cardLarge,
+  },
+  sideCardTitle: {
+    color: colors.surface,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 40,
+    textAlign: 'center',
+  },
+
+  carouselFooter: {
+    alignItems: 'center',
+    gap: 16,
+    paddingBottom: 36,
+  },
+  pageDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pageDot: {
+    width: 12,
+    height: 12,
+    backgroundColor: colors.mutedBorder,
+    borderRadius: radius.pill,
+  },
+  // The active dot is a cobalt pill with an ink border (§6).
+  pageDotActive: {
+    width: 32,
+    backgroundColor: colors.cobalt,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+  },
+  browsingLine: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 22,
+  },
+
+  gameTitle: {
+    color: colors.ink,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+  },
+  // Where the module draws — the whole stage under the header. A game that
+  // draws nothing leaves the Boardwalk canvas showing, which is the honest
+  // picture until the TV question screens land.
+  gameStage: {
+    flex: 1,
+    alignSelf: 'stretch',
+  },
+  unknownGameText: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.tv,
+    textAlign: 'center',
+  },
   center: {
     flex: 1,
     flexDirection: 'row',

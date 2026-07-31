@@ -369,60 +369,412 @@ demoable by force-quitting apps mid-lobby.
 Goal: a complete playable trivia game with flat scoring on a small inline
 question set — and the game-module interface exists because trivia is behind
 it.
-- [ ] Game-module interface in `game-core` — AC: interface exposes metadata
+- [x] Game-module interface in `game-core` — AC: interface exposes metadata
   (id, title, key-art treatment, player range, est. duration, category),
   settings schema, initial-state factory, `reduce(state, event)`, and TV/phone
   screen components; the hub renders purely from the registry (trivia is the
   only entry); a compile-time test instantiates a dummy module against the
   interface.
-- [ ] Room state machine & game lifecycle — AC: room states are `lobby →
-  in-game → lobby`; Host selects trivia and starts → TV and all phones switch
-  to trivia screens within 1s; Host "End game" mid-game → everyone returns to
-  the lobby, room intact.
-- [ ] Synced game carousel — AC: host phone prev/next (or swipe) updates
+
+  `GameModule<State, Event, Settings>` holds all three of a game's own types,
+  and the hub holds all three opaquely. The members that touch them are
+  declared as *methods* rather than properties, which makes their assignment
+  bivariant — the deliberate hole that lets a `GameModule<TriviaState, …>` sit
+  in a `readonly GameModule[]`. It is a hole, and it is the only way one array
+  holds games of unrelated shapes; what the hub does through it is store and
+  reload a state it never reads.
+
+  The Registry is its own package, `@huddle/game-registry`, because the
+  dependencies point the wrong way for it to live in game-core: every module
+  depends on the interface, so the list of modules cannot sit beside it without
+  a cycle — and the TV, the Controller and the Convex mutations all read it, so
+  it belongs to none of them either.
+
+  Two decisions the plan did not settle. A Settings Schema is a *declaration*
+  the hub renders — labelled options with a default — not a Zod schema, because
+  a validator carries neither labels nor the order to draw them in; Zod keeps
+  the pack format and the function boundary. And every Game Event names its
+  player (`GameEvent`), so one generic mutation can carry any game's event —
+  but the name is a claim, filled in server-side from the Session Token, never
+  believed from the phone.
+
+  **The compile-time test bites, checked rather than assumed.** A Coin Toss
+  module built against the interface — state, event and settings deliberately
+  unlike trivia's — plus five `@ts-expect-error` cases. Mutating the interface
+  five ways (optional `estimatedMinutes`, dropping the `Event extends
+  GameEvent` constraint, widening `reduce`'s return to `unknown`, widening the
+  key-art color to `string`, widening the TV screen's state to `any`) each
+  turned a case into `TS2578: Unused '@ts-expect-error' directive`. Two of
+  those were re-run independently at review; the files restored byte-identical.
+
+  What this does not carry: the AC's "hub renders purely from the registry" is
+  true structurally — the registry is the only place in Huddle that names a
+  game, grep-verified across `apps/` and `convex/` — but no hub surface draws a
+  game yet, so the *rendering* half is only demonstrated by the carousel task
+  below. Trivia's entry is metadata and an honest zero: an empty settings
+  schema, a `reduce` that returns the state it was given, and screens that draw
+  nothing, each commented with the task that fills it. Its `estimatedMinutes`
+  is 5 rather than the handoff's "~12 min" chip: ten questions at a 20s
+  countdown and a 5s reveal is about five minutes, and sooner when everybody
+  has answered. The handoff mock is not filler — the "2–10 players" beside it
+  is trivia's real range — so the contradiction was resolved in the handoff
+  itself (§6), which now records that the carousel draws whatever
+  `GameMetadata` declares and that the mock's number is the chip's shape rather
+  than trivia's duration.
+- [x] Room phase & the game lifecycle mutations (server half of "Room state
+  machine & game lifecycle", split because the original bundled three AC
+  clauses across `convex/`, `game-core` and both apps) — AC: a room's phase is
+  `lobby → in-game → lobby`, stored on the room with the running game's id and
+  its state; `startGame` is Host-only, refuses a game the Registry does not
+  install and a room already in a game, and seeds the state from the module's
+  initial-state factory; `endGame` is Host-only and returns the room to the
+  lobby with its roster, host and Room Code intact; integration tests cover
+  both, the refusals, and that a non-Host cannot call either.
+
+  The phase is not a column. A room holding a game is in a game and a room
+  holding none is in its lobby, so `rooms.game` — `{ gameId, state }`, optional
+  — is the whole of it, and `roomPhase` reads the phase off it. A stored phase
+  beside a stored game would be one fact written twice, with an in-game room
+  holding nothing as the row that says so; this way that row cannot be spelled.
+  It also makes each transition a single patch, so neither can half-succeed.
+  `state` is `v.any()`, because it belongs to the game: the hub stores and
+  returns it without reading it, which is what keeps a second game out of the
+  schema.
+
+  **The module had to be split, and that changed the task above.** `reduce` and
+  `createInitialState` run server-side, so Convex must import the Registry —
+  but a module's screens are *properties* of it, and properties do not
+  tree-shake, so importing whole modules would have put React Native in the
+  server bundle two tasks before trivia's screens exist. `GameLogic` (metadata,
+  settings schema, factory, reducer) is now the half the server reads and
+  `GameModule extends GameLogic` adds the screens; trivia and the Registry each
+  ship both through separate entry points, and the two lists are the same
+  objects rather than copies (asserted by identity, not equality).
+
+  **Checked rather than argued:** bundling `convex/games.ts` with esbuild puts
+  `triviaGameLogic` and `GAME_LOGIC_REGISTRY` in the output and leaves
+  `screens` and `triviaGameModule` out of it entirely — the `exports` seam is
+  honoured, not hoped for. That is esbuild run directly, which is the tool
+  Convex bundles with but not Convex's own pipeline, so it is a proxy for the
+  real build and not the real build.
+
+  Ending is unconditional where starting is refusable, and the two rules are
+  kept in different functions because of it: `phaseAfter(intent)` is the total
+  `lobby → in-game → lobby` machine, and `refusalToStart(phase, seated, range)`
+  is the whole of what can stop a start. A second tap on "End game" asks for the
+  lobby the room is already in and there is nothing to tell the person holding
+  the phone; a second *start* would throw away the state of a game in progress,
+  so `alreadyInGame` refuses it, and a party below `playerRange.min` gets
+  `notEnoughPlayers` carrying both numbers — the only useful thing to say is how
+  many more people have to join. The Host check runs before the Registry lookup,
+  so a phone with no room control learns only that it is not the Host and never
+  whether the game it named exists.
+
+  A room too *large* for a game is deliberately not refused. The room cap is ten
+  and no installed game may declare a maximum above it, so the rule could not
+  fire today; and were a smaller game installed tomorrow, refusing at the tap
+  would strand a party, since Huddle has no way to remove a player. It belongs
+  in the Host's picker, which can decline to offer a game the room has outgrown
+  while there is still something the Host can do about it.
+
+  What this does not carry: nothing renders any of it yet — both clients still
+  draw their lobbies, which is the task below. The player count is every seat in
+  the room, Away ones included; excluding them is Phase 4's "Away players
+  in-game", and doing it here would have been building ahead of it.
+- [x] TV and phones follow the room into the game (client half of the split) —
+  AC: Host selects trivia and starts → TV and all phones switch to trivia
+  screens within 1s; Host "End game" mid-game → everyone returns to the lobby,
+  room intact; both clients mount the module's screens out of the Registry
+  without naming a game.
+
+  One function decides it on both clients. `runningGameScreen(running)` turns
+  the room's answer into one of three: the lobby, this module on this state, or
+  a game this build does not install. Neither client names a game — grep for
+  "trivia" across `apps/` and `convex/` finds one comment and no code — and the
+  Host's start control offers the Registry's entry by its metadata title, so the
+  carousel task replaces what is browsed rather than this control.
+
+  The in-flight moment counts as the lobby, deliberately: every client is
+  already on its lobby when it asks, so `undefined` draws what is on screen
+  instead of flashing something else on the way to it.
+
+  **Unknown Game is a real state, not a defensive branch.** A phone that has not
+  been updated can walk into a room whose TV has, and the reverse. Folding it
+  into the lobby would put a Room Code on a television for a room that is
+  mid-game, and invite a player to act on one — so both clients say the app is
+  behind instead.
+
+  Two subscriptions had to outlive the switch, and both were placed for it. The
+  phone's heartbeat sits above the screen's early returns, so a player mid-game
+  is still present and does not go Away while answering; the TV's `stillOpen`
+  moved up into `OpenRoomStage`, because a room that expires during a game still
+  has to send that television back to a fresh Room Code, and the subscription
+  would have unmounted with the lobby. `OpenRoomFooter` is gone, its work now
+  done a level up.
+
+  What this does not carry — and it is the AC's own headline. "Within 1s" is
+  **argued, not observed**: it rests on the same Convex subscription the roster
+  uses, which *has* been seen pushing a join to a television within a round
+  trip, but nothing here has been run on a simulator or a television. Trivia's
+  screens still draw nothing, so an in-game TV today is the game's title over an
+  empty Boardwalk canvas and an in-game phone is its title and, for the Host,
+  "End game" — the switch is visible, the game is not. Settling the timing
+  honestly needs the TV and a phone against the cloud dev deployment, watching
+  the Host's tap land on both.
+
+  Also untested by construction: every component added here is React, and this
+  repo tests logic rather than rendering. `runningGameScreen` and `startControl`
+  carry the decisions and are unit-tested; the wiring from a subscription to a
+  mounted screen rests on the typecheck and on the run that has not happened.
+- [x] Synced game carousel — AC: host phone prev/next (or swipe) updates
   `browsingGameIndex` in room state; the TV carousel follows within 250ms
   (focused card treatment per handoff); non-host phones show "Now viewing
   <Game>"; renders correctly with the registry's single MVP entry.
-- [ ] Trivia reducer with flat scoring — AC (unit tests, using a 3-question
+
+  An index into the ordered Registry, not a game id: browsing is a walk along a
+  list, so "the third card" has to mean the same thing on the television and on
+  the phone, and ids would leave the two to agree an order separately. It is
+  clamped rather than refused — the list differs between builds, and a phone
+  that browsed past what this deployment installs should get the nearest card,
+  not an error on a television. `browseGame` is Host-only for the reason the
+  rest of the lifecycle is: one shared surface that anybody could move is a
+  surface nobody can read.
+
+  **A decision the docs did not settle, and the user made:** §1 pairing, §3
+  lobby and §6 carousel are three separate TV screens, and at handoff sizes they
+  cannot coexist — the focused card alone is 520px of a 720px stage, so the
+  carousel and the Phase 2 roster cannot both be on screen. The television now
+  shows the pairing screen while the room is empty and the carousel from the
+  first join onward, with the Room Code moving to the header chip that §3 and §6
+  both keep. The cost is that the filling-up seats stop being the TV's main
+  event once anybody is in.
+
+  With one game installed both side cards are absent rather than duplicated, and
+  both arrows are dead — a list of one that wrapped would give the Host two
+  buttons that changed nothing. Two Boardwalk tokens were added for §6 rather
+  than inlined: `opacity.carouselSideCard` (50%, deliberately not the 30%
+  `unavailable`, because a neighbouring game is not unavailable) and
+  `stickerTilt.carouselSideCard`.
+
+  **A regression this task caused and caught.** Putting `browsingIndex` on the
+  server's entry point as a re-export from `./carousel` pulled `GAME_REGISTRY`
+  — and every installed game's React Native screens — straight back into the
+  Convex bundle, undoing the seam two tasks earlier existed to build. Nothing
+  failed; the bundle simply grew the screens back, and it was found only by
+  re-running the esbuild check by hand. The clamp now lives in `./browsing`,
+  which takes a list *length* and imports no Registry at all, and
+  `logic.test.ts` walks the server entry point's import graph so the same
+  mistake fails a test instead of a play-test. That guard was mutation-checked:
+  re-adding the offending export fails both its assertions.
+
+  What this does not carry: "within 250ms" is **argued, not observed**, exactly
+  as the previous task's "within 1s" is — same Convex subscription, nothing run
+  on a television. The guard is a *source* check and not a bundle check: it
+  reads relative imports inside `packages/game-registry` and would not see a
+  bundler inlining something from outside it. And the handoff's swipe (§7,
+  "Swipe or tap arrows") is not implemented — the arrows are, the hint text
+  promises both, and with one installed game there is nothing to swipe to.
+- [x] Trivia reducer with flat scoring — AC (unit tests, using a 3-question
   inline set): each question presents 4 options with exactly 1 correct; a
   correct answer scores +100, wrong or no answer +0; with players A and B
   where A answers 3/3 correctly and B answers 1/3, final scores are A=300,
   B=100; after the last reveal the game emits a finished state ordered A, B.
-- [ ] Phone answer screen — AC: 4 large buttons matching the TV's option
+
+  What this does not carry: any seated phone can end the beat for the whole
+  room. `advanced` discards the event's playerId, and a game module is
+  deliberately never told who the Host is, so authority over `advance` is the
+  hub's problem and is not solved here.
+
+  The question list, `correctIndex` included, rides in `game.state`, which the
+  public `running` query in `convex/convex/games.ts` hands to every phone
+  before the reveal. It leaks nothing today, because the phones bundle
+  `INLINE_QUESTIONS` themselves — but Phase 4's server-side packs would be
+  leaked by that same line, and the pack is rewritten into the room document on
+  every answer event.
+
+  Two things the screen tasks below need from here: the reveal does not move to
+  the next question by itself, and a sender of `advance` must read the state it
+  is looking at in order to address the event — the beat it is ending, not
+  "now".
+- [x] Phone answer screen — AC: 4 large buttons matching the TV's option
   colors/shapes; tapping locks the answer (buttons disable, "locked in"
   shown); a second tap changes nothing; answering before the question is
   shown is impossible.
-- [ ] TV question & reveal screens — AC: TV shows question, 4 options, and how
+
+  What this does not carry: **"matching the TV's option colors/shapes" is not
+  verified, because there is no TV question screen yet** — it is the next task.
+  What was built instead of a match is a shared source: both screens take an
+  option's color from `accentFace(optionIndex)` in `packages/ui`, so they agree
+  by construction rather than by two files being kept in step. The TV task is
+  where that stops being an argument.
+
+  The screen itself is untested, per the repo's rule that renderers are not
+  tested (docs/tech-stack.md). What *is* tested is everything behind it:
+  `answering.test.ts` covers which buttons a state offers — including that a
+  locked-in player has no pressable option left and that a phone on any other
+  beat is offered nothing at all — and `logic.test.ts` and `games.test.ts`
+  cover the refusals underneath. So "buttons disable" and "'locked in' shown"
+  are argued from the code, not observed. Nothing here has run on a phone.
+
+  This task also carried two things the plan did not anticipate, both forced by
+  it being the first real screen: `boardwalkFonts` moved out of `@huddle/ui`'s
+  root barrel to `@huddle/ui/fonts` (a barrel is all-or-nothing, so importing
+  `colors` was dragging four .ttf files into every Node test), and Vitest now
+  stubs `react-native`. See docs/tech-stack.md, including what the stub can
+  hide.
+
+  The event transport landed here rather than in the reducer task: `sendEvent`
+  in `convex/convex/games.ts` is the one mutation a running game's events
+  travel on. It names the player from the Session Token and never from the
+  phone, stores nothing when the module makes nothing of the event, and skips
+  the write when the rules refuse — so a refused tap wakes no subscription.
+- [x] TV question & reveal screens — AC: TV shows question, 4 options, and how
   many players have answered ("3/5 answered"); when all active players have
   answered, reveal shows the correct option and per-player correctness; then
   the running scoreboard for 5s; then the next question.
-- [ ] Victory & return to lobby — AC: after the last question the TV shows
-  final standings (winner celebrated, ties share the top rank); Host's "Back
-  to lobby" returns everyone to the lobby with the same roster.
+
+  How "then the next question" happens, since the plan did not say: the
+  television cannot send it. A TV screen is given the room's state and its
+  roster and nothing else — it holds no player record, and every Game Event
+  must name a player. So the Reveal Beat comes from the phones, and from
+  *every* playing phone rather than a nominated one: the `advance` is addressed
+  to the beat it ends, so the first to arrive moves the room and the rest do
+  nothing. One nominated phone would be one phone whose screen locking stalls
+  the room. This is the flat cost of the reducer task's flagged gap, paid the
+  cheap way; Phase 4's question timer is where a server-side scheduler and a
+  player-less event belong.
+
+  What this does not carry: **the reveal and the running scoreboard are shown
+  together for the 5s, not in sequence.** The AC reads "reveal shows the correct
+  option and per-player correctness; then the running scoreboard for 5s", and
+  everything named is on screen for the full five seconds. This matches
+  docs/CONTEXT.md's Reveal, which is one phase showing the answer "followed by
+  the running scoreboard" — recorded here so a later reader does not re-litigate
+  it. A sequenced version needs no reducer change, only a second timer inside
+  the reveal render.
+
+  **A room with every phone backgrounded at once stalls on the reveal.** Nothing
+  else can send the beat. It self-heals the moment any phone comes forward, and
+  the Host's "Back to lobby" is the only other way out. Phase 4's server-side
+  scheduler is the real fix.
+
+  **One line of the send path is guarded by nothing.** `revealBeat` decides what
+  to send and when, and is asserted against four mutations — but the line in
+  `useRevealBeat` that actually calls `sendEvent` when the timer fires is in a
+  `.tsx` file, and deleting it would hang every reveal with tests, lint and
+  typecheck all green. Closing it means mounting a React component, which the
+  repo has no renderer for and deliberately does not do (docs/tech-stack.md).
+  A play-test is what catches this one.
+
+  Also true of the two screens generally: neither has run on a television or a
+  phone. The Boardwalk ink borders on both were wrong until review caught it —
+  every `StickerSurface` needs an explicit `borderColor`, since the surface
+  paints its band from that field — which is the kind of thing only a screen
+  someone has looked at can settle.
+  Victory & return to lobby was split into the two below during
+  implementation: it bundled a television screen with a hub mutation and a
+  Host control on the phone, which are separate layers that can be reviewed
+  and reverted on their own. The acceptance criteria are unchanged, only
+  divided.
+- [x] Victory Screen — AC: after the last question the TV shows final
+  standings (winner celebrated, ties share the top rank).
+
+  Who won is decided in `watching.ts` and not on the screen, for the reason the
+  standings' order already was: it is one answer to "who won", and a renderer
+  working it out is a renderer that can disagree with the next one to draw it.
+  So the ranks, who counts as a winner, and the Headline's words are all
+  asserted in `watching.test.ts` — single winner, two-way tie, a whole room that
+  scored nothing tying ten ways, and a player whose phone left mid-game.
+
+  The Headline is the decision the AC did not settle: "winner celebrated" does
+  not say what a screen says when four people tie. It says "It's a tie!" rather
+  than naming them, because ten seats can tie any number of ways and the list
+  would be a paragraph rather than a celebration. Recorded in docs/CONTEXT.md so
+  the next screen needing end-of-game copy finds it.
+
+  Every winner is drawn at the same size as everyone else, the celebration
+  riding Boardwalk's accent offset shadow instead — a card per winner would run
+  a ten-way tie off the stage.
+
+  What this does not carry: **the screen has not run on a television.** Review
+  drove the real component through a played-out game with a throwaway probe and
+  read the text it renders, which is how "ties share the top rank" was checked
+  against the screen rather than only the data behind it — but that probe is
+  deleted and is not a test, and the repo does not test renderers
+  (docs/tech-stack.md). **A full ten-seat room likely overflows the 720px
+  stage** at five rows of placings, as the reveal's verdicts already do at that
+  size; the comment in `tv-screen.tsx` says so rather than claiming a fit. Both
+  are play-test questions.
+- [x] Back to lobby — AC: the Host's "Back to lobby" returns everyone to the
+  lobby with the same roster.
+
+  Most of this was already standing: `endGame` has been Host-only and
+  unconditional since the hub phase, and the roster survives structurally
+  rather than by care — `players` holds nickname, color, away and token, and
+  every score lives in `rooms.game.state`, so returning to the lobby drops the
+  scoreboard because there is nowhere else it could have been. What this task
+  added is the phone's control saying the true thing, and tests that hold the
+  AC's own words instead of trusting that arrangement.
+
+  "The same roster" is now pinned by a test that claims colors before playing
+  the game out, which the pre-existing one did not: review checked by patching
+  `endGame` to clear every color on its way out, and only the new test went
+  red. Host-only was checked the same way, by swapping the Host lookup for the
+  ordinary one.
+
+  Available on every beat, not only after the Victory Screen — the prior task
+  left a room whose phones all backgrounded stalling on the reveal with this as
+  its only way out, so a control that waited for a finish would not reach the
+  case it exists for. That also settles the copy: the hub never reads game
+  state, so the label has to be true on all beats, and "End game" is false on
+  the beat after a game has ended.
+
+  It also closed a dead end it was not asked to: a Host whose build lacks the
+  room's game was told they would rejoin when everyone returned to the lobby —
+  waiting on themselves, with nothing in the room able to move it. The Unknown
+  Game card now carries the control for the Host. The §3 lobby card stays
+  deferred.
+
+  What this does not carry: **nothing has run on a phone.** That the control
+  renders at all, and only for the Host, is a `.tsx` condition and untested by
+  the repo's rule — the server refusal underneath it is what is actually
+  guarded. The button keeps the punch face, which is right for discarding a
+  game in progress and arguably alarming on the Victory Screen where the action
+  is benign, and there is no confirmation on a mid-game return. Both are
+  play-test questions rather than rules anyone has decided.
 
 ## Phase 4 — Full trivia: packs, timers, settings
 Goal: trivia as scoped — curated pack, countdowns, host-tunable settings —
 ready for a real game night.
-- [ ] Question-pack format & curated pack — AC: Zod schema for pack (id,
+- [x] Question-pack format & curated pack — AC: Zod schema for pack (id,
   title, version, questions[text, 4 options, correctIndex, category,
   difficulty]); a malformed pack fails `pnpm validate:packs` and CI; the
   shipped curated pack passes and contains ≥100 questions across ≥4
   categories.
-- [ ] Question timer — AC: each question runs a 20s countdown shown on the TV;
+- [x] Question timer — AC: each question runs a 20s countdown shown on the TV;
   players who haven't answered when it expires score +0 for that question;
   reveal triggers at expiry or when all active players have answered,
   whichever comes first (integration test with mocked scheduler).
-- [ ] Settings schema & lobby settings UI — AC: trivia declares settings
-  {scoring: flat|speed (default flat), questionCount: 5|10|20 (default 10),
-  category: all|<pack categories> (default all)}; the Host phone renders this
-  UI generically from the schema; a non-Host phone never sees settings
-  controls; a started game uses exactly the chosen settings (e.g. category
-  "Movies" yields only Movies questions, count 5 yields exactly 5).
-- [ ] Speed scoring mode — AC (unit tests): correct answer scores
+- [x] Settings schema & a game started from it (server half of the split) —
+  AC: trivia declares settings {scoring: flat|speed (default flat),
+  questionCount: 5|10|20 (default 10), category: all|<pack categories>
+  (default all)}; the schema is generic in `game-core`, not trivia-shaped;
+  `startGame` refuses settings that the declaring game's schema rejects, and
+  defaults anything absent; a started game uses exactly the chosen settings,
+  drawing from the curated pack — category "Movies" yields only Movies
+  questions, count 5 yields exactly 5. This is the task that first wires
+  `@huddle/packs` into trivia in place of its `INLINE_QUESTIONS`.
+- [x] Lobby settings UI (the other half of the split) — AC: the Host phone
+  renders the settings controls generically from whatever schema the chosen
+  game declares — nothing in the renderer names trivia or any of its
+  settings; a non-Host phone never sees settings controls; changing a
+  control updates what the room will start with, and every phone's carousel
+  keeps working while the Host is choosing.
+- [x] Speed scoring mode — AC (unit tests): correct answer scores
   `100 + round(100 × secondsRemaining / 20)`; e.g. correct with 15s left
   = 175, correct at 0s left = 100, wrong at any time = 0; flat mode unchanged
   at 100.
-- [ ] Away players in-game — AC: an away player is excluded from "3/5
+- [x] Away players in-game — AC: an away player is excluded from "3/5
   answered" denominators; their scoreboard row shows the away badge; a player
   who returns mid-question may answer that question if its timer is still
   running.
@@ -430,6 +782,63 @@ ready for a real game night.
 ## Phase 5 — Party-ready
 Goal: the app matches the Boardwalk design on real hardware; a full game night
 runs without touching a dev tool.
+- [ ] A Room Code tile sometimes draws empty on tvOS — AC: reproduce a blank
+  tile deliberately, then prove the fix by an A/B of the identical crop rather
+  than by one screenshot that looks right. **Do not act on the "letter I"
+  theory below — it was tested and is wrong.**
+
+  Seen three times on the tvOS simulator on 2026-07-30, the first time the
+  pairing screen had been run since the Boardwalk work: room code `OVAI` drew
+  as `O V A _`. Rendering a fixed `AIHI` then blanked both I's across two
+  positions and two accent colors, and `IJLT` drew J, L and T and dropped only
+  the I, while the live code `MMBH` drew all four tiles. That looked conclusive
+  and it is what the first version of this task claimed.
+
+  **It does not survive retesting.** Later the same session, a bare `I` in all
+  four tiles drew correctly on five consecutive fresh launches, as did `I`
+  followed by a zero-width space, `I` followed by a space, and `HI`. So the
+  glyph is not the variable and the letter-specific reading is disproven —
+  which also matches "TRIVIA" having rendered its own I's correctly on the
+  television throughout the failing runs. Whatever this is, it is intermittent
+  and something other than the character decides it.
+
+  Ruled out with evidence, so nobody pays for it twice: the font
+  (`Bungee_400Regular.ttf` has I at glyph 39, one contour, advance 605, bbox
+  (53,0)-(551,720) — the same shape of record as J and L); GSUB's `vert`
+  feature (it covers 375 glyphs including A and H, which never failed, and its
+  target for I is a normal 74-byte glyph); `codeLetterColor`; tile position;
+  and a font-loading race at the layout, since `apps/tv/app/_layout.tsx` already
+  holds the first frame until `useFonts` resolves.
+
+  Worth noting about the failing runs, as the only pattern left: all three were
+  in the first minutes of a session, two of them after a fast refresh, and one
+  on the first render after the session's first cold Metro bundle.
+
+  **A deliberate reproduction attempt failed.** Eleven cold launches over two
+  methods on 2026-07-30: five with the letter hardcoded, and six on the real
+  product path — Metro cache cleared, the code arriving from the server after
+  mount, screenshotting the first render — which is as close to the original
+  conditions as the setup gets. Every tile drew. The codes were random and
+  happened to contain no I (`APME`, `XCBV`, `HMBS`, `SFHT`, `NJGG`, `RSGG`),
+  so that run tested "any blank tile" rather than the I specifically.
+
+  Two mechanisms were considered and do not survive the evidence: a truncated
+  or half-loaded font asset (it would blank a contiguous run of glyph ids, but
+  A/H at 2/37 drew while I at 39 did not, and J/L/T at 40/43/51 drew), and a
+  `Text` whose content changes after mount (the `AIHI` and `IJLT` runs were
+  hardcoded at mount and still failed).
+
+  So the next person should not start from a theory. Start by catching it: it
+  has only ever appeared in the first minutes of a session, so the cheapest
+  instrument is a screenshot on every launch for a while, kept until one comes
+  back with a hole in it.
+
+  It is not cosmetic — the Room Code is the only way a phone joins, and a blank
+  tile makes the room unjoinable from the television. But a fix cannot be
+  chosen until it reproduces on demand, and the two escape routes floated
+  earlier (dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in
+  another face) would both change a documented decision to chase a cause that
+  has now been disproven.
 - [ ] Design fidelity pass — AC: hub screens (pairing, join, lobby ×3,
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the

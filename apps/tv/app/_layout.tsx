@@ -1,4 +1,4 @@
-import { boardwalkFonts } from '@huddle/ui';
+import { boardwalkFonts } from '@huddle/ui/fonts';
 import { ConvexProvider } from 'convex/react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';

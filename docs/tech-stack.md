@@ -30,8 +30,8 @@ packages for game modules and the protocol.
 ### Monorepo
 - **Choice:** pnpm workspaces: `apps/tv`, `apps/controller`, `convex/`,
   `packages/game-core` (module interface, room/event types),
-  `packages/games/trivia`, `packages/packs` (question-pack schema + the curated
-  pack).
+  `packages/game-registry` (the installed modules), `packages/games/trivia`,
+  `packages/packs` (question-pack schema + the curated pack).
 - **Why:** Scope's foundation requirements (game modules beside the platform,
   packs as data) are directory boundaries, enforced from day one. pnpm is free
   and fast; Expo supports it.
@@ -92,6 +92,25 @@ packages for game modules and the protocol.
   at compile time. Pack validation runs in CI so a typo'd question can't ship.
 - **Alternatives considered:** Hand-rolled checks — drift from types;
   ArkType/Valibot — fine tools, smaller ecosystems, no advantage here.
+- **Notes that cost time if forgotten:**
+  - **Pack validation is `pnpm validate:packs`.** It is the Question Pack
+    schema (`packages/packs/src/question-pack.ts`) pointed at every `.json` in
+    `packages/packs/packs/`, and it is a CI gate. The command takes a directory
+    argument, so a future importer can be checked before its output is
+    committed. It runs through `tsx`, the one thing in the repo that executes a
+    TypeScript file directly: every package ships raw TypeScript for a bundler
+    to compile, so a CLI has nothing to run otherwise.
+  - **`node:fs` must not reach a phone.** `@huddle/packs`'s index exports the
+    schema and the curated pack only; the module that reads a directory
+    (`pack-validation.ts`) is imported by the command by name and by nothing
+    else. Metro has no answer for `node:fs`, and the failure would appear as a
+    broken app build rather than as anything about packs.
+  - **A game's Settings Schema is not a Zod schema.** It is a declaration the
+    hub *renders* — labelled options with a default — because the scope makes
+    the Host's settings UI generic, and a validator does not carry labels or an
+    order to draw them in. Zod stays where it was chosen for: the pack format
+    and the payloads crossing a Convex function boundary, including the settings
+    a Host sends back.
 
 ### UI & Styling
 - **Choice:** React Native `StyleSheet` with a shared theme package
@@ -138,12 +157,28 @@ packages for game modules and the protocol.
     not a test suite.
   - **Deliberately untested:** RN component rendering/snapshots (churn without
     confidence), visual layout (play-test catches it).
+  - **`react-native` is stubbed under Vitest** (`test/react-native-stub.ts`,
+    aliased for all three projects). Not a change to the line above — the point
+    is still that renderers are not tested. But a Game Module's `screens` are
+    properties of it, so from the first real screen onward, importing a module
+    at all reaches React Native, whose Flow-typed source Node cannot parse. The
+    Registry's tests, the carousel's and the hub's would fail on the import
+    before asserting anything. The stub renders nothing on purpose: a test that
+    needs to assert what a screen draws is a decision to start testing
+    renderers, not a reason to grow the stub.
+  - **The stub can hide a broken seam.** Game logic must never pull screens into
+    the Convex bundle (`packages/game-registry/src/logic.test.ts` walks the
+    server entry's imports), and with `react-native` resolvable under Node a
+    leak would now import cleanly and stay green. That guard is a *source*
+    check; the check that would actually catch it is bundling
+    `convex/convex/games.ts` and grepping the output, which is a manual step at
+    the moment and not a CI gate.
   - **CI:** GitHub Actions free tier (`.github/workflows/ci.yml`) — typecheck,
-    lint, unit (`pnpm test:unit`), integration (`pnpm test:integration`) on
-    every push, as four named steps sharing one checkout and one install. It
-    runs off the committed `convex/convex/_generated` files, so no Convex
-    deployment and no secrets are involved. Pack validation joins the gates in
-    Phase 4, when the Question Pack schema exists.
+    lint, unit (`pnpm test:unit`), integration (`pnpm test:integration`) and
+    pack validation (`pnpm validate:packs`) on every push, as five named steps
+    sharing one checkout and one install. It runs off the committed
+    `convex/convex/_generated` files, so no Convex deployment and no secrets
+    are involved.
 - **Why:** Solo + cheap: the suite must run in seconds locally and free in CI,
   and concentrate on the shared logic that every client depends on.
 
@@ -199,3 +234,5 @@ packages for game modules and the protocol.
 - `expo-secure-store` — the Controller's Session Token across launches (see
   Authentication above).
 - `react-native-qrcode-svg` — QR render on the TV.
+- `tsx` — runs `packages/packs/src/validate-packs.ts` for `pnpm validate:packs`
+  (dev dependency; the repo's only TypeScript-file runner, see Validation).

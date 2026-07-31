@@ -1,10 +1,36 @@
-// The Game Module interface (metadata, settings schema, initial-state factory,
-// reduce(state, event), TV/Controller screens) lands here in Phase 3. See
-// docs/implementation-plan.md. Until then this package holds the room types the
-// hub and the game modules share.
 export type { ColorRejection } from './color-rejection';
+// The Game Module interface: the whole of what the hub knows about a game, and
+// the reason a second game is an entry in the Registry rather than a change to
+// the hub.
+export { gamePlayersFrom } from './game-module';
+export type {
+  ControllerGameScreenProps,
+  GameDeadline,
+  GameEvent,
+  GameKeyArt,
+  GameLogic,
+  GameLogicRegistry,
+  GameMetadata,
+  GameModule,
+  GamePlayer,
+  GamePlayerId,
+  GameRegistry,
+  GameSetting,
+  GameSettingOption,
+  GameSettingsSchema,
+  GameSetup,
+  PlayerRange,
+  RosterSeatForGame,
+  TvGameScreenProps,
+} from './game-module';
+// The Host's settings as everything outside a game module holds them, settled
+// and refused generically against whatever schema the game declares.
+export { type GameSettings, settingsFrom, settingsRefusal } from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
 export type { JoinRejection } from './join-rejection';
+// The names only, as with the player colors below: a module declares the color
+// its Key Art wears, and `packages/ui` says what that color is.
+export { KEY_ART_COLOR_NAMES, type KeyArtColorName } from './key-art';
 export { NICKNAME_MAX_LENGTH } from './nickname';
 // The names only: what a swatch looks like is Boardwalk's business, and lives
 // in `packages/ui`, which keys its palette off this list.
@@ -17,6 +43,18 @@ export {
 // the deadline, and neither number means anything alone.
 export { AWAY_AFTER_MS, HEARTBEAT_INTERVAL_MS } from './presence';
 export { ROOM_PLAYER_CAP } from './room-capacity';
+// The room's two phases and the rules for moving between them. The phase is
+// read off the running game rather than stored beside it — see `room-phase`.
+export {
+  type GameLifecycleIntent,
+  type GameLifecycleRejection,
+  phaseAfter,
+  refusalToStart,
+  roomPhase,
+  ROOM_PHASES,
+  type RoomPhase,
+  type RunningGame,
+} from './room-phase';
 // The third presence number, and the room's own: how long it outlives the last
 // phone it heard from.
 export { ROOM_EXPIRY_MS } from './room-expiry';
