@@ -23,7 +23,9 @@ tech-stack.md; device-visible criteria verified manually on dev builds). A
 phase is done when its slice works end-to-end and is tested.
 
 ## Pinned Defaults
-4-letter room codes (A–Z) · 10-player cap (per-game property; trivia: 2–10) ·
+4-letter room codes, minted from A–Z without I and accepted as any of A–Z
+(the tvOS blank-tile mitigation below; codes minted before it still hold an
+I) · 10-player cap (per-game property; trivia: 2–10) ·
 20s question timer · 10-minute room expiry · answers lock on tap · speed
 scoring `100 + round(100 × secondsRemaining / 20)`.
 
@@ -786,6 +788,23 @@ runs without touching a dev tool.
   tile deliberately, then prove the fix by an A/B of the identical crop rather
   than by one screenshot that looks right.
 
+  **A mitigation landed on 2026-07-31; the AC above is not met and this task
+  stays open.** `ROOM_CODE_ALPHABET` was dropped to A–Z without I and renamed
+  `ROOM_CODE_MINT_ALPHABET` (`packages/game-core/src/room-code.ts`), so no
+  newly minted code can contain the failing glyph. What it does *not* buy: the
+  rendering fault is untouched and its mechanism still unknown, so a code
+  minted before the change still holds an I and its tile still blanks, and the
+  next letter to hit the same fault would not be caught by this. It is a
+  narrower alphabet, not a fix, and the A/B the AC asks for is still owed by
+  whoever finds the mechanism.
+
+  Reading a code stayed at the full A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`, which
+  is what the join screen's `codeEntry` filters by) on purpose: rooms minted
+  before the change are live and on a television, and a phone that swallowed
+  the I they can see would turn a rendering mitigation into a room nobody can
+  join. `joinRoom`'s `normalizeRoomCode` never checked an alphabet and still
+  does not.
+
   **It now reproduces on demand, and the "letter I" reading is back — read
   this before the 2026-07-30 account below, which the warning at the top of
   this task used to contradict.**
@@ -861,11 +880,15 @@ runs without touching a dev tool.
   out — that decision is now in tension with a correctness bug and should be
   revisited first.
 
-  Next: the mechanism is still unknown, so a fix still cannot be chosen. But
-  the two escape routes previously ruled out for chasing a disproven cause —
-  dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in another face —
-  are live options again, and the first is one line and testable by the A/B
-  the AC asks for.
+  Next: the mechanism is still unknown, so a fix still cannot be chosen. Of the
+  two escape routes previously ruled out for chasing a disproven cause, the
+  first — dropping I from the minting alphabet — was taken on 2026-07-31 and is
+  recorded at the top of this task; it buys time rather than correctness. The
+  second, setting the tiles in another face, is untried and remains available.
+  The unexplored lead on the fault itself is rendering the tiles only once the
+  code is known, so the letter is present in the first commit, which the
+  current "draw empty tiles so the screen does not reflow" comment deliberately
+  rules out.
 
   Seen three times on the tvOS simulator on 2026-07-30, the first time the
   pairing screen had been run since the Boardwalk work: room code `OVAI` drew
@@ -918,7 +941,9 @@ runs without touching a dev tool.
   chosen until it reproduces on demand, and the two escape routes floated
   earlier (dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in
   another face) would both change a documented decision to chase a cause that
-  has now been disproven.
+  has now been disproven. (Superseded: the cause was re-established on
+  2026-07-31 and the first route was taken — see the top of this task. The
+  constant is now `ROOM_CODE_MINT_ALPHABET`.)
 - [ ] Design fidelity pass — AC: hub screens (pairing, join, lobby ×3,
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the

@@ -10,10 +10,14 @@ working must add it here.
 - **Room** — the shared session a TV creates and phones join; identified by a
   Room Code. Holds players, current game, and state. It is NOT called a
   "lobby" — the lobby is a phase of a room.
-- **Room Code** — 4-letter (A–Z) code identifying a room, shown on the TV and
+- **Room Code** — 4-letter code identifying a room, shown on the TV and
   encoded in its QR deep link (`huddle://join/<code>`). Minted server-side by
   `createRoom`, which redraws until the code is held by no live room; an
-  expired room's code returns to the pool.
+  expired room's code returns to the pool. It is minted from A–Z *without I*
+  (`ROOM_CODE_MINT_ALPHABET`) — a mitigation for a tvOS tile that draws an I
+  blank, not a fix; the bug is open in the plan. A code may still be *read* as
+  any of A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`), because rooms minted before the I
+  came out are still live and still have to be typeable off a television.
 - **Join Link** — the `huddle://join/<code>` deep link that puts a phone into a
   room. The TV's QR encodes it; both apps register its scheme (`huddle`).
   Built by `roomJoinLink` in game-core, because it is protocol both sides share.

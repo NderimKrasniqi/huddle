@@ -60,6 +60,11 @@ describe('code entry', () => {
     expect(typeCode('7')).toBe('');
   });
 
+  it('takes an I, which a live room minted before the tvOS mitigation still holds', () => {
+    expect(typeCode('RJBI')).toBe('RJBI');
+    expect(codeEntry('rjbi')).toBe('RJBI');
+  });
+
   it('takes no more letters than a Room Code has', () => {
     expect(typeCode('KWRDXYZ')).toBe('KWRD');
     expect(codeEntry('KWRDXYZ')).toHaveLength(ROOM_CODE_LENGTH);

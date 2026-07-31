@@ -1,4 +1,8 @@
-import { HEARTBEAT_INTERVAL_MS, ROOM_CODE_ALPHABET } from '@huddle/game-core';
+import {
+  HEARTBEAT_INTERVAL_MS,
+  ROOM_CODE_LENGTH,
+  ROOM_CODE_MINT_ALPHABET,
+} from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,9 +21,17 @@ type Backend = ReturnType<typeof convexTest>;
 /**
  * The `Math.random()` draw that lands on a given letter, aimed at the middle of
  * the letter's slice of [0, 1) so no rounding can push it into a neighbour.
+ *
+ * A letter the alphabet does not hold — an I, since the tvOS mitigation — is a
+ * test pinning a code `createRoom` could never mint, so it fails here rather
+ * than pinning a different code than the one it names.
  */
 function drawFor(letter: string): number {
-  return (ROOM_CODE_ALPHABET.indexOf(letter) + 0.5) / ROOM_CODE_ALPHABET.length;
+  const index = ROOM_CODE_MINT_ALPHABET.indexOf(letter);
+  if (index < 0) {
+    throw new Error(`No draw lands on "${letter}": ROOM_CODE_MINT_ALPHABET does not hold it`);
+  }
+  return (index + 0.5) / ROOM_CODE_MINT_ALPHABET.length;
 }
 
 /**
@@ -46,12 +58,15 @@ afterEach(() => {
 });
 
 describe('createRoom', () => {
-  it('returns a room with a four-letter A–Z Room Code', async () => {
+  it('returns a room whose Room Code is minted from the minting alphabet', async () => {
     const t = convexTest(schema, modules);
 
     const room = await t.mutation(api.rooms.createRoom, {});
 
-    expect(room.code).toMatch(/^[A-Z]{4}$/);
+    // Driven off the alphabet rather than /^[A-Z]{4}$/, which would pass just
+    // as happily on a code holding the I that tvOS draws blank.
+    expect(room.code).toHaveLength(ROOM_CODE_LENGTH);
+    expect([...room.code].every((letter) => ROOM_CODE_MINT_ALPHABET.includes(letter))).toBe(true);
     await t.run(async (ctx) => {
       expect(await ctx.db.get(room.roomId)).toMatchObject({ code: room.code });
     });
