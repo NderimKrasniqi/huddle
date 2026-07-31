@@ -83,6 +83,20 @@ export default defineSchema({
          * clients are shown the game's state and nothing about the scheduler.
          */
         deadline: v.optional(v.id('_scheduled_functions')),
+        /**
+         * When that deadline comes due, so that what is left of it can be
+         * *read* as well as cancelled: the hub times every event against this
+         * and hands the remainder to the rules (`GameEvent.msRemaining`), which
+         * is the whole of how a game can pay for answering quickly without a
+         * reducer ever touching a clock.
+         *
+         * Written and cleared with `deadline` above, since a room holding one
+         * without the other is a clock that cannot be read or cannot be
+         * stopped. Absent on a beat with no clock, and on a room dealt its beat
+         * by a deployment older than this field — which reads as an event the
+         * room could not time, and never as an event that arrived instantly.
+         */
+        deadlineAt: v.optional(v.number()),
       }),
     ),
     /**

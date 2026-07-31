@@ -1,7 +1,7 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
 
 import { questionsFor, type TriviaQuestion } from './questions';
-import { triviaSettings, TRIVIA_SETTINGS_SCHEMA } from './settings';
+import { triviaSettings, TRIVIA_SETTINGS_SCHEMA, type ScoringMode } from './settings';
 
 /**
  * Trivia's rules, with no screens attached.
@@ -14,23 +14,28 @@ import { triviaSettings, TRIVIA_SETTINGS_SCHEMA } from './settings';
  */
 
 /**
- * What a correct answer is worth in the flat Scoring Mode.
+ * What a correct answer is worth, before the Host's Scoring Mode adds anything
+ * to it: the whole of a flat game's score, and the floor of a speed one's.
  *
- * The only mode the rules implement. `speed` is *declared* in the settings
- * schema (`./settings`) because the Host is offered both, and the formula that
- * makes it different is the next plan task — so a room that chooses it today is
- * scored exactly as flat.
- *
- * What that task inherits is more than a formula. The chosen mode is read in
- * `createInitialState` and then dropped: `TriviaState` does not carry it, so a
- * running game cannot recover what the Host picked, and `revealed` — which is
- * handed nothing but the state — could not act on it if it did. Speed scoring
- * therefore needs the state to grow the mode *and* a source for the seconds a
- * question had left, which a pure reducer cannot read from a clock: it would
- * have to arrive on the answer event, as the hub is the only party in a
- * position to time it.
+ * One number rather than two identical ones, because it is one rule: a right
+ * answer is worth a hundred, and speed is a bonus paid on top of that for the
+ * seconds the question did not need. A wrong answer and an answer that never
+ * came are worth nothing in either mode, which is what keeps the Verdict on the
+ * television honest — a mark that says wrong can never sit beside points. It
+ * keeps the name of the mode it is the whole of.
  */
 export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
+
+/**
+ * What speed pays on top, for a correct answer with the whole question still
+ * left on the clock — falling to nothing as the last second goes.
+ *
+ * The plan's formula in full: `100 + round(100 × secondsRemaining / 20)`, so
+ * the fastest possible answer is worth twice a flat one and the slowest exactly
+ * as much. Rounded rather than truncated, so half a point goes up and the room
+ * is never told 174 for an answer the rules priced at 175.
+ */
+export const SPEED_BONUS_PER_CORRECT_ANSWER = 100;
 
 /**
  * How long a question stays up before the room stops waiting for it — the
@@ -80,6 +85,11 @@ export type TriviaStanding = {
  * `answers` is the current question's only: it is cleared when the room moves
  * to the next one, and a player missing from it is a player who has not
  * answered — which scores exactly what a wrong answer scores.
+ *
+ * The last two fields are optional because a game already in progress when
+ * speed scoring landed carries neither, and must finish unharmed: a room dealt
+ * its question by an older deployment reads as flat with nothing timed, which
+ * is exactly how that room was being scored when it started.
  */
 export type TriviaState = {
   readonly questions: readonly TriviaQuestion[];
@@ -88,7 +98,23 @@ export type TriviaState = {
   readonly phase: TriviaPhase;
   /** The current question's answers: player → the option they locked in. */
   readonly answers: Readonly<Record<GamePlayerId, number>>;
+  /**
+   * The current question's timings: player → the seconds the Question Timer
+   * still had when their answer landed. Cleared with `answers`, which it is
+   * keyed exactly like.
+   *
+   * Beside `answers` rather than inside it, because `answers` is the map three
+   * screens read — the "3/5 answered" count, a phone's Locked In buttons, the
+   * Reveal's Verdict — and not one of them has any business with the timing.
+   * Only `revealed` reads this, and only to price a correct answer.
+   */
+  readonly answerSeconds?: Readonly<Record<GamePlayerId, number>>;
   readonly standings: readonly TriviaStanding[];
+  /**
+   * The Scoring Mode the Host chose, kept because the reveal is where it is
+   * read and the reveal is handed nothing but the state.
+   */
+  readonly scoring?: ScoringMode;
 };
 
 /**
@@ -97,6 +123,9 @@ export type TriviaState = {
  * `answer` names the question it was aimed at, because a phone's tap and the
  * room's beat race: a tap that leaves while question one is up must answer
  * question one or nothing at all, never whatever is on screen when it lands.
+ * Its `msRemaining` is what speed scoring is paid on, and it is the hub's
+ * rather than the phone's for the same reason `playerId` is: a phone naming its
+ * own speed is a claim, and the hub writes the field over whatever arrived.
  *
  * `advance` is the room finishing a beat — a reveal ending, or a question the
  * room stops waiting on. Its `playerId` is optional because both kinds of
@@ -118,6 +147,11 @@ export type TriviaEvent =
       readonly playerId: GamePlayerId;
       readonly questionIndex: number;
       readonly optionIndex: number;
+      /**
+       * How long the Question Timer had left when this reached the rules.
+       * Absent where the room could not say — see `secondsLeftOn`.
+       */
+      readonly msRemaining?: number;
     }
   | {
       readonly kind: 'advance';
@@ -159,6 +193,48 @@ function isPlaying(state: TriviaState, playerId: GamePlayerId): boolean {
 }
 
 /**
+ * The seconds a question still had when an answer landed, as the rules will pay
+ * for them.
+ *
+ * The rules have no clock of their own, so this is whatever the hub timed the
+ * event with (`GameEvent`) — held to the question's own twenty seconds at both
+ * ends, since a clock that reads longer than the beat, or one already overdue,
+ * is a room's bookkeeping and not a score anybody earned.
+ *
+ * Absent is nothing, which is flat. Two things reach it: a beat with no clock
+ * running on it, and a room dealt its question by a deployment older than the
+ * field the hub times against. Paying no bonus is the safe direction of the two
+ * — the alternative is paying a full one for an answer that may have taken the
+ * whole question.
+ */
+function secondsLeftOn(msRemaining: number | undefined): number {
+  if (msRemaining === undefined || !Number.isFinite(msRemaining)) {
+    return 0;
+  }
+
+  return Math.min(Math.max(msRemaining / 1000, 0), QUESTION_SECONDS);
+}
+
+/**
+ * What a correct answer is worth in this game: a hundred, and in a speed game
+ * the bonus the seconds it left on the clock buy.
+ *
+ * The Host's whole Scoring Mode is this one line. A mode the state does not
+ * carry is flat, which is both the schema's default and what a game dealt
+ * before speed scoring existed was being scored.
+ */
+function scoreForCorrectAnswer(state: TriviaState, secondsRemaining: number): number {
+  if (state.scoring !== 'speed') {
+    return FLAT_SCORE_PER_CORRECT_ANSWER;
+  }
+
+  return (
+    FLAT_SCORE_PER_CORRECT_ANSWER +
+    Math.round((SPEED_BONUS_PER_CORRECT_ANSWER * secondsRemaining) / QUESTION_SECONDS)
+  );
+}
+
+/**
  * The question ends: the right answer goes up on the TV and the scores catch
  * up with it.
  *
@@ -180,7 +256,9 @@ function revealed(state: TriviaState): TriviaState {
     score:
       standing.score +
       (state.answers[standing.playerId] === question.correctIndex
-        ? FLAT_SCORE_PER_CORRECT_ANSWER
+        ? // A player who never answered is in neither map, so they are never
+          // here: no answer scores what a wrong one scores, in both modes.
+          scoreForCorrectAnswer(state, state.answerSeconds?.[standing.playerId] ?? 0)
         : 0),
   }));
 
@@ -212,7 +290,13 @@ function answerTaken(
   }
 
   const answers = { ...state.answers, [event.playerId]: event.optionIndex };
-  const answered = { ...state, answers };
+  // Timed now and priced at the reveal, because a score that moved the moment a
+  // phone was tapped would tell the room what the right answer was.
+  const answerSeconds = {
+    ...state.answerSeconds,
+    [event.playerId]: secondsLeftOn(event.msRemaining),
+  };
+  const answered = { ...state, answers, answerSeconds };
 
   // The last player to answer ends the question: there is nobody left to wait
   // for, so the room is not made to sit through a countdown it is done with.
@@ -245,7 +329,7 @@ function advanced(
       // The last reveal ends the game, and the standings are already in the
       // order the Victory Screen reads them in.
       return nextIndex < state.questions.length
-        ? { ...state, phase: 'question', questionIndex: nextIndex, answers: {} }
+        ? { ...state, phase: 'question', questionIndex: nextIndex, answers: {}, answerSeconds: {} }
         : { ...state, phase: 'finished' };
     }
 
@@ -305,8 +389,12 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
       questionIndex: 0,
       phase: 'question',
       answers: {},
+      answerSeconds: {},
       // Roster order, since nobody has scored yet and the sort is stable.
       standings: players.map((player) => ({ playerId: player.playerId, score: 0 })),
+      // The one setting the rules carry: the reveal is where it is read, and
+      // the reveal is handed nothing but the state.
+      scoring: chosen.scoring,
     };
   },
   reduce: (state, event) => {

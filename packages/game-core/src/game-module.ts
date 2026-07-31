@@ -87,6 +87,23 @@ export function gamePlayersFrom(
  */
 export type GameEvent = {
   readonly playerId?: GamePlayerId;
+  /**
+   * How long the room's clock still had when this event reached the rules — the
+   * beat's `GameDeadline`, read at the moment the event landed.
+   *
+   * The hub's, and written the same way `playerId` is: over whatever arrived,
+   * so a phone claiming to have been faster than it was is a claim the rules
+   * never see. It is here rather than in any module's own event because it is
+   * the hub that holds the clock — a reducer may not read one, and a game that
+   * pays for speed has no other way to be told what a second was worth.
+   *
+   * Absent means the room could not say: a beat with no deadline running on it,
+   * the scheduled deadline itself (which is the clock running *out*, so nothing
+   * is left of it), or a room dealt its beat by a deployment older than the
+   * field this is timed against. A game that reads it decides what nothing
+   * means; trivia pays no bonus.
+   */
+  readonly msRemaining?: number;
 };
 
 /**

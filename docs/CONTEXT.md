@@ -218,6 +218,17 @@ working must add it here.
   again — a clock re-armed on every event would be a beat that never ended while
   anybody was still acting on it. Optional: a game where nothing expires
   declares none.
+- **Time Left** — how much of the room's clock the beat still had when an event
+  reached the rules (`msRemaining` on `GameEvent`). The hub's, and written over
+  whatever arrived exactly as the player is, because a phone claiming to have
+  been faster than it was is a claim and never an identification. It is the
+  whole of how a game can pay for answering quickly without a Reducer ever
+  reading a clock: the room stores when its Game Deadline comes due
+  (`deadlineAt`, wound and cleared with the deadline itself) and subtracts.
+  Absent means the room could not say — a beat with no deadline on it, the
+  deadline itself (a clock that has run out has nothing left of it), or a beat
+  dealt by a deployment older than the field — and what nothing is worth is the
+  game's judgement, never the hub's.
 - **Registry** — the list of installed game modules the hub renders (carousel,
   metadata), held in order because the carousel browses it by index. Adding a
   game = adding a registry entry. It is `packages/game-registry` and not part
@@ -354,10 +365,18 @@ working must add it here.
   worked out the way it is). Counting from the question arriving starts a round
   trip late, which is the safe direction — the reveal takes the number off the
   screen, rather than the number sitting at zero waiting for it.
-- **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
-  or `speed` (`100 + round(100 × secondsRemaining / 20)`). Both are *offered*;
-  only flat is implemented, so a room that chooses speed today is scored flat.
-  The formula is its own plan task.
+- **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default) or
+  `speed` (`100 + round(100 × secondsRemaining / 20)`, so the fastest possible
+  correct answer is worth twice a flat one and the slowest exactly as much). A
+  wrong answer and an answer that never came score nothing in either mode, which
+  is what keeps a Verdict from ever sitting beside points. The seconds are the
+  Time Left the hub timed that answer with, held to the question's own twenty at
+  both ends and kept beside the answers (`answerSeconds`) until the Reveal
+  prices them — pricing at the tap would move a score before the reveal and tell
+  the room what the right answer was. The mode rides in the state (`scoring`)
+  because the Reveal is handed nothing but the state; a game dealt before speed
+  scoring existed carries neither field and is scored flat, which is what it was
+  started as.
 - **Trivia's settings** — the three the module declares
   (`TRIVIA_SETTINGS_SCHEMA`): the Scoring Mode, a **question count** of 5, 10 or
   20 (default 10), and a **category filter** of `all` or one of the pack's own

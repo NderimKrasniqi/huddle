@@ -770,7 +770,7 @@ ready for a real game night.
   settings; a non-Host phone never sees settings controls; changing a
   control updates what the room will start with, and every phone's carousel
   keeps working while the Host is choosing.
-- [ ] Speed scoring mode — AC (unit tests): correct answer scores
+- [x] Speed scoring mode — AC (unit tests): correct answer scores
   `100 + round(100 × secondsRemaining / 20)`; e.g. correct with 15s left
   = 175, correct at 0s left = 100, wrong at any time = 0; flat mode unchanged
   at 100.

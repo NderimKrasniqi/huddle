@@ -115,6 +115,32 @@ function timedBeat(game: GameLogic, state: unknown): string | undefined {
 }
 
 /**
+ * The room's clock as the room stores it: what will fire, and when it is due.
+ *
+ * The two travel together — one is how a clock is stopped and the other is how
+ * what is left of it is read — so they are wound, kept and cleared as one value
+ * rather than as two fields anybody could set apart. Empty is a beat with no
+ * clock on it.
+ */
+type RoomClock = {
+  readonly deadline?: Id<'_scheduled_functions'>;
+  readonly deadlineAt?: number;
+};
+
+/**
+ * How much of the room's clock is left, for the rules that are about to be
+ * handed an event.
+ *
+ * `undefined` where the room cannot say, which is a beat with no clock and a
+ * room dealt its beat before `deadlineAt` existed. Never clamped here: what a
+ * clock reading past its beat or already overdue is worth is the game's
+ * judgement and not the hub's, and the hub does not know what it is timing.
+ */
+function clockRemaining(clock: RoomClock): number | undefined {
+  return clock.deadlineAt === undefined ? undefined : clock.deadlineAt - Date.now();
+}
+
+/**
  * Stops whatever clock the room had running.
  *
  * A deadline that has already fired is past cancelling, and Convex says so by
@@ -146,20 +172,24 @@ async function windGameClock(
   room: Doc<'rooms'>,
   game: GameLogic,
   state: unknown,
-): Promise<Id<'_scheduled_functions'> | undefined> {
+): Promise<RoomClock> {
   await stopGameClock(ctx, room);
 
   const deadline = game.deadline?.(state);
 
   if (deadline === undefined) {
-    return undefined;
+    return {};
   }
 
-  return await ctx.scheduler.runAfter(deadline.afterMs, internal.games.reachDeadline, {
+  const scheduled = await ctx.scheduler.runAfter(deadline.afterMs, internal.games.reachDeadline, {
     roomId: room._id,
     gameId: game.metadata.id,
     event: deadline.event,
   });
+
+  // The module answers in milliseconds from now — no part of a game reads the
+  // time — so the room is what turns that into a moment to time events against.
+  return { deadline: scheduled, deadlineAt: Date.now() + deadline.afterMs };
 }
 
 /**
@@ -194,7 +224,10 @@ async function playGameEvent(
     return;
   }
 
-  const next = game.reduce(running.state, event);
+  // The clock is read here and nowhere else, and written over whatever the
+  // event arrived with — a phone claiming to have answered faster than it did
+  // is a claim, exactly as a phone naming a player is (see `GameEvent`).
+  const next = game.reduce(running.state, { ...event, msRemaining: clockRemaining(running) });
 
   // A module that does not recognise an event returns no state at all, and an
   // exhaustive switch over its own events is how it does that. Storing
@@ -222,12 +255,12 @@ async function playGameEvent(
   // `undefined` in either case stops the clock for good, and in silence, since
   // a beat that never expires throws nothing and fails no test.
   const sameBeat = timedBeat(game, next) === timedBeat(game, running.state);
-  const deadline =
+  const clock =
     sameBeat && running.deadline !== undefined
-      ? running.deadline
+      ? { deadline: running.deadline, deadlineAt: running.deadlineAt }
       : await windGameClock(ctx, room, game, next);
 
-  await ctx.db.patch(room._id, { game: { gameId: running.gameId, state: next, deadline } });
+  await ctx.db.patch(room._id, { game: { gameId: running.gameId, state: next, ...clock } });
 }
 
 /**
@@ -286,9 +319,9 @@ export const startGame = mutation({
     // The first beat's clock starts with the game, so a room that has been
     // dealt a question is already being counted down at the moment every screen
     // in it draws that question.
-    const deadline = await windGameClock(ctx, room, game, state);
+    const clock = await windGameClock(ctx, room, game, state);
 
-    await ctx.db.patch(room._id, { game: { gameId: game.metadata.id, state, deadline } });
+    await ctx.db.patch(room._id, { game: { gameId: game.metadata.id, state, ...clock } });
 
     return null;
   },
@@ -409,10 +442,11 @@ export const reachDeadline = internalMutation({
     // The deadline reaching the room is by definition no longer pending: it is
     // this mutation. So the room is handed on without it, and the beat this
     // event starts winds a fresh clock instead of trying to cancel the one it
-    // is running inside.
+    // is running inside. Without a due time either — a clock that has run out
+    // has nothing left on it, and that is what the rules should be told.
     await playGameEvent(
       ctx,
-      { ...room, game: { ...running, deadline: undefined } },
+      { ...room, game: { ...running, deadline: undefined, deadlineAt: undefined } },
       args.event as GameEvent,
     );
     return null;

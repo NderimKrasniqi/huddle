@@ -81,12 +81,27 @@ function wrongAnswerTo(state: TriviaState): number {
   return (rightAnswerTo(state) + 1) % questionOf(state).options.length;
 }
 
-function answering(state: TriviaState, playerId: string, optionIndex: number): TriviaState {
+/**
+ * A player locking an option in, with the room's clock on it where the test
+ * cares what it read.
+ *
+ * `msRemaining` is the hub's, never the phone's (see `GameEvent`), and is left
+ * off everywhere flat scoring is being tested — a flat game is worth the same
+ * whenever it was answered, so the timing is exactly the noise those tests do
+ * not need.
+ */
+function answering(
+  state: TriviaState,
+  playerId: string,
+  optionIndex: number,
+  msRemaining?: number,
+): TriviaState {
   return triviaGameLogic.reduce(state, {
     kind: 'answer',
     playerId,
     questionIndex: state.questionIndex,
     optionIndex,
+    msRemaining,
   });
 }
 
@@ -526,5 +541,122 @@ describe('the clock a question runs on', () => {
 
     expect(revealed.phase).toBe('reveal');
     expect(triviaGameLogic.reduce(revealed, timer.event)).toBe(revealed);
+  });
+});
+
+/**
+ * What a correct answer is worth, which is the one thing the Host's Scoring Mode
+ * changes.
+ *
+ * The seconds a question had left are not the rules' to read — a reducer has no
+ * clock — so they arrive on the answer event, timed by the hub, and every test
+ * here hands them over the way `sendEvent` does.
+ */
+describe('the Scoring Mode a Host chose', () => {
+  /** A game started on a scoring mode, settled the way `startGame` settles it. */
+  function gameScored(scoring: string): TriviaState {
+    return startedOn({ scoring }, ADA, GRACE);
+  }
+
+  /**
+   * What Ada scores for one answer, on a question Grace ends by answering
+   * wrongly — so the reveal happens on the beat the answer was given, and the
+   * only score in it is the one being asserted.
+   */
+  function scoreFor(
+    scoring: string,
+    answer: 'right' | 'wrong',
+    msRemaining?: number,
+  ): number | undefined {
+    const asked = gameScored(scoring);
+    const option = answer === 'right' ? rightAnswerTo(asked) : wrongAnswerTo(asked);
+    const revealed = answering(
+      answering(asked, ADA, option, msRemaining),
+      GRACE,
+      wrongAnswerTo(asked),
+      msRemaining,
+    );
+
+    expect(revealed.phase).toBe('reveal');
+
+    return scoreOf(revealed, ADA);
+  }
+
+  it('pays a speed answer the hundred plus the seconds it did not use', () => {
+    // The plan's own example: fifteen of the twenty seconds still on the clock.
+    expect(scoreFor('speed', 'right', 15_000)).toBe(175);
+  });
+
+  it('pays a speed answer that used the whole question the hundred and no more', () => {
+    expect(scoreFor('speed', 'right', 0)).toBe(100);
+  });
+
+  it('pays the full bonus to a thumb that lands as the question opens', () => {
+    expect(scoreFor('speed', 'right', QUESTION_SECONDS * 1000)).toBe(200);
+  });
+
+  it('rounds the bonus rather than truncating it', () => {
+    // Seven and a half seconds is 37.5 points of bonus, and the half goes up.
+    expect(scoreFor('speed', 'right', 7_500)).toBe(138);
+  });
+
+  it('pays a wrong answer nothing, however fast it was', () => {
+    expect(scoreFor('speed', 'wrong', QUESTION_SECONDS * 1000)).toBe(0);
+    expect(scoreFor('speed', 'wrong', 0)).toBe(0);
+  });
+
+  it('pays a player who never answered nothing, which is what the timer leaves them', () => {
+    const asked = gameScored('speed');
+    // Ada answers instantly and the Question Timer ends it, so Grace's phone
+    // never sent anything at all.
+    const revealed = advancing(answering(asked, ADA, rightAnswerTo(asked), 20_000));
+
+    expect(scoreOf(revealed, ADA)).toBe(200);
+    expect(scoreOf(revealed, GRACE)).toBe(0);
+  });
+
+  it('pays no more than a full question and no less than nothing', () => {
+    // A clock the hub read as longer than the question, or as already overdue.
+    // Neither is a score the rules will pay: the bonus is what the question's
+    // own twenty seconds are worth, and a late answer is worth a flat one.
+    expect(scoreFor('speed', 'right', QUESTION_SECONDS * 1000 + 5_000)).toBe(200);
+    expect(scoreFor('speed', 'right', -1_000)).toBe(100);
+  });
+
+  it('pays a speed answer the room could not time exactly the hundred', () => {
+    // No clock was running on the beat, or the room was dealt it by a
+    // deployment older than the field its deadline is stored in. The safe
+    // direction: an answer that may have taken the whole twenty seconds is
+    // never paid a bonus for seconds nobody watched.
+    expect(scoreFor('speed', 'right', undefined)).toBe(100);
+  });
+
+  it('pays a flat answer a hundred whenever it lands', () => {
+    // Flat is the default and the mode most rooms play: the clock reaching the
+    // rules must not have changed a single score in it.
+    expect(scoreFor('flat', 'right', QUESTION_SECONDS * 1000)).toBe(100);
+    expect(scoreFor('flat', 'right', 15_000)).toBe(100);
+    expect(scoreFor('flat', 'right', 0)).toBe(100);
+    expect(scoreFor('flat', 'wrong', 15_000)).toBe(0);
+  });
+
+  it('carries the Host’s choice in the state, since the reveal is where it is read', () => {
+    expect(gameScored('speed').scoring).toBe('speed');
+    expect(gameScored('flat').scoring).toBe('flat');
+  });
+
+  it('scores a game dealt before speed scoring flat, rather than on nothing', () => {
+    const asked = gameScored('speed');
+    // A room mid-question when this landed: its state carries neither the mode
+    // nor any timing, and it must finish the game it is in unharmed.
+    const dealtEarlier: TriviaState = { ...asked, scoring: undefined, answerSeconds: undefined };
+    const revealed = answering(
+      answering(dealtEarlier, ADA, rightAnswerTo(asked), 20_000),
+      GRACE,
+      wrongAnswerTo(asked),
+    );
+
+    expect(scoreOf(revealed, ADA)).toBe(100);
+    expect(scoreOf(revealed, GRACE)).toBe(0);
   });
 });

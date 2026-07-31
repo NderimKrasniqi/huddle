@@ -34,9 +34,23 @@ async function roomWithParty(t: Backend): Promise<{
   return { roomId: room.roomId, host: host.sessionToken, guest: guest.sessionToken };
 }
 
-/** A room in a game, with every phone's token by the nickname holding it. */
+/**
+ * A room in a game with every setting left at its default — sent as an empty
+ * set of choices, which is a Host who opened the settings screen and changed
+ * nothing. (A Host who never opened it sends none at all: that is `startGame`
+ * with the argument omitted, tested where the lifecycle is.)
+ */
 async function roomPlaying(
   t: Backend,
+  ...nicknames: readonly string[]
+): Promise<{ roomId: Id<'rooms'>; tokens: Record<string, string> }> {
+  return await roomPlayingOn(t, {}, ...nicknames);
+}
+
+/** A room in a game the Host chose settings for, every phone's token by nickname. */
+async function roomPlayingOn(
+  t: Backend,
+  settings: GameSettings,
   ...nicknames: readonly string[]
 ): Promise<{ roomId: Id<'rooms'>; tokens: Record<string, string> }> {
   const room = await t.mutation(api.rooms.createRoom, {});
@@ -54,7 +68,7 @@ async function roomPlaying(
     throw new Error('a room with nobody in it has no game to play');
   }
 
-  await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+  await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia', settings });
 
   return { roomId: room.roomId, tokens };
 }
@@ -896,6 +910,63 @@ describe('the clock a question runs on', () => {
     await elapse(t, clockOn(asked));
 
     expect((await stateOf(t, roomId)).phase).toBe('reveal');
+  });
+
+  /**
+   * The room timing an event against its own clock, which is the half of speed
+   * scoring the module cannot carry: a reducer may not read a clock, so what a
+   * second was worth has to arrive with the event (`GameEvent.msRemaining`).
+   *
+   * What the points mean is trivia's and is tested where trivia's rules are.
+   * What is asserted here is that the room times an answer by the clock it is
+   * actually running, and by nothing a phone says about itself.
+   */
+  describe('and the answers it times', () => {
+    it('hands the rules what the room’s clock had left', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlayingOn(t, { scoring: 'speed' }, 'Ada', 'Grace');
+      const ada = await playerIdOf(t, roomId, 'Ada');
+      const asked = await stateOf(t, roomId);
+
+      // Five seconds of thinking, so fifteen of the twenty are left: trivia
+      // prices that at 100 + 75, and it can only know it from the hub.
+      await elapse(t, 5_000);
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Ada ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
+      });
+      // Grace's phone is in her pocket; the room ends the question itself.
+      await elapse(t, clockOn(asked) - 5_000);
+
+      const revealed = await stateOf(t, roomId);
+
+      expect(revealed.phase).toBe('reveal');
+      expect(revealed.standings).toContainEqual({ playerId: ada, score: 175 });
+    });
+
+    it('never believes a phone about how fast it was', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlayingOn(t, { scoring: 'speed' }, 'Ada', 'Grace');
+      const ada = await playerIdOf(t, roomId, 'Ada');
+      const asked = await stateOf(t, roomId);
+
+      await elapse(t, 15_000);
+      // A phone claiming the whole question was still on the clock. The hub
+      // writes this field over whatever arrived, exactly as it does the player,
+      // so the answer is scored on the five seconds that were really left.
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Ada ?? '',
+        event: {
+          kind: 'answer',
+          questionIndex: 0,
+          optionIndex: correctAnswerTo(asked),
+          msRemaining: clockOn(asked),
+        },
+      });
+      await elapse(t, clockOn(asked) - 15_000);
+
+      expect((await stateOf(t, roomId)).standings).toContainEqual({ playerId: ada, score: 125 });
+    });
   });
 
   it('stops with the game, so a room that starts another gets its full time', async () => {
