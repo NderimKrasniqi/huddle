@@ -784,8 +784,49 @@ Goal: the app matches the Boardwalk design on real hardware; a full game night
 runs without touching a dev tool.
 - [ ] A Room Code tile sometimes draws empty on tvOS — AC: reproduce a blank
   tile deliberately, then prove the fix by an A/B of the identical crop rather
-  than by one screenshot that looks right. **Do not act on the "letter I"
-  theory below — it was tested and is wrong.**
+  than by one screenshot that looks right.
+
+  **It now reproduces on demand, and the "letter I" reading is back — read
+  this before the 2026-07-30 account below, which the warning at the top of
+  this task used to contradict.**
+
+  On 2026-07-31, 28 instrumented cold launches on the tvOS simulator against
+  the cloud dev deployment, real product path, random server-dealt codes:
+
+  | | code contains an I | no I |
+  |---|---|---|
+  | a tile blanked | **5** | 0 |
+  | every tile drew | 0 | **23** |
+
+  The five were `SHIN` (pos 2), `IQYV` (pos 0), `IJUN` (pos 0), `IEAN` (pos 0)
+  and `QIYB` (pos 1) — five positions across two accent runs, and in every one
+  the blank tile is exactly where the I is. No tile holding any other letter
+  has ever blanked, in 28 launches or in any earlier session.
+
+  **How this squares with the disproof.** The earlier experiment — a bare `I`
+  in all four tiles drawing correctly on five consecutive launches — disproves
+  "I *always* blanks". It does not touch "*only* I blanks", which is what every
+  observation before and since is consistent with, including this plan's own
+  note that the clean eleven-launch run "happened to contain no I". The two
+  readings were conflated and the task was warned off the live hypothesis. The
+  honest statement is: **the failure is specific to the letter I and is not
+  deterministic** — a hardcoded I has drawn fine, while a server-dealt I has
+  now failed 5 times out of 5.
+
+  **The instrument.** Cold launch, wait for a *stable* frame, then measure ink
+  coverage inside each of the four tile cards: a drawn glyph covers ~16%, an
+  empty card keeps only its ~3% border. Calibrated against a real frame and a
+  synthetically blanked copy so it is known to fire. Two traps it must handle,
+  both of which produced false positives first time round: a dev build takes
+  longer than 9s to fetch its bundle, and a frame where *all four* tiles are
+  empty is the room code not having arrived yet — the QR card is empty in
+  those frames too — not four holes.
+
+  Next: the mechanism is still unknown, so a fix still cannot be chosen. But
+  the two escape routes previously ruled out for chasing a disproven cause —
+  dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in another face —
+  are live options again, and the first is one line and testable by the A/B
+  the AC asks for.
 
   Seen three times on the tvOS simulator on 2026-07-30, the first time the
   pairing screen had been run since the Boardwalk work: room code `OVAI` drew
