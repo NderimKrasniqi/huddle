@@ -23,6 +23,9 @@ export type {
   RosterSeatForGame,
   TvGameScreenProps,
 } from './game-module';
+// The Host's settings as everything outside a game module holds them, settled
+// and refused generically against whatever schema the game declares.
+export { type GameSettings, settingsFrom, settingsRefusal } from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
 export type { JoinRejection } from './join-rejection';
 // The names only, as with the player colors below: a module declares the color
@@ -43,7 +46,6 @@ export { ROOM_PLAYER_CAP } from './room-capacity';
 // The room's two phases and the rules for moving between them. The phase is
 // read off the running game rather than stored beside it — see `room-phase`.
 export {
-  defaultSettings,
   type GameLifecycleIntent,
   type GameLifecycleRejection,
   phaseAfter,

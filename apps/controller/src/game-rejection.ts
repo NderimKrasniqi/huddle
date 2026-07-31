@@ -23,6 +23,7 @@ const REJECTION_KINDS: Readonly<Record<GameLifecycleRejection['kind'], true>> = 
   notEnoughPlayers: true,
   notHost: true,
   notInRoom: true,
+  settingRejected: true,
 };
 
 /** Whether `data` off a `ConvexError` is one of the lifecycle refusals. */
@@ -62,6 +63,12 @@ export function rejectionMessage(rejection: GameLifecycleRejection): string {
       return 'Somebody else is running this room now.';
     case 'notInRoom':
       return 'You are not in this room any more. Reopen Huddle to join again.';
+    case 'settingRejected':
+      // Only reachable from a phone whose settings screen was drawn off a
+      // different build's schema, which is the same story as `gameNotInstalled`
+      // and gets the same answer. The key is not named: the Host cannot act on
+      // it, and the control they used is on their screen either way.
+      return 'This room can’t play that game that way. Update Huddle and try again.';
   }
 }
 

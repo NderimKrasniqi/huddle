@@ -8,6 +8,7 @@ export {
   QUESTION_OPTION_COUNT,
   type QuestionPack,
   questionPackSchema,
+  RESERVED_CATEGORY,
 } from './question-pack';
 // The pack that ships in the repo, parsed from its file.
 export { CURATED_PACK } from './curated-pack';

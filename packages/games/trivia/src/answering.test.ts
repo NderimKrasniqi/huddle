@@ -24,7 +24,8 @@ function player(playerId: string): GamePlayer {
 function gameWith(...playerIds: readonly string[]): TriviaState {
   return triviaGameLogic.createInitialState({
     players: playerIds.map(player),
-    settings: undefined,
+    // A Host who chose nothing, which trivia reads as its schema's defaults.
+    settings: {},
   });
 }
 

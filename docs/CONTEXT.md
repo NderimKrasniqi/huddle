@@ -228,7 +228,14 @@ working must add it here.
   options; the hub renders settings UI generically from it. Each option is a
   labelled key with a closed list of labelled values and a default among them,
   which is what every setting Huddle has scoped is and what a generic screen
-  can draw without the game telling it how.
+  can draw without the game telling it how. The hub also *settles* a Host's
+  choices against it without reading them (`settingsFrom`, `settingsRefusal` in
+  game-core): anything the schema does not offer is refused at `startGame` as a
+  `settingRejected`, and anything the Host left alone takes the schema's own
+  default — so a game is never handed a setting it did not declare, and a Host
+  who never opened the settings screen still starts a game that has settings.
+  What crosses the hub is `GameSettings`, a value per key and both of them
+  strings; a game's own settings type is its business, on the far side of that.
 - **Reducer** — a game module's pure `reduce(state, event)` rules function;
   runs server-side in Convex mutations.
 - **Question Pack** — versioned data file of trivia questions (text, 4
@@ -241,8 +248,11 @@ working must add it here.
   that nothing checks.
 - **Pack Question** — one question as a pack holds it (`PackQuestion`): what
   the rules need to ask it, plus the two fields only a pack has a use for. Its
-  **category** is free text, because the Host's filter is built from whatever
-  categories a pack happens to use; its **difficulty** is `easy`, `medium` or
+  **category** is free text with one word reserved (`RESERVED_CATEGORY`, `all`,
+  in any case): the Host's filter is built from whatever categories a pack
+  happens to use, and it needs a value meaning "no filter", so a pack claiming
+  that word is malformed rather than merely awkward — the two share one space
+  and only one of them can have it. Its **difficulty** is `easy`, `medium` or
   `hard`, which is an author's sorting aid and nothing the rules read. A game's
   category (Game Metadata) is not one of these.
 - **Curated Pack** — the pack that ships in the repo (`CURATED_PACK`,
@@ -256,11 +266,20 @@ working must add it here.
   problem in every pack rather than stopping at the first, and exits non-zero
   if a file is malformed, unparseable, or if the directory holds no packs at
   all — a mistyped path that validated nothing would otherwise read as a pass.
-- **Inline Questions** — the three questions written into the trivia module
-  (`INLINE_QUESTIONS`) that every game is dealt until Phase 4's curated pack
-  replaces them. Deliberately not a Question Pack: a pack is a versioned file
-  with an id and a category on every question, and these are three questions
-  inline so the rules could be built and played before that format existed.
+- **Question Deal** — how a game of trivia gets its questions from the Curated
+  Pack (`questionsFor`): the Host's category filter, then their count, taken off
+  the front of what is left. Dealt once, into the state, so a room is asked what
+  it was dealt at the moment it started. Two decisions ride in it. The pack is
+  written a category at a time, so a deal for *all* categories takes one from
+  each in turn and the shortest game still spans the pack; a deal for one
+  category is that pack's own order, because there is a single queue to take
+  from. And it is **deterministic** — no shuffle, no random number — because a
+  module is a pure function of what it is handed and `GameSetup` has nowhere for
+  the hub to hand it a seed. The flat cost is that a party playing twice in an
+  evening is asked the same questions in the same order. A count larger than the
+  category holds deals what there is: a short game, never a repeat.
+  (`INLINE_QUESTIONS`, the three questions written into the module before packs
+  existed, is what this replaced.)
 - **Reveal** — the post-question moment showing the correct option and who
   scored, followed by the running scoreboard. One of trivia's three phases
   (`question`, `reveal`, `finished`), which is where a game of it is.
@@ -325,7 +344,19 @@ working must add it here.
   trip late, which is the safe direction — the reveal takes the number off the
   screen, rather than the number sitting at zero waiting for it.
 - **Scoring Mode** — trivia setting: `flat` (100 per correct answer, default)
-  or `speed` (`100 + round(100 × secondsRemaining / 20)`).
+  or `speed` (`100 + round(100 × secondsRemaining / 20)`). Both are *offered*;
+  only flat is implemented, so a room that chooses speed today is scored flat.
+  The formula is its own plan task.
+- **Trivia's settings** — the three the module declares
+  (`TRIVIA_SETTINGS_SCHEMA`): the Scoring Mode, a **question count** of 5, 10 or
+  20 (default 10), and a **category filter** of `all` or one of the pack's own
+  (default `all`). The category options are *derived from the Curated Pack*
+  rather than written down beside it — a category is whatever a pack says it is,
+  so a pack that gains one gains a filter for it, and every option offered has
+  questions behind it. `EVERY_CATEGORY` is the filter set to no filter, and is
+  not a category: it *is* the pack format's `RESERVED_CATEGORY`, one constant
+  rather than two spellings, so the word the schema refuses and the word the
+  filter tests cannot drift apart.
 - **Victory Screen** — the last thing the television shows of a game of trivia:
   the Standings with everybody's place on them, and a **Headline** over them
   celebrating whoever won. A place is a `FinalStanding` — a scoreboard row, its

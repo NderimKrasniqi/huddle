@@ -755,7 +755,7 @@ ready for a real game night.
   players who haven't answered when it expires score +0 for that question;
   reveal triggers at expiry or when all active players have answered,
   whichever comes first (integration test with mocked scheduler).
-- [ ] Settings schema & a game started from it (server half of the split) —
+- [x] Settings schema & a game started from it (server half of the split) —
   AC: trivia declares settings {scoring: flat|speed (default flat),
   questionCount: 5|10|20 (default 10), category: all|<pack categories>
   (default all)}; the schema is generic in `game-core`, not trivia-shaped;

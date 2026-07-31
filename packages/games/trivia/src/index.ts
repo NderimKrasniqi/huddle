@@ -11,5 +11,9 @@ export {
   type TriviaStanding,
   type TriviaState,
 } from './logic';
-export { INLINE_QUESTIONS, type TriviaQuestion } from './questions';
+export { type TriviaQuestion } from './questions';
+// Nothing else of `./questions` or `./settings` is exported: the schema reaches
+// the hub as `triviaGameModule.settingsSchema` and the pack's categories reach
+// the Host through the options on it, so a client that imported either by name
+// would be a client that had learnt what game it is drawing.
 export { triviaGameModule } from './trivia';

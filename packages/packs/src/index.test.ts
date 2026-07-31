@@ -60,6 +60,7 @@ describe('the public entry point', () => {
       'CURATED_PACK',
       'DIFFICULTIES',
       'QUESTION_OPTION_COUNT',
+      'RESERVED_CATEGORY',
       'packQuestionSchema',
       'questionPackSchema',
     ]);

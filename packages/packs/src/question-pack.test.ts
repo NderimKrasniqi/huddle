@@ -91,6 +91,19 @@ describe('questionPackSchema', () => {
     expect(questionPackSchema.safeParse(packWithQuestion({ category: '' })).success).toBe(false);
   });
 
+  it('rejects a category named after the filter’s own sentinel', () => {
+    // A pack shipping a category called "all" would hand the Host an option
+    // that dealt them an unfiltered game instead of that category — the two
+    // share one space, so the pack is where the collision is refused.
+    expect(questionPackSchema.safeParse(packWithQuestion({ category: 'all' })).success).toBe(false);
+    expect(questionPackSchema.safeParse(packWithQuestion({ category: 'All' })).success).toBe(false);
+    expect(questionPackSchema.safeParse(packWithQuestion({ category: ' ALL ' })).success).toBe(false);
+    // Only the word itself: a category that merely contains it is fine.
+    expect(questionPackSchema.safeParse(packWithQuestion({ category: 'All Sports' })).success).toBe(
+      true,
+    );
+  });
+
   it('rejects a misspelled field rather than ignoring it', () => {
     // A pack that says `answerIndex` has an answer nobody reads, and would
     // otherwise fail only on the required field it forgot to spell right.

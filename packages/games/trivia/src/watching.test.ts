@@ -1,7 +1,12 @@
 import type { GamePlayer } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
-import { QUESTION_SECONDS, triviaGameLogic, type TriviaState } from './logic';
+import {
+  FLAT_SCORE_PER_CORRECT_ANSWER,
+  QUESTION_SECONDS,
+  triviaGameLogic,
+  type TriviaState,
+} from './logic';
 import { watchedScreen, type WatchedScreen } from './watching';
 
 /**
@@ -23,7 +28,8 @@ function player(playerId: string, nickname: string): GamePlayer {
 const ROSTER = [player(ADA, 'Ada'), player(GRACE, 'Grace')];
 
 function gameWith(...players: readonly GamePlayer[]): TriviaState {
-  return triviaGameLogic.createInitialState({ players, settings: undefined });
+  // A Host who chose nothing, which trivia reads as its schema's defaults.
+  return triviaGameLogic.createInitialState({ players, settings: {} });
 }
 
 function answering(state: TriviaState, playerId: string, optionIndex: number): TriviaState {
@@ -121,7 +127,8 @@ function everyoneRightExcept(...wrong: readonly string[]) {
 
 describe('a question on the television', () => {
   it('shows the question, its four options, and where the room is in the set', () => {
-    const screen = screenOf(gameWith(...ROSTER));
+    const state = gameWith(...ROSTER);
+    const screen = screenOf(state);
 
     expect(screen.kind).toBe('question');
 
@@ -131,7 +138,9 @@ describe('a question on the television', () => {
 
     expect(screen.options).toHaveLength(4);
     expect(screen.questionNumber).toBe(1);
-    expect(screen.questionCount).toBe(3);
+    // However many the room was dealt: the Host chooses the length of a game
+    // now, so "1 of 10" is a fact about this game and not about trivia.
+    expect(screen.questionCount).toBe(state.questions.length);
     expect(screen.text).not.toBe('');
   });
 
@@ -272,10 +281,14 @@ describe('the Victory Screen', () => {
   }
 
   it('places the final standings, highest first', () => {
-    const screen = victoryOf(playedToTheEnd(ROSTER, everyoneRightExcept(GRACE)), ROSTER);
+    const played = playedToTheEnd(ROSTER, everyoneRightExcept(GRACE));
+    const screen = victoryOf(played, ROSTER);
+    // A clean sweep of whatever the room was dealt, since the Host chooses how
+    // many questions a game runs.
+    const everyQuestion = played.questions.length * FLAT_SCORE_PER_CORRECT_ANSWER;
 
     expect(screen.standings.map((row) => [row.nickname, row.score, row.rank])).toEqual([
-      ['Ada', 300, 1],
+      ['Ada', everyQuestion, 1],
       ['Grace', 0, 2],
     ]);
   });

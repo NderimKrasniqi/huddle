@@ -1,4 +1,4 @@
-import type { GameSettingsSchema, PlayerRange } from './game-module';
+import type { PlayerRange } from './game-module';
 
 /**
  * Where a room stands between parties and games.
@@ -49,7 +49,14 @@ export type GameLifecycleRejection =
    * numbers, because the only useful thing to say to the Host is how many more
    * people have to join.
    */
-  | { readonly kind: 'notEnoughPlayers'; readonly need: number; readonly have: number };
+  | { readonly kind: 'notEnoughPlayers'; readonly need: number; readonly have: number }
+  /**
+   * Starting a game on settings its Settings Schema does not offer — a key the
+   * game never declared, or a value the setting does not list. Carries both, so
+   * the refusal names what was actually sent rather than only that something
+   * was. See `settingsRefusal`, which is where it is decided.
+   */
+  | { readonly kind: 'settingRejected'; readonly key: string; readonly value: string };
 
 /** What the Host asked the room to do. */
 export type GameLifecycleIntent = 'start' | 'end';
@@ -106,14 +113,6 @@ export function refusalToStart(
   return null;
 }
 
-/**
- * The settings a game starts with when nobody has chosen any.
- *
- * Every setting declares a default among its options (`GameSetting`), so a
- * schema always answers this — which is what lets a Host start a game without
- * opening the settings screen at all. The Host's own choices replace this
- * wholesale in Phase 4; until then it is what every game is started with.
- */
-export function defaultSettings(schema: GameSettingsSchema): Record<string, string> {
-  return Object.fromEntries(schema.map((setting) => [setting.key, setting.defaultValue]));
-}
+// The settings a start is allowed on live in `./game-settings`, beside the
+// schema they are settled against: this file is the room's phases, and the two
+// only meet at `startGame`.

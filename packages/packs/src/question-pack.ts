@@ -34,6 +34,23 @@ const optionsSchema = z.tuple([nonEmpty, nonEmpty, nonEmpty, nonEmpty]);
  */
 export const QUESTION_OPTION_COUNT: z.infer<typeof optionsSchema>['length'] = 4;
 
+/**
+ * The one word a question's category may not be.
+ *
+ * A category is free text, because a Host's filter is built from whatever
+ * categories a pack happens to use — and a filter built that way needs a value
+ * meaning *no filter at all*, which trivia spells `all` (`EVERY_CATEGORY`). The
+ * two live in the same space, so a pack shipping a category literally named
+ * "all" would give the Host an option that quietly dealt them an unfiltered
+ * game. The collision is closed here, where a pack is checked, rather than
+ * argued away where it is filtered: the sentinel is reserved, and a pack using
+ * it is malformed.
+ *
+ * Matched without regard to case, because "All" is the same mistake made by an
+ * author who capitalises their categories.
+ */
+export const RESERVED_CATEGORY = 'all';
+
 /** How hard a question is meant to be. */
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 
@@ -63,7 +80,10 @@ export const packQuestionSchema = z
       .min(0)
       .max(QUESTION_OPTION_COUNT - 1),
     /** Free text, because the Host's category filter is built from whatever a pack uses. */
-    category: nonEmpty,
+    category: nonEmpty.refine(
+      (category) => category.trim().toLowerCase() !== RESERVED_CATEGORY,
+      `"${RESERVED_CATEGORY}" is reserved: it is the category filter set to no filter`,
+    ),
     difficulty: z.enum(DIFFICULTIES),
   })
   .refine((question) => new Set(question.options).size === question.options.length, {

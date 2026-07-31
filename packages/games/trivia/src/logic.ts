@@ -1,6 +1,7 @@
-import type { GameDeadline, GameLogic, GamePlayerId } from '@huddle/game-core';
+import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
 
-import { INLINE_QUESTIONS, type TriviaQuestion } from './questions';
+import { questionsFor, type TriviaQuestion } from './questions';
+import { triviaSettings, TRIVIA_SETTINGS_SCHEMA } from './settings';
 
 /**
  * Trivia's rules, with no screens attached.
@@ -12,7 +13,23 @@ import { INLINE_QUESTIONS, type TriviaQuestion } from './questions';
  * top for the two clients.
  */
 
-/** What a correct answer is worth in the flat Scoring Mode. */
+/**
+ * What a correct answer is worth in the flat Scoring Mode.
+ *
+ * The only mode the rules implement. `speed` is *declared* in the settings
+ * schema (`./settings`) because the Host is offered both, and the formula that
+ * makes it different is the next plan task — so a room that chooses it today is
+ * scored exactly as flat.
+ *
+ * What that task inherits is more than a formula. The chosen mode is read in
+ * `createInitialState` and then dropped: `TriviaState` does not carry it, so a
+ * running game cannot recover what the Host picked, and `revealed` — which is
+ * handed nothing but the state — could not act on it if it did. Speed scoring
+ * therefore needs the state to grow the mode *and* a source for the seconds a
+ * question had left, which a pure reducer cannot read from a clock: it would
+ * have to arrive on the answer event, as the hub is the only party in a
+ * position to time it.
+ */
 export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
 
 /**
@@ -242,12 +259,17 @@ function advanced(
 /**
  * Trivia's metadata, settings schema and rules.
  *
- * Its settings schema is still empty: scoring mode, question count and category
- * filter are Phase 4's, along with the Question Packs the last two are about.
- * Today every game is the same three inline questions scored flat — the loop
- * the platform was built to prove, and not yet the game it will ship.
+ * Its settings are declared in `./settings` and its questions drawn from the
+ * Curated Pack in `./questions`, so what is left here is the game: what a
+ * question is worth, when a question ends, and what a reveal does to the
+ * scoreboard.
+ *
+ * `Settings` is `GameSettings` — the hub's strings — rather than trivia's own
+ * three, because that is what the hub actually hands a module: it settles the
+ * Host's choices against this schema and passes the result back untouched, and
+ * `triviaSettings` is where they stop being strings.
  */
-export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent> = {
+export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> = {
   metadata: {
     id: 'trivia',
     title: 'Trivia',
@@ -271,15 +293,22 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent> = {
     /** The genre chip. Not one of a Question Pack's categories. */
     category: 'Knowledge',
   },
-  settingsSchema: [],
-  createInitialState: ({ players }) => ({
-    questions: INLINE_QUESTIONS,
-    questionIndex: 0,
-    phase: 'question',
-    answers: {},
-    // Roster order, since nobody has scored yet and the sort is stable.
-    standings: players.map((player) => ({ playerId: player.playerId, score: 0 })),
-  }),
+  settingsSchema: TRIVIA_SETTINGS_SCHEMA,
+  createInitialState: ({ players, settings }) => {
+    const chosen = triviaSettings(settings);
+
+    return {
+      // The whole game is dealt here and never again: the questions ride in the
+      // state, so a room is asked what it was dealt at the moment it started,
+      // whatever the pack does afterwards.
+      questions: questionsFor(chosen.category, chosen.questionCount),
+      questionIndex: 0,
+      phase: 'question',
+      answers: {},
+      // Roster order, since nobody has scored yet and the sort is stable.
+      standings: players.map((player) => ({ playerId: player.playerId, score: 0 })),
+    };
+  },
   reduce: (state, event) => {
     switch (event.kind) {
       case 'answer':

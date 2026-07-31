@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { GameSettingsSchema } from './game-module';
-import { defaultSettings, phaseAfter, refusalToStart, roomPhase, ROOM_PHASES } from './room-phase';
+import { phaseAfter, refusalToStart, roomPhase, ROOM_PHASES } from './room-phase';
 
 describe('a room’s phase', () => {
   it('is the lobby when the room holds no game', () => {
@@ -75,34 +74,6 @@ describe('whether the room may start a game', () => {
   });
 });
 
-describe('the settings a game starts with', () => {
-  it('is nothing at all for a game that declares no settings', () => {
-    expect(defaultSettings([])).toEqual({});
-  });
-
-  it('is every setting at the default its schema names', () => {
-    const schema: GameSettingsSchema = [
-      {
-        key: 'scoring',
-        label: 'Scoring',
-        options: [
-          { value: 'flat', label: 'Flat' },
-          { value: 'speed', label: 'Speed' },
-        ],
-        defaultValue: 'flat',
-      },
-      {
-        key: 'questionCount',
-        label: 'Questions',
-        options: [
-          { value: '5', label: '5' },
-          { value: '10', label: '10' },
-        ],
-        defaultValue: '10',
-      },
-    ];
-
-    // What a Host who never opened the settings screen starts a game with.
-    expect(defaultSettings(schema)).toEqual({ scoring: 'flat', questionCount: '10' });
-  });
-});
+// The settings a game starts with moved to `game-settings.test.ts` when the
+// Host gained a say in them: defaulting and refusing are one decision now, and
+// they are asserted together, beside the schema they read.

@@ -1,4 +1,4 @@
-import type { GameLifecycleRejection } from '@huddle/game-core';
+import { type GameSettings, settingsFrom, type GameLifecycleRejection } from '@huddle/game-core';
 import { GAME_REGISTRY } from '@huddle/game-registry';
 import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
@@ -309,6 +309,139 @@ describe('the Host starting a game', () => {
     await t.mutation(api.games.startGame, { sessionToken: alone.sessionToken, gameId: 'trivia' });
 
     expect(await t.query(api.games.running, { roomId: room.roomId })).not.toBeNull();
+  });
+
+  /**
+   * The questions the installed module deals for these settings, asked of the
+   * module itself.
+   *
+   * The hub cannot check that a room was dealt "five Movies questions" — it
+   * cannot read a game's state, and nothing here knows what a question is. What
+   * it can check is that the room holds exactly what the module makes of the
+   * settings the Host sent, which is the whole of "started from them".
+   */
+  function questionsDealtFor(chosen: GameSettings | undefined): readonly string[] {
+    const game = gameLogicById('trivia');
+
+    if (game === undefined) {
+      throw new Error('this build installs no trivia');
+    }
+
+    const state = game.createInitialState({
+      players: [],
+      settings: settingsFrom(game.settingsSchema, chosen),
+    }) as { readonly questions: readonly { readonly text: string }[] };
+
+    return state.questions.map((question) => question.text);
+  }
+
+  /** The questions the room is actually holding, by the same measure. */
+  async function questionsInPlay(t: Backend, roomId: Id<'rooms'>): Promise<readonly string[]> {
+    const running = await t.query(api.games.running, { roomId });
+    const questions = running?.state.questions as readonly { readonly text: string }[] | undefined;
+
+    if (questions === undefined) {
+      throw new Error('this room is not playing anything');
+    }
+
+    return questions.map((question) => question.text);
+  }
+
+  it('starts on the schema’s defaults when the Host chose nothing', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+
+    // A Host who never opened the settings screen still starts a game, and it
+    // is the game the module's own defaults describe.
+    expect(await questionsInPlay(t, roomId)).toEqual(questionsDealtFor(undefined));
+  });
+
+  it('starts on exactly the settings the Host chose', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+    const chosen = { category: 'Movies', questionCount: '5' };
+
+    await t.mutation(api.games.startGame, {
+      sessionToken: host,
+      gameId: 'trivia',
+      settings: chosen,
+    });
+
+    const inPlay = await questionsInPlay(t, roomId);
+
+    expect(inPlay).toHaveLength(5);
+    expect(inPlay).toEqual(questionsDealtFor(chosen));
+    // And not the game the defaults would have dealt, or the assertion above
+    // would pass on a hub that ignored the Host entirely.
+    expect(inPlay).not.toEqual(questionsDealtFor(undefined));
+  });
+
+  it('defaults every setting the Host left alone', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.games.startGame, {
+      sessionToken: host,
+      gameId: 'trivia',
+      settings: { category: 'Movies' },
+    });
+
+    // The count was never sent, so the room is dealt the schema's own.
+    expect(await questionsInPlay(t, roomId)).toEqual(questionsDealtFor({ category: 'Movies' }));
+    expect(await questionsInPlay(t, roomId)).toHaveLength(10);
+  });
+
+  it('refuses a value the game’s schema does not offer', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.startGame, {
+          sessionToken: host,
+          gameId: 'trivia',
+          settings: { questionCount: '7' },
+        }),
+      ),
+    ).toEqual({ kind: 'settingRejected', key: 'questionCount', value: '7' });
+
+    // Refused means nothing happened: the room did not start on a default it
+    // was never asked for.
+    expect(await t.query(api.games.running, { roomId })).toBeNull();
+  });
+
+  it('refuses a setting the game does not declare', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.startGame, {
+          sessionToken: host,
+          gameId: 'trivia',
+          settings: { difficulty: 'hard' },
+        }),
+      ),
+    ).toEqual({ kind: 'settingRejected', key: 'difficulty', value: 'hard' });
+    expect(await t.query(api.games.running, { roomId })).toBeNull();
+  });
+
+  it('tells a party too small that, before it tells them about a setting', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.startGame, {
+          sessionToken: alone.sessionToken,
+          gameId: 'trivia',
+          settings: { questionCount: '7' },
+        }),
+      ),
+    ).toEqual({ kind: 'notEnoughPlayers', need: 2, have: 1 });
   });
 
   it('refuses a phone whose seat is gone', async () => {

@@ -1,4 +1,5 @@
-import type { GamePlayer } from '@huddle/game-core';
+import { type GamePlayer, type GameSettings, settingsFrom } from '@huddle/game-core';
+import { CURATED_PACK } from '@huddle/packs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,7 +10,8 @@ import {
   triviaGameLogic,
   type TriviaState,
 } from './logic';
-import { INLINE_QUESTIONS } from './questions';
+import { EVERY_CATEGORY, PACK_CATEGORIES } from './questions';
+import { TRIVIA_SETTINGS_SCHEMA } from './settings';
 
 /**
  * Trivia's rules, which are the only place in Huddle that knows what winning
@@ -25,12 +27,39 @@ function player(playerId: string): GamePlayer {
   return { playerId, nickname: playerId, away: false };
 }
 
-/** A game just started, with the players named, in that roster order. */
+/**
+ * A game just started, with the players named, in that roster order — on the
+ * settings a Host who opened nothing starts one with.
+ */
 function gameWith(...playerIds: readonly string[]): TriviaState {
+  return startedOn(undefined, ...playerIds);
+}
+
+/** A game started on the Host's choices, settled the way `startGame` settles them. */
+function startedOn(chosen: GameSettings | undefined, ...playerIds: readonly string[]): TriviaState {
   return triviaGameLogic.createInitialState({
     players: playerIds.map(player),
-    settings: undefined,
+    settings: settingsFrom(TRIVIA_SETTINGS_SCHEMA, chosen),
   });
+}
+
+/**
+ * The same game cut to three questions, which is what a playthrough test can
+ * walk end to end.
+ *
+ * Three is not a length the Host can choose (the schema offers 5, 10 and 20), so
+ * it is cut here rather than started that way: the reducer takes a state and the
+ * scenarios below are about its rules, not about how long a game is.
+ */
+function shortGameWith(...playerIds: readonly string[]): TriviaState {
+  const full = gameWith(...playerIds);
+
+  return { ...full, questions: full.questions.slice(0, 3) };
+}
+
+/** The category the pack puts a question in, which the rules do not carry. */
+function categoryOf(question: { readonly text: string }): string | undefined {
+  return CURATED_PACK.questions.find((asked) => asked.text === question.text)?.category;
 }
 
 /** The question on screen — the one every event below is aimed at. */
@@ -80,15 +109,15 @@ function scoreOf(state: TriviaState, playerId: string): number | undefined {
   return state.standings.find((standing) => standing.playerId === playerId)?.score;
 }
 
-describe('the questions trivia is dealt', () => {
-  it('is three questions long, which is the whole game until packs land', () => {
-    // Phase 4 replaces these with a curated Question Pack. Until then they are
-    // trivia's entire content, and three is what a playthrough test can walk.
-    expect(INLINE_QUESTIONS).toHaveLength(3);
+describe('the questions a game is dealt', () => {
+  it('comes from the Curated Pack', () => {
+    for (const question of gameWith(ADA, GRACE).questions) {
+      expect(categoryOf(question), question.text).toBeDefined();
+    }
   });
 
   it('asks four options with exactly one right answer', () => {
-    for (const question of INLINE_QUESTIONS) {
+    for (const question of gameWith(ADA, GRACE).questions) {
       expect(question.text).not.toBe('');
       expect(question.options).toHaveLength(4);
       // Four *distinct* options: two identical ones would be a second right
@@ -96,6 +125,44 @@ describe('the questions trivia is dealt', () => {
       expect(new Set(question.options).size).toBe(4);
       expect(question.options[question.correctIndex]).toBeDefined();
     }
+  });
+
+  it('is ten questions long when the Host chose nothing', () => {
+    expect(gameWith(ADA, GRACE).questions).toHaveLength(10);
+  });
+
+  it('is exactly as many questions as the Host chose', () => {
+    expect(startedOn({ questionCount: '5' }, ADA, GRACE).questions).toHaveLength(5);
+    expect(startedOn({ questionCount: '20' }, ADA, GRACE).questions).toHaveLength(20);
+  });
+
+  it('is only the category the Host chose', () => {
+    const movies = startedOn({ category: 'Movies', questionCount: '20' }, ADA, GRACE);
+
+    expect(movies.questions).toHaveLength(20);
+    expect(movies.questions.map(categoryOf)).toEqual(Array(20).fill('Movies'));
+  });
+
+  it('can be filtered to any category the pack offers, and never comes up empty', () => {
+    for (const category of PACK_CATEGORIES) {
+      const filtered = startedOn({ category, questionCount: '5' }, ADA, GRACE);
+
+      expect(filtered.questions.map(categoryOf), category).toEqual(Array(5).fill(category));
+    }
+  });
+
+  it('spans the pack when the Host chose every category', () => {
+    // The pack is written a category at a time, so taking the front of it would
+    // deal a room that asked for everything twenty questions about films.
+    const dealt = startedOn({ category: EVERY_CATEGORY, questionCount: '5' }, ADA, GRACE);
+
+    expect(new Set(dealt.questions.map(categoryOf)).size).toBe(5);
+  });
+
+  it('never asks the same question twice in one game', () => {
+    const dealt = startedOn({ questionCount: '20' }, ADA, GRACE);
+
+    expect(new Set(dealt.questions.map((question) => question.text)).size).toBe(20);
   });
 });
 
@@ -259,7 +326,7 @@ describe('a game played to the end', () => {
    * one and then misses one and sits out the last.
    */
   function playthrough(): TriviaState {
-    let state = gameWith(ADA, GRACE);
+    let state = shortGameWith(ADA, GRACE);
 
     // Question one: both right.
     state = answering(state, ADA, rightAnswerTo(state));
@@ -324,9 +391,10 @@ describe('the beat that ends a reveal', () => {
   });
 
   it('is nothing once the game is over', () => {
-    let finished = gameWith(ADA, GRACE);
+    let finished = shortGameWith(ADA, GRACE);
+    const questionsInIt = finished.questions.length;
 
-    for (let question = 0; question < INLINE_QUESTIONS.length; question += 1) {
+    for (let question = 0; question < questionsInIt; question += 1) {
       finished = answering(finished, ADA, rightAnswerTo(finished));
       finished = answering(finished, GRACE, rightAnswerTo(finished));
       finished = advancing(finished);

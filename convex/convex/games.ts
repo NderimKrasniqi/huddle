@@ -1,7 +1,8 @@
 import {
-  defaultSettings,
   refusalToStart,
   roomPhase,
+  settingsFrom,
+  settingsRefusal,
   type GameEvent,
   type GameLifecycleRejection,
   type GameLogic,
@@ -237,9 +238,20 @@ async function playGameEvent(
  * the room's state and not that phone's — every screen in the room reads it
  * from the same row, so there is no moment where the television and a
  * Controller disagree about what was dealt.
+ *
+ * The settings arrive from the Host's phone and are settled against the
+ * declaring game's own schema, which the hub reads as labelled strings and
+ * nothing more: anything the schema does not offer is refused, and anything the
+ * Host left alone is defaulted (`settingsRefusal`, `settingsFrom`). They are
+ * optional because a Host who never opened the settings screen still starts a
+ * game, and that game still has settings.
  */
 export const startGame = mutation({
-  args: { sessionToken: v.string(), gameId: v.string() },
+  args: {
+    sessionToken: v.string(),
+    gameId: v.string(),
+    settings: v.optional(v.record(v.string(), v.string())),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const room = await roomThisPhoneRuns(ctx, args.sessionToken);
@@ -257,7 +269,11 @@ export const startGame = mutation({
     }
 
     const players = await playersFor(ctx, room._id);
-    const refusal = refusalToStart(roomPhase(room.game), players.length, game.metadata.playerRange);
+    // The room's own refusals first, then the settings': a party too small to
+    // play hears that before it hears about a setting, whatever it sent.
+    const refusal =
+      refusalToStart(roomPhase(room.game), players.length, game.metadata.playerRange) ??
+      settingsRefusal(game.settingsSchema, args.settings);
 
     if (refusal !== null) {
       throw new ConvexError<GameLifecycleRejection>(refusal);
@@ -265,7 +281,7 @@ export const startGame = mutation({
 
     const state = game.createInitialState({
       players,
-      settings: defaultSettings(game.settingsSchema),
+      settings: settingsFrom(game.settingsSchema, args.settings),
     });
     // The first beat's clock starts with the game, so a room that has been
     // dealt a question is already being counted down at the moment every screen
