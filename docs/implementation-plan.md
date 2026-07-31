@@ -1042,11 +1042,33 @@ runs without touching a dev tool.
   has now been disproven. (Superseded: the cause was re-established on
   2026-07-31 and the first route was taken — see the top of this task. The
   constant is now `ROOM_CODE_MINT_ALPHABET`.)
-- [ ] Design fidelity pass — AC: hub screens (pairing, join, lobby ×3,
-  carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
-  screens extend Boardwalk using only theme tokens; TV body text ≥18px at the
-  720p design size and question text readable from 3m; avatar pop-in spring
-  (~300ms) and carousel transition (~250ms) implemented per handoff.
+Split on 2026-07-31: "Design fidelity pass" bundled four independent
+acceptance criteria across eight hub screens, the trivia screens, typography
+and two animations — one checkbox that could not be reviewed or committed as
+one thing. The four below are the same AC, in the order a screen has to
+satisfy them. Nothing was added or dropped.
+
+- [ ] Design fidelity — hub screens against the mock — AC: the hub screens
+  (pairing, join, lobby ×3, carousel ×3) are spot-checked side-by-side against
+  the Boardwalk mock in `docs/design/design-handoff.md`, on a simulator, with
+  the discrepancies either fixed or written down as deliberate departures and
+  why. A screen that was drawn from the handoff but never *compared* with it
+  counts as unchecked.
+- [ ] Design fidelity — trivia screens on theme tokens only — AC: the trivia
+  screens extend Boardwalk using only theme tokens from `packages/ui` — no
+  literal colors, radii, border widths, shadow depths or font families at a
+  trivia call site. Enforced by something that fails rather than by reading:
+  a lint rule or a test over the game module's sources.
+- [ ] Design fidelity — TV legibility — AC: TV body text is ≥18px at the
+  720p design size, checked against the rendered styles rather than by eye,
+  and the trivia question text is readable from 3m. The 3m half needs a human
+  in front of a television and cannot be closed on a simulator — pair it with
+  the play-test gate below if no TV is to hand, but do not tick it on a
+  simulator screenshot.
+- [ ] Design fidelity — the two handoff animations — AC: the avatar pop-in
+  spring (~300ms) and the carousel transition (~250ms) are implemented per the
+  handoff, with the durations coming from theme tokens rather than numbers at
+  the call site, and each one watched running rather than only coded.
 - [ ] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.
@@ -1238,10 +1260,24 @@ runs without touching a dev tool.
   longer exists to restore. And the Controller's 6 converted surfaces have never
   been run on any device; they are converted, type-checked and unit-tested, and
   nothing more. Both are for the design fidelity pass to close.
-- [ ] Real-device builds — AC: locally built APK installs and runs on the
-  Philips Android TV; locally built APK runs on an Android phone; iOS
-  controller build runs via Xcode on a physical iPhone and is uploaded to
-  TestFlight.
+Split on 2026-07-31, for the second time and for the same reason the Android
+toolchain came out of it: three targets in one checkbox, each of which can
+fail on its own and none of which can be reviewed against the other two.
+Every one of these needs physical hardware in the room, so none can be closed
+by an agent — they are the phase's human-only tasks.
+
+- [ ] Real-device build — the Philips Android TV — AC: a locally built APK
+  installs and runs on the Philips Android TV, and the pairing screen renders
+  with a roster that still updates live. This is the real hub target and the
+  one the Android emulator has been standing in for at a much higher API
+  level, so expect the Boardwalk measurements, the font loading and the focus
+  model to need re-checking here.
+- [ ] Real-device build — an Android phone — AC: a locally built APK runs on
+  an Android phone; it joins a room by code and by scanning the TV's QR with
+  the phone's own camera, which is the one step of the QR task still untried
+  on any hardware.
+- [ ] Real-device build — iPhone and TestFlight — AC: the iOS Controller
+  build runs via Xcode on a physical iPhone and is uploaded to TestFlight.
 - [ ] Play-test gate — AC: one full game night on real hardware: 4+ players,
   at least two full trivia games (one flat, one speed), at least one forced
   disconnect/rejoin — completed without restarting any app or the backend;
