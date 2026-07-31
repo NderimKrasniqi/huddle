@@ -1229,22 +1229,30 @@ satisfy them. Nothing was added or dropped.
   than by re-measurement. The siblings below own what this pass did not look
   at: the three departures it could not close (next task), then trivia's
   screens, TV legibility, and the two animations.
-- [ ] Design fidelity — close the three hub departures this pass recorded — AC:
-  the three gaps the comparison above measured and left open are each either
-  built or closed out with a decision recorded against a handoff line, so they
-  stop living only in the prose of a finished task. They are: (a) §6's page-dot
-  collision on the TV carousel — the one-edit footer fix is written out above
-  (`carouselFooter` to `flexDirection: 'row'`, which buys 10pt of daylight
-  without touching a pinned §6 number), and it needs a tvOS build and a capture
-  beside `04-tv-carousel.png` because this is the screen the party looks at;
-  (b) the HOST pill, the JUST JOINED! pill and the away pill, which three
-  earlier tasks each deferred to the §3 TV lobby — a screen the synced-carousel
-  decision means is not coming, so they need a home on the carousel's footer or
-  an explicit decision that the television stops saying these things; (c) §5's
-  phone roster, which nothing has ever built — the Host currently gets §4's
-  screen, and either the roster rows land or the handoff section is marked as
-  dropped and why. Nothing here is a new feature; (a) is a nudge, (b) and (c)
-  are decisions with a small amount of drawing behind them.
+Split on 2026-07-31, straight after the task that created it: it bundled
+three criteria across both apps. (a) and (b) are both the TV carousel and
+share one build and one capture; (c) is a Controller screen that has never
+existed, and bundling it would have let a reviewer judge neither well.
+
+- [ ] Design fidelity — the TV carousel closes its two departures — AC: (a)
+  §6's page-dot collision is fixed — the footer change is written out in the
+  task above (`carouselFooter` to `flexDirection: 'row'` *plus*
+  `justifyContent: 'center'`, which buys 10pt of daylight without touching a
+  pinned §6 number) — and (b) the HOST pill, the JUST JOINED! pill and the
+  away pill, which three earlier tasks each deferred to the §3 TV lobby that
+  the synced-carousel decision means is never coming, either find a home on
+  the carousel's footer or get an explicit decision, recorded against a
+  handoff line, that the television stops saying these things. Both halves
+  need one tvOS build and a capture beside `04-tv-carousel.png`, because this
+  is the screen the party looks at and this phase has already been burned once
+  by an unverified claim about it.
+- [ ] Design fidelity — §5's phone roster — AC: the Host's roster rows either
+  land on the phone or §5 is marked as dropped with the reason recorded
+  against the handoff. Nothing has ever built this: the Host currently gets
+  §4's screen plus §7's picker. Whichever way it goes, the three pills above
+  are the other half of the same question — a television that stops saying who
+  is Host and who just joined puts the burden on the phone, so decide (b)
+  first and let it inform this.
 - [ ] Design fidelity — trivia screens on theme tokens only — AC: the trivia
   screens extend Boardwalk using only theme tokens from `packages/ui` — no
   literal colors, radii, border widths, shadow depths or font families at a
