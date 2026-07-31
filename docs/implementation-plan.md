@@ -829,6 +829,38 @@ runs without touching a dev tool.
   television. That removes the "wait and see whether it only happens in dev"
   option and makes a mitigation urgent even ahead of the mechanism.
 
+  **It reproduces deterministically, and the axis is not the one anyone
+  guessed.** Pin a code containing an I in `RoomCodeTiles` and vary only *when*
+  it arrives:
+
+  | how the code reaches the tiles | blank |
+  |---|---|
+  | present at the component's first render | **0 / 8** |
+  | delivered after mount by a 900ms timer | **8 / 8** |
+  | delivered after mount by a 60ms timer | **6 / 6** |
+
+  So it is not timing, not the font, not the colour, not the position, and not
+  the letter alone: **an I that is not in the first committed render does not
+  paint.** Every other letter survives the same path — all 23 non-I codes in
+  the launch runs were server-delivered and drew.
+
+  This also explains the 2026-07-30 contradiction that sent this task wrong:
+  the hardcoded experiments that passed had the letter present at first render,
+  and the ones that failed did not.
+
+  **Fixes tried and disproven, so nobody pays for them twice** — each re-run
+  against the deterministic repro, all still 8/8 blank:
+  - `key` on the `<Text>` so a changed letter mounts a fresh node;
+  - `key` on the whole `StickerSurface` so the entire tile subtree remounts.
+
+  That a *freshly mounted* text view still blanks is the sharp part: this is
+  not React reusing a node, so the fault is below it, in native text layout on
+  a non-initial pass. The next thing to try is rendering the tiles only once
+  the code is known (letter present in the first commit), which the current
+  "draw empty tiles so the screen does not reflow" comment deliberately rules
+  out — that decision is now in tension with a correctness bug and should be
+  revisited first.
+
   Next: the mechanism is still unknown, so a fix still cannot be chosen. But
   the two escape routes previously ruled out for chasing a disproven cause —
   dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in another face —
