@@ -4,6 +4,8 @@ import {
   type GameEvent,
   type GameModule,
   type GamePlayer,
+  type GameSettings,
+  type GameSettingsSchema,
   type PlayerColorName,
   ROOM_CODE_LENGTH,
 } from '@huddle/game-core';
@@ -56,6 +58,12 @@ import {
   resumeSession,
 } from '../src/session';
 import { phoneSessionTokenStore } from '../src/session-store';
+import {
+  type SettingsChoice,
+  settingChosen,
+  settingsControls,
+  settingsToStart,
+} from '../src/settings-choice';
 
 /** How long the caret in the active cell rests between showing and hiding. */
 const CARET_BLINK_MS = 530;
@@ -379,6 +387,13 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const standing = lobbyStanding(roster, session.playerId);
   const claimed = yourColor(roster, session.playerId);
   const face = playerFace(claimed);
+  // The Host's settings, held here rather than on the picker below because this
+  // screen is the one that survives a game: the picker is unmounted for the
+  // whole of a game and remounted on "Back to lobby", and a party playing twice
+  // in an evening (docs/CONTEXT.md, Question Deal) would otherwise find their
+  // twenty questions quietly back at ten. It costs nothing on a phone that is
+  // not running the room — a choice nothing draws and nothing sends.
+  const [settingsChoice, setSettingsChoice] = useState<SettingsChoice>();
 
   // The room's own word on what it is playing. A separate subscription from the
   // roster because the two change on entirely different beats — this twice a
@@ -450,6 +465,8 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         roomId={session.roomId}
         roster={roster}
         youAreHost={standing.youAreHost}
+        settingsChoice={settingsChoice}
+        onChooseSetting={setSettingsChoice}
       />
     </PhoneScreen>
   );
@@ -467,10 +484,15 @@ function LobbyGameControls({
   roomId,
   roster,
   youAreHost,
+  settingsChoice,
+  onChooseSetting,
 }: {
   readonly roomId: PlayerSession['roomId'];
   readonly roster: readonly RosterSeat[];
   readonly youAreHost: boolean;
+  /** The Host's settings, kept by the screen above — see `YoureInScreen`. */
+  readonly settingsChoice: SettingsChoice | undefined;
+  readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
 }) {
   const browsingAt = useQuery(api.games.browsing, { roomId });
   const browsing = carouselWindow(browsingAt ?? 0);
@@ -480,7 +502,12 @@ function LobbyGameControls({
   }
 
   return youAreHost ? (
-    <HostGamePicker browsing={browsing} roster={roster} />
+    <HostGamePicker
+      browsing={browsing}
+      roster={roster}
+      settingsChoice={settingsChoice}
+      onChooseSetting={onChooseSetting}
+    />
   ) : (
     <NowViewing browsing={browsing} />
   );
@@ -497,13 +524,24 @@ function LobbyGameControls({
 function HostGamePicker({
   browsing,
   roster,
+  settingsChoice,
+  onChooseSetting,
 }: {
   readonly browsing: CarouselWindow;
   readonly roster: readonly RosterSeat[];
+  readonly settingsChoice: SettingsChoice | undefined;
+  readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
 }) {
   const browseGame = useMutation(api.games.browseGame);
   const back = previousIndex(browsing.index);
   const on = nextIndex(browsing.index);
+  // The Host's settings live on this phone and nowhere else — see
+  // `settings-choice`. They travel as one argument of `startGame`, so browsing
+  // stays exactly what it was before this screen gained settings: a mutation of
+  // its own that the TV and every other phone follow, and that nothing here
+  // touches.
+  const { id: gameId } = browsing.focused.metadata;
+  const { settingsSchema } = browsing.focused;
 
   async function browse(to: number | undefined) {
     if (to === undefined) {
@@ -534,8 +572,132 @@ function HostGamePicker({
 
       <Text style={styles.pickerHint}>Swipe or tap arrows — the TV follows along</Text>
 
-      <StartGameControl roster={roster} browsingAt={browsing.index} />
+      <SettingsControls
+        schema={settingsSchema}
+        gameId={gameId}
+        choice={settingsChoice}
+        // Chosen from the choice React holds rather than the one this render
+        // closed over: two chips tapped in the same beat both count.
+        onChoose={(key, value) =>
+          onChooseSetting((current) => settingChosen(gameId, current, key, value))
+        }
+      />
+
+      <StartGameControl
+        roster={roster}
+        browsingAt={browsing.index}
+        settings={settingsToStart(settingsSchema, gameId, settingsChoice)}
+      />
     </View>
+  );
+}
+
+/**
+ * The Host's settings for the card they are on, drawn from whatever the game
+ * declares (docs/CONTEXT.md, Settings Schema).
+ *
+ * It reads its schema off the module the carousel is focused on and its labels
+ * off that schema, so it names no game and no setting: a game that declares
+ * three chips gets three, a game that declares none draws nothing here, and
+ * neither is a change to this component. Only the Host's phone mounts it, and
+ * the settings it produces only ever leave as an argument of `startGame`, which
+ * refuses a phone that is not running the room.
+ */
+function SettingsControls({
+  schema,
+  gameId,
+  choice,
+  onChoose,
+}: {
+  readonly schema: GameSettingsSchema;
+  readonly gameId: string;
+  readonly choice: SettingsChoice | undefined;
+  readonly onChoose: (key: string, value: string) => void;
+}) {
+  const controls = settingsControls(schema, gameId, choice);
+
+  if (controls.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.settings}>
+      <Text style={styles.label}>SETTINGS</Text>
+
+      {controls.map((control) => (
+        <View key={control.key} style={styles.setting}>
+          <Text style={styles.settingLabel}>{control.label}</Text>
+          <View style={styles.settingOptions}>
+            {control.options.map((option) => (
+              <SettingOption
+                key={option.value}
+                label={option.label}
+                // Which setting this value belongs to, for a screen reader —
+                // three settings' chips are one flat list of buttons to it, and
+                // "Movies, selected" alone says nothing about what it sets.
+                spokenAs={`${control.label}: ${option.label}`}
+                chosen={option.chosen}
+                onPress={() => onChoose(control.key, option.value)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * One value of one setting, as Boardwalk draws a choice: the chosen chip is
+ * cobalt and sits on its own shadow, the rest are white and flat.
+ *
+ * The same treatment the color picker gives a claimed swatch, for the same
+ * reason — the sticker shadow is what Boardwalk uses to lift the thing that is
+ * currently true off the ones that merely could be.
+ */
+function SettingOption({
+  label,
+  spokenAs,
+  chosen,
+  onPress,
+}: {
+  readonly label: string;
+  /** The label read aloud: the setting this value belongs to, and the value. */
+  readonly spokenAs: string;
+  readonly chosen: boolean;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={spokenAs}
+      accessibilityState={{ selected: chosen }}
+    >
+      {({ pressed }) =>
+        chosen ? (
+          <StickerSurface
+            depth={shadowDepth.phoneSmall}
+            style={[
+              styles.settingOption,
+              styles.settingOptionChosen,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={[styles.settingOptionLabel, styles.settingOptionLabelChosen]}>
+              {label}
+            </Text>
+          </StickerSurface>
+        ) : (
+          // No press travel on the flat chip, as with an unclaimed swatch:
+          // Boardwalk's press is a sticker going down onto its own shadow, and
+          // a chip that has no shadow to meet would just slide 3px sideways.
+          <View style={styles.settingOption}>
+            <Text style={styles.settingOptionLabel}>{label}</Text>
+          </View>
+        )
+      }
+    </Pressable>
   );
 }
 
@@ -591,9 +753,12 @@ function RoundButton({
 function StartGameControl({
   roster,
   browsingAt,
+  settings,
 }: {
   readonly roster: readonly RosterSeat[];
   readonly browsingAt: number;
+  /** What the controls above are showing: the settings the room starts on. */
+  readonly settings: GameSettings;
 }) {
   const startGame = useMutation(api.games.startGame);
   const [starting, setStarting] = useState(false);
@@ -615,7 +780,7 @@ function StartGameControl({
       const game = gameToStart(browsingAt);
 
       if (game !== undefined) {
-        await startGame({ sessionToken, gameId: game.id });
+        await startGame({ sessionToken, gameId: game.id, settings });
       }
     } catch (error) {
       setFailure(lifecycleFailureMessage(error));
@@ -1372,6 +1537,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  // The settings group sits between the picker and the start button, and is
+  // left-aligned rather than centred like the picker above it: the chips wrap
+  // onto as many rows as the game's options need, and a wrapped row that
+  // centres itself reads as a different list from the one above it.
+  settings: {
+    alignSelf: 'stretch',
+    gap: 14,
+  },
+  setting: {
+    alignSelf: 'stretch',
+    gap: 8,
+  },
+  settingLabel: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+  },
+  settingOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  settingOption: {
+    justifyContent: 'center',
+    // A comfortable thumb target on the smallest phone Huddle draws on.
+    minHeight: 44,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    // Thin, as Boardwalk borders a chip — these sit inside the picker's own
+    // 3px surfaces and would out-weigh them at the same width.
+    borderWidth: borderWidth.thin,
+    borderRadius: radius.chip,
+  },
+  settingOptionChosen: {
+    backgroundColor: colors.cobalt,
+  },
+  settingOptionLabel: {
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+  },
+  settingOptionLabelChosen: {
+    color: colors.surface,
+    fontFamily: fontFamily.bodyBold,
+  },
+
   startButton: {
     backgroundColor: colors.green,
   },

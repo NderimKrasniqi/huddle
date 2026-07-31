@@ -764,7 +764,7 @@ ready for a real game night.
   drawing from the curated pack — category "Movies" yields only Movies
   questions, count 5 yields exactly 5. This is the task that first wires
   `@huddle/packs` into trivia in place of its `INLINE_QUESTIONS`.
-- [ ] Lobby settings UI (the other half of the split) — AC: the Host phone
+- [x] Lobby settings UI (the other half of the split) — AC: the Host phone
   renders the settings controls generically from whatever schema the chosen
   game declares — nothing in the renderer names trivia or any of its
   settings; a non-Host phone never sees settings controls; changing a

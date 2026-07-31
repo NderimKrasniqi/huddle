@@ -378,6 +378,31 @@ describe('the Host starting a game', () => {
     expect(inPlay).not.toEqual(questionsDealtFor(undefined));
   });
 
+  it('takes settings from nobody but the Host', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host, guest } = await roomWithParty(t);
+
+    // The settings screen is the Host's, and this is what makes that true
+    // rather than drawn: a phone with no room control can send a schema's own
+    // values and still change nothing about the room it is in.
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.startGame, {
+          sessionToken: guest,
+          gameId: 'trivia',
+          settings: { category: 'Movies', questionCount: '5' },
+        }),
+      ),
+    ).toEqual({ kind: 'notHost' });
+    expect(await t.query(api.games.running, { roomId })).toBeNull();
+
+    await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+
+    // And when the room does start, it starts on the Host's settings — the
+    // defaults here — with no trace of what the other phone asked for.
+    expect(await questionsInPlay(t, roomId)).toEqual(questionsDealtFor(undefined));
+  });
+
   it('defaults every setting the Host left alone', async () => {
     const t = convexTest(schema, modules);
     const { roomId, host } = await roomWithParty(t);

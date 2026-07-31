@@ -236,6 +236,17 @@ working must add it here.
   who never opened the settings screen still starts a game that has settings.
   What crosses the hub is `GameSettings`, a value per key and both of them
   strings; a game's own settings type is its business, on the far side of that.
+- **Settings Choice** — what the Host has picked on the settings controls, held
+  on the Host's phone alone (`settings-choice` in the Controller) and tagged
+  with the game it was picked for, so browsing to another card leaves it behind
+  rather than sending one game's setting to another's schema. It is not room
+  state, unlike `browsingGameIndex`: the carousel is a surface three screens
+  read, and a phone that is not running the room has no settings to draw at all.
+  It reaches the room only as the `settings` argument of the Host-only
+  `startGame`, which is what actually keeps a non-Host from setting anything.
+  It lasts as long as the phone's seat does, not as long as the lobby: a party
+  playing twice in an evening comes back from a game to the settings they
+  chose, and only relaunching or browsing to another card clears them.
 - **Reducer** — a game module's pure `reduce(state, event)` rules function;
   runs server-side in Convex mutations.
 - **Question Pack** — versioned data file of trivia questions (text, 4
