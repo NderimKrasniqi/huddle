@@ -161,7 +161,12 @@ packages for game modules and the protocol.
   Both tests drive the ESLint API over the repo's real config rather than
   `RuleTester`, so a config that stopped switching a rule on fails too. That
   matters most for the floor, which is half config: the rule knows what a floor
-  is and the config knows which files stand on a television.
+  is, and the config knows which surface a file stands on — `apps/tv` and a
+  module's `tv-*` screens at 18, `apps/controller` and its `controller-*`
+  screens at 14, and no floor at all on a package both clients import. A
+  `RuleTester` would pin the arithmetic and stay green through a block pointed
+  at no files, or at the wrong surface's number, so the test lints every sample
+  at a real path and the paths are as much of the assertion as the code is.
 
 ### Testing
 - **Choice & strategy:**

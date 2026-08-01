@@ -23,6 +23,7 @@ import {
   colors,
   fontFamily,
   letterSpacing,
+  minBodyFontSize,
   opacity,
   type PlayerColor,
   playerColor,
@@ -1402,11 +1403,20 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 10,
   },
+  // A measurement the handoff gives and this screen does not take.
+  // §2 writes this label at 13px, and the same document floors phone body text
+  // at 14 — and this is body text by that document's own naming, since its two
+  // type roles are Display (Bungee) and Body/UI (Space Grotesk 400–700) and
+  // this is the second one. A floor a single spec line can undercut is not a
+  // floor, so the floor wins and the 1px is spent. Written as the token rather
+  // than as `14` for exactly that reason: this element's handoff measurement is
+  // 13, so a bare 14 would read as one and hide which of the document's two
+  // lines won. The token says it, and moves if Boardwalk ever moves the floor.
   label: {
     alignSelf: 'flex-start',
     color: colors.mutedText,
     fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
+    fontSize: minBodyFontSize.phone,
     letterSpacing: letterSpacing.label,
   },
 
@@ -1550,8 +1560,14 @@ const styles = StyleSheet.create({
   hostPillText: {
     color: colors.surface,
     fontFamily: fontFamily.display,
-    // The size this screen already sets its uppercase labels at, so the pill
-    // reads as the code chip's sibling rather than shouting over it.
+    // The smallest type on the phone, so the pill reads as the code chip's
+    // sibling rather than shouting over it. This 13 was the field label's 13
+    // until the Body Text Floor took that one to 14; the handoff sizes this
+    // pill nowhere, so it now stands on its own rather than on a match. Outside
+    // the floor either way, because Bungee is Boardwalk's display face — and
+    // that exemption is not a claim anybody can make on a line: it costs an
+    // actual change of face, and Bungee's caps at 13 stand taller and heavier
+    // than Space Grotesk's do.
     fontSize: 13,
     letterSpacing: letterSpacing.label,
     // The label's letter spacing trails its last letter; pulling it back keeps

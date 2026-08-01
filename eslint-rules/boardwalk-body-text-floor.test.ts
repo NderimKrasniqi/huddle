@@ -12,9 +12,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
  * reason its sibling's test gives, and for one more of its own.
  *
  * This gate is *half config*: the rule knows what a floor is, and the flat
- * config knows which files stand on a television. A `RuleTester` would pin the
+ * config knows which surface a file stands on. A `RuleTester` would pin the
  * arithmetic and stay green through a config that pointed the floor at no files
- * at all, or at the phone, whose floor is a different number. So every sample
+ * at all, or at the phone with the television's number on it. So every sample
  * below is linted at a real path, and the paths are the assertion as much as
  * the code is.
  */
@@ -26,7 +26,7 @@ const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
 }).trim();
 
-/** The two surfaces the floor is switched on for, and one of each that it is not. */
+/** The four file sets the floor is switched on for: two on each surface. */
 const A_TV_SCREEN = path.join(repoRoot, 'apps/tv/app/body-text-floor-probe.tsx');
 const A_TRIVIA_TV_SCREEN = path.join(
   repoRoot,
@@ -38,7 +38,12 @@ const A_TRIVIA_CONTROLLER_SCREEN = path.join(
   'packages/games/trivia/src/controller-body-text-floor-probe.tsx',
 );
 
+/** And a file on neither, which no floor governs. */
+const A_SHARED_SOURCE = path.join(repoRoot, 'packages/game-core/src/body-text-floor-probe.ts');
+
 const TV_APP_SCREENS = path.join(repoRoot, 'apps/tv/app');
+const CONTROLLER_SCREENS = path.join(repoRoot, 'apps/controller/app');
+const CONTROLLER_SOURCES = path.join(repoRoot, 'apps/controller/src');
 const TRIVIA_SOURCES = path.join(repoRoot, 'packages/games/trivia/src');
 
 let eslint: ESLint;
@@ -80,37 +85,74 @@ function styles(declarations: string): string {
 
 describe('the floor the config hands the rule', () => {
   it("is Boardwalk's own, so the two cannot drift apart", async () => {
-    const config = await eslint.calculateConfigForFile(A_TV_SCREEN);
-    const [severity, options] = config.rules[RULE] as [number, { surface: string }];
+    for (const [filePath, surface] of [
+      [A_TV_SCREEN, 'tv'],
+      [A_TRIVIA_TV_SCREEN, 'tv'],
+      [A_CONTROLLER_SCREEN, 'phone'],
+      [A_TRIVIA_CONTROLLER_SCREEN, 'phone'],
+    ] as const) {
+      const config = await eslint.calculateConfigForFile(filePath);
+      const [severity, options] = config.rules[RULE] as [number, { surface: string }];
 
-    expect(severity).toBe(2);
-    expect(options).toEqual({ surface: 'tv', minBodyFontSize });
+      expect(severity).toBe(2);
+      // The whole table on both surfaces, not each surface's own number: it is
+      // what lets the rule read `minBodyFontSize.phone` written on a television.
+      expect(options).toEqual({ surface, minBodyFontSize });
+    }
+  });
+
+  // Two blocks, and the second must not have quietly widened the first. A file
+  // on neither surface is governed by no floor at all.
+  it('reaches neither surface from a package both of them import', async () => {
+    const config = await eslint.calculateConfigForFile(A_SHARED_SOURCE);
+
+    expect(config.rules[RULE]).toBeUndefined();
   });
 });
 
+/** Every `.tsx` under `directory`, as a lintable absolute path. */
+function screensIn(directory: string): string[] {
+  return readdirSync(directory, { recursive: true })
+    .map(String)
+    .filter((file) => file.endsWith('.tsx'))
+    .map((file) => path.join(directory, file));
+}
+
+/** What the floor says about a real screen, named file and line. */
+async function offencesIn(screens: string[]): Promise<string[]> {
+  // Without this the check passes vacuously the day the screens are renamed.
+  expect(screens.length).toBeGreaterThan(1);
+
+  const results = await eslint.lintFiles(screens);
+
+  return results.flatMap((result) =>
+    result.messages
+      .filter((message) => message.ruleId === RULE)
+      .map(
+        (message) =>
+          `${path.relative(repoRoot, result.filePath)}:${message.line} ${message.message}`,
+      ),
+  );
+}
+
 describe('what the television already renders', () => {
   it('is above the floor on every screen it draws', async () => {
-    const screens = [
-      ...readdirSync(TV_APP_SCREENS)
-        .filter((file) => file.endsWith('.tsx'))
-        .map((file) => path.join(TV_APP_SCREENS, file)),
-      path.join(TRIVIA_SOURCES, 'tv-screen.tsx'),
-    ];
+    expect(
+      await offencesIn([...screensIn(TV_APP_SCREENS), path.join(TRIVIA_SOURCES, 'tv-screen.tsx')]),
+    ).toEqual([]);
+  });
+});
 
-    // Without this the check passes vacuously the day the screens are renamed.
-    expect(screens.length).toBeGreaterThan(1);
-
-    const results = await eslint.lintFiles(screens);
-    const offences = results.flatMap((result) =>
-      result.messages
-        .filter((message) => message.ruleId === RULE)
-        .map(
-          (message) =>
-            `${path.relative(repoRoot, result.filePath)}:${message.line} ${message.message}`,
-        ),
-    );
-
-    expect(offences).toEqual([]);
+describe('what the phone already renders', () => {
+  it('is above the floor on every screen it draws', async () => {
+    expect(
+      await offencesIn([
+        // `app` recursively: the scanned Join Link's route is a directory down.
+        ...screensIn(CONTROLLER_SCREENS),
+        ...screensIn(CONTROLLER_SOURCES),
+        path.join(TRIVIA_SOURCES, 'controller-screen.tsx'),
+      ]),
+    ).toEqual([]);
   });
 });
 
@@ -182,12 +224,30 @@ describe('body text under the floor', () => {
   it('is caught on the trivia module\'s television screen, not only in the TV app', async () => {
     expect(await complaints(styles('fontSize: 16,'), A_TRIVIA_TV_SCREEN)).toHaveLength(1);
   });
+
+  // The size the Controller drew its field labels at until this floor was
+  // switched on there, and the whole reason the phone block exists.
+  it('is caught on the phone at the size the handoff pins §2\'s label to', async () => {
+    for (const filePath of [A_CONTROLLER_SCREEN, A_TRIVIA_CONTROLLER_SCREEN]) {
+      const [message] = await complaints(styles('fontSize: 13,'), filePath);
+
+      expect(message).toContain('13');
+      expect(message).toContain(String(minBodyFontSize.phone));
+      expect(message).toContain('minBodyFontSize.phone');
+    }
+  });
 });
 
 describe('body text on the floor or above it', () => {
   it('passes at exactly the floor, however it is written', async () => {
     expect(await complaints(styles('fontSize: minBodyFontSize.tv,'))).toEqual([]);
     expect(await complaints(styles(`fontSize: ${minBodyFontSize.tv},`))).toEqual([]);
+    expect(
+      await complaints(styles('fontSize: minBodyFontSize.phone,'), A_CONTROLLER_SCREEN),
+    ).toEqual([]);
+    expect(
+      await complaints(styles(`fontSize: ${minBodyFontSize.phone},`), A_CONTROLLER_SCREEN),
+    ).toEqual([]);
   });
 
   it('passes above it', async () => {
@@ -260,10 +320,44 @@ describe('what the floor does not reach', () => {
     ).toEqual([]);
   });
 
-  // A phone is read from the hand and Boardwalk floors it at 14, so a repo-wide
-  // 18 would be the wrong number written on the wrong surface.
-  it('says nothing on the phone, whose floor is a different number', async () => {
+  // A file on neither surface is a file the repo has not said where it is read
+  // from, and the floor is a fact about a reading distance rather than about
+  // text. Both blocks have to miss it or one of them is over-wide.
+  it('says nothing in a package both surfaces import', async () => {
+    expect(await complaints(styles('fontSize: 8,'), A_SHARED_SOURCE)).toEqual([]);
+  });
+});
+
+// Two floors, not a strict one and a lax one: the same sample is judged by the
+// distance the screen it is on is read from. 15 is legible in the hand and not
+// across a room, and each block has to be the number for its own surface —
+// the phone wearing the television's would ban half the Controller, and the
+// television wearing the phone's would quietly un-ban what the TV task caught.
+describe('the two surfaces judge the same size differently', () => {
+  it('lets the phone keep a size the television refuses', async () => {
+    expect(await complaints(styles('fontSize: 15,'))).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 15,'), A_TRIVIA_TV_SCREEN)).toHaveLength(1);
     expect(await complaints(styles('fontSize: 15,'), A_CONTROLLER_SCREEN)).toEqual([]);
     expect(await complaints(styles('fontSize: 15,'), A_TRIVIA_CONTROLLER_SCREEN)).toEqual([]);
+  });
+
+  it('refuses on both what is under both', async () => {
+    expect(await complaints(styles('fontSize: 12,'))).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 12,'), A_CONTROLLER_SCREEN)).toHaveLength(1);
+  });
+
+  // The exemption stops being forward-looking here: on the television the
+  // smallest display size is 20 and nothing sits in it, but the phone draws its
+  // HOST pill in Bungee at 13, under its own floor and outside it.
+  it('exempts display type on the phone too, which is where that matters', async () => {
+    expect(
+      await complaints(
+        styles('fontFamily: fontFamily.display,\nfontSize: 13,'),
+        A_CONTROLLER_SCREEN,
+      ),
+    ).toEqual([]);
+    expect(
+      await complaints(styles('fontFamily: fontFamily.bodyBold,\nfontSize: 13,'), A_CONTROLLER_SCREEN),
+    ).toHaveLength(1);
   });
 });

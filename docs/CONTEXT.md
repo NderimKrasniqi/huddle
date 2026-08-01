@@ -528,8 +528,11 @@ working must add it here.
   nothing else.
   Which files stand on which surface is the flat config's question rather than
   the rule's, since that is what ESLint's `files` is for: `apps/tv` and a game
-  module's `tv-*` screens are the `tv` surface, and the phone is left alone,
-  because 14 and 18 are two floors and not a lax one and a strict one.
+  module's `tv-*` screens are the `tv` surface, `apps/controller` and a module's
+  `controller-*` screens the `phone`. Two config blocks and not one repo-wide
+  number, because 14 and 18 are two floors and not a lax one and a strict one.
+  `packages/ui` is on neither: a shared primitive stands on no one surface, so
+  it can be given no floor — none of them sets a `fontSize` today.
   **Body text is everything with a `fontSize` except Boardwalk's display face** —
   a style setting the theme's own `fontFamily.display` is drawing type (a
   wordmark, a Room Code letter, a Countdown) and the handoff floors *body* text.
@@ -542,8 +545,23 @@ working must add it here.
   than the one number, so `minBodyFontSize.phone` standing on a television is a
   size it can read rather than a reference it has to wave through. What it
   cannot see is a `<Text>` carrying no size at all, which renders at React
-  Native's own 14px — every one on both TV surfaces sets a size today, and that
-  is a fact established by reading rather than by the gate.
+  Native's own 14px — every one on all four surfaces either sets a size or is
+  nested in a `<Text>` that does, and that is a fact established by reading
+  rather than by the gate. (On the phone that default *is* the floor, so only
+  the television is exposed by the gap.)
+  The display exemption is where the two surfaces differ in practice: on a
+  television nothing sits in it (the smallest display size there is 20), while
+  the phone's HOST pill is Bungee at 13, under the phone floor and outside it.
+  It is not an exemption anybody can claim on a line — it costs an actual change
+  of face, which is a visible one.
+  Where the handoff floors body text and also pins a particular element under
+  that floor, the floor wins: §2 writes the Controller's field label at 13px and
+  the same document's typography section floors phone body at 14, and a floor a
+  single spec line can undercut is not a floor. That label reads
+  `minBodyFontSize.phone` rather than `14` because 14 is the floor and not this
+  element's handoff measurement — a bare number there would read as one. It is
+  not the screen's only size the handoff does not give, either: the HOST pill's
+  13 was derived from that label's 13, and this is what broke the derivation.
 - **Eyes up** — the platform's core UX principle: the TV is the stage; phones
   are minimal controllers; players' eyes belong on the TV and each other.
 

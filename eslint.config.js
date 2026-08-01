@@ -53,24 +53,40 @@ module.exports = defineConfig([
 
   // Boardwalk's other rule, and the half of it that is config: body text is
   // floored at the smallest size the surface it is read from allows, and this
-  // is where the repo says which files are read from a television. The TV app
-  // and a game module's `tv-*` screens; nothing else. The phone's floor is a
-  // different number (14 against 18), so a repo-wide 18 would be the
-  // television's answer written over the phone's — and two sizes on the
-  // Controller sit at 13 today. Switching the phone on is its own plan task
-  // ("Design fidelity — the phone's 14px floor", Phase 5): a second block here
-  // with `surface: 'phone'`, not a second rule and no change to this one.
+  // is where the repo says which surface a file stands on. Two blocks and not
+  // one, because 14 and 18 are two floors rather than a lax one and a strict
+  // one — a repo-wide 18 would be the television's answer written over the
+  // phone's, and a repo-wide 14 would un-ban on the TV everything the TV block
+  // exists to catch. The rule is handed the whole `MIN_BODY_FONT_SIZE` table
+  // either way, so each surface can read the *other's* floor as a number when
+  // it is written where it does not belong.
   //
-  // A game's television screen is recognised by its file name, which is the
+  // Both blocks name a game module's screens by file name, which is the
   // convention every module follows (`tv-screen.tsx` beside
   // `controller-screen.tsx`) and the only handle a config has: a module that
-  // drew its TV screen out of a file named something else would sit outside the
-  // gate.
+  // drew a screen out of a file named something else would sit outside the
+  // gate. What neither block names is `packages/ui`, which both surfaces import
+  // — a shared primitive stands on no one surface, so it cannot be given a
+  // floor here. None of them sets a `fontSize` today.
   {
     files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
     plugins: { boardwalk },
     rules: {
       'boardwalk/body-text-floor': ['error', { surface: 'tv', minBodyFontSize: MIN_BODY_FONT_SIZE }],
+    },
+  },
+  {
+    files: [
+      'apps/controller/**/*.ts',
+      'apps/controller/**/*.tsx',
+      'packages/games/*/src/controller-*.tsx',
+    ],
+    plugins: { boardwalk },
+    rules: {
+      'boardwalk/body-text-floor': [
+        'error',
+        { surface: 'phone', minBodyFontSize: MIN_BODY_FONT_SIZE },
+      ],
     },
   },
 ]);

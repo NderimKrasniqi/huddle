@@ -30,13 +30,18 @@ const {
  * contradict the one sentence that makes either of them defensible. They share
  * the walk to a style object (`style-objects.js`) and nothing else.
  *
- * ## Which files stand on a television
+ * ## Which surface a file stands on
  *
  * Not the rule's question — the flat config's, which is what ESLint's `files`
- * is for. `eslint.config.js` switches this on for `apps/tv` and a game module's
- * `tv-*` screens with `surface: 'tv'`, and leaves the phone alone. A repo-wide
- * 18 would be the television's number written over the phone's, which is a
- * different floor rather than a laxer one.
+ * is for. `eslint.config.js` switches this on twice: `apps/tv` and a game
+ * module's `tv-*` screens with `surface: 'tv'`, `apps/controller` and a
+ * module's `controller-*` screens with `surface: 'phone'`. Two blocks and not
+ * one repo-wide number, because 18 and 14 are two floors rather than a strict
+ * one and a lax one — a repo-wide 18 would be the television's number written
+ * over the phone's, and a repo-wide 14 would un-ban on the television
+ * everything the TV block exists to catch. A file on neither surface —
+ * `packages/ui`, which both clients import — gets no floor, because a shared
+ * primitive stands on no one reading distance.
  *
  * The whole `minBodyFontSize` table is passed in rather than the one number, so
  * that `minBodyFontSize.phone` written on a television — a phone screen ported
@@ -52,19 +57,23 @@ const {
  * object that names no family at all: the floor applies unless a style says it
  * is display, which is the safe direction for a default.
  *
- * That exemption is a statement about what the floor means rather than a hole
- * anything currently sits in. At the time it was written the smallest display
- * size on either television surface was 20px, so nothing in the repo relies on
- * it.
+ * The exemption is load-bearing on the phone and not on the television: the
+ * smallest display size on either TV surface is 20px, while the Controller
+ * draws its HOST pill in Bungee at 13 — under the phone floor and outside it.
+ * It is not an exemption a style can claim by asserting it, which is what makes
+ * that safe: it costs `fontFamily.display`, an actual change of face, and one
+ * that shows.
  *
  * ## What it does not catch
  *
  * A `<Text>` with no size anywhere in its style chain renders at React Native's
- * own 14px default, which is under the TV floor and invisible here — finding it
- * would mean resolving style names across files. Every `<Text>` on both
- * television surfaces carries a sized style today, and that is a fact checked by
- * reading rather than by this gate. A size arriving as a prop, or from another
- * module, is likewise unjudgeable and passes.
+ * own 14px default, which is invisible here — finding it would mean resolving
+ * style names across files. That default is under the TV floor and *is* the
+ * phone floor, so only the television is exposed by the gap. Every `<Text>` on
+ * all four surfaces either carries a sized style or is nested in one that does,
+ * and that is a fact checked by reading rather than by this gate. A size
+ * arriving as a prop, or from another module, is likewise unjudgeable and
+ * passes.
  */
 
 /** The theme exports this rule has to recognise, and Boardwalk's display face. */

@@ -141,3 +141,69 @@ present by a `players:heartbeat` loop from the CLI. `players:roster` was read at
 capture time and reported exactly the split the frames draw — in `11`, Milo and
 Zoe `away: true` and the other four `false` — so every muted dot is the room's
 answer and not a rendering accident.
+
+## The phone's field labels, after "Design fidelity — the phone's 14px floor"
+
+iPhone 17, iOS 26.5, Debug build at 1206×2622 (×3 of 402×874 pt), taken on
+2026-08-01 against the same cloud dev deployment. An **A/B on one line**: the
+`label` style's `fontSize` was flipped in place and Metro's fast refresh
+re-rendered the screen that was already up, so the two frames of each pair
+differ in that number and in nothing else — same device, same room, same scroll
+position, seconds apart.
+
+| file | what it is |
+|---|---|
+| `14-phone-join-label-before.png` | §2 Join, ROOM CODE and YOUR NAME at the handoff's 13px |
+| `14-phone-join-label-after.png` | the same screen at `minBodyFontSize.phone` (14) |
+| `15-phone-host-lobby-label-before.png` | §4 + §5 + §7 Host lobby, three labels at 13px (landing view; SETTINGS is further down and unmounted) |
+| `15-phone-host-lobby-label-after.png` | the same screen at 14 |
+
+Measured off the frames at ×3 by scanning for `colors.mutedText`
+(`#6E6653`), in design points:
+
+| label | 13px | 14px | Δ |
+|---|---|---|---|
+| ROOM CODE | 87.67 wide, 9.33 cap | 93.33, 10.00 | +5.67 |
+| YOUR NAME | 87.33, 9.33 | 93.00, 10.00 | +5.67 |
+| YOUR ROOM | 88.67, 9.33 | 94.33, 10.00 | +5.67 |
+| YOUR COLOR | 94.67, 9.33 | 100.33, 10.00 | +5.67 |
+| YOU'RE THE HOST — PICK A GAME | 256.67, 9.33 | 272.00, 10.00 | +15.33 |
+
+The Δ is **proportional, not constant**: `letterSpacing.label` is a fixed 2pt
+per character and does not scale, so only the glyph run grows, by 14/13. Every
+row above is that model to within about 0.35pt (the misses run 0.05 to 0.34,
+and the residual is the space glyph, whose own advance scales with size where
+the model holds it fixed) — "ROOM CODE" is 9 characters, so
+(87.67 − 18) × 14/13 + 18 = 93.03 against 93.33 measured, and the 29-character
+label gives 271.95 against 272.00. Both are ~6% of width, which is why the long
+one gains 15.33 where the short ones gain 5.67.
+
+The sixth label, **SETTINGS, is on neither frame**: it mounts only once a game
+with settings is picked. It is the same `label` style and one word long, so it
+gains less than anything measured above — that much is inferred from the shared
+style, not observed.
+
+**Nothing wraps and nothing reflows.** The longest label is the one that could:
+at 14 it runs 24.3 → 296.3pt in a column that is 354pt wide (402 less the
+PhoneScreen's two 24pt insets), so it would have to grow another 30% to break.
+Every label keeps its left edge at 24pt. What does move is vertical: each label's
+line box grows about 1.3pt, so §5's roster row — the measurement the previous
+task pinned at an ink border top of **411.3pt** — now begins at **412.67pt**, and
+each label further down the Host's screen is displaced by the growth of the ones
+above it (YOUR COLOR +1.67, the picker's label +3.00).
+
+That leaves the fold finding above unchanged, by arithmetic rather than by a
+frame: these frames hold a **one-player** room, so row 6 is not in them, and
+row 1 is where the 1.33pt was measured. Carried onto `11`'s six-player layout it
+puts row 6's border top at 791.3 + 1.33 = **792.7pt inferred**, against a
+measured 839.3pt viewport — 46pt of margin, so rows 1–6 are still the landing
+view and the seventh player is still below it. Re-capturing a six-player room
+would settle it by observation; the margin is wide enough that it was not worth
+seating five phones for.
+
+**Driven, not seeded.** Ada was joined on the phone itself — Join Link opened
+(`huddle://join/GGGU`), nickname typed, Join tapped. The join-form pair is the
+same phone sent to a *second* room's link (`huddle://join/HHWH`), which is the
+one case a seated Controller is let back to the form (see Rejoin in
+docs/CONTEXT.md); it is the join screen with a scanned code in it, not a fresh
+launch.

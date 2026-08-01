@@ -1747,7 +1747,10 @@ green. The second half is now grouped with the phase's other human-only work.
   rather than swept in — this AC is the television's — and written up as its own
   Phase 5 task ("Design fidelity — the phone's 14px floor") below, so that a
   known violation of the handoff is recorded where the plan can see it rather
-  than only in a comment inside a rule that does not run there.
+  than only in a comment inside a rule that does not run there. (That last
+  sentence is this task's own state and has since been superseded: the phone
+  task below switched the rule on for `apps/controller` and took the label to
+  14. Left standing as the record of what was true here.)
   The `tv-*` glob is the only handle a config has on a game's television screen,
   so a module that drew its TV screen out of a file named something else would
   sit outside the gate.
@@ -1815,7 +1818,7 @@ green. The second half is now grouped with the phase's other human-only work.
   `StyleSheet`, a style object built outside `create` and passed in by name, a
   computed key. Nothing here has been on a simulator or a television, and nothing
   needed to be: no rendered size moved.
-- [ ] Design fidelity — the phone's 14px floor — AC: every piece of body text
+- [x] Design fidelity — the phone's 14px floor — AC: every piece of body text
   the Controller and the trivia controller screen render is ≥14px, and
   `boardwalk/body-text-floor` is switched on for them so a smaller one fails
   `pnpm lint`. Raised by the TV task above rather than found by a sweep, so what
@@ -1834,6 +1837,119 @@ green. The second half is now grouped with the phase's other human-only work.
   whether the sweep the glob then performs turns up anything the TV task had no
   reason to look at. A phone is read from the hand, so unlike the television's
   floor this one can be judged on a simulator.
+
+  **A config glob and nothing else, as forecast.** `apps/controller/**` (both
+  extensions, as the TV block does) and `packages/games/*/src/controller-*.tsx`,
+  with `surface: 'phone'` and the same `MIN_BODY_FONT_SIZE` table. Checked
+  rather than assumed on both edges: the glob's own reach is the app's `app/`
+  and `src/` and nothing more — `.expo/`, `expo-env.d.ts` and `ios/Pods` hold no
+  authored `.ts`/`.tsx` and the first two are globally ignored anyway — and a
+  file on *neither* surface still has no floor, which is a test of its own,
+  because the second block widening quietly over the first is the failure mode
+  of a two-block config. `packages/ui` is the case that names the boundary: both
+  clients import it, so a shared primitive stands on no one surface and can be
+  given no floor. Nothing in it sets a `fontSize` today, which is a fact read
+  rather than a fact enforced.
+
+  **The catalogue, by the technique the TV pass used**: the rule run over both
+  phone surfaces with an absurd floor, so it names everything it considers body.
+  Twenty-six sizes, fifteen body and eleven display. Body: the name field (18),
+  the primary button's label (18), the failure line (15), a roster nickname
+  (16), the aside (15), the picked game's meta and position (15/15), the
+  name of one setting (16) and one of its chips (15), the waiting line (15), the
+  status card's sentence (16), trivia's answer buttons (20), its LOCKED IN pill
+  (14) and its eyes-up line (18) — and the field `label`, at 13. Display, and
+  outside the floor: the wordmark (20/16), "Join the room" (28), a code tile's
+  letter (36), the HOST pill (13), the code chip (20), the hero monogram (42), a
+  roster monogram (14), a picker chevron (30), the picked title (22) and
+  trivia's question (22). Two are worth arguing. **The HOST pill at 13 is the
+  only place in the repo where the display exemption is load-bearing** — on the
+  television the smallest display size is 20, so the exemption was forward-
+  looking there and is not here. It is defensible because the exemption cannot
+  be claimed on a line: it costs `fontFamily.display`, an actual change of face,
+  and Bungee's caps at 13 stand taller and heavier than Space Grotesk's. And
+  **trivia's LOCKED IN pill is body at exactly 14** rather than display, which is
+  the same call the TV pass made for a seat's nickname: it is a badge, but it is
+  set in Space Grotesk, and a badge is where a reader looks to find out whether
+  their tap registered.
+
+  **The label goes to 14, and the handoff contradicts itself about it.** §2
+  writes "ROOM CODE label (13px, letter-spacing 2px, bold, muted)" while the
+  same document's typography tokens floor phone body at ≥14px. That is not this
+  repo's rule colliding with the handoff — it is the handoff colliding with
+  itself, and it is now recorded as such in `docs/design/design-handoff.md`
+  under §2 rather than silently resolved in code. The floor wins, for two
+  reasons that are the document's own: its two type roles are Display (Bungee)
+  and **Body/UI** (Space Grotesk 400–700), so a bold muted label in Space
+  Grotesk is what "phone body" names; and a floor a single per-screen line can
+  undercut is not a floor. An `eslint-disable` was the live alternative and was
+  rejected on what it would mean: the phone gate's first act would be to exempt
+  the one violation it was built to catch.
+  Written as `minBodyFontSize.phone` and not as `14`, because this element's
+  handoff measurement is 13: a bare 14 in a stylesheet of handoff numbers would
+  read like one more of them and hide which of the document's two lines won.
+
+  **Six labels on three screens; five of them measured.** ROOM CODE and YOUR
+  NAME on §2; YOUR ROOM, YOUR COLOR and YOU'RE THE HOST — PICK A GAME on the
+  Host's merged §4/§5/§7 screen; YOUR COLOR again on the player's §4; and
+  SETTINGS, which mounts only once a game with settings is picked and is on
+  neither frame. A/B'd on an iPhone 17 by flipping the one number and letting
+  fast refresh redraw the screen that was already up, so each pair differs in
+  that number and nothing else (`tools/design-fidelity/`, frames 14 and 15).
+
+  The growth is **proportional to the glyph run, not a constant**, because
+  `letterSpacing.label` is a fixed 2pt per character that does not scale with
+  the size: the four short labels each gain 5.67pt and the 29-character one
+  gains 15.33 (256.67 → 272.00), which is the same ~6% of width in both cases.
+  Predicted the same way to within about 0.35pt — glyphs × 14/13, spacing held,
+  the residual being the space glyph's own advance, which scales where the model
+  holds it fixed — which
+  is why SETTINGS is left uncaptured rather than guessed at: it is the same
+  `label` style, one word long, so it gains less than any label that *was*
+  measured, and the ~2.7pt it adds to the picked-game screen's column is
+  **inferred from the shared style rather than observed**.
+
+  **Nothing wraps and nothing reflows.** The longest label lands at 272.0pt in a
+  354pt column and would have to grow another 30% to break. What moves is
+  vertical, about 1.3pt per label, so §5's roster row starts at 412.67pt where
+  the roster task measured 411.3 — measured on row 1 of a one-player room, since
+  that is the room the frames hold.
+
+  **Three pieces of prose went stale, not one**, and all three are fixed here:
+  `hostPillText`'s comment, which founded its 13 on the label's 13; this rule's
+  own docblock, which said the config "leaves the phone alone" and called the
+  display exemption a hole nothing sits in; and `docs/tech-stack.md`, which said
+  the config knows which files stand on a television. A gate whose rule
+  documents the opposite of its config is a gate a developer reads as misfiring.
+
+  **Proved by failing.** With the block added and the label still at 13,
+  `pnpm lint` reported exactly one problem, on its line:
+  `apps/controller/app/index.tsx:1409 Boardwalk floors phone body text at 14px
+  and this is 13px at the design size`. One and not two — the HOST pill on the
+  same screen at the same 13 lints clean, which is the exemption proved by the
+  gate rather than by argument. Six tests were added to
+  `eslint-rules/boardwalk-body-text-floor.test.ts` (24 there, 601 in the repo):
+  the config test now walks all four file sets and asserts the surface *and* the
+  whole table on each, a companion asserts a shared package gets no floor at
+  all, the phone's real screens are linted and expected silent, 13 is caught at
+  both phone paths with `minBodyFontSize.phone` named in the message, and one
+  pair pins the thing a single repo-wide number would break: 15 is refused on
+  both television paths and passed on both phone paths, while 12 is refused
+  everywhere.
+
+  **What is still open.** The gap the TV pass documented is inherited whole — a
+  `<Text>` with no size in its style chain is invisible to a rule that reads
+  style objects — but it is toothless on this surface for once, since React
+  Native's own default is 14 and that *is* the phone floor. Only the television
+  is exposed by it. All fifty-two `<Text>` on the phone were read anyway, to the
+  same standard: forty-eight name a sized style and the other four are the
+  wordmark's period, which sets a colour and inherits its parent's 20 or 16.
+  Legibility itself is still unjudged: 14px was read on a
+  simulator at ×3 on a desk, which settles that the labels fit and not that they
+  are comfortable in a hand at arm's length; that belongs to the play-test gate,
+  as the 3m trivia question does. And the handoff's §2 line is annotated, not
+  changed at source — the mock in the design project still says 13, so anyone
+  re-fetching it will find the same contradiction.
 - [ ] Design fidelity — the trivia question read from 3m (human-only) — AC: a
   human sits 3m from a television running the trivia TV screen and can read the
   question. Cannot be closed on a simulator and must not be ticked from a

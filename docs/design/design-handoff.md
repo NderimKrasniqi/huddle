@@ -78,6 +78,17 @@ are iPhone-sized (~390×844).
 ### 2. Phone — Join
 - Logo (20px), heading "Join the room" (Bungee 28px).
 - ROOM CODE label (13px, letter-spacing 2px, bold, muted) + 4 tiles 64×80px:
+  - **13px is this document contradicting itself, and it is built at 14.** The
+    typography tokens above floor phone body at ≥14px, and this label is body
+    text by this document's own naming: the two type roles here are Display
+    (Bungee) and Body/UI (Space Grotesk 400–700), and a bold muted label is the
+    second. A floor a single per-screen line can undercut is not a floor, so the
+    floor wins and every field label on the Controller — ROOM CODE, YOUR NAME,
+    YOUR ROOM, YOUR COLOR, SETTINGS, YOU'RE THE HOST — PICK A GAME — is 14.
+    Measured on an iPhone 17 rather than argued: the longest of them grows from
+    256.7pt to 272.0pt in a 354pt column, so nothing wraps, and the roster below
+    moves down 1.33pt. Frames in `tools/design-fidelity/`; written up against
+    "Design fidelity — the phone's 14px floor" in docs/implementation-plan.md.
   filled letters use Bungee 36px in the letter's color; active cell has cobalt
   border + blinking cobalt caret; empty cell dashed border.
 - YOUR NAME label + white input (3px ink border, radius 16, shadow 3px).
