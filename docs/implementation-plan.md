@@ -1397,13 +1397,153 @@ existed, and bundling it would have let a reviewer judge neither well.
   Arrival rule and not a new one. What `09` does not show is more than one game
   installed: with a single registry entry there is one page dot, so the *row* of
   dots is verified at width one and the daylight at the only width there is.
-- [ ] Design fidelity — §5's phone roster — AC: the Host's roster rows either
+- [x] Design fidelity — §5's phone roster — AC: the Host's roster rows either
   land on the phone or §5 is marked as dropped with the reason recorded
   against the handoff. Nothing has ever built this: the Host currently gets
   §4's screen plus §7's picker. Whichever way it goes, the three pills above
   are the other half of the same question — a television that stops saying who
   is Host and who just joined puts the burden on the phone, so decide (b)
   first and let it inform this.
+
+  **Built, on 2026-08-01, and the deciding argument is the one the task above
+  left behind.** §5's rows are the only surface in Huddle that can say a
+  non-Host player is away between games. The television's Seats said it until
+  the carousel took their screen and the task above dropped the away treatment
+  outright; §4 gives a player their own screen and §7 gives the Host a picker,
+  and neither of those lists anybody. Dropping §5 as well would have left the
+  product with no answer at all to "is Milo still with us?" outside a running
+  game. It was weighed against the real objection — a roster the Host has to
+  scroll during a party may be a screen nobody looks at — and **the first
+  version of this pass answered that objection without addressing it**, which
+  review caught. "A section, not a screen you navigate to" is true and beside
+  the point: a section below §4's 128px hero avatar, its heading and its ten
+  swatches is still a scroll, and a longer one than a screen would have been.
+  Measured on the layout as first built, the first row began at **676pt** of an
+  839pt viewport, so two rows landed — and in the three-player room this task's
+  own frame shows, the away row was below the fold. On the one surface in the
+  product that carries that news.
+
+  **So the rows moved above the color picker**, directly under §4's heading,
+  which is also where §5 itself draws them. The trade traces to what each
+  section is for: a color is claimed once and never returned to, while the
+  roster is what a Host re-reads all through a lobby, so the picker is the one
+  that can afford to be a scroll away. Measured on the layout as it now stands
+  (`11-phone-host-roster-six-players.png`, landing view, nothing scrolled): the
+  label at 383.3pt, row 1 at **411.3**, a 76.0 pitch, viewport bottom 839.3.
+
+  **What that buys and what it does not.** Rows **1 to 6** all show their
+  avatar, nickname and status without a swipe; row 6 loses only its bottom edge
+  and shadow. From the **seventh** player a row is entirely below the fold, and
+  the count line is from the sixth. The room cap is ten, so a full party still
+  keeps four rows behind a swipe — and a full party is exactly when a Host is
+  most likely to be looking for the one phone that has gone quiet. That is the
+  honest residue of this task and it is not solved: closing it means either a
+  denser row (§5 pins the 40px avatar, the 3px border and the 16 radius, so
+  what would give is padding the handoff does not pin) or saying away-ness in a
+  summary the eye reaches first, which is copy §5 does not give. Neither was
+  taken here, because both are design decisions rather than fidelity ones.
+
+  **What landed.** `HostRoster` and `RosterRow` in `apps/controller/app/
+  index.tsx`, with the decisions in `apps/controller/src/host-roster.ts`
+  (`rosterRowSlot`, `rosterRowSpokenAs`, `rosterFooterLine`). Every measurement
+  is a `packages/ui` token; the task needed no new ones, which is the reading
+  that §5's row is Boardwalk's phone card at its pinned sizes and nothing new.
+  The `browsingGameIndex` subscription moved up to `YoureInScreen` in the same
+  edit: the roster now sits above the color picker and §7's controls below it,
+  and both read that index, so one subscription answering both is what keeps
+  the count line and the start control from disagreeing (see the footer line
+  below). `LobbyGameControls` takes the browsed card as a prop rather than
+  asking for it.
+
+  That move widened the subscription's lifetime, which is worth writing down
+  rather than discovering later: it used to open when `LobbyGameControls`
+  mounted and now opens on every render path of `YoureInScreen`, so it stays
+  open on a phone for the whole of a game. It is inert there — the value is
+  unread in those branches, and `browsingGameIndex` cannot move while the
+  picker is unmounted — so the cost is one idle subscription and no re-renders.
+  It also removes a small wart: coming back through Back to lobby no longer
+  shows a frame of `carouselWindow(0)` while a cold query resolves, because the
+  subscription is already warm.
+
+  **Measured off the frame, not asserted.** `tools/design-fidelity/
+  10-phone-host-roster.png` at ×3, in design points: the row's ink border
+  **3.00**, its offset shadow **3.00** past the bottom and right edges (the two
+  read as one 6.00 ink run, which is what a Boardwalk row's edge is), the corner
+  **16** (the top scanline's ink begins 15.33pt in and the edge is straight
+  15.33pt down — a 16pt arc with the most-transparent pixel or two at each end
+  under the threshold), the avatar **40.00** inside a 2.00pt ink ring, the
+  status dot **12.00 × 12.00**, and the 10pt row gap showing 7pt of canvas
+  because the shadow has the other 3. The away row is checked by *colour value*:
+  its ring reads `(186,186,185)` and its face `(185,227,200)`, which are ink and
+  the claimed green at exactly `opacity.unavailable` over white; its nickname
+  reads `(110,102,83)` (`colors.mutedText`) and its dot `(201,191,172)`
+  (`colors.mutedBorder`) against a present player's `(23,163,74)`.
+
+  **Which was driven and which was seeded.** The Host (Ada) was **driven** on
+  the iPhone 17 simulator against the cloud dev deployment, in every frame —
+  Join Link opened, nickname typed, Join tapped, cobalt claimed off §4's picker.
+  Everybody else was **seeded** with `players:joinRoom`. The away players are
+  Milo and Zoe, because a seeded seat never beats and the room's own `markAway`
+  reached them; Grace Hopper, Bea and Cyd were held present by a
+  `players:heartbeat` loop from the CLI. `players:roster` was read at capture
+  time and reported exactly the split the frames draw, so every muted dot is the
+  room's answer and not a coincidence of rendering.
+
+  **The four frames say which are scrolled**, which the first set did not — and
+  that omission is why the layout problem above went unnoticed until review.
+  `10` (three players), `11` (six) and `12` (one) are **landing views, nothing
+  scrolled**; only `13` is scrolled, to the start control.
+
+  **Three departures from §5, each with its line.**
+  - **A section, not a screen.** The Host keeps §4's heading and avatar, so
+    §5's "Your room" heading is a section label in the vocabulary this screen
+    already labels YOUR COLOR and SETTINGS with. Same reasoning as §8 being the
+    tail of §4: one screen cannot carry two headings.
+  - **The pink NEW! pill is not drawn**, and this is deferred rather than
+    decided against. Nothing is lost by it today — the television greets each
+    arrival in punch for the same four seconds, which the task above put there
+    deliberately. What it would cost is the reason: correct four seconds need
+    `just-joined.ts`'s `Arrivals` fold *and* the carousel's `greeted` spending,
+    both of which live in `apps/tv/src` and would have to move to a shared home
+    to be reused. Re-implementing them on the phone was refused outright: the
+    greeting-after-a-game bug that pass found in review is exactly what a
+    second copy would re-earn.
+  - **"Choose a game →" is not drawn.** The button opens §7, and §7 is already
+    on this screen; the one cobalt primary button here is "Start <Game>", which
+    the earlier fidelity pass made cobalt for exactly this reason.
+
+  **The footer line drops its own invitation.** "<n> players in — you can start
+  anytime" is false in a room too small for the game being browsed, so on that
+  room the line is the count alone and the start control says what is missing —
+  `12-phone-host-roster-one-player.png` and `13-phone-host-start-blocked.png`
+  are the same one-player room, showing "1 player in" and "Trivia needs one more
+  player." That is the same move §1's footer makes when it drops "waiting for
+  players…", and it is why the browsed-card subscription had to move up the
+  tree: whether the party can start is a question about that card, and the two
+  sections that answer it now sit either side of the color picker.
+
+  **The slot's precedence is HOST over away, and it hides nothing.** This
+  roster is drawn on the Host's phone alone, so the row marked `host` is the
+  reader's own, and a phone with this screen in front of its owner is one the
+  room is hearing from. The case where it is not — a room whose whole party has
+  gone quiet keeps its away Host — is a room with nobody in it to read the
+  screen. Every row that can meaningfully be away therefore has a dot on it.
+  Four tests pin the precedence, including the away-Host case.
+
+  **What this does not close.** The fold above is the first of it. The second:
+  it is **Host-only**, because §5 is — a non-Host player still learns nothing
+  about anybody else's presence between games, on any surface. That is accepted
+  rather than solved — §4 has no roster in the mock, and inventing one would be
+  a screen this pass has no line to trace. The
+  four frames are an iPhone 17 simulator at ×3; nothing here has been on a
+  phone in a hand, so the 40px avatar and the 12pt dot are checked as pixels
+  and not as something read at arm's length. The away state was watched
+  *arriving* only in the sense that Milo was already away when the screen was
+  captured — the transition from green dot to muted was not filmed, though the
+  roster is the same live subscription the color picker's dimming rides and
+  that has been watched pushing before. Nothing in `apps/tv` was touched, so
+  the shared canvas, the sticker tilts and `StickerSurface`'s pale seam are
+  undisturbed by construction; no tvOS binary was built by this task.
 - [ ] Design fidelity — trivia screens on theme tokens only — AC: the trivia
   screens extend Boardwalk using only theme tokens from `packages/ui` — no
   literal colors, radii, border widths, shadow depths or font families at a

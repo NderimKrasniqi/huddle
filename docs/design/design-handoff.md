@@ -114,13 +114,32 @@ are iPhone-sized (~390×844).
 - Heading "Your room" + code chip. Roster rows: white, 3px ink border,
   radius 16, 3px shadow — 40px avatar, bold name, right slot = HOST pill /
   green online dot / pink NEW! pill (new row uses pink border+shadow).
-  - Not built yet: the Host currently gets §4's screen plus §7's picker, and
-    these roster rows have never existed. Undecided rather than dropped, and it
-    matters more than it looks — the television gave up saying who is away
-    (see §3), so this is the only surface left that could. Its own open task in
-    docs/implementation-plan.md.
+  - **Built**, and built because of §3: the television dropped the away
+    treatment outright, so these rows are the only surface left in Huddle that
+    says a non-Host player is away between games. They are a *section* of the
+    Host's screen rather than a screen — that phone already carries §4 and §7,
+    and one screen cannot have two headings, so "Your room" is a section label
+    over the rows, drawn directly under §4's heading and above its color picker
+    so the rows land without scrolling. Every measurement above is drawn as
+    pinned *except the new row's pink border and shadow*, which is the NEW! pill
+    below; all of them are measured back off
+    `tools/design-fidelity/10-phone-host-roster.png`.
+  - Two decisions about the right slot. **Away is the fourth thing it says**,
+    and it says it the way the system already decided a listed player's
+    presence reads: the Status Dot mutes, the face dims to 30%, the nickname
+    goes to muted text. **The pink NEW! pill is not drawn** — an arrival is
+    already greeted for four seconds on the television (§6), and the machinery
+    that stops such a greeting repeating after a game lives in the TV app.
+    Deferred rather than dropped; written up against the "§5's phone roster"
+    task in docs/implementation-plan.md.
 - Footer: "<n> players in — you can start anytime" + cobalt primary button
   "Choose a game →".
+  - The line is drawn, and drops "you can start anytime" when the room is too
+    small for the game it is on, the way §1's footer drops "waiting for
+    players…" once somebody is in: the start control immediately below already
+    says what the room is short of. The **button is not** drawn — the picker it
+    would open is on this same screen, and this screen's one cobalt primary
+    button is §7's "Start <Game>".
 
 ### 6. TV — Game carousel
 - Header as lobby. Center: 3 cards — side cards 300×400px at 50% opacity,

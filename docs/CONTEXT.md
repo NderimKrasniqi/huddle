@@ -98,7 +98,8 @@ working must add it here.
   Host, and the away pill is dropped outright — which means that between games
   the television says nothing at all about a non-Host player being away, since
   the Seat treatments that used to say it are unreachable once anybody is in
-  the room. A greeting is spent once and remembered by the screen, so a game
+  the room; the Host Roster is where that went instead. A greeting is spent
+  once and remembered by the screen, so a game
   ending does not re-announce the arrival that preceded it; and because the
   slot holds one sentence, two phones landing inside a single roster push greet
   only the later of them.
@@ -122,8 +123,30 @@ working must add it here.
   them. Unique within a room ignoring case and surrounding spaces; `joinRoom`
   turns a repeat away with "name taken".
 - **Roster** — a room's players as the clients draw them: the TV's seats, and
-  (Phase 2) the Host's rows on their phone. Served in join order by the
-  `roster` query, which projects each player rather than handing over the row.
+  the Host Roster on their phone. Served in join order by the `roster` query,
+  which projects each player rather than handing over the row.
+- **Host Roster** — the Roster as the Host's own phone draws it (handoff §5):
+  one row per player in join order, each carrying their avatar, their Nickname,
+  and a right slot that says exactly one thing about them — the HOST pill, or
+  their Status Dot. A *section* of the Host's lobby screen rather than a screen
+  of its own, since that phone already holds §4's and §7's, drawn directly
+  under §4's heading and above its color picker: a color is claimed once while
+  the roster is re-read all through a lobby, and a section the Host has to
+  scroll to is a section a party does not read. Even there it does not fit every
+  room — from the seventh player a row falls below the fold on a 402×874 phone,
+  which is measured against the task rather than assumed away. Its footer line
+  ("<n> players in — you can start anytime") drops the invitation on a room too
+  small for the game being browsed, rather than contradict the start control
+  further down the screen.
+  It is the only surface in Huddle that says a non-Host player is Away between
+  games: the TV's Seats said it until the Carousel took their screen, and the
+  Carousel Footer Line dropped it outright. That is why it exists, and it is
+  what decides the slot — the HOST pill wins over away-ness, which costs
+  nothing, because this roster is drawn on the Host's phone alone and the row
+  marked Host is the reader's own. The handoff's pink NEW! pill is the one pin
+  not drawn: an Arrival is already greeted on the television for the same four
+  seconds. Host-only, like §5 — a non-Host player still learns nothing about
+  anybody else's presence between games, which is accepted rather than solved.
 - **Seat** — one place on the TV's roster: a dashed empty circle until a player
   takes it, then their claimed color with their Bungee initials, and the
   nickname under it. A room has ten of them (`ROOM_PLAYER_CAP` in game-core, the
@@ -192,12 +215,13 @@ working must add it here.
   ended back to the Join Screen, since its Session Token then answers nothing.
   The TV learns of it from the `stillOpen` subscription and opens a fresh room
   (`closeExpiredRoom`) rather than showing a code that belongs to no room.
-- **Status Dot** — the dot on a player's avatar saying whether the room is
-  hearing from their phone: Boardwalk green when it is, muted when they are
-  Away. Boardwalk's online dot (the handoff draws it on the Host's roster rows;
-  the TV's pairing seats are specified as avatar and nickname only), carried
-  onto every surface that lists players because presence is news wherever a
-  player is drawn.
+- **Status Dot** — the dot beside a player saying whether the room is hearing
+  from their phone: Boardwalk green when it is, muted when they are Away.
+  Boardwalk's online dot, which the handoff draws on the Host Roster's rows and
+  which is drawn there; the TV's pairing Seats specify avatar and nickname only
+  and carry it anyway, because presence is news wherever a player is drawn.
+  Colour is the whole of the difference between its two states, so any surface
+  drawing one owes a screen reader the word as well (`rosterRowSpokenAs`).
 - **Just Joined** — the pink treatment a Seat wears for about four seconds after
   its player appears (the handoff's avatar pop-in), then settles. A fact about
   what one screen has watched, not about the room: the TV works it out by
