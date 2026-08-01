@@ -234,6 +234,31 @@ working must add it here.
   A seat is not the only thing that spends them: the Carousel Footer Line spends
   the same four on the newest Arrival, counted the same way, because after the
   first join the television has no seats left to draw.
+- **Pop-in** — the spring an arrival is announced with: scale 0.6 → 1 with a
+  slight overshoot over about 300ms (`motionDuration.popIn`, `popIn`), the
+  handoff's "avatar pop-in". It runs on the Carousel Footer Line's greeting and
+  nowhere else, because that line is what inherited the announcement when §3's
+  lobby card was dropped — the Seat the handoff's card became is unreachable
+  once anybody is in the room, and a spring there would run for nobody. So a
+  party sees a sentence spring in, not an avatar. The four seconds it introduces
+  are Just Joined's and are counted separately: the spring is how the greeting
+  arrives, not how long it stays.
+- **Card Transition** — the carousel sliding into place behind a Browsing Game
+  Index the room has moved: the cards start 96 design points off in the
+  direction the room browsed and ease out to 0 over 250ms
+  (`motionDuration.cardTransition`, `cardEntryOffset`). Transform only, so it
+  moves nothing the layout can see — the page dots' 10pt of daylight under the
+  focused card's shadow is a measured number that no animation may spend. A
+  build installing one game cannot show it, since a list of one has nowhere to
+  browse to.
+- **Motion tokens** — Boardwalk's two animation durations and the pop-in's shape
+  (`packages/ui/src/motion.ts`), read from the theme like a color and never
+  written at the call site. `boardwalk/tokens-only` does not cover them — that
+  rule reads the property names of a style object, and a duration is an argument
+  to an animation — so this one is a convention the tokens hold rather than a
+  gate. `springOf` is what makes a duration usable: React Native's spring takes
+  stiffness, damping and mass, so the token names the spring's natural *period*
+  and the conversion is the standard second-order one.
 - **Game Module** — a self-contained game implementation behind the game-core
   interface (`GameModule`: metadata, settings schema, initial-state factory,
   reducer, TV/Controller screens). Games are modules; the hub never contains

@@ -207,3 +207,51 @@ same phone sent to a *second* room's link (`huddle://join/HHWH`), which is the
 one case a seated Controller is let back to the form (see Rejoin in
 docs/CONTEXT.md); it is the join screen with a scanned code in it, not a fresh
 launch.
+
+## The two handoff animations
+
+Apple TV 4K (3rd generation) **at 1080p** (tvOS 26.5, 1920×1080 — ×1.5 of the
+1280×720 design stage, where every other capture here is ×3), Debug build,
+Metro serving the working tree, taken on 2026-08-01 against the same cloud dev
+deployment.
+
+The lower resolution is the point rather than a compromise: these two files are
+frames pulled out of a *recording*, and `simctl io recordVideo` at ×3 dropped
+most of a 300ms animation on this machine.
+
+| file | what it is |
+|---|---|
+| `16-tv-carousel-transition.png` | the carousel's Card Transition, seven frames of one 250ms ease-out, labelled with elapsed time and the row's measured offset |
+| `17-tv-arrival-pop-in.png` | the arrival greeting's Pop-in, seven frames of one ~300ms spring, labelled with elapsed time and the measured scale |
+
+Both are strips of real frames at their real presentation times, not renders of
+a curve. How they were taken:
+
+- `simctl io <udid> recordVideo --codec h264` while the room was driven from the
+  CLI, then `swift tools/motion-frames.swift <movie> <dir> <prefix> <from-ms>
+  <to-ms>`, which decodes the track through and writes every frame in the window
+  named by its own timestamp.
+- The recorder writes frames **only while the screen is changing**, so a
+  recording of a still television holds one frame and each animation is a burst
+  of ~15–18 frames at 60fps. That is how the bursts were found.
+- It also loses the tail of an interrupted recording, and its index stops before
+  its samples do — seeking with `AVAssetImageGenerator` returns the same last
+  frame for every request past that point, which reads exactly like an animation
+  that finished instantly. `motion-frames.swift` reads sequentially for that
+  reason.
+
+**Driven and seeded.** Everything here was **seeded**: the arrivals with
+`players:joinRoom`, the browsing with `games:browseGame` under the Host's own
+Session Token. The television takes no input.
+
+**The carousel frames needed a second game.** The Registry ships one, so the
+Browsing Game Index has nowhere to go; `16` was taken with
+`tools/carousel-transition-repro.patch` applied to both Registry lists *and
+pushed to the Convex deployment*, since `browseGame` clamps the index
+server-side. Both were reverted afterwards. `17` was taken on the unpatched
+tree, which is why its footer shows a single page dot.
+
+The numbers measured off both files — the cubic fit for the slide, the scale
+curve for the spring, and the 10.00pt that still separates the greeting from the
+focused card's shadow at the spring's peak — are in the "two handoff animations"
+task in `docs/implementation-plan.md`.

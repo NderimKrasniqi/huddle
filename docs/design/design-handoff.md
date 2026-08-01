@@ -186,11 +186,36 @@ are iPhone-sized (~390×844).
 - **Avatar pop-in**: when a player joins, their TV card animates in (scale
   0.6→1 with slight overshoot, ~300ms spring) and holds the pink "JUST
   JOINED!" treatment for ~4s before settling to the normal style.
+  - **Built, on the surface that inherited what it announces.** The TV card is
+    §3's, which is never coming, and the pairing Seat that stood in for it is
+    only ever drawn for an *empty* room — so the spring as written has nothing
+    reachable to run on. What survived §3 is the greeting itself: §6's footer
+    line hands its four seconds to the newest arrival, in punch. That line is
+    what pops in — same event, same treatment, same 0.6→1 spring at the same
+    ~300ms — so the animation moved with the thing it was announcing rather
+    than being dropped or pinned to dead code. The four seconds were already
+    built and are unchanged. What a party sees is a *line* springing in under
+    the carousel, not a card: there is no avatar on this television to scale,
+    and the §4 phone avatar was considered and refused, because a spring there
+    would fire on a rejoin as well as an arrival and only its owner would see
+    it. Measured on the tvOS simulator against
+    `tools/design-fidelity/17-tv-arrival-pop-in.png`; written up against "the
+    two handoff animations" in docs/implementation-plan.md.
 - **Color picker**: tapping a swatch claims it (server-validated uniqueness);
   unavailable colors dimmed to 30%.
 - **Carousel sync**: host phone prev/next (or swipe) drives the TV carousel in
   real time via room state (`browsingGameIndex`); TV animates card transition
   ~250ms ease-out. Non-host phones live-update the "Now viewing X" label.
+  - **Built**: the row of cards slides 96pt in from the direction the room
+    browsed and eases out over 250ms as the new card lands. Transform only, so
+    it moves nothing Yoga can see and the footer's measured 10pt of daylight
+    (§6 above) is untouched. The travel distance is not this document's — it is
+    deliberately shorter than a card's pitch, because the row is centred and
+    changes width as neighbours appear at the ends of the Registry.
+    **A build that installs one game can never show it**: with a single card the
+    index has nowhere to go, so it was watched against a patched Registry of two
+    (`tools/carousel-transition-repro.patch`), which is also the honest reading
+    of the animation's status until a second game ships.
 - **Start**: only the Host sees/can tap "Select …"; on select, all clients
   transition to the game.
 - **Reconnect**: phones rejoining land on the phase-appropriate screen (room

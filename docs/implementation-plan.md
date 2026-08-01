@@ -1956,10 +1956,153 @@ green. The second half is now grouped with the phase's other human-only work.
   screenshot — it is the one legibility fact that only a room can settle. Do it
   inside the play-test gate below rather than as a trip of its own, since that
   gate already puts a person in front of a television with a game running.
-- [ ] Design fidelity — the two handoff animations — AC: the avatar pop-in
+- [x] Design fidelity — the two handoff animations — AC: the avatar pop-in
   spring (~300ms) and the carousel transition (~250ms) are implemented per the
   handoff, with the durations coming from theme tokens rather than numbers at
   the call site, and each one watched running rather than only coded.
+
+  Both built and both **watched running** on 2026-08-01, on the Apple TV 4K
+  (3rd generation) **at 1080p** simulator (tvOS 26.5, 1920×1080 = ×1.5 of the
+  design stage) against the cloud dev deployment, off the Debug build of
+  2026-07-31 with Metro serving this working tree. The frames are
+  `tools/design-fidelity/16-tv-carousel-transition.png` and
+  `17-tv-arrival-pop-in.png`, each a strip of real frames at their real
+  presentation times. Everything on these screens was **seeded** —
+  `players:joinRoom` for the arrivals, `games:browseGame` with the Host's own
+  Session Token for the browsing — since the television takes no input and
+  renders the room.
+
+  **The instrument, because a still frame cannot show a spring.** `simctl io
+  screenshot` takes longer to return one frame than either animation takes to
+  run, so these were recorded (`simctl io recordVideo`, 60fps) and read back
+  frame by frame with `tools/motion-frames.swift`. Two traps it exists to
+  handle: the recorder writes frames only while the screen is changing, so a
+  recording of a still television is one frame and an animation is a *burst*;
+  and an interrupted recording's index stops before its samples do, so seeking
+  with `AVAssetImageGenerator` answers every request past that point with the
+  same last frame it can find — which read as "the animation ran in 8ms" until
+  the tool was changed to decode the track through with `AVAssetReader`.
+
+  **The durations are tokens** (`packages/ui/src/motion.ts`: `motionDuration`,
+  `popIn`, `springOf`), which `boardwalk/tokens-only` does *not* enforce — it
+  keys on the property names of a style object and a duration is an argument to
+  an animation. Said plainly because the AC asks for tokens and the gate that
+  looks like it would catch a regression here would not. `springOf` is the part
+  worth reading: `Animated.spring` takes stiffness, damping and mass rather than
+  a duration, so "~300ms spring" is carried as the spring's natural period and
+  converted (unit mass, ω = 2π/T, c = 2ζω). Five tests pin the conversion — the
+  period comes back out, the damping ratio comes back out, and both ends of the
+  ratio are refused.
+
+  **(a) The carousel transition is a 250ms cubic ease-out, and it was measured
+  against the curve.** The row of cards starts 96pt off in the direction the
+  room browsed (`cardEntryOffset`, four tests) and eases to 0.
+  Measured off the recording by the centroid of every non-cream pixel in the
+  card band, in design points, against `96·(1−t/250)³`:
+
+  | | forward (0→1) | back (1→0) |
+  |---|---|---|
+  | first frame at the full offset | +95.59pt | −95.59pt |
+  | worst residual against the cubic, 15 frames | **1.32pt** | **0.42pt** |
+  | settled | 285ms after the burst starts | 284ms |
+
+  The leftmost drawn pixel moves 144px at ×1.5 — 96pt — which is the same claim
+  without the arithmetic. Two things the fit says that the code does not. It is
+  *cubic* ease-out in fact and not only in name: a curve fitted at 250ms lands
+  within 1.32pt of every frame, which no other easing in the family does. And
+  the animation's own zero is **22.5ms after the frame that first shows the row
+  at its full offset** (26.2ms browsing back) — 1.3 and 1.6 frames at 60fps, the
+  `useLayoutEffect` reset landing in the commit and the native driver beginning
+  to step on the frame or two after it. Two clocks are easy to confuse here and
+  the frames are labelled in the first: the strip's `+0ms` is that full-offset
+  frame, while the *burst* starts earlier still — 1.3 frames, the recorder's
+  gaps not being uniform — on the last frame of the old layout, so the same
+  zero is 44.5ms from the burst's first frame, and
+  quoting that number without its origin is what an earlier draft of this
+  paragraph did.
+
+  **It cannot be watched on a build that installs one game**, and that is worth
+  saying in the plan rather than only in the handoff: the Registry ships trivia
+  alone, so `browsingGameIndex` has nowhere to go and the transition has nothing
+  to animate. It was driven against a patched Registry of two
+  (`tools/carousel-transition-repro.patch`, reverted; the second card is
+  trivia's own module under another id and key art). The patch has to reach the
+  *server* too — `browseGame` clamps the index against the deployment's
+  `GAME_LOGIC_REGISTRY`, so a patched client alone leaves a perfectly still
+  television, which is exactly what the first recording caught.
+
+  **(b) The pop-in moved to the surface that inherited what it announces, and
+  that judgement is the task.** The handoff hangs it on the §3 TV card of the
+  player who joined; §3 is never coming, and the pairing Seat that stood in for
+  it is only drawn for an *empty* room — `PlayerSeat` is unreachable in a
+  shipped build, as the "TV carousel closes its two departures" task established.
+  A spring there would have satisfied the checkbox and run for nobody. What
+  survived §3 is the greeting: the Carousel Footer Line hands its four seconds
+  to the newest Arrival, in punch, on the screen the party is looking at — and
+  it appeared with no motion at all. So that line is what pops in: same event,
+  same treatment, same 0.6→1 with slight overshoot at ~300ms. **A party sees a
+  sentence spring in, not an avatar.** There is no avatar on this television
+  after the first join, and the §4 phone avatar was considered and refused —
+  a spring there fires on a rejoin as well as an arrival, and only its owner
+  would ever see it, which is the opposite of what the handoff's line is for.
+  §5's deferred NEW! pill is untouched by this and stays deferred.
+
+  Measured off `17`, by the punch glyph run's width in design points against its
+  settled width:
+
+  | | +0ms | +80 | +130 | +163 | +213 | +297 | +362 |
+  |---|---|---|---|---|---|---|---|
+  | measured scale | **0.598** | 0.74 | 0.92 | **1.00** | **1.04** | 1.02 | 1.00 |
+  | closed form, τ = t − 30ms | 0.600 | 0.738 | 0.927 | 1.001 | 1.038 | 1.013 | 0.998 |
+
+  So: it starts at the token's 0.6, crosses 1 at ~163ms, peaks at 1.04 around
+  213ms, and is settled by ~360ms — one slight overshoot, which is what the
+  handoff asks for and what the frames show.
+
+  **The frames agree with the closed form, and the second row above is that
+  claim.** `x(τ) = 1 − 0.4·e^(−ζωτ)(cos ω₁τ + 0.75 sin ω₁τ)` with ζ = 0.6 and
+  ω = 2π/0.3 — the spring `springOf` builds, nothing fitted but the origin —
+  lands within **0.005 of scale** on all 21 measured frames. Two things have to
+  be right for that to come out, and an earlier draft of this paragraph got both
+  wrong and invented an anomaly out of them, which is why they are written down:
+
+  - **The overshoot is a fraction of the travel, not of the settled value.**
+    `e^(−πζ/√(1−ζ²))` = 9.48% of a step that is 0.6→1, so the predicted peak is
+    `1 + 0.0948 × 0.4` = **1.038** against **1.04** measured. Read against 1.0
+    instead it looks like the television overshot half as far as it should have.
+    `motion.test.ts` already treats that formula as a fraction of travel; only
+    the prose had it as a fraction of the settled scale.
+  - **The lag is a constant ~30ms origin offset, not a dilation** — the same
+    instrument fact the carousel section measures at 22.5ms, and for the same
+    reason: the first frame of the burst is the reset, and the driver starts
+    stepping one or two frames later. With τ = t − 30 the crossing lands at 162
+    against 163 measured and the peak at 217 against 213–228. A ×1.20 dilation
+    is decisively *rejected* by the same frames — it predicts 0.81 at +80ms
+    against 0.74 measured, a residual fifteen times the offset model's worst.
+
+  The ×20 rehearsal (the same spring at 6000ms) was an instrument check and not
+  evidence: it proved the recorder captures continuous motion, at 60fps for 3s.
+  Read as data it is mostly the rise — at that duration the model does not reach
+  1 until 2.64s — and it tracks the model to within 0.05 of scale through the
+  first 1.5s, then lags and flattens near 0.89 where the model is still climbing.
+  That tail is on the part of a recording whose end the encoder was already
+  dropping (every recording here lost its last seconds), so it is not a fact
+  about the spring, and nothing in the real-speed capture behaves that way. On a
+  real television none of this is tested, like every other measurement in this
+  phase.
+
+  **The footer's measured daylight survives the motion**, which was the thing
+  most at risk. Both animations are transform-only, so neither is laid out; and
+  at the spring's 1.04 peak the greeting's cap top reads 662.67pt against the
+  focused card's cobalt shadow ending at 652.67pt — the same 10.00pt as at rest,
+  inside the ⅔pt this capture can resolve. The page dots are not inside the
+  animated node at all.
+
+  Not tested, deliberately: the timing and the easing themselves. tech-stack.md
+  does not test renderers, and a test that asserted `Animated.timing` was called
+  with 250 would pass on a screen that never mounted it. What is tested is the
+  arithmetic either side — the spring conversion and the slide's direction — and
+  the rest is the frames above.
 - [ ] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.

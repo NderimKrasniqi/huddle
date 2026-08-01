@@ -15,19 +15,23 @@ import {
   fontFamily,
   letterSpacing,
   minBodyFontSize,
+  motionDuration,
   opacity,
   playerFace,
   playerInitials,
+  popIn,
   radius,
   shadowDepth,
+  springOf,
   stickerTilt,
 } from '@huddle/ui';
 import { StickerSurface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { cardEntryOffset } from '../src/card-transition';
 import { arrivalToGreet, carouselFooterLine } from '../src/carousel-footer';
 import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
 import { closeExpiredRoom, deployed, openRoom } from '../src/room';
@@ -286,14 +290,7 @@ function CarouselStage({
           </View>
         </View>
 
-        <View style={styles.carousel}>
-          {/* The side cards are absent rather than duplicated with one game
-              installed — `carouselWindow` is what decides that, and this just
-              draws what it was handed. */}
-          <SideKeyArt game={window.previous} />
-          <FocusedGameCard game={window.focused} />
-          <SideKeyArt game={window.next} />
-        </View>
+        <CarouselCards window={window} />
 
         <View style={styles.carouselFooter}>
           <View style={styles.pageDots}>
@@ -316,6 +313,37 @@ function CarouselStage({
         </View>
       </View>
     </TvStage>
+  );
+}
+
+/**
+ * The three cards, and the Card Transition between them (the handoff's
+ * "TV animates card transition ~250ms ease-out").
+ *
+ * The row slides in from the direction the room browsed: the cards themselves
+ * are swapped by the render that follows Convex's push, so what travels is the
+ * row arriving where the new focused card belongs, not each card moving to its
+ * own new place. `cardEntryOffset` decides the sign;
+ * `motionDuration.cardTransition` and the ease-out are the handoff's.
+ *
+ * A slide and nothing else — no fade, no scale. The handoff pins the duration
+ * and the easing and leaves the rest, and a translation is the one thing on this
+ * screen that cannot cost a measurement: it is not laid out, so no card, dot or
+ * shadow moves anywhere Yoga can see it, and the footer's 10pt of daylight under
+ * the focused card's shadow is exactly where the last task left it.
+ */
+function CarouselCards({ window }: { readonly window: CarouselWindow }) {
+  const entry = useCardTransition(window.index);
+
+  return (
+    <Animated.View style={[styles.carousel, entry]}>
+      {/* The side cards are absent rather than duplicated with one game
+          installed — `carouselWindow` is what decides that, and this just
+          draws what it was handed. */}
+      <SideKeyArt game={window.previous} />
+      <FocusedGameCard game={window.focused} />
+      <SideKeyArt game={window.next} />
+    </Animated.View>
   );
 }
 
@@ -374,8 +402,14 @@ function BrowsingLine({
     };
   }, [arrival, onGreeted]);
 
+  // The handoff's avatar pop-in, on the surface that inherited what it was
+  // announcing. See `usePopIn`.
+  const pop = usePopIn(line.greeting);
+
   return (
-    <Text style={[styles.browsingLine, line.greeting && styles.arrivalLine]}>{line.text}</Text>
+    <Animated.Text style={[styles.browsingLine, line.greeting && styles.arrivalLine, pop]}>
+      {line.text}
+    </Animated.Text>
   );
 }
 
@@ -840,6 +874,115 @@ function useGreeted(): {
   }, []);
 
   return { greeted, noteGreeted };
+}
+
+/**
+ * The Card Transition: the carousel row sliding into place behind an index the
+ * room has just moved (handoff — "TV animates card transition ~250ms ease-out").
+ *
+ * Which index this screen was drawing is state rather than a ref, and it is
+ * folded during render the way `useArrivals` folds the roster: the animation is
+ * derived from the index changing, and an effect that compared indices would be
+ * a second opinion about what the render already knows. `cardEntryOffset` turns
+ * the pair into the direction the strip travels, and a zero offset — a mount, a
+ * roster push, a re-render for any of the other reasons this screen has — is no
+ * animation at all rather than a 250ms animation of nothing.
+ *
+ * `useLayoutEffect` because the reset and the frame it is reset for must be the
+ * same frame. The driver is left settled between transitions, so an ordinary
+ * effect would commit one frame of the new cards already in place and only then
+ * throw them back out to their starting offset — a backwards jump at the head of
+ * every transition, which is precisely the stutter this is meant to remove.
+ */
+function useCardTransition(
+  index: number,
+): { readonly transform: readonly [{ translateX: Animated.Value }] } {
+  const [slide] = useState(() => new Animated.Value(0));
+  const [entry, setEntry] = useState(() => ({ index, offset: 0 }));
+
+  if (entry.index !== index) {
+    setEntry({ index, offset: cardEntryOffset(entry.index, index) });
+  }
+
+  useLayoutEffect(() => {
+    if (entry.offset === 0) {
+      return undefined;
+    }
+
+    slide.setValue(entry.offset);
+
+    // Ease-out as the handoff writes it, at the duration Boardwalk holds for
+    // this animation: fast off the mark and settling into the new card, which
+    // is the shape of a carousel that has been *pushed* somewhere rather than
+    // one drifting there. Cubic is CSS's own `ease-out` curve.
+    const travel = Animated.timing(slide, {
+      toValue: 0,
+      duration: motionDuration.cardTransition,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+
+    travel.start();
+
+    // A Host holding the arrow moves the index again mid-slide; the next
+    // transition resets the driver from wherever this one had reached, and a
+    // stopped animation is what keeps the two from fighting over it.
+    return () => travel.stop();
+  }, [entry, slide]);
+
+  return { transform: [{ translateX: slide }] };
+}
+
+/**
+ * The handoff's avatar pop-in — "scale 0.6→1 with slight overshoot, ~300ms
+ * spring" — on the one surface still drawing what it was written for.
+ *
+ * The handoff hangs it on the §3 lobby card of the player who just joined, and
+ * §3 is never coming; the pairing Seat that stood in for that card is drawn only
+ * for an *empty* room, so a spring there would run for nobody. What survived the
+ * loss is the greeting itself: the Carousel Footer Line hands its four seconds
+ * to the newest Arrival, in punch, on the screen the whole party is looking at.
+ * That is what pops in — the same event, the same treatment, the same ~300ms,
+ * one surface further along. Written up against the handoff's Motion section
+ * and against this task in docs/implementation-plan.md.
+ *
+ * `Animated.spring` takes physics rather than a duration, so the token is
+ * converted (`springOf`) instead of being handed over: a spring's period is the
+ * honest reading of "~300ms spring", and the damping ratio is what makes the
+ * overshoot slight.
+ *
+ * Nothing pops when the line is saying who is browsing. That sentence is not
+ * news, and a footer that sprang every time a room's Host changed their mind
+ * would be motion for its own sake — the opposite of Eyes up.
+ */
+function usePopIn(greeting: boolean): { readonly transform: readonly [{ scale: Animated.Value }] } {
+  const [scale] = useState(() => new Animated.Value(greeting ? popIn.fromScale : 1));
+
+  useEffect(() => {
+    if (!greeting) {
+      return undefined;
+    }
+
+    // Reset before springing, so the hook does not quietly depend on how it is
+    // mounted. The caller keys this line by the player being greeted, which
+    // makes every greeting a fresh instance whose scale starts at 0.6 — but a
+    // `key` that reads as redundant is a `key` somebody removes, and without
+    // this line that edit would leave `scale` sitting at 1, spring 1→1, and
+    // delete the pop-in with every test still green.
+    scale.setValue(popIn.fromScale);
+
+    const spring = Animated.spring(scale, {
+      toValue: 1,
+      ...springOf(motionDuration.popIn, popIn.dampingRatio),
+      useNativeDriver: true,
+    });
+
+    spring.start();
+
+    return () => spring.stop();
+  }, [greeting, scale]);
+
+  return { transform: [{ scale }] };
 }
 
 function useJustJoined(arrived: boolean): boolean {

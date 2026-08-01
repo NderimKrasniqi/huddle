@@ -9,6 +9,7 @@ export { colors, type ColorToken } from './colors';
 // the font binaries into any plain-Node consumer. It lives at
 // `@huddle/ui/fonts` — see this package's `exports`.
 export { tvDesignSize, tvStageScale, type WindowSize } from './layout';
+export { motionDuration, popIn, type SpringConfig, springOf } from './motion';
 export { type PlayerColor, playerColor, playerFace, playerPalette } from './player-colors';
 export { shadowDepth, stickerShadowRect, type ShadowRect } from './shadows';
 export { borderWidth, opacity, radius, stickerTilt } from './shape';
