@@ -1671,12 +1671,27 @@ existed, and bundling it would have let a reviewer judge neither well.
   `tsconfig.json` so the test is typechecked. The rule itself is CommonJS
   JavaScript — the only such file in the repo besides `eslint.config.js`, which
   `require`s it, and nothing here compiles a config.
-- [ ] Design fidelity — TV legibility — AC: TV body text is ≥18px at the
-  720p design size, checked against the rendered styles rather than by eye,
-  and the trivia question text is readable from 3m. The 3m half needs a human
-  in front of a television and cannot be closed on a simulator — pair it with
-  the play-test gate below if no TV is to hand, but do not tick it on a
-  simulator screenshot.
+Split on 2026-08-01: the two halves of "TV legibility" cannot be closed by the
+same means. The floor is arithmetic over the rendered styles and an agent can
+finish it; the 3m reading needs eyes in front of a television and cannot be
+ticked on a simulator, so bundling them meant a checkbox that could never go
+green. The second half is now grouped with the phase's other human-only work.
+
+- [ ] Design fidelity — the TV's 18px floor — AC: every piece of body text the
+  TV app and the trivia TV screen render is ≥18px at the 720p design size,
+  established against the rendered styles rather than by eye, and enforced by
+  something that fails when a smaller one is added — the sibling task above
+  built `boardwalk/tokens-only` for exactly this shape of problem, and the
+  handoff pins the floor ("TV minimums: body text ≥ 18px at 1280×720"). Note
+  that `minBodyFontSize.tv` already exists and is already used in places, so
+  the work is finding what does *not* use it and deciding whether each is body
+  text.
+- [ ] Design fidelity — the trivia question read from 3m (human-only) — AC: a
+  human sits 3m from a television running the trivia TV screen and can read the
+  question. Cannot be closed on a simulator and must not be ticked from a
+  screenshot — it is the one legibility fact that only a room can settle. Do it
+  inside the play-test gate below rather than as a trip of its own, since that
+  gate already puts a person in front of a television with a game running.
 - [ ] Design fidelity — the two handoff animations — AC: the avatar pop-in
   spring (~300ms) and the carousel transition (~250ms) are implemented per the
   handoff, with the durations coming from theme tokens rather than numbers at
