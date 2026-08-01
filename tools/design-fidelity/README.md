@@ -34,3 +34,38 @@ than a nudge, are in the task in `docs/implementation-plan.md`.
 
 Which screens were driven by a real client and which were seeded is recorded in
 that task too; it has mattered on this project before.
+
+## The carousel, after "the TV carousel closes its two departures"
+
+Same device, same scale, same deployment, taken on 2026-07-31 at 22:09 off a
+Debug build made that evening (`expo run:ios`, Metro serving the working tree).
+`04-tv-carousel.png` above is the before for both.
+
+| file | what it is |
+|---|---|
+| `08-tv-carousel-after.png` | the footer on one row: the page dots clear of the card's shadow, and §6's browsing line naming the Host |
+| `09-tv-carousel-just-joined.png` | the same footer during a phone's four seconds — the line handed to the newest arrival, in punch |
+
+Measured off these frames at ×3, one pixel column at a time, in design points:
+
+| | `04` (before) | `08`/`09` (after) |
+|---|---|---|
+| focused card, ink border | 110 → 630 | 124 → 644 |
+| its 10px cobalt shadow | 630 → 640 | 644 → 654 |
+| active page dot | 626 → 639 — *inside the shadow* | 664 → 676 |
+| daylight between them | none: the dot row starts 12pt above the shadow's bottom edge (9.3pt of it against painted cobalt) | **10pt of screen cream** |
+
+The camouflage is visible as numbers in the before column: at the dot's own
+x the run is ink 626→630, cobalt 630→636, ink 636→639, and the shadow behind it
+is cobalt 630→640 — so the dot's fill and the shadow are the same colour at the
+same pixels, and only the ink border survives. After, the dot's cobalt sits on
+cream with 10pt of it above.
+
+`09` measures identically to `08` line for line, which is the other half of the
+claim: the arrival greeting borrows the footer's existing 28pt line rather than
+adding anything, so the footer cannot grow back into the shadow.
+
+The players in both frames were **seeded** with `npx convex run
+players:joinRoom` — Ada (who is therefore the Host the line names) and then
+Grace Hopper, whose arrival is what `09` catches. Nothing on this screen needs a
+phone: the carousel is a pure renderer of `browsingGameIndex` and the roster.

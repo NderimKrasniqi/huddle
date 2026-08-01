@@ -1234,7 +1234,7 @@ three criteria across both apps. (a) and (b) are both the TV carousel and
 share one build and one capture; (c) is a Controller screen that has never
 existed, and bundling it would have let a reviewer judge neither well.
 
-- [ ] Design fidelity — the TV carousel closes its two departures — AC: (a)
+- [x] Design fidelity — the TV carousel closes its two departures — AC: (a)
   §6's page-dot collision is fixed — the footer change is written out in the
   task above (`carouselFooter` to `flexDirection: 'row'` *plus*
   `justifyContent: 'center'`, which buys 10pt of daylight without touching a
@@ -1246,6 +1246,157 @@ existed, and bundling it would have let a reviewer judge neither well.
   need one tvOS build and a capture beside `04-tv-carousel.png`, because this
   is the screen the party looks at and this phase has already been burned once
   by an unverified claim about it.
+
+  Built and seen on 2026-07-31, on the Apple TV 4K (3rd generation) simulator
+  against the cloud dev deployment: a Debug build of that evening's working tree
+  (`expo run:ios`, Metro serving the JS), two players **seeded** with
+  `players:joinRoom`, and nothing on this screen driven by a phone — the
+  carousel renders `browsingGameIndex` and the roster and takes no input. The
+  frames are `tools/design-fidelity/08-tv-carousel-after.png` and
+  `09-tv-carousel-just-joined.png`, beside the `04` they replace, with the
+  pixel columns behind every number below in that directory's README.
+
+  **(a) The page dots are clear, and the arithmetic predicted it exactly.**
+  `carouselFooter` is a centred row; the footer went 92 → 64. Measured off the
+  frames at ×3: the card's ink border moved 110→630 to 124→644, its 10px cobalt
+  shadow to 654, and the active dot now runs 664→676 — **10pt of screen cream**
+  between them, which is the number the task above computed before the build
+  existed. The camouflage is gone at the same time as the overlap: in `04` the
+  dot's own column reads ink 626→630, cobalt 630→636, ink 636→639 against a
+  cobalt shadow at 630→640, so its fill was the shadow's colour at the shadow's
+  pixels; in `08` the same fill sits on cream. That the *indicator reads* was the
+  point, not that two boxes stopped touching, and it is the frame that says so.
+  One number the earlier pass inferred is now pinned rather than measured: the
+  footer line's 28pt box was React Native's default for `fontSize: 22`, and
+  `browsingLine` now carries `lineHeight` explicitly (`FOOTER_TEXT_LINE`, which
+  the pairing footer already used), so the footer's height is a decision instead
+  of a default.
+
+  **(b) One of the three pills lands, two are dropped, and the reasons are
+  different.** What made them different is a fact about this television that is
+  easy to state and was not: the carousel replaces the pairing screen at the
+  *first* join, so there are no seats on it at all. The question is therefore
+  not "does a pill beat the seat treatment" for all three — for two of them the
+  seat is not on screen and neither is anything else.
+
+  - **The JUST JOINED! pill lands, as the footer's line rather than as a pill.**
+    Its absence was a real hole, not a fidelity nit: after the first join the
+    television acknowledges nobody. A party of six seats one player on a screen
+    anybody watches and the other five change nothing at all, which is the
+    opposite of Eyes up on the one screen the room is looking at. So §6's
+    footer line is now a slot: for four seconds it belongs to the newest arrival
+    ("<Nickname> just joined!", punch — Boardwalk's "join/new highlights"), then
+    it goes back to "<Host> is browsing on their phone". Seen on the television
+    in `09`, and *measured* there: that frame's card, shadow and dot are the
+    same pixels as `08`'s, because the greeting borrows the existing 28pt line
+    and adds no box. A pill was costed and refused — one runs ~46pt at the TV's
+    18px minimum, which puts the footer at 82pt and the dots back inside the
+    card's shadow, undoing (a). The pairing seat gave up the same pill on the
+    same kind of measurement, so this is the system's answer and not this
+    screen's. Timing was watched rather than reasoned: the mutation returning,
+    then four consecutive captures ~1s apart — the first still muted (the push
+    had not landed), the next three punch, and a fifth after the four seconds
+    back to the browsing line.
+
+    **A greeting is spent once, and the screen remembers it — found in review,
+    and it is the interesting part of this bullet.** Being an Arrival is
+    permanent (`just-joined.ts`: a player stays one for as long as they stay
+    seated), while the four seconds were counted by the drawing component's
+    *mount*. `CarouselStage` and `GameStage` are different component types at
+    the same position, so ending a game unmounted one and mounted the other —
+    and the television came back from ten minutes of trivia announcing
+    "<Nickname> just joined!" about a phone that had landed before the game
+    started. A reconnect blip reached it more cheaply still, since
+    `runningGameScreen(undefined)` returns `{kind:'lobby'}` and flashes the
+    carousel. That is exactly the case `just-joined.ts` already refuses for a
+    seat — "a room coming back from a game has not [seen ten people walk in]
+    either" — inherited from `PlayerSeat`, where it is unreachable, and put on
+    screen by this task.
+
+    So which greetings have been spent is now held by `useGreeted` in
+    `OpenRoomStage`, beside the subscriptions and for the same reason: it has
+    to outlive the switch to a game and back. `arrivalToGreet` is the question
+    with one answer, and the spending is reported both when the four seconds
+    run out *and* when a game cuts them short — a television that resumes a
+    greeting after a ten-minute game is worse than one that truncates it.
+    Tested rather than argued: five tests over `arrivalToGreet`, and the pair
+    that pin the fix fail when the `greeted` filter is removed. Not re-observed
+    on the television — the frames above predate the fix, and it changes which
+    sentence is chosen rather than any box on the screen.
+  - **The HOST pill is dropped from the television**, against §6's own footer
+    line: "page dots + '<Host> is browsing on their phone'". The handoff draws
+    the pill on a §3 lobby *card* and a §5 roster *row* — beside an avatar, which
+    is the only thing a pill labels — and §6 identifies the Host in words
+    instead. The state is still said twice: by name in that line (`08` shows
+    "Ada is browsing on their phone"), and by the real pill on the Host's own
+    phone in §4. A pill on the carousel footer would label nothing and would
+    cost the same 46pt as above.
+
+    An earlier draft of this bullet claimed a third channel — the tangerine
+    offset shadow on the pairing seat — and it was wrong, in a way worth
+    keeping written down because it is the same mistake §3 caused twice
+    already. The carousel takes over the moment `seats.length > 0`, so
+    `RosterFooter` is only ever reached with an *empty* roster: `PlayerSeat`,
+    `seatHighlightShadow`, the tangerine Host shadow, the punch arrival shadow
+    and `avatarAway`/`statusDotAway`/`seatNameAway` are **unreachable in any
+    shipped build**. They are dead code, and the plan should stop citing them
+    as live. Deleting them is not this task's business, but the next person to
+    touch that footer should know they are drawing for nobody.
+  - **The away pill is dropped from the television**, against the away-badge
+    task's own measurement (an "AWAY" pill at 18px overhangs a 72px seat) and
+    §3, which is where its only home was. The carousel has no roster, so there
+    is nothing to be away *on*. The room's one away-ness that matters between
+    games is the Host's, and the television reports that already by *changing
+    the name in the footer line* when auto-transfer moves the role.
+
+    **Say the consequence plainly, because it is the decision and not a
+    detail: after the first join the television says nothing at all about a
+    non-Host player being away.** The dimmed face and muted dot that the
+    away-badge task argued for are on the pairing seats, and the pairing seats
+    are unreachable once anybody is in the room (see the HOST bullet above).
+    Away-ness is still visible to the party on their own phones, and the
+    scoreboard's muted row and the "n/m ANSWERED" denominator still exclude an
+    away player *during* a game — Phase 4 watched both. What is gone is the
+    between-games case: a lobby where somebody has put their phone down looks,
+    on the television, exactly like one where they have not. That is accepted
+    here rather than solved, on the grounds that the footer has one line and it
+    is already spent naming the Host and greeting arrivals; the phone is where
+    a roster belongs, which is the §5 task directly below.
+
+  **The row centres, so the dots move with the sentence.** Measured, not
+  noticed late: the active dot's cobalt sits at x 454.3→480.3 in `08` and
+  485.3→511.3 in `09`, a 31pt slide right when the greeting appears and back
+  when it expires. It follows directly from the fix — a centred row re-centres
+  when its widest child changes — and it is recorded rather than removed
+  because the two captures above are this task's required evidence and any
+  layout change would invalidate them. Whoever picks up the §5 task should
+  decide whether the dots want a fixed slot; the cost is one more tvOS build
+  and a third capture, not a redesign.
+
+  **What that leaves wrong, observed rather than argued.** A room whose whole
+  party has gone quiet keeps its away Host (being away is not resigning), so the
+  footer goes on saying "<Host> is browsing on their phone" about a phone that
+  is face-down. Seen directly at the end of this pass: `players:roster` reported
+  both seeded players `away: true` with Ada still `host: true` while the
+  television drew exactly that line. It is left alone deliberately — the state
+  only survives when *nobody* is present (any present player takes the role
+  within ~15s and the line then names them), so the sentence is only wrong in a
+  room with nobody in it to read it, and the room expires ten minutes later.
+
+  **Not carried.** Simulator only, at ×3 — no television, so the ×1.5-for-1080p
+  path is still untested here. `StickerSurface` was not touched, so the pale
+  seam is undisturbed by construction. The shared canvas is visible intact in
+  both new frames. The sticker tilts are *not* — the only tilt this screen has
+  is `stickerTilt.carouselSideCard`, and with one game in the registry the side
+  cards are absent, so nothing in `08` or `09` is rotated at all. The tilt fix
+  is safe because no tilt code was touched, which is an argument and not an
+  observation, and this task's AC exists precisely because the phase was burned
+  once by an unverified claim about this screen. The greeting is drawn from the roster
+  snapshots this screen has been pushed, exactly as a seat's four seconds are,
+  so a television that joins a room late greets nobody — which is the existing
+  Arrival rule and not a new one. What `09` does not show is more than one game
+  installed: with a single registry entry there is one page dot, so the *row* of
+  dots is verified at width one and the daylight at the only width there is.
 - [ ] Design fidelity — §5's phone roster — AC: the Host's roster rows either
   land on the phone or §5 is marked as dropped with the reason recorded
   against the handoff. Nothing has ever built this: the Host currently gets

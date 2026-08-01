@@ -92,6 +92,14 @@ are iPhone-sized (~390×844).
   claimed color + 3px ink border, Bungee initials), name (26px bold), status.
   Host card gets black HOST pill; newest joiner's card swaps border+shadow to
   pink with "JUST JOINED!" pill. One empty dashed slot with "+" and the code.
+  - Not built, and not coming: this screen has no room on a 720px stage beside
+    §6's 520px focused card, so the television goes §1 → §6 at the first join.
+    Of the three things this line draws, "JUST JOINED!" survives as the §6
+    footer's line for four seconds; the HOST pill is dropped because §6 names
+    the Host in words and a pill needs an avatar to label; and the away
+    treatment is dropped outright, so the television says nothing about a
+    non-Host player being away. Written up against the "TV carousel closes its
+    two departures" task in docs/implementation-plan.md.
 - Footer: "4 of 10 players in — <Host> can start whenever".
 
 ### 4. Phone — Player lobby ("You're in")
@@ -106,6 +114,11 @@ are iPhone-sized (~390×844).
 - Heading "Your room" + code chip. Roster rows: white, 3px ink border,
   radius 16, 3px shadow — 40px avatar, bold name, right slot = HOST pill /
   green online dot / pink NEW! pill (new row uses pink border+shadow).
+  - Not built yet: the Host currently gets §4's screen plus §7's picker, and
+    these roster rows have never existed. Undecided rather than dropped, and it
+    matters more than it looks — the television gave up saying who is away
+    (see §3), so this is the only surface left that could. Its own open task in
+    docs/implementation-plan.md.
 - Footer: "<n> players in — you can start anytime" + cobalt primary button
   "Choose a game →".
 

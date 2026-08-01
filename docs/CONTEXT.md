@@ -86,6 +86,22 @@ working must add it here.
 - **Carousel** — the TV's game browser (handoff §6): the focused card with its
   neighbours either side. It draws whatever `browsingGameIndex` names, so the
   television follows the room rather than any one phone.
+- **Carousel Footer Line** — the one sentence under the Carousel's page dots
+  (`carouselFooterLine`). §6 writes it as "<Host> is browsing on their phone",
+  and it is a *slot* rather than that sentence: for four seconds after a phone
+  lands it belongs to the newest Arrival ("<Nickname> just joined!", in punch),
+  then it goes back. That is where the handoff's JUST JOINED! pill ended up,
+  because the Carousel replaces the Pairing Screen at the first join and so has
+  no Seat to put one on — and as a line rather than a pill because a Boardwalk
+  pill's box would push the page dots back into the focused card's Offset
+  Shadow. The HOST and away pills are *not* here: the line already names the
+  Host, and the away pill is dropped outright — which means that between games
+  the television says nothing at all about a non-Host player being away, since
+  the Seat treatments that used to say it are unreachable once anybody is in
+  the room. A greeting is spent once and remembered by the screen, so a game
+  ending does not re-announce the arrival that preceded it; and because the
+  slot holds one sentence, two phones landing inside a single roster push greet
+  only the later of them.
 - **Browsing Game Index** — the room's position in the Registry's ordered list,
   which the Host's arrows move and the TV and every other phone follow. An index
   and not a game id, because browsing is a walk along an ordered list: "the third
@@ -115,7 +131,10 @@ working must add it here.
   handoff's four. Because the circle's fill is now the player, everything else
   a seat has to say rides its Offset Shadow — punch for Just Joined, tangerine
   for the Host — which is the one channel none of the ten fills can collide
-  with. Both stand in for pills the §3 lobby card will draw properly.
+  with. Neither stands in for anything any more: the §3 lobby card that was to
+  draw them as pills is never coming, and the HOST pill and the away pill are
+  now decided against the television outright (see Carousel Footer Line, which
+  is where the third of them went).
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
   active player on disconnect. Plays games like any other player. Held as the
@@ -188,6 +207,9 @@ working must add it here.
   greeted by nobody. Distinct from an **Arrival** (`noteArrivals`, `isArrival`),
   which is the permanent fact that this screen watched the seat being taken;
   Just Joined is the four seconds that fact earns, counted by the seat itself.
+  A seat is not the only thing that spends them: the Carousel Footer Line spends
+  the same four on the newest Arrival, counted the same way, because after the
+  first join the television has no seats left to draw.
 - **Game Module** — a self-contained game implementation behind the game-core
   interface (`GameModule`: metadata, settings schema, initial-state factory,
   reducer, TV/Controller screens). Games are modules; the hub never contains

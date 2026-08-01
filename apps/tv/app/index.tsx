@@ -28,6 +28,7 @@ import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { arrivalToGreet, carouselFooterLine } from '../src/carousel-footer';
 import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
 import { closeExpiredRoom, deployed, openRoom } from '../src/room';
 import {
@@ -51,7 +52,13 @@ import { TvStage } from '../src/tv-stage';
 /** The QR's edge, per the handoff ("~196px QR"). */
 const QR_SIZE = 196;
 
-/** The footer count's line box, pinned so it can be centred against the seats. */
+/**
+ * A TV footer's line box at 22px, pinned rather than left to React Native's
+ * default. The pairing footer centres its count against the seats with it, and
+ * the carousel's footer *is* it — which makes that footer's height, and so how
+ * far the page dots clear the focused card's shadow, a measured number rather
+ * than an inferred one.
+ */
 const FOOTER_TEXT_LINE = 28;
 
 /**
@@ -69,8 +76,15 @@ const FOOTER_TEXT_LINE = 28;
  * The fill now says who a player is, and `tangerine` is one of the ten colors
  * anybody can claim, so a Host wearing it as a fill was about to be
  * indistinguishable from whoever claimed it. The palette still names tangerine
- * for the Host ("Brand accent, Host avatar"), and the HOST pill it stands in for
- * still waits on the §3 lobby card, which has the width to draw one.
+ * for the Host ("Brand accent, Host avatar").
+ *
+ * None of this reaches a television any more, and the honest thing is to say so
+ * here rather than let the next reader work it out. The carousel takes over the
+ * moment `seats.length > 0`, so a seat is only ever drawn for an *empty* room:
+ * every highlight below, and the away treatment on `PlayerSeat`, is unreachable
+ * in a shipped build. The §3 lobby card these were waiting for is not coming —
+ * the decision, and what the television says instead, are written up against the
+ * "TV carousel closes its two departures" task in docs/implementation-plan.md.
  */
 const seatHighlightShadow: Record<
   SeatHighlight,
@@ -132,6 +146,7 @@ function OpenRoomStage({
 }) {
   const roster = useRoster(room);
   const arrivals = useArrivals(roster);
+  const { greeted, noteGreeted } = useGreeted();
   useRoomExpiry(room, onExpired);
 
   // What the room says it is playing. Its own subscription: this changes twice
@@ -159,7 +174,20 @@ function OpenRoomStage({
   const browsing = carouselWindow(browsingAt ?? 0);
 
   if (seats.length > 0 && browsing !== undefined) {
-    return <CarouselStage window={browsing} code={room.code} roster={seats} />;
+    return (
+      <CarouselStage
+        window={browsing}
+        code={room.code}
+        roster={seats}
+        arrivals={arrivals}
+        // Which greetings this television has already spent. It is held here,
+        // beside the subscriptions, for the same reason they are: it has to
+        // outlive the switch to a game and back, which is precisely the trip
+        // that would otherwise announce the room's last arrival all over again.
+        greeted={greeted}
+        onGreeted={noteGreeted}
+      />
+    );
   }
 
   return (
@@ -229,12 +257,19 @@ function CarouselStage({
   window,
   code,
   roster,
+  arrivals,
+  greeted,
+  onGreeted,
 }: {
   readonly window: CarouselWindow;
   readonly code: string;
   readonly roster: readonly RosterSeat[];
+  readonly arrivals: Arrivals | undefined;
+  readonly greeted: ReadonlySet<RosterSeat['playerId']>;
+  readonly onGreeted: (playerId: RosterSeat['playerId']) => void;
 }) {
   const host = roster.find((seat) => seat.host);
+  const arrival = arrivalToGreet(arrivals, roster, greeted);
 
   return (
     <TvStage>
@@ -269,14 +304,78 @@ function CarouselStage({
               />
             ))}
           </View>
-          <Text style={styles.browsingLine}>
-            {host === undefined
-              ? 'Picking a game…'
-              : `${host.nickname} is browsing on their phone`}
-          </Text>
+          <BrowsingLine
+            // Keyed by the player being greeted, so every phone that lands
+            // starts its own four seconds — the same mount that starts a
+            // seat's, on the one screen that has no seats.
+            key={arrival?.playerId ?? 'nobody'}
+            host={host}
+            arrival={arrival}
+            onGreeted={onGreeted}
+          />
         </View>
       </View>
     </TvStage>
+  );
+}
+
+/**
+ * §6's footer line — "<Host> is browsing on their phone" — and the four seconds
+ * of it that belong to a phone that has just landed.
+ *
+ * The greeting is here rather than on a seat because this screen has no seats:
+ * the television leaves the pairing roster behind at the first join, so every
+ * player after the first arrives to a television that says nothing. It borrows
+ * the browsing line's own slot, in punch pink, which is what keeps the footer at
+ * the height the page dots' daylight was measured against (`carouselFooter`).
+ *
+ * The four seconds are counted here, as a seat counts its own: the room does not
+ * record when a phone landed, and a live query reports what happens rather than
+ * four seconds of nothing happening. Where this differs from a seat is that the
+ * *answer* is remembered above, in `useGreeted` — a seat is drawn continuously
+ * and can be trusted to count once, while this line is torn down for the length
+ * of a game and put back afterwards, and a greeting that restarted on the way
+ * back would announce a phone that landed before the game did.
+ */
+function BrowsingLine({
+  host,
+  arrival,
+  onGreeted,
+}: {
+  readonly host: RosterSeat | undefined;
+  readonly arrival: RosterSeat | undefined;
+  readonly onGreeted: (playerId: RosterSeat['playerId']) => void;
+}) {
+  // One clock, not two. The greeting lasts exactly as long as this screen has
+  // an ungreeted arrival to draw: the timer below reports the four seconds
+  // spent, that answer goes into `greeted` above, and `arrivalToGreet` stops
+  // naming them — which is what takes the sentence back to §6's own line. A
+  // second timer here to fade the punch would be a second opinion about when
+  // four seconds are up.
+  const line = carouselFooterLine(host, arrival);
+
+  // Spending a greeting is what makes it spent, and the room is told so that
+  // the knowledge outlives this screen. The cleanup reports it too, not only
+  // the timer: a game starting partway through the four seconds unmounts this
+  // line, and a television that comes back from ten minutes of trivia to
+  // announce an arrival it was already announcing is worse than one that cut a
+  // greeting short. Marking the same player twice is deliberately harmless.
+  useEffect(() => {
+    if (arrival === undefined) {
+      return undefined;
+    }
+
+    const { playerId } = arrival;
+    const timer = setTimeout(() => onGreeted(playerId), JUST_JOINED_MS);
+
+    return () => {
+      clearTimeout(timer);
+      onGreeted(playerId);
+    };
+  }, [arrival, onGreeted]);
+
+  return (
+    <Text style={[styles.browsingLine, line.greeting && styles.arrivalLine]}>{line.text}</Text>
   );
 }
 
@@ -714,6 +813,35 @@ function useArrivals(roster: readonly RosterSeat[] | undefined): Arrivals | unde
  * happening is precisely what a live query never reports. A seat the screen did
  * not watch arrive never starts one.
  */
+/**
+ * Which arrivals this television has already spent its four seconds on.
+ *
+ * Being an Arrival is permanent — a player stays one for as long as they stay
+ * seated — but a greeting is not, and nothing in a live query ever reports the
+ * four seconds ending. So the screen remembers, and this is the memory: it lives
+ * above the switch between the carousel and a game, which is the one trip that
+ * would otherwise re-announce a phone that landed before the game started.
+ *
+ * The same player being noted twice is expected rather than guarded against: the
+ * greeting is marked spent both when it runs out and when a game cuts it short,
+ * and those are the same fact. The set is returned unchanged when it already
+ * holds the player, because the component doing the noting re-renders on it.
+ */
+function useGreeted(): {
+  readonly greeted: ReadonlySet<RosterSeat['playerId']>;
+  readonly noteGreeted: (playerId: RosterSeat['playerId']) => void;
+} {
+  const [greeted, setGreeted] = useState<ReadonlySet<RosterSeat['playerId']>>(() => new Set());
+
+  const noteGreeted = useCallback((playerId: RosterSeat['playerId']) => {
+    setGreeted((already) =>
+      already.has(playerId) ? already : new Set(already).add(playerId),
+    );
+  }, []);
+
+  return { greeted, noteGreeted };
+}
+
 function useJustJoined(arrived: boolean): boolean {
   const [settled, setSettled] = useState(false);
 
@@ -873,8 +1001,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // The dots and the line side by side rather than stacked. §6 asks for "page
+  // dots + '<Host> is browsing on their phone'" and does not say in which
+  // direction, and one row is 28pt of content instead of 56: the footer goes
+  // 92 → 64, the card lands at 124→644 with its 10px cobalt shadow to 654, and
+  // the dots sit at 664. Ten points of daylight under the shadow the active dot
+  // used to disappear into, with every pinned §6 number left alone — the
+  // arithmetic and the two nudges that did not work are in the plan.
+  //
+  // `justifyContent` is load-bearing rather than decorative: `screen` stretches
+  // this footer across the full 1280pt, so a row without it packs the dots and
+  // the line against the left edge. `alignItems` stays and changes meaning —
+  // it now centres the two on each other's line.
   carouselFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 16,
     paddingBottom: 36,
   },
@@ -900,6 +1042,14 @@ const styles = StyleSheet.create({
     color: colors.mutedText,
     fontFamily: fontFamily.bodyMedium,
     fontSize: 22,
+    lineHeight: FOOTER_TEXT_LINE,
+  },
+  // An arrival's four seconds: Boardwalk's "join/new highlight" pink, and
+  // nothing else. Same family, same size, same pinned line — the greeting is
+  // the footer's own sentence changing colour, and a line box that could not
+  // move is a footer that cannot grow back into the card's shadow.
+  arrivalLine: {
+    color: colors.punch,
   },
 
   gameTitle: {
