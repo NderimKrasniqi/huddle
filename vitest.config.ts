@@ -26,6 +26,17 @@ export default defineConfig({
           server: { deps: { inline: ['convex-test'] } },
         },
       },
+      // The one ESLint rule this repo writes for itself. Its own project because
+      // it lives beside `eslint.config.js` rather than in a workspace package,
+      // and because it drives ESLint over real source paths — no app, and no
+      // react-native stub to get in the way of that.
+      {
+        test: {
+          name: 'lint-rules',
+          include: ['eslint-rules/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
       {
         resolve: stubReactNative,
         test: {

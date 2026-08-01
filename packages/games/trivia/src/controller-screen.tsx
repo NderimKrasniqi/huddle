@@ -232,9 +232,8 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   answerText: {
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.bodyBold,
     fontSize: 20,
-    fontWeight: '700',
     textAlign: 'center',
   },
   lockedIn: {
@@ -248,9 +247,8 @@ const styles = StyleSheet.create({
   },
   lockedInText: {
     color: colors.ink,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.bodyBold,
     fontSize: 14,
-    fontWeight: '700',
     letterSpacing: letterSpacing.badge,
   },
   eyesUp: {

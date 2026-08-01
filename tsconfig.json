@@ -2,5 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   // Repo-root tooling config only; every workspace package typechecks itself.
   "extends": "./tsconfig.base.json",
-  "include": ["vitest.config.ts"]
+  // `eslint-rules` is the repo's own lint rule and its test. The rule itself is
+  // CommonJS JavaScript, because `eslint.config.js` `require`s it and nothing in
+  // this repo compiles a config; its test is TypeScript and typechecks here.
+  "include": ["vitest.config.ts", "eslint-rules/**/*.ts"]
 }

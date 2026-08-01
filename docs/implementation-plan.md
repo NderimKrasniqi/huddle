@@ -1544,11 +1544,133 @@ existed, and bundling it would have let a reviewer judge neither well.
   that has been watched pushing before. Nothing in `apps/tv` was touched, so
   the shared canvas, the sticker tilts and `StickerSurface`'s pale seam are
   undisturbed by construction; no tvOS binary was built by this task.
-- [ ] Design fidelity — trivia screens on theme tokens only — AC: the trivia
+- [x] Design fidelity — trivia screens on theme tokens only — AC: the trivia
   screens extend Boardwalk using only theme tokens from `packages/ui` — no
   literal colors, radii, border widths, shadow depths or font families at a
   trivia call site. Enforced by something that fails rather than by reading:
   a lint rule or a test over the game module's sources.
+
+  **A lint rule, not a test over the sources** (`boardwalk/tokens-only`, in
+  `eslint-rules/`, wired into the root flat config). The question this has to
+  ask is a *syntactic* one — is this value a literal or a reference? — which a
+  parser answers exactly where a regex over text approximates it, and it has to
+  ask it of a property's *name* rather than of any number it sees. It also
+  reports on the offending line in the editor and rides `pnpm lint`, which is
+  already a CI gate. The repo's existing guard, `color-literals.test.ts`, stays
+  a text scan because its question is about a value ("is this hex anywhere
+  outside `packages/ui`?"), which text answers perfectly. The two compose rather
+  than overlap: the scan catches a hex smuggled through a name, the rule catches
+  `borderRadius: 24` and `backgroundColor: 'rebeccapurple'`, which no hex scan
+  can see.
+
+  **What was found at the trivia call sites: two, and both the same one.**
+  `fontWeight: '700'` on the answer buttons and on the LOCKED IN pill, beside
+  `fontFamily.body`. Everything else on both screens was already on tokens.
+  This one is guarded as part of "font families" and banned outright rather than
+  required to be a token, because on this stack a weight *is* how a face gets
+  chosen by hand and it does not work: React Native does not synthesise weights
+  for custom fonts on Android, so the theme registers each weight as its own
+  family (`packages/ui/src/typography.ts`) and `fontFamily.bodyBold` is the only
+  way to ask for bold. Both are now `fontFamily.bodyBold`. That is a *visual*
+  change on the phone — two labels that were drawing at regular weight now draw
+  bold — and it has not been on a device; it is read off the token table, not
+  seen.
+
+  **Where the boundary was drawn, which is the part that decides whether the
+  rule survives.** It fires only inside a style context — a `StyleSheet.create`
+  block, a `style`/`…Style` prop, and `StickerSurface`'s `depth` and
+  `shadowColor` — and only on property *names*: `color`/`…Color`,
+  `border…Radius`, `border…Width`, `fontFamily`, `fontWeight`, `depth`. It never
+  looks at a number to decide, because the handoff's own measurements are plain
+  numbers all through this codebase (`width: 148`, `gap: 18`,
+  `paddingHorizontal: 26`, `fontSize: 88`) and a rule that fired on those is a
+  rule that gets switched off. Anchoring the width pattern on `border` is what
+  keeps `width`/`minWidth`/`maxWidth` out of it. The style-context restriction
+  is what keeps it off the domain: `keyArt: { color: 'punch' }` and
+  `<NamePill color={row.color} />` carry a Key Art or Player Color *name*, which
+  is protocol from game-core, and a rule firing there would be firing on the
+  vocabulary — and the two shadow props are read on `StickerSurface` itself
+  rather than on any tag using those words, since `depth` is an ordinary name
+  for a tree node's nesting.
+
+  Two literals pass, each because it is the *absence* of a design value rather
+  than one of Boardwalk's: numeric `0` for a radius, a border width or a shadow
+  depth (`depth={news?.depth ?? 0}` on a seat with nothing to say is real code),
+  and `'transparent'` for a colour, which is the same argument in the same shape
+  — `StickerSurface` draws its border that way so the fill cannot escape past
+  the ink. Neither has a token because the palette has nothing there to name, so
+  without the exemption the only exits would be inventing one or an
+  `eslint-disable`.
+
+  Arithmetic is judged by what it is made of rather than waved through as an
+  expression, so `24 + 0` is still 24 and `radius.pill + 4` is a design decision
+  wearing a token as a disguise. That hole was worth closing above the two left
+  open below: those need a developer to restructure their code, this one needed
+  four characters.
+
+  A module-level name is *followed to what it holds*, not judged by where it was
+  bound. `const HOST_FACE = accentFace(0)`, `const ink = colors.ink` and
+  `const BRAND = { border: colors.ink }` all pass, because hoisting a tokenised
+  value out of a component for reuse is an ordinary thing to do and a gate that
+  objected to it is a gate somebody switches off — which would cost more than
+  anything it caught. `const CARD_RADIUS = 24` does not pass, which is the
+  distinction the tracing exists to make.
+
+  Sticker tilts, `opacity` and `letterSpacing` are *not* guarded: all three have
+  tokens and all three are used, but none is on the criterion's list and each
+  would need its own false-positive argument first (`opacity: 0` on a hidden
+  view is not a design decision).
+
+  **Scoped repo-wide, and it cost nothing to do so.** Enabled for every `.ts`
+  and `.tsx` outside `packages/ui/src` — the same exemption the hex scan makes,
+  for the same reason: the theme is where a design value belongs. The hub apps
+  were expected to need cleanup and did not; `pnpm lint` came back green over
+  `apps/tv` and `apps/controller` with no change to either, so scoping the rule
+  to trivia alone would have been choosing a weaker gate for nothing.
+
+  **Proved by failing, not by reading.** Five violations were introduced one
+  class at a time and `pnpm lint` named each on its line: `borderWidth: 3` and
+  `color: '<ink>'` and `fontFamily: 'Bungee_400Regular'` in `tv-screen.tsx`,
+  `depth={6}` on a `StickerSurface`, and — in `apps/tv/app/index.tsx`, to show
+  the repo-wide scope is real — a module-level `const HUB_RADIUS = 24` used as
+  `borderRadius`, which is the likelier dodge than an inline literal and is
+  caught by resolving the value's root name to its binding. All were reverted;
+  the gate is green. Twenty-one tests in
+  `eslint-rules/boardwalk-tokens-only.test.ts` pin the same behaviour by driving
+  ESLint over the repo's real config rather than through `RuleTester`, so a
+  config that stopped switching the rule on would fail them too — including one
+  that lints the actual trivia screens and expects silence. Review then spent
+  its effort trying to get violations *past* the rule; seventeen dodges held,
+  and the six that did not are folded in above and below.
+
+  **What it does not catch**, and this list is the write-up's credibility. A
+  style object built outside `StyleSheet.create` and passed in by name
+  (`const chip = { borderWidth: 3 }; StyleSheet.create({ chip })`) is invisible
+  to it — nothing in the repo is written that way, and widening the rule to
+  chase it would mean guessing which plain objects are styles. The style sheet
+  is likewise recognised by *name*, so aliasing it steps around the rule
+  entirely (`import { StyleSheet as SS }`, or destructuring `create` off it);
+  the same goes for a computed key, a literal laundered through `String()` or
+  `JSON.parse()`, and a module-level IIFE's own locals. None of those is
+  plausible so much as possible, and each costs a developer more effort than
+  writing the token would. A local (non-module) `const` holding a literal slips
+  for the reason the module-level tracing stops where it does: a name bound
+  inside a component is data flowing through it. And a wrapper around
+  `StickerSurface` escapes the two shadow props, which is the price of reading
+  them on that element instead of on the word. Finally, the rule is about
+  *where* a value is written, not about whether the value is right:
+  `radius.pill` used where the handoff wants `radius.card` passes, and always
+  will. That half is what a design-fidelity comparison is for, and it is the
+  sibling task above, not this one. Nothing here has been on a simulator — this
+  task's deliverable is a gate, and the evidence for a gate is that it fails.
+
+  Machinery this needed, recorded because it changed shared files: a fourth
+  Vitest project (`lint-rules`) since the rule lives beside `eslint.config.js`
+  rather than in a workspace package, `--project lint-rules` added to
+  `test:unit` so CI runs it, and `eslint-rules/**/*.ts` added to the root
+  `tsconfig.json` so the test is typechecked. The rule itself is CommonJS
+  JavaScript — the only such file in the repo besides `eslint.config.js`, which
+  `require`s it, and nothing here compiles a config.
 - [ ] Design fidelity — TV legibility — AC: TV body text is ≥18px at the
   720p design size, checked against the rendered styles rather than by eye,
   and the trivia question text is readable from 3m. The 3m half needs a human

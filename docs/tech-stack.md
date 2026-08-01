@@ -140,6 +140,17 @@ packages for game modules and the protocol.
 - **Alternatives considered:** Biome — faster, but no Expo-maintained ruleset,
   so React Native correctness rules would be hand-assembled; per-package ESLint
   configs — five copies of the same file.
+- **One rule is the repo's own.** `boardwalk/tokens-only` (`eslint-rules/`,
+  registered as an inline plugin in the root config) fails a color, radius,
+  border width, shadow depth or font family written at a call site instead of
+  read from a `packages/ui` token — see Tokens only in `docs/CONTEXT.md` for the
+  boundary it draws and why. It is a lint rule rather than a scan of the sources
+  because the question is syntactic (literal or reference?) and wants a parser,
+  and because reporting on the line is what makes a styling rule land. It is
+  plain CommonJS JavaScript, like `eslint.config.js` that `require`s it: nothing
+  in this repo compiles a config, so a `.ts` rule would have nothing to run it.
+  Its test drives the ESLint API over the repo's real config rather than
+  `RuleTester`, so a config that stopped switching it on fails too.
 
 ### Testing
 - **Choice & strategy:**
@@ -173,6 +184,12 @@ packages for game modules and the protocol.
     check; the check that would actually catch it is bundling
     `convex/convex/games.ts` and grepping the output, which is a manual step at
     the moment and not a CI gate.
+  - **Vitest runs four projects**, not three: `convex`, `packages`, `apps`, and
+    `lint-rules`. The fourth holds the test for the repo's own ESLint rule,
+    which lives beside `eslint.config.js` rather than in a workspace package and
+    needs no `react-native` stub. `pnpm test:unit` names it explicitly
+    (`--project lint-rules --project packages --project apps`), so a project
+    added without touching that script would run locally and not in CI.
   - **CI:** GitHub Actions free tier (`.github/workflows/ci.yml`) — typecheck,
     lint, unit (`pnpm test:unit`), integration (`pnpm test:integration`) and
     pack validation (`pnpm validate:packs`) on every push, as five named steps

@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit && pnpm -r typecheck",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "test:unit": "vitest run --project packages --project apps",
+    "test:unit": "vitest run --project lint-rules --project packages --project apps",
     "test:integration": "vitest run --project convex",
     "validate:packs": "tsx packages/packs/src/validate-packs.ts"
   },

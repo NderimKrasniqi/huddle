@@ -492,6 +492,30 @@ working must add it here.
   names, never a generic color word: `canvas`, `screen`, `surface`, `ink`,
   `mutedText`, `mutedBorder`, `cobalt`, `tangerine`, `punch`, `green`,
   `yellow`.
+- **Tokens only** — Boardwalk's rule that a color, radius, border width, shadow
+  depth or font family is *read* from a `packages/ui` token and never written
+  where it is used — and the ESLint rule that fails when one is
+  (`boardwalk/tokens-only`, in `eslint-rules/`, run by `pnpm lint`). It looks
+  inside style contexts alone: a `StyleSheet.create` block, a `style`/`…Style`
+  prop, and the Offset Shadow's own two props on `StickerSurface` (`depth`,
+  `shadowColor`). That boundary is what keeps it off the domain — `color`
+  anywhere else in Huddle is a Player Color or Key Art *name*, which is protocol
+  and not a color at all, and `depth` is an ordinary word for a tree node's
+  nesting. It keys on the property's name and never on its value,
+  because the handoff's measurements are written as plain numbers throughout
+  (`width: 148`, `gap: 18`, `fontSize: 88`) and a rule that fired on those is a
+  rule somebody switches off; sizes, spacing, sticker tilts, opacity and letter
+  spacing are outside it. Two literals are the absence of a design value rather
+  than one of Boardwalk's and are admitted as such: `0` for a radius, a border
+  width or a depth, and `transparent` for a color. A name is followed to what it
+  holds rather than judged by where it was bound — `const ink = colors.ink` is
+  as tokenised as `colors.ink`, `const CARD_RADIUS = 24` is not, and `24 + 0` is
+  still 24. `fontWeight` is banned rather than tokenised: React
+  Native ignores a weight on a custom family, so a family token is the only way
+  to ask for bold and a weight at a call site is a face chosen by hand that never
+  arrives. Its sibling is the hex scan in `color-literals.test.ts` — that one
+  asks what a value *is*, anywhere in the repo; this one asks where it was
+  *written*.
 - **Eyes up** — the platform's core UX principle: the TV is the stage; phones
   are minimal controllers; players' eyes belong on the TV and each other.
 
