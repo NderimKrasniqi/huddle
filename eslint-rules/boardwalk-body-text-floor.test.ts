@@ -1,0 +1,269 @@
+import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
+
+import { minBodyFontSize } from '@huddle/ui';
+import { ESLint } from 'eslint';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+/**
+ * `boardwalk/body-text-floor` exercised through ESLint itself, against the
+ * repo's real `eslint.config.js`, rather than through `RuleTester` — for the
+ * reason its sibling's test gives, and for one more of its own.
+ *
+ * This gate is *half config*: the rule knows what a floor is, and the flat
+ * config knows which files stand on a television. A `RuleTester` would pin the
+ * arithmetic and stay green through a config that pointed the floor at no files
+ * at all, or at the phone, whose floor is a different number. So every sample
+ * below is linted at a real path, and the paths are the assertion as much as
+ * the code is.
+ */
+
+const RULE = 'boardwalk/body-text-floor';
+
+const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+  cwd: import.meta.dirname,
+  encoding: 'utf8',
+}).trim();
+
+/** The two surfaces the floor is switched on for, and one of each that it is not. */
+const A_TV_SCREEN = path.join(repoRoot, 'apps/tv/app/body-text-floor-probe.tsx');
+const A_TRIVIA_TV_SCREEN = path.join(
+  repoRoot,
+  'packages/games/trivia/src/tv-body-text-floor-probe.tsx',
+);
+const A_CONTROLLER_SCREEN = path.join(repoRoot, 'apps/controller/app/body-text-floor-probe.tsx');
+const A_TRIVIA_CONTROLLER_SCREEN = path.join(
+  repoRoot,
+  'packages/games/trivia/src/controller-body-text-floor-probe.tsx',
+);
+
+const TV_APP_SCREENS = path.join(repoRoot, 'apps/tv/app');
+const TRIVIA_SOURCES = path.join(repoRoot, 'packages/games/trivia/src');
+
+let eslint: ESLint;
+
+beforeAll(() => {
+  eslint = new ESLint({ cwd: repoRoot });
+});
+
+/** What the rule says about `code`, and nothing about what any other rule says. */
+async function complaints(code: string, filePath = A_TV_SCREEN): Promise<string[]> {
+  const [result] = await eslint.lintText(code, { filePath });
+
+  // An ignored path lints to nothing at all, which would let every "no
+  // complaints" expectation below pass without the rule ever having run.
+  if (result === undefined) {
+    throw new Error(`ESLint returned no result for ${filePath}; is the path ignored?`);
+  }
+
+  return result.messages
+    .filter((message) => message.ruleId === RULE)
+    .map((message) => message.message);
+}
+
+/** A screen that imports the theme, so the samples below can reference tokens. */
+function screen(body: string): string {
+  return [
+    "import { fontFamily, minBodyFontSize } from '@huddle/ui';",
+    "import { StyleSheet, Text, View } from 'react-native';",
+    '',
+    body,
+    '',
+  ].join('\n');
+}
+
+/** A `StyleSheet.create` block holding `declarations`. */
+function styles(declarations: string): string {
+  return screen(`export const styles = StyleSheet.create({ probe: { ${declarations} } });`);
+}
+
+describe('the floor the config hands the rule', () => {
+  it("is Boardwalk's own, so the two cannot drift apart", async () => {
+    const config = await eslint.calculateConfigForFile(A_TV_SCREEN);
+    const [severity, options] = config.rules[RULE] as [number, { surface: string }];
+
+    expect(severity).toBe(2);
+    expect(options).toEqual({ surface: 'tv', minBodyFontSize });
+  });
+});
+
+describe('what the television already renders', () => {
+  it('is above the floor on every screen it draws', async () => {
+    const screens = [
+      ...readdirSync(TV_APP_SCREENS)
+        .filter((file) => file.endsWith('.tsx'))
+        .map((file) => path.join(TV_APP_SCREENS, file)),
+      path.join(TRIVIA_SOURCES, 'tv-screen.tsx'),
+    ];
+
+    // Without this the check passes vacuously the day the screens are renamed.
+    expect(screens.length).toBeGreaterThan(1);
+
+    const results = await eslint.lintFiles(screens);
+    const offences = results.flatMap((result) =>
+      result.messages
+        .filter((message) => message.ruleId === RULE)
+        .map(
+          (message) =>
+            `${path.relative(repoRoot, result.filePath)}:${message.line} ${message.message}`,
+        ),
+    );
+
+    expect(offences).toEqual([]);
+  });
+});
+
+describe('body text under the floor', () => {
+  it('is caught in a style sheet, and named with the size it is', async () => {
+    const [message] = await complaints(styles('fontSize: 16,'));
+
+    expect(message).toContain('16');
+    expect(message).toContain(String(minBodyFontSize.tv));
+    expect(message).toContain('minBodyFontSize.tv');
+  });
+
+  it('is caught in an inline style as well', async () => {
+    expect(
+      await complaints(screen('export const Row = () => <View style={{ fontSize: 12 }} />;')),
+    ).toHaveLength(1);
+    expect(
+      await complaints(
+        screen(
+          'export const Row = () => <Text style={[styles.probe, { fontSize: 12 }]} />;\n' +
+            'const styles = StyleSheet.create({ probe: {} });',
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('is caught after being hoisted to a constant, which is the likelier dodge', async () => {
+    expect(
+      await complaints(
+        screen(
+          'const CAPTION = 15;\nexport const styles = StyleSheet.create({ probe: { fontSize: CAPTION } });',
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
+  // The dodge with a token on it: the arithmetic reads as though the floor were
+  // being respected, and the number it produces is under the floor.
+  it('is caught through arithmetic, token-flavoured or not', async () => {
+    expect(await complaints(styles('fontSize: minBodyFontSize.tv - 2,'))).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 8 * 2,'))).toHaveLength(1);
+  });
+
+  // A name consulted twice in one expression is not a cycle. The guard against
+  // following a name round forever is per *path* through the tree, so the
+  // second `HALF` still resolves — `HALF * 2` was always caught and this is the
+  // same 16.
+  it('is caught when one name is consulted twice in the same expression', async () => {
+    expect(
+      await complaints(
+        screen(
+          'const HALF = 8;\nexport const styles = StyleSheet.create({ probe: { fontSize: HALF + HALF } });',
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
+  // The likeliest way a real screen ends up under the TV floor: a phone screen
+  // ported to the television, keeping the floor it was written against.
+  it("is caught when it is the phone's floor standing on a television", async () => {
+    expect(await complaints(styles('fontSize: minBodyFontSize.phone,'))).toHaveLength(1);
+  });
+
+  it('is caught inside a conditional, whichever arm hides it', async () => {
+    expect(await complaints(styles('fontSize: long ? minBodyFontSize.tv : 14,'))).toHaveLength(1);
+    expect(await complaints(styles('fontSize: long ? 14 : minBodyFontSize.tv,'))).toHaveLength(1);
+  });
+
+  it('is caught on the trivia module\'s television screen, not only in the TV app', async () => {
+    expect(await complaints(styles('fontSize: 16,'), A_TRIVIA_TV_SCREEN)).toHaveLength(1);
+  });
+});
+
+describe('body text on the floor or above it', () => {
+  it('passes at exactly the floor, however it is written', async () => {
+    expect(await complaints(styles('fontSize: minBodyFontSize.tv,'))).toEqual([]);
+    expect(await complaints(styles(`fontSize: ${minBodyFontSize.tv},`))).toEqual([]);
+  });
+
+  it('passes above it', async () => {
+    expect(await complaints(styles('fontSize: 22,'))).toEqual([]);
+    expect(await complaints(styles('fontSize: 88,'))).toEqual([]);
+  });
+
+  it('passes when the screen computed the size and the rule cannot see it', async () => {
+    expect(
+      await complaints(
+        screen(
+          'export const Line = ({ size }: any) => <Text style={{ fontSize: size }}>hi</Text>;',
+        ),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('what the floor does not reach', () => {
+  // The handoff floors *body* text. Bungee is Boardwalk's display face and is
+  // never asked to carry a sentence, so a size on it is a drawing decision.
+  it('says nothing about display type, which is the face and not the size', async () => {
+    expect(
+      await complaints(styles('fontFamily: fontFamily.display,\nfontSize: 12,')),
+    ).toEqual([]);
+    // …and the same object without the display face is body text again.
+    expect(await complaints(styles('fontFamily: fontFamily.body,\nfontSize: 12,'))).toHaveLength(1);
+  });
+
+  // The exemption is granted on the theme's own face, proved the way the floor
+  // table is, rather than on any name that happens to end in `.display`. Both
+  // samples below are caught by `boardwalk/tokens-only` on the same line too,
+  // but a value rule that took a family on trust would be the weaker of the two
+  // standards in this file, and the one that got copied.
+  it('grants the exemption only to the theme, not to anything shaped like it', async () => {
+    expect(
+      await complaints(
+        screen(
+          "const faces = { display: 'Comic Sans' };\n" +
+            'export const styles = StyleSheet.create({ probe: { fontFamily: faces.display, fontSize: 12 } });',
+        ),
+      ),
+    ).toHaveLength(1);
+    expect(
+      await complaints(
+        screen(
+          "import { faces } from './faces';\n" +
+            'export const styles = StyleSheet.create({ probe: { fontFamily: faces.display, fontSize: 12 } });',
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('grants it through an alias, because the import is what it reads', async () => {
+    expect(
+      await complaints(
+        screen(
+          "import { fontFamily as boardwalkFaces } from '@huddle/ui';\n" +
+            'export const styles = StyleSheet.create({ probe: { fontFamily: boardwalkFaces.display, fontSize: 12 } });',
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it('says nothing about the other measurements a text style carries', async () => {
+    expect(
+      await complaints(
+        styles(['width: 12,', 'height: 12,', 'gap: 8,', 'lineHeight: 16,', 'padding: 4,'].join('\n')),
+      ),
+    ).toEqual([]);
+  });
+
+  // A phone is read from the hand and Boardwalk floors it at 14, so a repo-wide
+  // 18 would be the wrong number written on the wrong surface.
+  it('says nothing on the phone, whose floor is a different number', async () => {
+    expect(await complaints(styles('fontSize: 15,'), A_CONTROLLER_SCREEN)).toEqual([]);
+    expect(await complaints(styles('fontSize: 15,'), A_TRIVIA_CONTROLLER_SCREEN)).toEqual([]);
+  });
+});

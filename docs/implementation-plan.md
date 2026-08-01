@@ -1677,7 +1677,7 @@ finish it; the 3m reading needs eyes in front of a television and cannot be
 ticked on a simulator, so bundling them meant a checkbox that could never go
 green. The second half is now grouped with the phase's other human-only work.
 
-- [ ] Design fidelity — the TV's 18px floor — AC: every piece of body text the
+- [x] Design fidelity — the TV's 18px floor — AC: every piece of body text the
   TV app and the trivia TV screen render is ≥18px at the 720p design size,
   established against the rendered styles rather than by eye, and enforced by
   something that fails when a smaller one is added — the sibling task above
@@ -1686,6 +1686,154 @@ green. The second half is now grouped with the phase's other human-only work.
   that `minBodyFontSize.tv` already exists and is already used in places, so
   the work is finding what does *not* use it and deciding whether each is body
   text.
+
+  **Nothing was under the floor, and no rendered size changed.** Twenty-nine
+  text styles are drawn on the two television surfaces — eighteen in
+  `apps/tv/app/index.tsx`, eleven in `packages/games/trivia/src/tv-screen.tsx`
+  — and the smallest of them is 18. Four already read `minBodyFontSize.tv`
+  (`roomChipLabel`, the carousel's `chipText`, `unknownGameText`, `seatName`),
+  the rest sit above it, and the classification below is what the rest of the
+  work rests on. So this task changed no pixel on any television and needs no
+  screenshot; its whole deliverable is the gate, and a gate's evidence is that
+  it fails.
+
+  **The `TvStage` model was checked rather than assumed.** The TV app is
+  authored on a fixed 1280×720 surface and scaled to the panel by one
+  transform (`apps/tv/src/tv-stage.tsx`), so a `fontSize` in these stylesheets
+  *is* the design-size number and the AC's "at the 720p design size" needs no
+  conversion. Nothing in either file sizes text off `useWindowDimensions` or
+  `PixelRatio`.
+
+  **Body text is everything with a size except Boardwalk's display face.** That
+  is the judgement the task asks for, and the discriminator is the system's
+  own two faces rather than a list of screens: Bungee is the display face and is
+  never asked to carry a sentence, Space Grotesk is body. So the wordmark (34),
+  the room-code chip (24), key art and card titles (46/34/34), the game title
+  (34), GRAB YOUR PHONE! (20), a Room Code letter (88), a seat's monogram (24),
+  trivia's Countdown (36), its question (44), its tick and verdict marks
+  (30/24), its score (26), FINAL SCORES (24), the Victory headline (52) and a
+  rank (22) are display type and outside the floor. Everything else is body and
+  inside it: the `room` label (18), the carousel card's chips (18), the Carousel
+  Footer Line and its greeting (22), the Unknown Game line (18), the pairing
+  caption (22), the trouble chip (22), the QR caption (20), a Seat's nickname
+  (18), the roster footer (22), trivia's QUESTION/ANSWERED chips (20), its
+  option labels (30) and its name pills (22). Two of these were worth arguing
+  and neither was reclassified to avoid work: a seat's nickname is body at
+  exactly the floor because a seat is only as wide as its avatar, and the trouble
+  chip is body at 22 because it is the one line on the screen that has to be read
+  and acted on. The page dots carry no text at all, so there was nothing there
+  to classify; the wordmark's period is a nested `<Text>` that sets only a colour
+  and inherits its parent's 34.
+
+  **A second rule, not an option on the first** (`boardwalk/body-text-floor`).
+  `boardwalk/tokens-only`'s entire defensibility is the sentence that it keys on
+  a property's *name* and never on a value — which is what lets `width: 148` and
+  `fontSize: 88` stay plain numbers without a gate objecting. This rule is that
+  sentence inverted: `fontSize` may be any number and the only question is which.
+  Folding them together would have made one rule that contradicts its own
+  documented boundary, and would have needed two enablement scopes for one rule
+  besides. They share the walk to a style object — `StyleSheet.create`'s
+  argument and any `style`/`…Style` prop, now `eslint-rules/style-objects.js`,
+  extracted from `boardwalk-tokens-only.js` unchanged — and nothing above it.
+  That extraction is the one file this task touched that it did not create.
+
+  **Which files stand on a television is the config's question, not the rule's**,
+  since `files` is exactly what flat config is for. Switched on for
+  `apps/tv/**` and `packages/games/*/src/tv-*.tsx` with `surface: 'tv'`. A
+  repo-wide 18 would have been wrong rather than merely strict: the handoff
+  floors a phone at 14, and the Controller has two 13s today
+  (`label` is body and genuinely under the phone floor; `hostPillText` is
+  `fontFamily.display` and outside it either way). Left alone deliberately
+  rather than swept in — this AC is the television's — and written up as its own
+  Phase 5 task ("Design fidelity — the phone's 14px floor") below, so that a
+  known violation of the handoff is recorded where the plan can see it rather
+  than only in a comment inside a rule that does not run there.
+  The `tv-*` glob is the only handle a config has on a game's television screen,
+  so a module that drew its TV screen out of a file named something else would
+  sit outside the gate.
+
+  **The floor is written in `eslint.config.js` and pinned to the token by a
+  test.** Nothing in this repo compiles a config, so a CommonJS rule cannot
+  import `minBodyFontSize` from `@huddle/ui` — the number has to be written
+  somewhere outside `packages/ui`, which is the one place this repo says a design
+  value may not be. The closure is a test that reads the resolved config for a TV
+  file and asserts the option deep-equals the imported token, so the two cannot
+  drift. The *whole* table is handed to the rule rather than the one number, and
+  that pays for itself: `fontSize: minBodyFontSize.phone` on a television — a
+  phone screen ported to the TV keeping the floor it was authored against, which
+  is the likeliest way a real screen ends up under it — is then a size the rule
+  can read rather than a reference it waves through.
+
+  A size is followed the way its sibling follows a colour: through a
+  module-level constant (`const CAPTION = 15`) and through arithmetic, so
+  `minBodyFontSize.tv - 2` folds to 16 and is caught, and both arms of a
+  conditional are judged. A size bound inside a component, or arriving as a prop,
+  is data flowing through the screen and passes.
+
+  **Proved by failing.** Four violations were introduced one at a time and
+  `pnpm lint` named each on its line: `fontSize: 16` on the pairing caption in
+  `apps/tv/app/index.tsx` and on trivia's chips in `tv-screen.tsx` (both
+  reported "this is 16px at the design size"), then the two dodges — the same
+  caption as `minBodyFontSize.tv - 2` and the same chip through a module-level
+  `const TRIVIA_CHIP = 15`, reported as 16 and 15. All were reverted and lint is
+  green. The exemptions were checked the same way rather than argued: Boardwalk's
+  badge at `fontFamily.display` with `fontSize: 12` on the TV lints clean, and
+  the Controller's two 13s lint clean because the rule is not switched on there
+  at all. Fifteen tests in `eslint-rules/boardwalk-body-text-floor.test.ts` pin
+  the lot by driving ESLint over the repo's real config — including one that
+  lints the actual TV screens and expects silence, and one that lints the same
+  sub-floor sample at a TV path and at a Controller path and expects a complaint
+  from only the first.
+
+  **Three things review found, one of them in the sibling rule.** The tracing's
+  cycle guard was carried across a whole walk rather than down a path, so a name
+  read twice in one expression looked like a name being followed round forever.
+  In this rule that failed *permissive* — `const HALF = 8` with
+  `fontSize: HALF + HALF` slipped while `HALF * 2` was caught — but the same
+  shape in `boardwalk/tokens-only`, which is where the walk came from, failed
+  the other way: `const ink = colors.ink; const BRAND = { border: ink, text: ink }`
+  reported Boardwalk's own token as a value of the file's own. A false positive
+  on correct code is the worse of the two, and it was live from the sibling task
+  until here. Both now copy the set per branch, with a test each. Second, the
+  display exemption was granted on the *shape* of a name (anything
+  `…​.display`) while the floor table's provenance was proved through imports
+  and module aliases; two standards for "is this really the theme's?" in one
+  file is an invitation to copy the weaker, so one `isThemeToken` now answers
+  both, and `const faces = { display: 'Comic Sans' }` no longer earns the
+  exemption. Third, the deferral of the Controller's 13px `label` pointed at a
+  phone task that did not exist; it does now, above, unticked.
+
+  **What it does not catch.** A `<Text>` with no size anywhere in its style
+  chain renders at React Native's own 14px, which is under the floor and
+  invisible to a rule that only reads style objects — finding it would mean
+  resolving style names across files. Every `<Text>` on both television surfaces
+  sets a size today, and that was established by reading all thirty-nine of them,
+  not by the gate. The display exemption is forward-looking rather than
+  load-bearing: the smallest display size on either surface is 20, so nothing in
+  the repo currently sits in it. And every gap `boardwalk/tokens-only` documents
+  above it is inherited whole, since the walk is the same one — an aliased
+  `StyleSheet`, a style object built outside `create` and passed in by name, a
+  computed key. Nothing here has been on a simulator or a television, and nothing
+  needed to be: no rendered size moved.
+- [ ] Design fidelity — the phone's 14px floor — AC: every piece of body text
+  the Controller and the trivia controller screen render is ≥14px, and
+  `boardwalk/body-text-floor` is switched on for them so a smaller one fails
+  `pnpm lint`. Raised by the TV task above rather than found by a sweep, so what
+  it already knows is written down here: **one known violation**,
+  `apps/controller/app/index.tsx:1409` — the uppercase field `label` at 13px,
+  `fontFamily.bodyBold`, and body text by any reading. The other 13 on that
+  screen (`hostPillText`) is `fontFamily.display` and outside the floor either
+  way, which is the same boundary the TV task drew. **The mechanism already
+  exists**: the rule is handed Boardwalk's whole `minBodyFontSize` table and
+  told which surface a file set stands on, so the phone is a config glob
+  (`apps/controller/**`, `packages/games/*/src/controller-*.tsx`) and
+  `surface: 'phone'` — a second config block in `eslint.config.js`, not a second
+  rule and not a change to this one. What is *not* settled and is the actual
+  work: whether that label goes to 14 or to `minBodyFontSize.phone`, what it
+  costs the two screens it appears on at a size a thumb's width wider, and
+  whether the sweep the glob then performs turns up anything the TV task had no
+  reason to look at. A phone is read from the hand, so unlike the television's
+  floor this one can be judged on a simulator.
 - [ ] Design fidelity — the trivia question read from 3m (human-only) — AC: a
   human sits 3m from a television running the trivia TV screen and can read the
   question. Cannot be closed on a simulator and must not be ticked from a

@@ -7,7 +7,21 @@
 const { defineConfig, globalIgnores } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 
+const bodyTextFloor = require('./eslint-rules/boardwalk-body-text-floor');
 const tokensOnly = require('./eslint-rules/boardwalk-tokens-only');
+
+// One plugin object for both of Boardwalk's rules, shared by reference: two
+// config blocks that each defined a `boardwalk` plugin of their own would be
+// two different objects under one name, which flat config refuses.
+const boardwalk = {
+  rules: { 'tokens-only': tokensOnly, 'body-text-floor': bodyTextFloor },
+};
+
+// Boardwalk's floors, as `packages/ui` holds them (`minBodyFontSize`). Written
+// out here because nothing in this repo compiles a config, so a CommonJS file
+// cannot import the TypeScript token — `eslint-rules/boardwalk-body-text-floor.test.ts`
+// reads this config and the token and fails if the two ever disagree.
+const MIN_BODY_FONT_SIZE = { tv: 18, phone: 14 };
 
 module.exports = defineConfig([
   globalIgnores([
@@ -33,7 +47,30 @@ module.exports = defineConfig([
   {
     files: ['**/*.ts', '**/*.tsx'],
     ignores: ['packages/ui/src/**'],
-    plugins: { boardwalk: { rules: { 'tokens-only': tokensOnly } } },
+    plugins: { boardwalk },
     rules: { 'boardwalk/tokens-only': 'error' },
+  },
+
+  // Boardwalk's other rule, and the half of it that is config: body text is
+  // floored at the smallest size the surface it is read from allows, and this
+  // is where the repo says which files are read from a television. The TV app
+  // and a game module's `tv-*` screens; nothing else. The phone's floor is a
+  // different number (14 against 18), so a repo-wide 18 would be the
+  // television's answer written over the phone's — and two sizes on the
+  // Controller sit at 13 today. Switching the phone on is its own plan task
+  // ("Design fidelity — the phone's 14px floor", Phase 5): a second block here
+  // with `surface: 'phone'`, not a second rule and no change to this one.
+  //
+  // A game's television screen is recognised by its file name, which is the
+  // convention every module follows (`tv-screen.tsx` beside
+  // `controller-screen.tsx`) and the only handle a config has: a module that
+  // drew its TV screen out of a file named something else would sit outside the
+  // gate.
+  {
+    files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
+    plugins: { boardwalk },
+    rules: {
+      'boardwalk/body-text-floor': ['error', { surface: 'tv', minBodyFontSize: MIN_BODY_FONT_SIZE }],
+    },
   },
 ]);

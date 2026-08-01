@@ -255,6 +255,26 @@ describe('a design value taken from the theme', () => {
     ).toEqual([]);
   });
 
+  // A name used twice in one hoisted value is not a cycle, and the guard that
+  // stops the tracing following a name round forever must not mistake it for
+  // one: reading `ink` a second time would otherwise report Boardwalk's own
+  // token as a value of this file's own.
+  it('passes when one tokenised name is read twice in the same hoisted value', async () => {
+    expect(
+      await complaints(
+        screen(
+          [
+            'const ink = colors.ink;',
+            'const BRAND = { border: ink, text: ink };',
+            'export const styles = StyleSheet.create({',
+            '  probe: { borderColor: BRAND.border, color: BRAND.text },',
+            '});',
+          ].join('\n'),
+        ),
+      ),
+    ).toEqual([]);
+  });
+
   it('passes when a surface has no shadow at all, which zero is and no token names', async () => {
     expect(
       await complaints(

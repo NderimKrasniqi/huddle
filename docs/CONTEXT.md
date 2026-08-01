@@ -516,6 +516,34 @@ working must add it here.
   arrives. Its sibling is the hex scan in `color-literals.test.ts` — that one
   asks what a value *is*, anywhere in the repo; this one asks where it was
   *written*.
+- **Body Text Floor** — the smallest body size Boardwalk allows on the surface
+  a screen is read from (`minBodyFontSize` in `packages/ui`: 18 on a television
+  read across a room, 14 on a phone read from the hand), and the ESLint rule
+  that fails when a screen goes under it (`boardwalk/body-text-floor`, in
+  `eslint-rules/`, run by `pnpm lint`). Tokens only's opposite half, and a
+  separate rule for exactly that reason: that one keys on a property's *name*
+  and never looks at a value, which is what lets the handoff's measurements stay
+  plain numbers; this one lets `fontSize` be any number and asks only which. The
+  two share the walk to a style object (`eslint-rules/style-objects.js`) and
+  nothing else.
+  Which files stand on which surface is the flat config's question rather than
+  the rule's, since that is what ESLint's `files` is for: `apps/tv` and a game
+  module's `tv-*` screens are the `tv` surface, and the phone is left alone,
+  because 14 and 18 are two floors and not a lax one and a strict one.
+  **Body text is everything with a `fontSize` except Boardwalk's display face** —
+  a style setting the theme's own `fontFamily.display` is drawing type (a
+  wordmark, a Room Code letter, a Countdown) and the handoff floors *body* text.
+  Its being the theme's is proved through imports and module aliases rather than
+  taken from the name's shape, to the same standard the floor itself is read by. A style naming no
+  family is body text, so the floor applies unless a screen says otherwise. A
+  size is followed the way Tokens only follows a colour, through a module-level
+  constant and through arithmetic, so `minBodyFontSize.tv - 2` is 16 and is
+  caught; and the whole `minBodyFontSize` table is handed to the rule rather
+  than the one number, so `minBodyFontSize.phone` standing on a television is a
+  size it can read rather than a reference it has to wave through. What it
+  cannot see is a `<Text>` carrying no size at all, which renders at React
+  Native's own 14px — every one on both TV surfaces sets a size today, and that
+  is a fact established by reading rather than by the gate.
 - **Eyes up** — the platform's core UX principle: the TV is the stage; phones
   are minimal controllers; players' eyes belong on the TV and each other.
 

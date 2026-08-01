@@ -1,5 +1,15 @@
 'use strict';
 
+const {
+  THEME,
+  STYLE_PROP,
+  unwrap,
+  objectsIn,
+  propertyName,
+  isStyleSheetCreate,
+  lookUp,
+} = require('./style-objects');
+
 /**
  * `boardwalk/tokens-only` — a Boardwalk design value is never written at a call
  * site; it is always read from a `packages/ui` token.
@@ -19,7 +29,11 @@
  * Style contexts only — the object passed to `StyleSheet.create`, and anything
  * inside a `style`/`…Style` JSX prop — plus `StickerSurface`'s own two shadow
  * props, `depth` and `shadowColor`, matched on that element and not on any tag
- * that happens to use those words. That boundary is what keeps the rule off the
+ * that happens to use those words. The walk that reaches those objects lives in
+ * `style-objects.js`, shared with `boardwalk/body-text-floor` — which has to
+ * reach the same places to ask an entirely different question.
+ *
+ * That boundary is what keeps the rule off the
  * domain: `keyArt: { color: 'punch' }` and `<NamePill color={row.color} />`
  * carry a *Player Color name*, which is protocol from game-core
  * (docs/CONTEXT.md) and not a colour at all, and `depth` is an ordinary word
@@ -81,9 +95,6 @@ const RADIUS = /^border[A-Za-z]*Radius$/;
 /** `borderWidth`, `borderTopWidth`, … — anchored on `border` so that `width`, `minWidth` and `maxWidth` are untouched. */
 const BORDER_WIDTH = /^border[A-Za-z]*Width$/;
 
-/** The theme package, and the only import a design value may come from. */
-const THEME = /^@huddle\/ui(?:\/|$)/;
-
 /**
  * The guarded property names, each with the `packages/ui` export that answers
  * it — named in the message so a reader is told what to use and not only what
@@ -98,29 +109,12 @@ const GUARDED = [
   { matches: (name) => name === 'depth', token: 'shadowDepth', absence: 0 },
 ];
 
-/** Style props: `style`, `wrapperStyle`, `contentContainerStyle`, … */
-const STYLE_PROP = /^(?:style|[a-zA-Z]+Style)$/;
-
 /** Boardwalk's one shadow-bearing surface, and the props of it that carry a design value. */
 const SHADOW_SURFACE = 'StickerSurface';
 const SHADOW_PROP = /^(?:depth|shadowColor)$/;
 
 function guardFor(name) {
   return GUARDED.find((guard) => guard.matches(name));
-}
-
-/** Unwraps the TypeScript and grouping nodes that sit between a value and its expression. */
-function unwrap(node) {
-  switch (node.type) {
-    case 'TSAsExpression':
-    case 'TSSatisfiesExpression':
-    case 'TSNonNullExpression':
-    case 'TSInstantiationExpression':
-    case 'ChainExpression':
-      return unwrap(node.expression);
-    default:
-      return node;
-  }
 }
 
 /**
@@ -185,18 +179,6 @@ function rootNames(node, found) {
   return found;
 }
 
-function lookUp(scope, name) {
-  for (let current = scope; current !== null; current = current.upper) {
-    const variable = current.variables.find((candidate) => candidate.name === name);
-
-    if (variable !== undefined) {
-      return variable;
-    }
-  }
-
-  return null;
-}
-
 /**
  * Where a name's value comes from.
  *
@@ -251,6 +233,12 @@ function originOf(scope, identifier, seen) {
  * Whether every part of an expression traces back to the theme — a literal
  * anywhere in it does not, which is what makes `const CARD_RADIUS = 24`
  * distinguishable from `const ink = colors.ink`.
+ *
+ * `seen` stops a name being followed round forever, so it is carried *down a
+ * path* and every branch gets a copy. A name read twice in one value
+ * (`const BRAND = { border: ink, text: ink }`) is not a cycle, and a shared set
+ * would treat the second read as a value of this file's own and report
+ * Boardwalk's own token.
  */
 function derivesFromTheme(scope, node, seen) {
   const value = unwrap(node);
@@ -265,93 +253,30 @@ function derivesFromTheme(scope, node, seen) {
       return derivesFromTheme(scope, value.callee, seen);
     case 'ConditionalExpression':
       return (
-        derivesFromTheme(scope, value.consequent, seen) &&
-        derivesFromTheme(scope, value.alternate, seen)
+        derivesFromTheme(scope, value.consequent, new Set(seen)) &&
+        derivesFromTheme(scope, value.alternate, new Set(seen))
       );
     case 'LogicalExpression':
     case 'BinaryExpression':
       return (
-        derivesFromTheme(scope, value.left, seen) && derivesFromTheme(scope, value.right, seen)
+        derivesFromTheme(scope, value.left, new Set(seen)) &&
+        derivesFromTheme(scope, value.right, new Set(seen))
       );
     case 'ObjectExpression':
       return value.properties.every((property) =>
         derivesFromTheme(
           scope,
           property.type === 'SpreadElement' ? property.argument : property.value,
-          seen,
+          new Set(seen),
         ),
       );
     case 'ArrayExpression':
       return value.elements.every(
-        (element) => element !== null && derivesFromTheme(scope, element, seen),
+        (element) => element !== null && derivesFromTheme(scope, element, new Set(seen)),
       );
     default:
       return false;
   }
-}
-
-/** Every object expression reachable through a style prop or a style sheet. */
-function objectsIn(node, found) {
-  if (node === null || node === undefined || typeof node.type !== 'string') {
-    return found;
-  }
-
-  const value = unwrap(node);
-
-  switch (value.type) {
-    case 'ObjectExpression':
-      found.push(value);
-      for (const property of value.properties) {
-        objectsIn(property.type === 'SpreadElement' ? property.argument : property.value, found);
-      }
-      break;
-    case 'ArrayExpression':
-      for (const element of value.elements) {
-        objectsIn(element, found);
-      }
-      break;
-    case 'SpreadElement':
-      objectsIn(value.argument, found);
-      break;
-    case 'ConditionalExpression':
-      objectsIn(value.consequent, found);
-      objectsIn(value.alternate, found);
-      break;
-    case 'LogicalExpression':
-      objectsIn(value.left, found);
-      objectsIn(value.right, found);
-      break;
-    case 'JSXExpressionContainer':
-      objectsIn(value.expression, found);
-      break;
-    default:
-      break;
-  }
-
-  return found;
-}
-
-function propertyName(property) {
-  if (property.type !== 'Property' || property.computed) {
-    return null;
-  }
-  if (property.key.type === 'Identifier') {
-    return property.key.name;
-  }
-  return property.key.type === 'Literal' ? String(property.key.value) : null;
-}
-
-function isStyleSheetCreate(node) {
-  const { callee } = node;
-
-  return (
-    callee.type === 'MemberExpression' &&
-    !callee.computed &&
-    callee.object.type === 'Identifier' &&
-    callee.object.name === 'StyleSheet' &&
-    callee.property.type === 'Identifier' &&
-    callee.property.name === 'create'
-  );
 }
 
 /** Whether a JSX attribute sits on the one element whose shadow props carry design values. */

@@ -140,17 +140,28 @@ packages for game modules and the protocol.
 - **Alternatives considered:** Biome — faster, but no Expo-maintained ruleset,
   so React Native correctness rules would be hand-assembled; per-package ESLint
   configs — five copies of the same file.
-- **One rule is the repo's own.** `boardwalk/tokens-only` (`eslint-rules/`,
-  registered as an inline plugin in the root config) fails a color, radius,
-  border width, shadow depth or font family written at a call site instead of
-  read from a `packages/ui` token — see Tokens only in `docs/CONTEXT.md` for the
-  boundary it draws and why. It is a lint rule rather than a scan of the sources
-  because the question is syntactic (literal or reference?) and wants a parser,
-  and because reporting on the line is what makes a styling rule land. It is
-  plain CommonJS JavaScript, like `eslint.config.js` that `require`s it: nothing
-  in this repo compiles a config, so a `.ts` rule would have nothing to run it.
-  Its test drives the ESLint API over the repo's real config rather than
-  `RuleTester`, so a config that stopped switching it on fails too.
+- **Two rules are the repo's own**, both in `eslint-rules/` and registered as
+  one inline `boardwalk` plugin in the root config.
+  `boardwalk/tokens-only` fails a color, radius, border width, shadow depth or
+  font family written at a call site instead of read from a `packages/ui` token;
+  `boardwalk/body-text-floor` fails body text set below the smallest size the
+  surface it is read from allows. See Tokens only and Body Text Floor in
+  `docs/CONTEXT.md` for the boundary each draws and why they are two rules
+  rather than one with an option — the first never looks at a value and the
+  second looks at nothing else. They share the walk to a style object
+  (`style-objects.js`) and nothing above it.
+  Lint rules rather than scans of the sources because the questions are
+  syntactic (literal or reference? which number, after the constants and the
+  arithmetic?) and want a parser, and because reporting on the line is what
+  makes a styling rule land. They are plain CommonJS JavaScript, like
+  `eslint.config.js` that `require`s them: nothing in this repo compiles a
+  config, so a `.ts` rule would have nothing to run it — which is also why the
+  floors are written out in `eslint.config.js` rather than imported from
+  `@huddle/ui`, with a test pinning the two together.
+  Both tests drive the ESLint API over the repo's real config rather than
+  `RuleTester`, so a config that stopped switching a rule on fails too. That
+  matters most for the floor, which is half config: the rule knows what a floor
+  is and the config knows which files stand on a television.
 
 ### Testing
 - **Choice & strategy:**
