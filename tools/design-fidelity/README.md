@@ -255,3 +255,80 @@ The numbers measured off both files — the cubic fit for the slide, the scale
 curve for the spring, and the 10.00pt that still separates the greeting from the
 focused card's shadow at the spring's peak — are in the "two handoff animations"
 task in `docs/implementation-plan.md`.
+
+## The TV's remote surface
+
+Apple TV 4K (3rd generation), tvOS 26.5, Debug build at 3840×2160 (×3 of the
+1280×720 design stage), Metro serving the working tree, taken on 2026-08-02
+against the same cloud dev deployment. Room `JUKL`.
+
+| file | what it is |
+|---|---|
+| `18-tv-carousel-before-about.png` | §6's carousel with a seeded join, before the panel — the baseline `20` is measured against |
+| `19-tv-about-panel.png` | the About Panel over that carousel — the one control a remote may reach |
+| `20-tv-about-dismissed.png` | the same screen after the panel's twenty seconds ran out, with nothing touched |
+| `21-tv-carousel-focusable-probe.png` | **the rejected design**: the About item built as a focusable control on the screen |
+
+`18` is committed for one reason: it is the *before* half of `20`'s pixel
+comparison, and a measurement whose baseline is not in the repo cannot be
+re-run from it.
+
+**No remote was pressed, and could not be.** This is the honest limit of this
+capture set and it is stated first. `xcrun simctl` has no subcommand that sends
+a remote press — `simctl help` lists none, and `simctl io` records and
+screenshots only. The two routes that exist on this machine were both shut:
+driving the Simulator's own remote window needs Accessibility, and
+`osascript` is refused it (`System Events got an error: osascript is not
+allowed to send keystrokes. (1002)`); the sanctioned automation route,
+`XCUIRemote.press(.playPause)`, needs a UI-test target that this project's
+generated `ios/` does not have. So **`19` was taken by forcing the panel's own
+state** — `useState(false)` → `useState(true)` in `apps/tv/src/tv-about.tsx`,
+redrawn by fast refresh and reverted after — the same device precedent as
+`16`'s Registry patch. What the frame proves is what the panel *draws*, not
+that play/pause summons it. That half is argued from the source and from
+`react-native-tvos`'s own gesture recognisers, and is written up as inferred
+against the task in `docs/implementation-plan.md`.
+
+**What `20` does prove, by measurement.** It was taken twenty seconds after
+`19`, with nothing touched in between: the panel's own timeout took it away.
+Compared pixel for pixel against `18`, the frame from *before* the panel
+appeared, **0 of 8,294,400 pixels differ by more than 8/255** — an empty
+difference bounding box. Both files are in this directory, so that is a number
+anybody can re-derive:
+
+```python
+from PIL import Image, ImageChops
+a = Image.open('18-tv-carousel-before-about.png').convert('RGB')
+b = Image.open('20-tv-about-dismissed.png').convert('RGB')
+print(ImageChops.difference(a, b).getbbox())   # None
+```
+ The panel is absolutely positioned inside the Stage,
+so the screen it is summoned over does not move by a point, and the footer's
+10pt of daylight under the focused card's cobalt shadow is where the previous
+task left it.
+
+**The panel, measured off `19`** at ×3, one pixel column at a time, in design
+points, along the row through its middle:
+
+| | intended | measured |
+|---|---|---|
+| left ink border | 4px (`borderWidth.thick`) | **3.67** — a 4pt edge read across a card leaning -1.5° |
+| right edge, border + offset shadow | 4 + 6 (`shadowDepth.tvCard`) | **9.67** as one ink run |
+| card interior | 560 wide | **552.67** at this row, which is the same card seen at -1.5° |
+
+**`21` is the design that was not built**, kept because it is the argument. It
+is one `<Pressable>` added to §6's footer and reverted immediately; it is what
+an "About item" looks like if it is a control on the screen rather than a key
+the app listens for. Two things are visible in it and one is not:
+
+- The ABOUT pill lands in the footer row beside the page dots, crowding the
+  measured daylight the two previous tasks bought there — a control has to live
+  somewhere, and on a 720pt stage that is somewhere the design already spent.
+- It is on screen during the entire party, which is the opposite of Eyes up.
+- **Whether tvOS actually gave it focus was not observed.** React Native's
+  `Pressable` draws no focus ring of its own on tvOS, and with no way to press
+  a remote there was nothing to move focus *with*. That a `Pressable` is a
+  focus target on a television is taken from `react-native-tvos`, not from this
+  frame.
+
+`huddle/tv-remote-surface` is what now fails on the diff that produced `21`.

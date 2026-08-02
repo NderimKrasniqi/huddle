@@ -26,15 +26,26 @@ export default defineConfig({
           server: { deps: { inline: ['convex-test'] } },
         },
       },
-      // The one ESLint rule this repo writes for itself. Its own project because
-      // it lives beside `eslint.config.js` rather than in a workspace package,
-      // and because it drives ESLint over real source paths — no app, and no
+      // The ESLint rules this repo writes for itself. Their own project because
+      // they live beside `eslint.config.js` rather than in a workspace package,
+      // and because they drive ESLint over real source paths — no app, and no
       // react-native stub to get in the way of that.
+      //
+      // Every test here boots a real ESLint against the repo's real config and
+      // several of them lint real files, so seconds are the unit of work rather
+      // than milliseconds. Vitest's 5s default is set for pure functions and is
+      // the wrong number for this project: it was survivable while one file
+      // linted two screens, and the third rule's test — which lints every TV
+      // source there is — put the whole project's files in contention and made
+      // an existing test flake on a loaded machine. One timeout for the project
+      // rather than a number sprinkled per test, because the reason is the
+      // project's and not any one test's.
       {
         test: {
           name: 'lint-rules',
           include: ['eslint-rules/**/*.test.ts'],
           environment: 'node',
+          testTimeout: 60_000,
         },
       },
       {

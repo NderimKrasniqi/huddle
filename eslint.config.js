@@ -9,6 +9,7 @@ const expoConfig = require('eslint-config-expo/flat');
 
 const bodyTextFloor = require('./eslint-rules/boardwalk-body-text-floor');
 const tokensOnly = require('./eslint-rules/boardwalk-tokens-only');
+const tvRemoteSurface = require('./eslint-rules/huddle-tv-remote-surface');
 
 // One plugin object for both of Boardwalk's rules, shared by reference: two
 // config blocks that each defined a `boardwalk` plugin of their own would be
@@ -16,6 +17,16 @@ const tokensOnly = require('./eslint-rules/boardwalk-tokens-only');
 const boardwalk = {
   rules: { 'tokens-only': tokensOnly, 'body-text-floor': bodyTextFloor },
 };
+
+// A second plugin rather than a third Boardwalk rule. Boardwalk is the design
+// system — what a screen is drawn with — and `huddle` is the product: Eyes up is
+// a line in docs/project-scope.md, not in the handoff, and a television with a
+// focusable button on it would be in perfect Boardwalk style.
+const huddle = { rules: { 'tv-remote-surface': tvRemoteSurface } };
+
+// The one file allowed to hold the remote's key listener — see the rule, and
+// About Panel in docs/CONTEXT.md. Repo-relative, like every other path here.
+const THE_REMOTE_OWNER = 'apps/tv/src/tv-about.tsx';
 
 // Boardwalk's floors, as `packages/ui` holds them (`minBodyFontSize`). Written
 // out here because nothing in this repo compiles a config, so a CommonJS file
@@ -75,6 +86,20 @@ module.exports = defineConfig([
       'boardwalk/body-text-floor': ['error', { surface: 'tv', minBodyFontSize: MIN_BODY_FONT_SIZE }],
     },
   },
+  // Eyes up, as a gate: the television is the stage and the phones are the
+  // controllers, so nothing a TV screen draws may be reachable with the remote.
+  // Switched on for exactly the paths the TV floor above covers — the same two
+  // globs, because "the TV surface" is one answer and having it written twice
+  // differently is how one of them ends up wrong. The Controller is pointedly
+  // not among them: its screens are made of controls.
+  {
+    files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
+    plugins: { huddle },
+    rules: {
+      'huddle/tv-remote-surface': ['error', { remoteOwner: THE_REMOTE_OWNER }],
+    },
+  },
+
   {
     files: [
       'apps/controller/**/*.ts',

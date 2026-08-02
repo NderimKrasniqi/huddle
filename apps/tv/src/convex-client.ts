@@ -19,7 +19,11 @@ import { ConvexReactClient } from 'convex/react';
  * pairing screen turns into a line saying which setting is missing (see
  * `roomOpeningCaption`), and the log below for whoever installed the app.
  */
-const deploymentUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+/**
+ * Exported as well as used, because "which deployment is that television on?"
+ * is a question a party asks out loud and the About Panel is where it answers.
+ */
+export const deploymentUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
 export const convexClient = openConnection(deploymentUrl);
 

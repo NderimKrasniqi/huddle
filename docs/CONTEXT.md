@@ -29,7 +29,31 @@ working must add it here.
 - **Stage** — the TV app's fixed 1280×720 design surface (`TvStage`), scaled to
   whatever panel it runs on, so every measurement in TV screens is written
   exactly as the design handoff gives it. Distinct from the metaphorical "stage"
-  in Eyes up below.
+  in Eyes up below. It is also where the About Panel is mounted, which is what
+  puts that panel on every TV screen without any of them drawing it.
+- **Remote Surface** — everything on the television a remote can reach, which is
+  deliberately almost nothing: no TV screen holds a focusable view, so the
+  remote's directions and its OK button have nothing to land on. The whole
+  surface is one key — see About Panel. Enforced by `huddle/tv-remote-surface`,
+  which fails a focusable component, a focus or press prop, or a remote listener
+  written outside the one file the config names. "Requires zero remote
+  interaction" and "one remote-reachable control" are two claims about two
+  mechanisms — focus and a root key listener — and both are true at once.
+- **About Panel** — the TV's one remote-reachable control: a Boardwalk card
+  summoned by the remote's play/pause key, showing this build's Build Stamp. It
+  closes on the next press of anything — OK included, deliberately — and on its
+  own after twenty seconds; the auto-dismiss is what keeps Eyes up true, since a
+  panel needing a second press to dismiss is a state a guest can leave the room
+  in. Play/pause because a television running a party is not playing media, so
+  it is the button nobody presses by accident, and because the app binds it to
+  nothing else. **Not** because it is the only key that arrives: both platforms
+  deliver the directions and OK to the root view with nothing focused, and the
+  app simply answers one of them.
+- **Build Stamp** — what identifies the build a party is actually running, and
+  the whole content of the About Panel: version (marked when it is a debug
+  bundle), the Convex deployment as a host, and the installed Game Modules.
+  Version alone is not it — the questions a room asks are which deployment its
+  rooms live on and which games this television can draw.
 - **Join Screen** — the Controller's first screen: four Room Code cells that
   fill one letter at a time, a nickname field, and Join. Where a phone becomes
   a Player. Its "You're in" state is the same screen once the room has seated
@@ -588,7 +612,9 @@ working must add it here.
   not the screen's only size the handoff does not give, either: the HOST pill's
   13 was derived from that label's 13, and this is what broke the derivation.
 - **Eyes up** — the platform's core UX principle: the TV is the stage; phones
-  are minimal controllers; players' eyes belong on the TV and each other.
+  are minimal controllers; players' eyes belong on the TV and each other. It has
+  a gate of its own now, on the half of it that is checkable: see Remote
+  Surface.
 
 ## Naming Decisions
 - We say "Room", never "Lobby" for the entity; "lobby" is only the pre-game

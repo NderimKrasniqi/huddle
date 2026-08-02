@@ -2103,9 +2103,166 @@ green. The second half is now grouped with the phase's other human-only work.
   with 250 would pass on a screen that never mounted it. What is tested is the
   arithmetic either side — the spring conversion and the slide's direction — and
   the rest is the frames above.
-- [ ] TV app remote surface — AC: the TV app requires zero remote interaction
+- [x] TV app remote surface — AC: the TV app requires zero remote interaction
   after launch (room auto-creates; everything else is phone-driven); the only
   remote-reachable control is an "About/version" item.
+
+  **The two halves do not contradict each other, and the word that separates
+  them is *focus*.** Read plainly the criterion asks for a TV that needs no
+  remote *and* for one thing a remote can reach, which is why it is worth
+  stating the resolution before anything else: **nothing on any TV screen is
+  focusable**, so the remote's directions and its OK button have nothing to
+  land on — no highlight moves, nothing opens, and there is no state this
+  television waits in for a press. That is "requires zero remote interaction".
+  The About Panel is reached *without focus*, by the app listening at the root
+  for one key. Two claims, two mechanisms, both true at once.
+
+  **What was already there, checked rather than assumed.** Every TV screen this
+  app can show — the pairing screen, the carousel, a game's own screen and the
+  unknown-game screen — turned out to hold no `Pressable`, no `Touchable*`, no
+  `TextInput`, no scroll view and no `focusable` prop. So the first half of this
+  task was a *proof*, not a change: `apps/tv` and the Registry's `tv-*` screens
+  are made of `View`, `Text`, `Animated.*` and `StickerSurface`, which is a
+  `View`. The one thing that was missing is what fails when somebody adds the
+  first one.
+
+  **The mechanism is a third lint rule, `huddle/tv-remote-surface`**, in
+  `eslint-rules/` beside Boardwalk's two and switched on for exactly the paths
+  the TV body-text floor covers (`apps/tv/**`, `packages/games/*/src/tv-*.tsx`).
+  It fails a focusable component by the name it is drawn with, a focus or press
+  prop on any element (`focusable`, `hasTVPreferredFocus`, `nextFocus*`,
+  `onPress`, `onFocus`, …), and a remote listener written anywhere but the one
+  file the config names. It is a **second plugin** rather than a third Boardwalk
+  rule on purpose: Boardwalk is the design system, Eyes up is a line in
+  project-scope.md, and a television with a focusable button on it would be in
+  perfect Boardwalk style. Its test drives the real ESLint config over every TV
+  source file, which is the first half of the criterion written as an assertion
+  rather than as a claim; 14 tests, and the app lints clean.
+
+  Two decisions inside the rule worth recording. It keys on **names, not
+  provenance** — the reverse of `boardwalk/tokens-only`, which proves a value
+  came from `@huddle/ui` before allowing it — because a `Pressable` of
+  somebody's own making is exactly as focusable as React Native's, and the name
+  on the line is what a reviewer reads too. And it judges the remote's two names
+  **wherever they are written**, not only in an import: the first draft watched
+  import specifiers alone, and the About Panel's own final shape (below) walked
+  straight past it. A gate that the one permitted use can evade is not a gate.
+
+  **The About Panel opens on play/pause**, closes on the next press of
+  *anything* including play/pause again, and closes itself after twenty seconds
+  regardless. The auto-dismiss is not politeness — it is what keeps the first
+  half of the criterion true in the presence of the second: a panel needing a
+  second press to dismiss would be a state a guest could put the television into
+  and the room would then have to press its way out of. Play/pause because a
+  television running a party is not playing media, so it is the button nobody
+  reaches for by accident, and because this app binds it to nothing else; it is
+  `UIPressTypePlayPause` on the Siri remote and `KEYCODE_MEDIA_PLAY_PAUSE` on an
+  Android TV remote. `menu` was rejected because on tvOS it exits to the home
+  screen unless the app takes the key over, and an app that is hard to leave is
+  worse than one with no About Panel. Android reports a key twice (down, then
+  up) where tvOS reports a tap once on the way up, so the panel acts on the
+  release — without that, one Android play/pause would open the panel and close
+  it in the same instant.
+
+  **A correction, kept rather than quietly fixed, because of what it is about.**
+  The first version of this task claimed play/pause was *the only key that
+  reaches an app with nothing focused* — that on tvOS `select` came from a
+  focused view and so "the OK button emits nothing at all". That is wrong, and
+  the source contradicting it was in this repo's own `node_modules` the whole
+  time. `RCTTVRemoteHandler` really does install no `select` recogniser, which
+  is where the mistake came from; but tvOS constructs a **second** handler on
+  the next line of the same call site — `RCTRootView.m:104-105`, and
+  `RCTSurfaceHostingProxyRootView.mm:183-184` for the Fabric path this app
+  actually takes — and `RCTTVRemoteSelectHandler` attaches a `UIPressTypeSelect`
+  recogniser **to the root view**, posting `select` with `keyAction: 1` from
+  `sendSelectNotification` regardless of focus. Android never had the condition
+  at all: `ReactAndroidHWInputDeviceHelper.kt:60-62` maps `KEYCODE_DPAD_CENTER`,
+  `ENTER` and `SPACE` to `select` outright. The four directions likewise reach
+  the root on both platforms.
+  Nothing in the app changes — `aboutPanelAfter` returns the state it was given
+  for `select` when the panel is closed — and the criterion still holds, because
+  the criterion is about focus and not about which keys arrive. What changes is
+  the justification: play/pause is the key a party will not press by accident,
+  not the only key that lands. **It is worth recording that this happened on
+  this particular task.** The whole question here was whether reading source can
+  stand in for pressing a button, this was the single inference a reviewer could
+  independently check, and it was wrong — which is a fair prior for the two
+  inferences below that nobody has checked yet.
+  One consequence is now a decision rather than an accident: since every press
+  closes the panel and `select` does arrive, **OK closes the panel**. That is
+  wanted — OK is what somebody who wants it gone presses first, and a panel that
+  ignored the most obvious button on the remote would be worse.
+
+  **It shows three lines, because a version alone does not identify a build.**
+  VERSION (`0.1.0 (debug)` — the Expo config's, marked when it is a debug bundle
+  that dies with the laptop serving it), ROOM SERVER (the deployment host —
+  `colorful-viper-224.convex.cloud`, or `127.0.0.1:3210` for the local backend
+  this project spent a phase on, or "not configured"), and GAMES (the installed
+  Game Modules, which is the fact behind the unknown-game screen). Those are the
+  three questions a party actually asks of a television, and the second is the
+  one that has bitten this project before.
+
+  Drawn in Boardwalk, which draws no About screen: a card the system already
+  knows how to draw — surface fill, 4px ink border, a large card's radius, a TV
+  card's 6px offset shadow, a new `stickerTilt.aboutPanel` at -1.5° — with the
+  HOST pill's ink badge as its heading. No scrim behind it, because a dimmed
+  screen would need a colour Boardwalk does not hold and the hard offset shadow
+  is how this system separates a surface from what is under it. It is mounted on
+  `TvStage` rather than on any screen, which is what puts it on all four by
+  construction instead of by four call sites remembering to.
+
+  **Observed, on an Apple TV 4K at ×3** (frames 18–21 in
+  `tools/design-fidelity/`, and its README carries the numbers):
+  - The television ran a room from launch to a Host browsing a game with
+    **nothing touched at all** — it opened room `JUKL` by itself, a seeded join
+    moved it from the pairing screen to §6's carousel, and the footer named Ada.
+  - The panel draws as specified over the carousel, reading the real deployment
+    off the running bundle.
+  - **The auto-dismiss works and the panel moves nothing.** Twenty seconds after
+    it was drawn, with nothing touched, it was gone — and the carousel frame
+    after it dismissed differs from the frame before it appeared in **0 of
+    8,294,400 pixels**. The footer's 10pt of daylight is untouched.
+
+  **Not observed, and the reason is not a small one: no remote was pressed.**
+  `xcrun simctl` has no subcommand that sends a remote press. The two routes
+  that exist on this machine were both closed — driving the Simulator's remote
+  window needs Accessibility, which `osascript` was refused outright
+  (`osascript is not allowed to send keystrokes. (1002)`), and the sanctioned
+  route, `XCUIRemote.press(.playPause)`, needs a UI-test target this project's
+  generated `ios/` has never had. So frame `19` was taken by **forcing the
+  panel's state** (`useState(false)` → `true`, fast-refreshed, reverted), the
+  same precedent as `16`'s Registry patch. What is therefore **inferred rather
+  than seen**: that play/pause summons the panel, that a direction press changes
+  nothing on screen, and that a `Pressable` on a TV screen takes focus. The
+  first two rest on the recogniser and keycode wiring read in this repo's
+  `node_modules` — `RCTTVRemoteHandler.m` and `RCTTVRemoteSelectHandler.m` on
+  the tvOS side, `ReactAndroidHWInputDeviceHelper.kt` on Android — and on
+  `aboutPanelAfter`, which is unit-tested against every key those emit. The
+  third rests on `react-native-tvos`'s documented behaviour and on nothing in
+  this repo. Read the correction above before trusting any of them: one
+  inference of exactly this kind has already turned out wrong. Frame `21` shows what the rejected
+  design looks like — the About item built as a focusable control — and it is
+  worth its place for the design argument rather than the focus one: the pill
+  lands in the footer row beside the page dots, crowding daylight two previous
+  tasks bought, and it is on screen for the whole party.
+  **A tvOS UI-test target
+  is what would close all three**, and it is the first thing to do if this ever
+  needs to be more than an argument.
+
+  One dependency defect found and worked around rather than fixed:
+  **`react-native-tvos` types `useTVEventHandler` onto the wrong module under
+  pnpm.** It ships the TV APIs as a module augmentation of `react-native`, and
+  resolved from inside `.pnpm/react-native-tvos@…/node_modules/react-native-tvos/`
+  that bare name finds the *stock* React Native in the store — the copy
+  `packages/ui` keeps as a dev dependency — not the tvOS package the app aliases.
+  `tsc --traceResolution` says so in one line. Re-declaring it from a `.d.ts` in
+  the app does not work either, and that was **probed rather than assumed**: a
+  module augmentation may only patch existing declarations, so an added
+  `ViewProps` member merged and an added `const` stayed invisible. The hook is
+  therefore read off the `react-native` namespace and checked at runtime in
+  `tv-about.tsx` — the value is really there and only its declaration is missing
+  — with a no-op fallback, because a television that threw on `undefined(...)`
+  at launch is a black screen nobody in the room can fix.
 - [x] Convex cloud project (development ran on an anonymous local backend at
   127.0.0.1, which real devices cannot reach) — AC: a Convex cloud free-tier
   deployment exists; both apps point at it; TV and phone on real hardware
