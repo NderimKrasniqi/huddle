@@ -1,0 +1,65 @@
+A second card in the carousel, as a patch (Phase 5).
+
+The Registry ships one game, so `browsingGameIndex` has nothing to move
+between and the Card Transition — the 250ms ease-out §6 asks for — has nothing
+to animate on a shipped build. This installs a second entry (trivia's own
+module and logic under another id, title and key art) so the transition can be
+driven and watched.
+
+Both lists have to grow, and the server's is the one that is easy to forget:
+`browseGame` clamps the index against `GAME_LOGIC_REGISTRY` in the Convex
+deployment, so a patched client alone leaves the index pinned at 0 and the
+television perfectly still.
+
+    git apply tools/carousel-transition-repro.patch
+    (cd convex && npx convex dev --once)      # the clamp lives on the server
+    # drive it: convex run games:browseGame '{"sessionToken":"…","index":1}'
+    git apply -R tools/carousel-transition-repro.patch
+    (cd convex && npx convex dev --once)      # put the deployment back
+
+It is a patch and not a fixture because a second game is a Registry decision
+(docs/CONTEXT.md), and a hub that ships a fake one to make its animations
+visible is a hub lying about what it installs.
+
+diff --git a/packages/game-registry/src/logic.ts b/packages/game-registry/src/logic.ts
+index ef56b86..dd9051f 100644
+--- a/packages/game-registry/src/logic.ts
++++ b/packages/game-registry/src/logic.ts
+@@ -12,7 +12,12 @@ import { clampBrowsingIndex } from './browsing';
+  * Convex mutations that seed and reduce a game's state reach for this one, and
+  * a module's screens are React Native that has no business in a server bundle.
+  */
+-export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic];
++const secondCardLogic = {
++  ...triviaGameLogic,
++  metadata: { ...triviaGameLogic.metadata, id: 'second-card', title: 'SECOND CARD' },
++} as unknown as GameLogicRegistry[number];
++
++export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, secondCardLogic];
+ 
+ /**
+  * The installed game answering to `gameId`, or `undefined` if none does.
+diff --git a/packages/game-registry/src/registry.ts b/packages/game-registry/src/registry.ts
+index 9425458..907dc5c 100644
+--- a/packages/game-registry/src/registry.ts
++++ b/packages/game-registry/src/registry.ts
+@@ -14,4 +14,18 @@ import { triviaGameModule } from '@huddle/game-trivia';
+  * a hub that reads a registry of one and a hub that reads a registry of six are
+  * the same hub, and a hub written around the one game it has is not.
+  */
+-export const GAME_REGISTRY: GameRegistry = [triviaGameModule];
++const secondCard = {
++  ...triviaGameModule,
++  metadata: {
++    ...triviaGameModule.metadata,
++    id: 'second-card',
++    title: 'SECOND CARD',
++    keyArt: { color: 'cobalt' },
++    category: 'Instrument',
++  },
++} as const;
++
++export const GAME_REGISTRY: GameRegistry = [
++  triviaGameModule,
++  secondCard as unknown as GameRegistry[number],
++];

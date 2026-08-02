@@ -18,10 +18,12 @@ import {
 } from '@huddle/game-registry';
 import {
   borderWidth,
+  codeLetterBox,
   codeLetterColor,
   colors,
   fontFamily,
   letterSpacing,
+  minBodyFontSize,
   opacity,
   type PlayerColor,
   playerColor,
@@ -42,12 +44,21 @@ import {
   codeEntry,
   isCodeComplete,
   nicknameEntry,
+  shouldMoveToNickname,
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
-import { backToLobbyLabel, gameToStart, startControl } from '../src/game-controls';
+import {
+  backToLobbyLabel,
+  browsedGameMeta,
+  gameToStart,
+  NOW_VIEWING_CAPTION,
+  nowViewingLine,
+  startControl,
+} from '../src/game-controls';
 import { lifecycleFailureMessage } from '../src/game-rejection';
 import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
+import { rosterFooterLine, rosterRowSlot, rosterRowSpokenAs } from '../src/host-roster';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
 import { type ForegroundWatch, keepPresent } from '../src/presence';
@@ -173,7 +184,7 @@ function JoinForm({
     setFailure(undefined);
     // The last letter advances the way every letter before it did — off the
     // tiles and into the only field left to fill.
-    if (isCodeComplete(entered) && !isCodeComplete(code)) {
+    if (shouldMoveToNickname(code, entered)) {
       nameField.current?.focus();
     }
   }
@@ -304,6 +315,15 @@ function CodeTiles({
 }) {
   const [focused, setFocused] = useState(false);
   const activeCell = activeCodeCell(code);
+  const codeField = useRef<TextInput>(null);
+
+  // The visible tiles are deliberately not TextInputs. On iOS, moving from
+  // the nickname field back to an invisible TextInput is not reliable if the
+  // keyboard is already changing owners, so give the whole row an explicit
+  // focus target and ask for focus again after the tap has settled.
+  function focusCodeField() {
+    requestAnimationFrame(() => codeField.current?.focus());
+  }
 
   return (
     <View>
@@ -333,17 +353,26 @@ function CodeTiles({
         })}
       </View>
 
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={focusCodeField}
+        accessible={false}
+      />
+
       <TextInput
+        ref={codeField}
         style={styles.codeInput}
         value={code}
         onChangeText={onChange}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
+        onPressIn={focusCodeField}
         autoFocus={autoFocus}
         autoCapitalize="characters"
         autoComplete="off"
         autoCorrect={false}
         spellCheck={false}
+        showSoftInputOnFocus
         // No `maxLength`: the entry is what caps the code at four letters, and
         // it does it after discarding whatever is not a letter — so a pasted
         // " kwrd " still lands as KWRD instead of stopping at a space.
@@ -372,13 +401,12 @@ function BlinkingCaret() {
  * handoff's reconnect rule is that a rejoining phone lands on the screen its
  * room's phase calls for, and in the lobby that is this one.
  *
- * The Host gets the pill and a line saying the room is theirs, and nothing to
- * press: the handoff's host screen (§5) is a roster with a "Choose a game"
- * button, and both the roster and every control on it belong to the game
- * lifecycle in Phase 3. Until then this screen is where a player finds out they
- * are running the room — including when they become the host mid-party, which
- * is why the standing is read from a live query rather than from the answer
- * that seated them.
+ * The Host gets the pill, a line saying the room is theirs, and then the whole
+ * of §5 and §7 below it — the roster and the picker, which are sections of this
+ * screen rather than screens of their own (see `LobbyGameControls`). So this is
+ * where a player finds out they are running the room, including when they
+ * become the host mid-party, which is why the standing is read from a live
+ * query rather than from the answer that seated them.
  */
 function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   const { code, nickname } = session;
@@ -400,6 +428,15 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   // game, the roster on every join, claim and heartbeat.
   const running = useQuery(api.games.running, { roomId: session.roomId });
   const screen = runningGameScreen(running);
+
+  // The card the room is browsing. Held here rather than by the controls that
+  // draw it because §5's roster reads it too — its footer line only offers to
+  // start when the room in fact can, which is a question about the card — and
+  // the roster sits above the color picker while the controls sit below it. One
+  // subscription answering both is what keeps the two sections from disagreeing
+  // about whether the party can begin.
+  const browsingAt = useQuery(api.games.browsing, { roomId: session.roomId });
+  const browsing = carouselWindow(browsingAt ?? 0);
 
   if (screen.kind === 'unknownGame') {
     return (
@@ -450,6 +487,21 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
 
       <Text style={styles.title}>You’re in, {nickname}!</Text>
 
+      {/* Directly under the heading, where §5 draws it, and above the color
+          picker rather than below it: a color is claimed once and the roster is
+          re-read all through a lobby, so the section a Host keeps coming back
+          to is the one that should not need scrolling to. What it costs is
+          measured against the task in docs/implementation-plan.md. */}
+      {standing.youAreHost && browsing !== undefined ? (
+        <HostRoster
+          roster={roster}
+          // `startControl` is pure and is asked again by the control itself; the
+          // alternative is threading one answer through two sections that need
+          // different halves of it.
+          canStart={startControl(roster, browsing.index).enabled}
+        />
+      ) : null}
+
       <ColorPicker roster={roster} session={session} />
 
       <StickerSurface
@@ -462,7 +514,7 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
       </StickerSurface>
 
       <LobbyGameControls
-        roomId={session.roomId}
+        browsing={browsing}
         roster={roster}
         youAreHost={standing.youAreHost}
         settingsChoice={settingsChoice}
@@ -473,30 +525,30 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
 }
 
 /**
- * What the lobby offers below the status card: the picker for the Host, and for
- * everybody else the one thing they need to know about it.
+ * What the lobby offers below the status card: the Host's picker (handoff §7),
+ * and for everybody else the one thing they need to know about the room (§8).
  *
- * Both read the same `browsingGameIndex`, so "Now viewing Trivia" on a player's
+ * Both draw the card the room is browsing, which is why the screen above hands
+ * it down rather than each section asking: "Now viewing Trivia" on a player's
  * phone is the card the Host is looking at and the card the television is
- * showing — one subscription, three screens.
+ * showing — one subscription, three screens, and §5's roster above makes a
+ * fourth reader of it.
  */
 function LobbyGameControls({
-  roomId,
+  browsing,
   roster,
   youAreHost,
   settingsChoice,
   onChooseSetting,
 }: {
-  readonly roomId: PlayerSession['roomId'];
+  /** The card the room is on; `undefined` only in a build with no games. */
+  readonly browsing: CarouselWindow | undefined;
   readonly roster: readonly RosterSeat[];
   readonly youAreHost: boolean;
   /** The Host's settings, kept by the screen above — see `YoureInScreen`. */
   readonly settingsChoice: SettingsChoice | undefined;
   readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
 }) {
-  const browsingAt = useQuery(api.games.browsing, { roomId });
-  const browsing = carouselWindow(browsingAt ?? 0);
-
   if (browsing === undefined) {
     return null;
   }
@@ -510,6 +562,100 @@ function LobbyGameControls({
     />
   ) : (
     <NowViewing browsing={browsing} />
+  );
+}
+
+/**
+ * Phone — Host lobby (handoff §5): who is in the room, and whether the party
+ * can begin.
+ *
+ * It is the Host's screen because §5 is, and because the Host is the one with
+ * something to do about what it says: wait for the phone that has gone quiet,
+ * or start without them. It is also the only place left in Huddle that says a
+ * non-Host player is away between games — see `host-roster.ts`, which carries
+ * the reasoning, and the departures recorded against §5 in
+ * docs/implementation-plan.md.
+ *
+ * A section rather than the screen §5 draws. The Host already has §4's screen
+ * (their avatar, "You're in, <Name>!", the color picker) and §7's picker, and
+ * one screen cannot carry two headings — the same reason §8 is the tail of §4
+ * here. So §5's "Your room" is a section label in the vocabulary the rest of
+ * this screen labels its sections with.
+ *
+ * Where it sits is not cosmetic. §5 draws the rows immediately under the
+ * heading and they are drawn there, above §4's color picker, because a section
+ * the Host has to scroll to is a section a party does not read — and this one
+ * carries news nothing else in the product carries. It does not fit every room:
+ * from about the sixth player the last rows and the count line fall below the
+ * fold on a 402×874 phone, which is measured against the task in
+ * docs/implementation-plan.md rather than left to be discovered.
+ */
+function HostRoster({
+  roster,
+  canStart,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly canStart: boolean;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>YOUR ROOM</Text>
+
+      <View style={styles.roster}>
+        {roster.map((seat) => (
+          <RosterRow key={seat.playerId} seat={seat} />
+        ))}
+      </View>
+
+      <Text style={styles.aside}>{rosterFooterLine(roster.length, canStart)}</Text>
+    </View>
+  );
+}
+
+/**
+ * One player, as §5 draws a roster row: white, ink-bordered, on its own small
+ * offset shadow — a 40px avatar, the nickname, and the right slot.
+ *
+ * The away treatment is the one the away-badge task settled on for a listed
+ * player and the TV seats wore until the carousel took their screen: the face
+ * dims to Boardwalk's "present but unavailable" opacity, the dot mutes, and the
+ * nickname goes to muted text rather than dimming with the circle — 30% ink is
+ * not text any more. The dot's colour is the only part of that a screen reader
+ * cannot see, which is what `rosterRowSpokenAs` is for.
+ */
+function RosterRow({ seat }: { readonly seat: RosterSeat }) {
+  const slot = rosterRowSlot(seat);
+  const away = slot === 'away';
+  const face = playerFace(seat.color);
+
+  return (
+    // The label is on a wrapper rather than the surface: `StickerSurface` is a
+    // shadow and a face, and forwards no accessibility of its own.
+    <View accessible accessibilityLabel={rosterRowSpokenAs(seat)} style={styles.stretch}>
+      <StickerSurface
+        depth={shadowDepth.phoneSmall}
+        style={styles.rosterRow}
+        wrapperStyle={styles.stretch}
+      >
+        <View
+          style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
+        >
+          <Text style={[styles.rosterInitials, { color: face.monogram }]}>
+            {playerInitials(seat.nickname)}
+          </Text>
+        </View>
+
+        <Text style={[styles.rosterName, away && styles.rosterNameAway]} numberOfLines={1}>
+          {seat.nickname}
+        </Text>
+
+        {slot === 'host' ? (
+          <HostPill />
+        ) : (
+          <View style={[styles.statusDot, away && styles.statusDotAway]} />
+        )}
+      </StickerSurface>
+    </View>
   );
 }
 
@@ -563,14 +709,17 @@ function HostGamePicker({
         <RoundButton label="‹" enabled={back !== undefined} onPress={() => void browse(back)} />
         <View style={styles.pickedGame}>
           <Text style={styles.pickedTitle}>{browsing.focused.metadata.title}</Text>
-          <Text style={styles.pickedMeta}>
+          <Text style={styles.pickedMeta}>{browsedGameMeta(browsing.focused.metadata)}</Text>
+          <Text style={styles.pickedPosition}>
             {browsing.index + 1} / {browsing.total}
           </Text>
         </View>
         <RoundButton label="›" enabled={on !== undefined} onPress={() => void browse(on)} />
       </View>
 
-      <Text style={styles.pickerHint}>Swipe or tap arrows — the TV follows along</Text>
+      <Text style={[styles.aside, styles.asideCentred]}>
+        Swipe or tap arrows — the TV follows along
+      </Text>
 
       <SettingsControls
         schema={settingsSchema}
@@ -701,11 +850,29 @@ function SettingOption({
   );
 }
 
-/** Phone — Player waiting (handoff §8): the card the room is looking at. */
+/**
+ * Phone — Player waiting (handoff §8): the card the room is looking at, on the
+ * status card the handoff draws it on, and the line saying what this phone is
+ * about to become.
+ *
+ * It is the same Boardwalk surface as the lobby's own status card above it —
+ * white, green dot, one line — because it is the same kind of statement: the
+ * room is doing something and this phone is watching. The handoff draws §8 as a
+ * screen of its own; here it is the tail of §4, for the reason the Host's
+ * picker is (see `LobbyGameControls`).
+ */
 function NowViewing({ browsing }: { readonly browsing: CarouselWindow }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.nowViewing}>Now viewing {browsing.focused.metadata.title}</Text>
+      <StickerSurface
+        depth={shadowDepth.phoneCard}
+        style={styles.statusCard}
+        wrapperStyle={styles.stretch}
+      >
+        <View style={styles.statusDot} />
+        <Text style={styles.statusText}>{nowViewingLine(browsing.focused.metadata)}</Text>
+      </StickerSurface>
+      <Text style={[styles.aside, styles.asideCentred]}>{NOW_VIEWING_CAPTION}</Text>
     </View>
   );
 }
@@ -803,7 +970,7 @@ function StartGameControl({
         {({ pressed }) => (
           <StickerSurface
             depth={shadowDepth.phoneCard}
-            style={[styles.button, styles.startButton, pressed && styles.buttonPressed]}
+            style={[styles.button, pressed && styles.buttonPressed]}
             wrapperStyle={[styles.stretch, !control.enabled && styles.buttonUnavailable]}
           >
             <Text style={styles.buttonLabel}>
@@ -1255,11 +1422,20 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 10,
   },
+  // A measurement the handoff gives and this screen does not take.
+  // §2 writes this label at 13px, and the same document floors phone body text
+  // at 14 — and this is body text by that document's own naming, since its two
+  // type roles are Display (Bungee) and Body/UI (Space Grotesk 400–700) and
+  // this is the second one. A floor a single spec line can undercut is not a
+  // floor, so the floor wins and the 1px is spent. Written as the token rather
+  // than as `14` for exactly that reason: this element's handoff measurement is
+  // 13, so a bare 14 would read as one and hide which of the document's two
+  // lines won. The token says it, and moves if Boardwalk ever moves the floor.
   label: {
     alignSelf: 'flex-start',
     color: colors.mutedText,
     fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
+    fontSize: minBodyFontSize.phone,
     letterSpacing: letterSpacing.label,
   },
 
@@ -1289,6 +1465,13 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   tileLetter: {
+    // As on the TV's tiles, and for the same reason there: a Room Code letter
+    // takes its box from its cell, never from its own glyph. These cells cannot
+    // blank the way the TV's did — an empty one renders a caret or nothing at
+    // all, never an empty `<Text>`, so they never file the measurement that
+    // poisons an I — but the rule is the rule, and one of them keeping it by
+    // accident is not worth the difference.
+    ...codeLetterBox,
     fontFamily: fontFamily.display,
     fontSize: 36,
     // As on the TV's tiles: Bungee rides low in its own line box unless the
@@ -1396,8 +1579,14 @@ const styles = StyleSheet.create({
   hostPillText: {
     color: colors.surface,
     fontFamily: fontFamily.display,
-    // The size this screen already sets its uppercase labels at, so the pill
-    // reads as the code chip's sibling rather than shouting over it.
+    // The smallest type on the phone, so the pill reads as the code chip's
+    // sibling rather than shouting over it. This 13 was the field label's 13
+    // until the Body Text Floor took that one to 14; the handoff sizes this
+    // pill nowhere, so it now stands on its own rather than on a match. Outside
+    // the floor either way, because Bungee is Boardwalk's display face — and
+    // that exemption is not a claim anybody can make on a line: it costs an
+    // actual change of face, and Bungee's caps at 13 stand taller and heavier
+    // than Space Grotesk's do.
     fontSize: 13,
     letterSpacing: letterSpacing.label,
     // The label's letter spacing trails its last letter; pulling it back keeps
@@ -1442,8 +1631,11 @@ const styles = StyleSheet.create({
     lineHeight: 46,
   },
 
-  // Ten 44px circles (the handoff's size) wrapped into two rows of five: a row
-  // of ten would run 500px wide before any gap, on a screen that is 390.
+  // Ten 44px circles (the handoff's size), wrapped: a row of ten runs 500px
+  // before any gap, on a phone that is 390–430 wide. How many land on the first
+  // row is the phone's business and not a number written down here — an iPhone
+  // 17 takes six, a 390pt phone five — which is why they are centred rather
+  // than laid out in a grid a narrower screen would break.
   swatches: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1480,6 +1672,84 @@ const styles = StyleSheet.create({
     borderWidth: borderWidth.medium,
     borderRadius: radius.row,
   },
+  // The Host's roster (§5). The rows sit closer together than the screen's own
+  // 28pt section gap: they are one list, not four sections.
+  roster: {
+    alignSelf: 'stretch',
+    gap: 10,
+  },
+  // §5's row, measurement for measurement: white, 3px ink border, radius 16,
+  // and the 3px shadow its `StickerSurface` casts.
+  rosterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.input,
+  },
+  // §5's 40px avatar. Its ink is Boardwalk's thin border rather than the row's
+  // own 3px: a circle inside a bordered row drawn at the row's width would
+  // out-weigh the thing containing it, and 2px on 40px is the proportion the
+  // handoff's 4px on §4's 128px circle already sets.
+  rosterAvatar: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: colors.ink,
+    borderWidth: borderWidth.thin,
+    borderRadius: radius.pill,
+  },
+  rosterInitials: {
+    fontFamily: fontFamily.display,
+    // The proportion the TV's seat and §4's hero avatar both keep — a monogram
+    // about a third of the circle it sits in.
+    fontSize: 14,
+    // Bungee rides low in its own line box; pinning it centres the monogram.
+    lineHeight: 16,
+  },
+  // Boardwalk's treatment for something present but not available, which is
+  // exactly what an away player is. The circle only: see `rosterNameAway`.
+  rosterAway: {
+    opacity: opacity.unavailable,
+  },
+  rosterName: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+  },
+  // The nickname mutes rather than dimming with the circle — ink at 30% stops
+  // being text, which is the away-badge task's own measurement.
+  rosterNameAway: {
+    color: colors.mutedText,
+  },
+  // The muted half of the Status Dot (docs/CONTEXT.md): the room is not hearing
+  // from this phone.
+  statusDotAway: {
+    backgroundColor: colors.mutedBorder,
+  },
+  // Boardwalk's aside on a phone screen: something true about the room rather
+  // than something to press — §5's count line, §7's swipe hint, §8's caption.
+  // One entry rather than three near-copies, each of whose comment claimed to
+  // be a copy of one of the others.
+  aside: {
+    alignSelf: 'stretch',
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+  },
+  // §7's hint and §8's caption sit under centred content; §5's count line sits
+  // under a list of left-aligned rows and stays with them.
+  asideCentred: {
+    textAlign: 'center',
+  },
+
   pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1517,25 +1787,23 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     textAlign: 'center',
   },
+  // The handoff's "title + meta" on the selected-game card (§7): the same three
+  // facts the TV's carousel chips carry, on one line because a phone's card is
+  // as wide as a thumb and three chips would wrap into a paragraph.
   pickedMeta: {
     color: colors.mutedText,
     fontFamily: fontFamily.bodyMedium,
     fontSize: 15,
+    textAlign: 'center',
   },
-  pickerHint: {
-    alignSelf: 'stretch',
+  // Where in the list the card is — the handoff puts this between the arrows
+  // ("Prev/next round buttons 76px … with '2 / 3' between") but pins no weight
+  // for it, so it keeps the one it has always had rather than gaining emphasis
+  // this pass has no line to trace.
+  pickedPosition: {
     color: colors.mutedText,
     fontFamily: fontFamily.bodyMedium,
     fontSize: 15,
-    textAlign: 'center',
-  },
-  // What a player who is not running the room is told about the carousel: the
-  // card the Host is on, which is the card on the television.
-  nowViewing: {
-    color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
-    textAlign: 'center',
   },
   // The settings group sits between the picker and the start button, and is
   // left-aligned rather than centred like the picker above it: the chips wrap
@@ -1584,9 +1852,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
   },
 
-  startButton: {
-    backgroundColor: colors.green,
-  },
   // Boardwalk's "this ends something" surface, and the only punch button on a
   // phone screen — it is meant to be found, not stumbled into.
   backToLobbyButton: {

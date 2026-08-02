@@ -7,6 +7,7 @@ import {
   codeEntry,
   isCodeComplete,
   nicknameEntry,
+  shouldMoveToNickname,
 } from './join-entry';
 
 /**
@@ -73,6 +74,13 @@ describe('code entry', () => {
   it('accepts a whole code at once, as a scanned Join Link will hand it over', () => {
     expect(codeEntry('kwrd')).toBe('KWRD');
     expect(isCodeComplete(codeEntry(' kwrd '))).toBe(true);
+  });
+
+  it('moves focus to the nickname only when an edit completes the code', () => {
+    expect(shouldMoveToNickname('KWR', 'KWRD')).toBe(true);
+    expect(shouldMoveToNickname('', 'KWR')).toBe(false);
+    expect(shouldMoveToNickname('KWRD', 'KWRD')).toBe(false);
+    expect(shouldMoveToNickname('KWRD', 'KWR')).toBe(false);
   });
 });
 

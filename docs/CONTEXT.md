@@ -13,11 +13,12 @@ working must add it here.
 - **Room Code** — 4-letter code identifying a room, shown on the TV and
   encoded in its QR deep link (`huddle://join/<code>`). Minted server-side by
   `createRoom`, which redraws until the code is held by no live room; an
-  expired room's code returns to the pool. It is minted from A–Z *without I*
-  (`ROOM_CODE_MINT_ALPHABET`) — a mitigation for a tvOS tile that draws an I
-  blank, not a fix; the bug is open in the plan. A code may still be *read* as
-  any of A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`), because rooms minted before the I
-  came out are still live and still have to be typeable off a television.
+  expired room's code returns to the pool. It is minted and read as the full
+  A–Z (`ROOM_CODE_MINT_ALPHABET` and `ROOM_CODE_ACCEPTED_ALPHABET`). The
+  temporary no-I mitigation for a tvOS tile that drew an I blank ended on
+  2026-08-02: the tile itself is fixed (Code Letter Box), so the full alphabet
+  is safe to mint again. The accepted alphabet stays full A–Z so rooms minted
+  under the former mitigation are still typeable off a television.
 - **Join Link** — the `huddle://join/<code>` deep link that puts a phone into a
   room. The TV's QR encodes it; both apps register its scheme (`huddle`).
   Built by `roomJoinLink` in game-core, because it is protocol both sides share.
@@ -27,7 +28,31 @@ working must add it here.
 - **Stage** — the TV app's fixed 1280×720 design surface (`TvStage`), scaled to
   whatever panel it runs on, so every measurement in TV screens is written
   exactly as the design handoff gives it. Distinct from the metaphorical "stage"
-  in Eyes up below.
+  in Eyes up below. It is also where the About Panel is mounted, which is what
+  puts that panel on every TV screen without any of them drawing it.
+- **Remote Surface** — everything on the television a remote can reach, which is
+  deliberately almost nothing: no TV screen holds a focusable view, so the
+  remote's directions and its OK button have nothing to land on. The whole
+  surface is one key — see About Panel. Enforced by `huddle/tv-remote-surface`,
+  which fails a focusable component, a focus or press prop, or a remote listener
+  written outside the one file the config names. "Requires zero remote
+  interaction" and "one remote-reachable control" are two claims about two
+  mechanisms — focus and a root key listener — and both are true at once.
+- **About Panel** — the TV's one remote-reachable control: a Boardwalk card
+  summoned by the remote's play/pause key, showing this build's Build Stamp. It
+  closes on the next press of anything — OK included, deliberately — and on its
+  own after twenty seconds; the auto-dismiss is what keeps Eyes up true, since a
+  panel needing a second press to dismiss is a state a guest can leave the room
+  in. Play/pause because a television running a party is not playing media, so
+  it is the button nobody presses by accident, and because the app binds it to
+  nothing else. **Not** because it is the only key that arrives: both platforms
+  deliver the directions and OK to the root view with nothing focused, and the
+  app simply answers one of them.
+- **Build Stamp** — what identifies the build a party is actually running, and
+  the whole content of the About Panel: version (marked when it is a debug
+  bundle), the Convex deployment as a host, and the installed Game Modules.
+  Version alone is not it — the questions a room asks are which deployment its
+  rooms live on and which games this television can draw.
 - **Join Screen** — the Controller's first screen: four Room Code cells that
   fill one letter at a time, a nickname field, and Join. Where a phone becomes
   a Player. Its "You're in" state is the same screen once the room has seated
@@ -84,6 +109,24 @@ working must add it here.
 - **Carousel** — the TV's game browser (handoff §6): the focused card with its
   neighbours either side. It draws whatever `browsingGameIndex` names, so the
   television follows the room rather than any one phone.
+- **Carousel Footer Line** — the one sentence under the Carousel's page dots
+  (`carouselFooterLine`). §6 writes it as "<Host> is browsing on their phone",
+  and it is a *slot* rather than that sentence: for four seconds after a phone
+  lands it belongs to the newest Arrival ("<Nickname> just joined!", in punch),
+  then it goes back. That is where the handoff's JUST JOINED! pill ended up,
+  because the Carousel replaces the Pairing Screen at the first join and so has
+  no Seat to put one on — and as a line rather than a pill because a Boardwalk
+  pill's box would push the page dots back into the focused card's Offset
+  Shadow. The HOST and away pills are *not* here: the line already names the
+  Host, and the away pill is dropped outright — which means that between games
+  the television says nothing at all about a non-Host player being away, since
+  the Seat treatments that used to say it were unreachable once anybody was in
+  the room and have since been deleted; the Host Roster is where that went
+  instead. A greeting is spent
+  once and remembered by the screen, so a game
+  ending does not re-announce the arrival that preceded it; and because the
+  slot holds one sentence, two phones landing inside a single roster push greet
+  only the later of them.
 - **Browsing Game Index** — the room's position in the Registry's ordered list,
   which the Host's arrows move and the TV and every other phone follow. An index
   and not a game id, because browsing is a walk along an ordered list: "the third
@@ -104,16 +147,43 @@ working must add it here.
   them. Unique within a room ignoring case and surrounding spaces; `joinRoom`
   turns a repeat away with "name taken".
 - **Roster** — a room's players as the clients draw them: the TV's seats, and
-  (Phase 2) the Host's rows on their phone. Served in join order by the
-  `roster` query, which projects each player rather than handing over the row.
-- **Seat** — one place on the TV's roster: a dashed empty circle until a player
-  takes it, then their claimed color with their Bungee initials, and the
-  nickname under it. A room has ten of them (`ROOM_PLAYER_CAP` in game-core, the
-  plan's pinned cap); the pairing screen's footer always draws at least the
-  handoff's four. Because the circle's fill is now the player, everything else
-  a seat has to say rides its Offset Shadow — punch for Just Joined, tangerine
-  for the Host — which is the one channel none of the ten fills can collide
-  with. Both stand in for pills the §3 lobby card will draw properly.
+  the Host Roster on their phone. Served in join order by the `roster` query,
+  which projects each player rather than handing over the row.
+- **Host Roster** — the Roster as the Host's own phone draws it (handoff §5):
+  one row per player in join order, each carrying their avatar, their Nickname,
+  and a right slot that says exactly one thing about them — the HOST pill, or
+  their Status Dot. A *section* of the Host's lobby screen rather than a screen
+  of its own, since that phone already holds §4's and §7's, drawn directly
+  under §4's heading and above its color picker: a color is claimed once while
+  the roster is re-read all through a lobby, and a section the Host has to
+  scroll to is a section a party does not read. Even there it does not fit every
+  room — from the seventh player a row falls below the fold on a 402×874 phone,
+  which is measured against the task rather than assumed away. Its footer line
+  ("<n> players in — you can start anytime") drops the invitation on a room too
+  small for the game being browsed, rather than contradict the start control
+  further down the screen.
+  It is the only surface in Huddle that says a non-Host player is Away between
+  games: the TV's Seats said it until the Carousel took their screen, and the
+  Carousel Footer Line dropped it outright. That is why it exists, and it is
+  what decides the slot — the HOST pill wins over away-ness, which costs
+  nothing, because this roster is drawn on the Host's phone alone and the row
+  marked Host is the reader's own. The handoff's pink NEW! pill is the one pin
+  not drawn: an Arrival is already greeted on the television for the same four
+  seconds. Host-only, like §5 — a non-Host player still learns nothing about
+  anybody else's presence between games, which is accepted rather than solved.
+- **Seat** — one place on the TV's roster: a dashed empty circle, on the Pairing
+  Screen, saying there is room for you. A room has ten of them
+  (`ROOM_PLAYER_CAP` in game-core, the plan's pinned cap); the pairing screen's
+  footer always draws at least the handoff's four, and the line beside them
+  counts who is in.
+  **A Seat never holds a player**, which is the whole of what is left to know
+  about it: the Carousel replaces this screen at the first join, so a taken seat
+  cannot appear on a television. It could once — claimed-color fill, Bungee
+  initials, nickname, Status Dot, and an Offset Shadow in punch for Just Joined
+  or tangerine for the Host — and all of it was deleted rather than left drawing
+  for nobody, once the §3 lobby card those treatments were standing in for was
+  decided against. What the television says instead is the Carousel Footer Line;
+  what it no longer says about an away player is the Host Roster's job.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
   active player on disconnect. Plays games like any other player. Held as the
@@ -165,27 +235,76 @@ working must add it here.
   for the reason Away is one: a query re-runs when rows change, not when time
   passes. A Heartbeat inside the ten minutes saves the room without cancelling
   anything — the check re-reads the clock when it runs and leaves a room that
-  has been rejoined standing. A room nobody has joined never expires: nobody
-  left it, and its Room Code is on a screen somebody may be reading. Expiry is
-  what returns a Room Code to the pool, and what sends a phone whose party
-  ended back to the Join Screen, since its Session Token then answers nothing.
+  has been rejoined standing. It cannot reach an Unjoined Room at all — that
+  room has never heard a Heartbeat for the ten minutes to run from — which is
+  the other clock's job. Expiry is what returns a Room Code to the pool, and what
+  sends a phone whose party ended back to the Join Screen, since its Session
+  Token then answers nothing.
   The TV learns of it from the `stillOpen` subscription and opens a fresh room
   (`closeExpiredRoom`) rather than showing a code that belongs to no room.
-- **Status Dot** — the dot on a player's avatar saying whether the room is
-  hearing from their phone: Boardwalk green when it is, muted when they are
-  Away. Boardwalk's online dot (the handoff draws it on the Host's roster rows;
-  the TV's pairing seats are specified as avatar and nickname only), carried
-  onto every surface that lists players because presence is news wherever a
-  player is drawn.
-- **Just Joined** — the pink treatment a Seat wears for about four seconds after
-  its player appears (the handoff's avatar pop-in), then settles. A fact about
+- **Unjoined Room** — a room no phone has ever joined: a Pairing Screen on a
+  television, and the one room Room Expiry has no clock for. Deleted
+  `UNJOINED_ROOM_EXPIRY_MS` (two hours) after it was minted, by a check
+  `createRoom` arms at birth (`expireUnjoinedRoom`) — a single check, never
+  re-armed, because the only thing that can happen to such a room is a join, and
+  a join hands it to Room Expiry's clock permanently. Without it a launch that
+  opened a room and never got a join held its Room Code forever, and codes leaked
+  monotonically; a hundred rooms and no players on the dev deployment was that
+  and nothing else. Two hours because the only thing this clock can get wrong is
+  taking a code off a screen somebody is reading it from, and guests arrive
+  minutes after a television is switched on, never hours — and because the cost
+  of being wrong is only that the TV opens a fresh room and shows a fresh code.
+  A constant rather than a Heartbeat from the television, which would let the
+  room know its TV had gone: nothing but a phone speaks to a room, so a TV left
+  on and a TV switched off are the same silence and the only question is how long
+  to wait it out — and a TV beat would put a write every few seconds on the one
+  row every Game Event patches, to protect a case that a long enough window
+  already covers.
+- **Status Dot** — the dot beside a player saying whether the room is hearing
+  from their phone: Boardwalk green when it is, muted when they are Away.
+  Boardwalk's online dot, which the handoff draws on the Host Roster's rows and
+  which is drawn there — and there alone. A TV Seat carried one too, on the
+  grounds that presence is news wherever a player is drawn, until it turned out
+  no Seat is ever drawn with a player in it.
+  Colour is the whole of the difference between its two states, so any surface
+  drawing one owes a screen reader the word as well (`rosterRowSpokenAs`).
+- **Just Joined** — the four seconds of pink a player earns when the television
+  watches them land (the handoff's avatar pop-in), then settles. A fact about
   what one screen has watched, not about the room: the TV works it out by
   comparing the roster snapshots it has been pushed, since the room does not
   record when a seat was taken and a server timestamp would be read against a
   television's own clock. Seats already taken when a screen starts watching are
   greeted by nobody. Distinct from an **Arrival** (`noteArrivals`, `isArrival`),
   which is the permanent fact that this screen watched the seat being taken;
-  Just Joined is the four seconds that fact earns, counted by the seat itself.
+  Just Joined is the four seconds that fact earns. The Carousel Footer Line is
+  what spends them, on the newest Arrival, and the only thing that does: the
+  Seat wore this treatment first, but a Seat is never drawn with a player in it,
+  so the pink went where the party is looking.
+- **Pop-in** — the spring an arrival is announced with: scale 0.6 → 1 with a
+  slight overshoot over about 300ms (`motionDuration.popIn`, `popIn`), the
+  handoff's "avatar pop-in". It runs on the Carousel Footer Line's greeting and
+  nowhere else, because that line is what inherited the announcement when §3's
+  lobby card was dropped — the Seat the handoff's card became is never drawn
+  with a player in it, so a spring there would have run for nobody. So a
+  party sees a sentence spring in, not an avatar. The four seconds it introduces
+  are Just Joined's and are counted separately: the spring is how the greeting
+  arrives, not how long it stays.
+- **Card Transition** — the carousel sliding into place behind a Browsing Game
+  Index the room has moved: the cards start 96 design points off in the
+  direction the room browsed and ease out to 0 over 250ms
+  (`motionDuration.cardTransition`, `cardEntryOffset`). Transform only, so it
+  moves nothing the layout can see — the page dots' 10pt of daylight under the
+  focused card's shadow is a measured number that no animation may spend. A
+  build installing one game cannot show it, since a list of one has nowhere to
+  browse to.
+- **Motion tokens** — Boardwalk's two animation durations and the pop-in's shape
+  (`packages/ui/src/motion.ts`), read from the theme like a color and never
+  written at the call site. `boardwalk/tokens-only` does not cover them — that
+  rule reads the property names of a style object, and a duration is an argument
+  to an animation — so this one is a convention the tokens hold rather than a
+  gate. `springOf` is what makes a duration usable: React Native's spring takes
+  stiffness, damping and mass, so the token names the spring's natural *period*
+  and the conversion is the standard second-order one.
 - **Game Module** — a self-contained game implementation behind the game-core
   interface (`GameModule`: metadata, settings schema, initial-state factory,
   reducer, TV/Controller screens). Games are modules; the hub never contains
@@ -430,12 +549,94 @@ working must add it here.
   blurred (`Npx Npx 0 <color>`), ink by default and an accent color for
   highlights. Always produced by `offsetShadow()` in `packages/ui`; never
   `elevation` and never a blur.
+- **Code Letter Box** — Boardwalk's rule that a Room Code letter takes its box
+  from its tile and never from its own glyph (`codeLetterBox` in `packages/ui`:
+  `alignSelf: 'stretch'` with `textAlign: 'center'`). The tiles are fixed cells
+  with one centred letter, so measuring the glyph was always the longer route to
+  the same pixels — and on tvOS it was a broken one. React Native measures an
+  empty `<Text>` by substituting the placeholder string "I", zeroes that width
+  because the string was empty, and caches the result under the *placeholder's*
+  key — the attributed string, the paragraph attributes and the layout
+  constraints — so a real I arriving later under all three was laid out 0pt wide
+  and painted nothing. That was the blank Room Code tile.
 - **Color tokens** — Boardwalk names its palette by role, and code uses those
   names, never a generic color word: `canvas`, `screen`, `surface`, `ink`,
   `mutedText`, `mutedBorder`, `cobalt`, `tangerine`, `punch`, `green`,
   `yellow`.
+- **Tokens only** — Boardwalk's rule that a color, radius, border width, shadow
+  depth or font family is *read* from a `packages/ui` token and never written
+  where it is used — and the ESLint rule that fails when one is
+  (`boardwalk/tokens-only`, in `eslint-rules/`, run by `pnpm lint`). It looks
+  inside style contexts alone: a `StyleSheet.create` block, a `style`/`…Style`
+  prop, and the Offset Shadow's own two props on `StickerSurface` (`depth`,
+  `shadowColor`). That boundary is what keeps it off the domain — `color`
+  anywhere else in Huddle is a Player Color or Key Art *name*, which is protocol
+  and not a color at all, and `depth` is an ordinary word for a tree node's
+  nesting. It keys on the property's name and never on its value,
+  because the handoff's measurements are written as plain numbers throughout
+  (`width: 148`, `gap: 18`, `fontSize: 88`) and a rule that fired on those is a
+  rule somebody switches off; sizes, spacing, sticker tilts, opacity and letter
+  spacing are outside it. Two literals are the absence of a design value rather
+  than one of Boardwalk's and are admitted as such: `0` for a radius, a border
+  width or a depth, and `transparent` for a color. A name is followed to what it
+  holds rather than judged by where it was bound — `const ink = colors.ink` is
+  as tokenised as `colors.ink`, `const CARD_RADIUS = 24` is not, and `24 + 0` is
+  still 24. `fontWeight` is banned rather than tokenised: React
+  Native ignores a weight on a custom family, so a family token is the only way
+  to ask for bold and a weight at a call site is a face chosen by hand that never
+  arrives. Its sibling is the hex scan in `color-literals.test.ts` — that one
+  asks what a value *is*, anywhere in the repo; this one asks where it was
+  *written*.
+- **Body Text Floor** — the smallest body size Boardwalk allows on the surface
+  a screen is read from (`minBodyFontSize` in `packages/ui`: 18 on a television
+  read across a room, 14 on a phone read from the hand), and the ESLint rule
+  that fails when a screen goes under it (`boardwalk/body-text-floor`, in
+  `eslint-rules/`, run by `pnpm lint`). Tokens only's opposite half, and a
+  separate rule for exactly that reason: that one keys on a property's *name*
+  and never looks at a value, which is what lets the handoff's measurements stay
+  plain numbers; this one lets `fontSize` be any number and asks only which. The
+  two share the walk to a style object (`eslint-rules/style-objects.js`) and
+  nothing else.
+  Which files stand on which surface is the flat config's question rather than
+  the rule's, since that is what ESLint's `files` is for: `apps/tv` and a game
+  module's `tv-*` screens are the `tv` surface, `apps/controller` and a module's
+  `controller-*` screens the `phone`. Two config blocks and not one repo-wide
+  number, because 14 and 18 are two floors and not a lax one and a strict one.
+  `packages/ui` is on neither: a shared primitive stands on no one surface, so
+  it can be given no floor — none of them sets a `fontSize` today.
+  **Body text is everything with a `fontSize` except Boardwalk's display face** —
+  a style setting the theme's own `fontFamily.display` is drawing type (a
+  wordmark, a Room Code letter, a Countdown) and the handoff floors *body* text.
+  Its being the theme's is proved through imports and module aliases rather than
+  taken from the name's shape, to the same standard the floor itself is read by. A style naming no
+  family is body text, so the floor applies unless a screen says otherwise. A
+  size is followed the way Tokens only follows a colour, through a module-level
+  constant and through arithmetic, so `minBodyFontSize.tv - 2` is 16 and is
+  caught; and the whole `minBodyFontSize` table is handed to the rule rather
+  than the one number, so `minBodyFontSize.phone` standing on a television is a
+  size it can read rather than a reference it has to wave through. What it
+  cannot see is a `<Text>` carrying no size at all, which renders at React
+  Native's own 14px — every one on all four surfaces either sets a size or is
+  nested in a `<Text>` that does, and that is a fact established by reading
+  rather than by the gate. (On the phone that default *is* the floor, so only
+  the television is exposed by the gap.)
+  The display exemption is where the two surfaces differ in practice: on a
+  television nothing sits in it (the smallest display size there is 20), while
+  the phone's HOST pill is Bungee at 13, under the phone floor and outside it.
+  It is not an exemption anybody can claim on a line — it costs an actual change
+  of face, which is a visible one.
+  Where the handoff floors body text and also pins a particular element under
+  that floor, the floor wins: §2 writes the Controller's field label at 13px and
+  the same document's typography section floors phone body at 14, and a floor a
+  single spec line can undercut is not a floor. That label reads
+  `minBodyFontSize.phone` rather than `14` because 14 is the floor and not this
+  element's handoff measurement — a bare number there would read as one. It is
+  not the screen's only size the handoff does not give, either: the HOST pill's
+  13 was derived from that label's 13, and this is what broke the derivation.
 - **Eyes up** — the platform's core UX principle: the TV is the stage; phones
-  are minimal controllers; players' eyes belong on the TV and each other.
+  are minimal controllers; players' eyes belong on the TV and each other. It has
+  a gate of its own now, on the half of it that is checkable: see Remote
+  Surface.
 
 ## Naming Decisions
 - We say "Room", never "Lobby" for the entity; "lobby" is only the pre-game

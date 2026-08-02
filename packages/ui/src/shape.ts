@@ -70,6 +70,14 @@ export const stickerTilt = {
    */
   carouselSideCard: '-2deg',
   /**
+   * -1.5° — the TV's About Panel, which the handoff does not draw. The
+   * shallowest lean in the system, and it leans the opposite way from the QR
+   * card it is the same kind of object as: a panel summoned over a running
+   * screen should read as a sticker pressed on top of it and not as another
+   * card competing with what is underneath.
+   */
+  aboutPanel: '-1.5deg',
+  /**
    * 2° — trivia's countdown tile, the one number a whole room reads at once.
    * Its own entry rather than the status chip's, per this table's rule: two
    * surfaces sharing a number is how one of them ends up re-tilted by a change

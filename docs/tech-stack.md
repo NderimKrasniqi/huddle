@@ -26,6 +26,28 @@ packages for game modules and the protocol.
 - **Alternatives considered:** Flutter — TV support unofficial/weak; native
   per-platform — cost; web app — rejected earlier by product decision (native
   TV feel, and tvOS has no WebView anyway).
+- **Notes that cost time if forgotten:**
+  - **`react-native-tvos`'s TV-only types do not reach the TV app under pnpm.**
+    The library declares every TV API (`useTVEventHandler`, `TVEventControl`,
+    the `nextFocus*` props) as a module augmentation of `react-native`, and
+    resolved from inside
+    `.pnpm/react-native-tvos@…/node_modules/react-native-tvos/` that bare name
+    finds the *stock* React Native in the store — the copy `packages/ui` keeps
+    as a dev dependency — rather than the tvOS package `apps/tv` aliases. So the
+    augmentation lands on a module the TV app never reads, and the symptom is
+    `TS2305: Module '"react-native"' has no exported member 'useTVEventHandler'`
+    on a tree where nothing looks wrong. `tsc --traceResolution` shows it in one
+    line.
+  - **Re-declaring it in the app does not work, and it is not worth trying
+    again.** A `.d.ts` under `apps/tv` does resolve `react-native` to the right
+    package, but a module augmentation may only *patch existing* declarations —
+    it cannot introduce a new top-level export. Probed, not assumed: an added
+    `ViewProps` member merged and an added `const` stayed invisible. Worse, a
+    `declare module 'react-native'` in a file with no imports is not an
+    augmentation at all but an ambient declaration that replaces the module
+    workspace-wide, which breaks every `View` import in the repo at once.
+    `apps/tv/src/tv-about.tsx` reads the hook off the namespace with a runtime
+    check instead, and carries the whole story.
 
 ### Monorepo
 - **Choice:** pnpm workspaces: `apps/tv`, `apps/controller`, `convex/`,
@@ -140,6 +162,47 @@ packages for game modules and the protocol.
 - **Alternatives considered:** Biome — faster, but no Expo-maintained ruleset,
   so React Native correctness rules would be hand-assembled; per-package ESLint
   configs — five copies of the same file.
+- **Three rules are the repo's own**, all in `eslint-rules/`, registered as two
+  inline plugins in the root config. Two of them are `boardwalk`, the design
+  system; the third is `huddle`, the product.
+  `huddle/tv-remote-surface` fails a focusable component, a focus or press prop,
+  or a remote key listener written anywhere on the TV surface but the one file
+  the config names (`apps/tv/src/tv-about.tsx`). It is a second plugin rather
+  than a third Boardwalk rule because Eyes up is a line in project-scope.md and
+  not in the handoff — a television with a focusable button on it would be in
+  perfect Boardwalk style. It keys on *names* where its siblings key on
+  provenance: a `Pressable` of somebody's own making is exactly as focusable as
+  React Native's. It also judges the remote's two names wherever they are
+  written rather than only in an import, which is not fussiness — the About
+  Panel reads `useTVEventHandler` off the namespace (see below), and the first
+  draft of the rule waved that straight through. See Remote Surface and About
+  Panel in `docs/CONTEXT.md`.
+  The other two are `boardwalk`.
+  `boardwalk/tokens-only` fails a color, radius, border width, shadow depth or
+  font family written at a call site instead of read from a `packages/ui` token;
+  `boardwalk/body-text-floor` fails body text set below the smallest size the
+  surface it is read from allows. See Tokens only and Body Text Floor in
+  `docs/CONTEXT.md` for the boundary each draws and why they are two rules
+  rather than one with an option — the first never looks at a value and the
+  second looks at nothing else. They share the walk to a style object
+  (`style-objects.js`) and nothing above it.
+  Lint rules rather than scans of the sources because the questions are
+  syntactic (literal or reference? which number, after the constants and the
+  arithmetic?) and want a parser, and because reporting on the line is what
+  makes a styling rule land. They are plain CommonJS JavaScript, like
+  `eslint.config.js` that `require`s them: nothing in this repo compiles a
+  config, so a `.ts` rule would have nothing to run it — which is also why the
+  floors are written out in `eslint.config.js` rather than imported from
+  `@huddle/ui`, with a test pinning the two together.
+  Both tests drive the ESLint API over the repo's real config rather than
+  `RuleTester`, so a config that stopped switching a rule on fails too. That
+  matters most for the floor, which is half config: the rule knows what a floor
+  is, and the config knows which surface a file stands on — `apps/tv` and a
+  module's `tv-*` screens at 18, `apps/controller` and its `controller-*`
+  screens at 14, and no floor at all on a package both clients import. A
+  `RuleTester` would pin the arithmetic and stay green through a block pointed
+  at no files, or at the wrong surface's number, so the test lints every sample
+  at a real path and the paths are as much of the assertion as the code is.
 
 ### Testing
 - **Choice & strategy:**
@@ -173,6 +236,12 @@ packages for game modules and the protocol.
     check; the check that would actually catch it is bundling
     `convex/convex/games.ts` and grepping the output, which is a manual step at
     the moment and not a CI gate.
+  - **Vitest runs four projects**, not three: `convex`, `packages`, `apps`, and
+    `lint-rules`. The fourth holds the test for the repo's own ESLint rule,
+    which lives beside `eslint.config.js` rather than in a workspace package and
+    needs no `react-native` stub. `pnpm test:unit` names it explicitly
+    (`--project lint-rules --project packages --project apps`), so a project
+    added without touching that script would run locally and not in CI.
   - **CI:** GitHub Actions free tier (`.github/workflows/ci.yml`) — typecheck,
     lint, unit (`pnpm test:unit`), integration (`pnpm test:integration`) and
     pack validation (`pnpm validate:packs`) on every push, as five named steps

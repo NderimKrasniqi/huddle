@@ -2,6 +2,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   ROOM_CODE_LENGTH,
   ROOM_CODE_MINT_ALPHABET,
+  UNJOINED_ROOM_EXPIRY_MS,
 } from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
@@ -22,9 +23,9 @@ type Backend = ReturnType<typeof convexTest>;
  * The `Math.random()` draw that lands on a given letter, aimed at the middle of
  * the letter's slice of [0, 1) so no rounding can push it into a neighbour.
  *
- * A letter the alphabet does not hold — an I, since the tvOS mitigation — is a
- * test pinning a code `createRoom` could never mint, so it fails here rather
- * than pinning a different code than the one it names.
+ * A letter the alphabet does not hold is a test pinning a code `createRoom`
+ * could never mint, so it fails here rather than pinning a different code than
+ * the one it names.
  */
 function drawFor(letter: string): number {
   const index = ROOM_CODE_MINT_ALPHABET.indexOf(letter);
@@ -58,13 +59,28 @@ afterEach(() => {
 });
 
 describe('createRoom', () => {
+  it('can mint a Room Code holding I after the tvOS tile fix', async () => {
+    const t = convexTest(schema, modules);
+    pinDrawsTo('RIJI');
+
+    const room = await t.mutation(api.rooms.createRoom, {});
+
+    expect(room.code).toBe('RIJI');
+    // `convex-test` uses Math.random for its snapshot runner too; the pin is
+    // only for the Room Code draw, so release it before inspecting the row.
+    vi.restoreAllMocks();
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(room.roomId)).toMatchObject({ code: 'RIJI' });
+    });
+  });
+
   it('returns a room whose Room Code is minted from the minting alphabet', async () => {
     const t = convexTest(schema, modules);
 
     const room = await t.mutation(api.rooms.createRoom, {});
 
-    // Driven off the alphabet rather than /^[A-Z]{4}$/, which would pass just
-    // as happily on a code holding the I that tvOS draws blank.
+    // Driven off the product alphabet rather than /^[A-Z]{4}$/, so this test
+    // stays coupled to the Room Code decision, including the restored I.
     expect(room.code).toHaveLength(ROOM_CODE_LENGTH);
     expect([...room.code].every((letter) => ROOM_CODE_MINT_ALPHABET.includes(letter))).toBe(true);
     await t.run(async (ctx) => {
@@ -182,16 +198,24 @@ describe('room expiry', () => {
     return (await t.query(api.players.roster, { roomId })).length;
   }
 
-  /** Expiry checks the room still has scheduled against itself. */
+  /**
+   * Desertion checks the room still has scheduled against itself.
+   *
+   * Named as well as room-scoped, because two of the room's own checks take a
+   * `roomId`: this counts `expireRoom` and never the unjoined check every room
+   * carries from birth.
+   */
   async function pendingExpiryChecks(t: Backend, roomId: Id<'rooms'>): Promise<number> {
     return await t.run(async (ctx) => {
       const scheduled = await ctx.db.system.query('_scheduled_functions').collect();
 
       return scheduled.filter((job) => {
-        // The away checks scheduled against the same room carry a `playerId`
-        // and no `roomId`, so this counts exactly the expiry ones.
         const [args] = job.args as [{ readonly roomId?: Id<'rooms'> }];
-        return job.state.kind === 'pending' && args.roomId === roomId;
+        return (
+          job.state.kind === 'pending' &&
+          args.roomId === roomId &&
+          job.name.endsWith(':expireRoom')
+        );
       }).length;
     });
   }
@@ -245,19 +269,6 @@ describe('room expiry', () => {
     // Ten minutes after that one word, and not a moment sooner, the room goes.
     await elapse(t, 5 * 60_000);
     expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
-  });
-
-  it('leaves a room nobody has joined open for as long as the television is on', async () => {
-    const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
-
-    // A television switched on before the guests arrive. Nobody has left this
-    // room, so nothing has expired — and taking its code away while somebody
-    // across the room is reading it off the screen is the one thing expiry must
-    // never do.
-    await elapse(t, 3 * TEN_MINUTES);
-
-    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
   });
 
   it('gives an expired room’s code back to the pool', async () => {
@@ -335,5 +346,101 @@ describe('room expiry', () => {
     await elapse(t, 15_000);
 
     expect(await pendingExpiryChecks(t, room.roomId)).toBe(1);
+  });
+
+  /**
+   * The room's other clock: the one for a room that has never had a player, and
+   * so has no last heartbeat for the ten minutes above to run from.
+   *
+   * The first two are one sentence read in both directions: a television showing
+   * a Room Code to a party that has not arrived keeps it, and a room nobody ever
+   * arrives at is eventually let go. The fourth is the one a naive fix breaks —
+   * a party that *did* arrive keeps their room however late they walked in, and
+   * a Room Code taken off a working television mid-party is the failure this
+   * clock risks and the only one it can cause.
+   */
+  describe('a room nobody has joined', () => {
+    /** Every scheduled function this backend gave up on. */
+    async function failedChecks(t: Backend): Promise<readonly string[]> {
+      return await t.run(async (ctx) => {
+        const scheduled = await ctx.db.system.query('_scheduled_functions').collect();
+
+        return scheduled.filter((job) => job.state.kind === 'failed').map((job) => job.name);
+      });
+    }
+
+    it('keeps its Room Code for the whole of the window', async () => {
+      const t = convexTest(schema, modules);
+      const room = await t.mutation(api.rooms.createRoom, {});
+
+      // A television switched on before the guests arrive. Nobody has left this
+      // room, so nothing has expired — and taking its code away while somebody
+      // across the room is reading it off the screen is the one thing expiry
+      // must never do.
+      await elapse(t, UNJOINED_ROOM_EXPIRY_MS - 1_000);
+
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+    });
+
+    it('is deleted once the window passes with nobody in it', async () => {
+      const t = convexTest(schema, modules);
+      const room = await t.mutation(api.rooms.createRoom, {});
+
+      // The television was switched off, or the evening never happened. Either
+      // way the room has heard nothing from anybody since it was minted, and
+      // holding it forever is what leaked the codes.
+      await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
+
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+    });
+
+    it('gives its Room Code back to the pool', async () => {
+      const t = convexTest(schema, modules);
+      const room = await t.mutation(api.rooms.createRoom, {});
+
+      await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
+
+      // The point of the deletion rather than a side effect of it: `createRoom`
+      // draws against live rooms, so a room held forever is a code spent
+      // forever.
+      pinDrawsTo(room.code);
+      const next = await t.mutation(api.rooms.createRoom, {});
+      expect(next.code).toBe(room.code);
+    });
+
+    it('stops being one the moment somebody joins', async () => {
+      const t = convexTest(schema, modules);
+      const room = await t.mutation(api.rooms.createRoom, {});
+
+      // A television on all afternoon, and the guests walk in a minute before
+      // the window comes due — the latest they can, and so the tightest version
+      // of the case this clock must never break. The check fires in the middle
+      // of their evening and has to find nothing to do: a Room Code taken off a
+      // television mid-party is the failure a naive fix here produces.
+      await elapse(t, UNJOINED_ROOM_EXPIRY_MS - 60_000);
+      const ada = await seatPlayer(t, room.code, 'Ada');
+      await elapseBeating(t, [ada.sessionToken], 5 * 60_000);
+
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+      expect(await seatedCount(t, room.roomId)).toBe(1);
+    });
+
+    it('does not trip over a room its party has already ended', async () => {
+      const t = convexTest(schema, modules);
+      const room = await t.mutation(api.rooms.createRoom, {});
+      await seatPlayer(t, room.code, 'Ada');
+
+      // A party arrives, plays, and goes home: desertion takes the room long
+      // before the window comes due against it. The check that arrives afterwards
+      // finds no room at all, which is a state it has to survive rather than
+      // throw on — a failing scheduled function is invisible from every screen.
+      await elapse(t, TEN_MINUTES);
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+
+      await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
+
+      expect(await failedChecks(t)).toEqual([]);
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+    });
   });
 });

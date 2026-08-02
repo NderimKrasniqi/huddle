@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -60,7 +61,9 @@ describe('generateRoomCode', () => {
     ).toBe(true);
   });
 
-  it('can never draw an I, the letter a tvOS Room Code tile drops', () => {
+  it('can draw I after the Code Letter Box fixed the tvOS tile', () => {
+    expect(generateRoomCode(draws(...[...'RIJI'].map(drawFor)))).toBe('RIJI');
+
     // Every draw the generator can make, one per slice of [0, 1): what comes
     // back is the whole of what a Room Code can ever be spelled with.
     const everyLetter = new Set(
@@ -71,20 +74,26 @@ describe('generateRoomCode', () => {
     );
 
     expect(everyLetter).toEqual(new Set(ROOM_CODE_MINT_ALPHABET));
-    expect(everyLetter.has('I')).toBe(false);
+    expect(everyLetter.has('I')).toBe(true);
   });
 });
 
 describe('the alphabets', () => {
-  it('mints every letter but I', () => {
-    const notMinted = [...ROOM_CODE_ACCEPTED_ALPHABET].filter(
-      (letter) => !ROOM_CODE_MINT_ALPHABET.includes(letter),
-    );
-
-    expect(notMinted).toEqual(['I']);
+  it('mints the full A–Z after the rendering fix', () => {
+    expect(ROOM_CODE_MINT_ALPHABET).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
   });
 
-  it('still accepts an I, because rooms minted before the mitigation hold one', () => {
+  it('keeps accepting the full A–Z', () => {
     expect(ROOM_CODE_ACCEPTED_ALPHABET).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+  });
+
+  it('records the full-alphabet decision against the minting constant', () => {
+    const source = readFileSync(new URL('./room-code.ts', import.meta.url), 'utf8');
+    const decisionComment = source.match(
+      /(\/\*\*(?:(?!\/\*\*)[\s\S])*?\*\/)\s*export const ROOM_CODE_MINT_ALPHABET/,
+    )?.[1];
+
+    expect(decisionComment).toContain('full A–Z');
+    expect(decisionComment).toContain('Code Letter Box');
   });
 });

@@ -55,9 +55,9 @@ export {
   type RoomPhase,
   type RunningGame,
 } from './room-phase';
-// The third presence number, and the room's own: how long it outlives the last
-// phone it heard from.
-export { ROOM_EXPIRY_MS } from './room-expiry';
+// The room's own two: how long it outlives the last phone it heard from, and
+// how long it is held for a television whose party never arrived at all.
+export { ROOM_EXPIRY_MS, UNJOINED_ROOM_EXPIRY_MS } from './room-expiry';
 export {
   generateRoomCode,
   ROOM_CODE_ACCEPTED_ALPHABET,

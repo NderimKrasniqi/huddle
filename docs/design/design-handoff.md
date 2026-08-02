@@ -72,12 +72,33 @@ are iPhone-sized (~390×844).
 - Footer: 4 dashed avatar circles (72px) + "0 of 10 joined — waiting for
   players…" (22px muted). Once players are in (agreed during implementation)
   the line is the count alone — "4 of 10 joined": "waiting for players…" is
-  false at 10 of 10, and the seats that fill up claim the width it used. A
-  taken seat is its player's avatar circle with the nickname under it.
+  false at 10 of 10.
+  - **The seats never fill up**, which was not the intention and is the
+    consequence of §3 below: the television goes §1 → §6 at the first join, so
+    this footer is only ever drawn for an empty room. A taken seat was built —
+    the player's claimed color, Bungee initials, the nickname under it, the
+    online dot, and an offset shadow in pink for an arrival or tangerine for the
+    Host — and none of it could reach a screen, so it was deleted. What is left
+    is four dashed circles and, in practice, the empty room's own line: the
+    footer is still drawn *from* the roster, so the count reads what the room
+    holds, and what the room holds whenever this screen is up is nobody. Written
+    up against "Delete the TV's unreachable seat code" in
+    docs/implementation-plan.md.
 
 ### 2. Phone — Join
 - Logo (20px), heading "Join the room" (Bungee 28px).
 - ROOM CODE label (13px, letter-spacing 2px, bold, muted) + 4 tiles 64×80px:
+  - **13px is this document contradicting itself, and it is built at 14.** The
+    typography tokens above floor phone body at ≥14px, and this label is body
+    text by this document's own naming: the two type roles here are Display
+    (Bungee) and Body/UI (Space Grotesk 400–700), and a bold muted label is the
+    second. A floor a single per-screen line can undercut is not a floor, so the
+    floor wins and every field label on the Controller — ROOM CODE, YOUR NAME,
+    YOUR ROOM, YOUR COLOR, SETTINGS, YOU'RE THE HOST — PICK A GAME — is 14.
+    Measured on an iPhone 17 rather than argued: the longest of them grows from
+    256.7pt to 272.0pt in a 354pt column, so nothing wraps, and the roster below
+    moves down 1.33pt. Frames in `tools/design-fidelity/`; written up against
+    "Design fidelity — the phone's 14px floor" in docs/implementation-plan.md.
   filled letters use Bungee 36px in the letter's color; active cell has cobalt
   border + blinking cobalt caret; empty cell dashed border.
 - YOUR NAME label + white input (3px ink border, radius 16, shadow 3px).
@@ -92,6 +113,14 @@ are iPhone-sized (~390×844).
   claimed color + 3px ink border, Bungee initials), name (26px bold), status.
   Host card gets black HOST pill; newest joiner's card swaps border+shadow to
   pink with "JUST JOINED!" pill. One empty dashed slot with "+" and the code.
+  - Not built, and not coming: this screen has no room on a 720px stage beside
+    §6's 520px focused card, so the television goes §1 → §6 at the first join.
+    Of the three things this line draws, "JUST JOINED!" survives as the §6
+    footer's line for four seconds; the HOST pill is dropped because §6 names
+    the Host in words and a pill needs an avatar to label; and the away
+    treatment is dropped outright, so the television says nothing about a
+    non-Host player being away. Written up against the "TV carousel closes its
+    two departures" task in docs/implementation-plan.md.
 - Footer: "4 of 10 players in — <Host> can start whenever".
 
 ### 4. Phone — Player lobby ("You're in")
@@ -106,8 +135,32 @@ are iPhone-sized (~390×844).
 - Heading "Your room" + code chip. Roster rows: white, 3px ink border,
   radius 16, 3px shadow — 40px avatar, bold name, right slot = HOST pill /
   green online dot / pink NEW! pill (new row uses pink border+shadow).
+  - **Built**, and built because of §3: the television dropped the away
+    treatment outright, so these rows are the only surface left in Huddle that
+    says a non-Host player is away between games. They are a *section* of the
+    Host's screen rather than a screen — that phone already carries §4 and §7,
+    and one screen cannot have two headings, so "Your room" is a section label
+    over the rows, drawn directly under §4's heading and above its color picker
+    so the rows land without scrolling. Every measurement above is drawn as
+    pinned *except the new row's pink border and shadow*, which is the NEW! pill
+    below; all of them are measured back off
+    `tools/design-fidelity/10-phone-host-roster.png`.
+  - Two decisions about the right slot. **Away is the fourth thing it says**,
+    and it says it the way the system already decided a listed player's
+    presence reads: the Status Dot mutes, the face dims to 30%, the nickname
+    goes to muted text. **The pink NEW! pill is not drawn** — an arrival is
+    already greeted for four seconds on the television (§6), and the machinery
+    that stops such a greeting repeating after a game lives in the TV app.
+    Deferred rather than dropped; written up against the "§5's phone roster"
+    task in docs/implementation-plan.md.
 - Footer: "<n> players in — you can start anytime" + cobalt primary button
   "Choose a game →".
+  - The line is drawn, and drops "you can start anytime" when the room is too
+    small for the game it is on, the way §1's footer drops "waiting for
+    players…" once somebody is in: the start control immediately below already
+    says what the room is short of. The **button is not** drawn — the picker it
+    would open is on this same screen, and this screen's one cobalt primary
+    button is §7's "Start <Game>".
 
 ### 6. TV — Game carousel
 - Header as lobby. Center: 3 cards — side cards 300×400px at 50% opacity,
@@ -143,11 +196,36 @@ are iPhone-sized (~390×844).
 - **Avatar pop-in**: when a player joins, their TV card animates in (scale
   0.6→1 with slight overshoot, ~300ms spring) and holds the pink "JUST
   JOINED!" treatment for ~4s before settling to the normal style.
+  - **Built, on the surface that inherited what it announces.** The TV card is
+    §3's, which is never coming, and the pairing Seat that stood in for it is
+    only ever drawn for an *empty* room — so the spring as written has nothing
+    reachable to run on. What survived §3 is the greeting itself: §6's footer
+    line hands its four seconds to the newest arrival, in punch. That line is
+    what pops in — same event, same treatment, same 0.6→1 spring at the same
+    ~300ms — so the animation moved with the thing it was announcing rather
+    than being dropped or pinned to dead code. The four seconds were already
+    built and are unchanged. What a party sees is a *line* springing in under
+    the carousel, not a card: there is no avatar on this television to scale,
+    and the §4 phone avatar was considered and refused, because a spring there
+    would fire on a rejoin as well as an arrival and only its owner would see
+    it. Measured on the tvOS simulator against
+    `tools/design-fidelity/17-tv-arrival-pop-in.png`; written up against "the
+    two handoff animations" in docs/implementation-plan.md.
 - **Color picker**: tapping a swatch claims it (server-validated uniqueness);
   unavailable colors dimmed to 30%.
 - **Carousel sync**: host phone prev/next (or swipe) drives the TV carousel in
   real time via room state (`browsingGameIndex`); TV animates card transition
   ~250ms ease-out. Non-host phones live-update the "Now viewing X" label.
+  - **Built**: the row of cards slides 96pt in from the direction the room
+    browsed and eases out over 250ms as the new card lands. Transform only, so
+    it moves nothing Yoga can see and the footer's measured 10pt of daylight
+    (§6 above) is untouched. The travel distance is not this document's — it is
+    deliberately shorter than a card's pitch, because the row is centred and
+    changes width as neighbours appear at the ends of the Registry.
+    **A build that installs one game can never show it**: with a single card the
+    index has nowhere to go, so it was watched against a patched Registry of two
+    (`tools/carousel-transition-repro.patch`), which is also the honest reading
+    of the animation's status until a second game ships.
 - **Start**: only the Host sees/can tap "Select …"; on select, all clients
   transition to the game.
 - **Reconnect**: phones rejoining land on the phase-appropriate screen (room

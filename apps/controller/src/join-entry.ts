@@ -26,9 +26,9 @@ import {
  * what the server will look a room up by.
  *
  * The alphabet it filters by is what a code may *hold*
- * (`ROOM_CODE_ACCEPTED_ALPHABET`), not the shorter one new codes are minted
- * from: a room minted before the I came out is still on a television, and a
- * screen that swallowed its letter would leave that room unjoinable.
+ * (`ROOM_CODE_ACCEPTED_ALPHABET`), which is also the full alphabet new codes
+ * are minted from. Keeping this contract at A–Z means a pre-existing code from
+ * the former no-I mitigation remains typeable too.
  */
 export function codeEntry(typed: string): string {
   return [...typed.toUpperCase()]
@@ -49,6 +49,15 @@ export function activeCodeCell(entry: string): number | undefined {
 /** Whether the code has all its letters. */
 export function isCodeComplete(entry: string): boolean {
   return entry.length === ROOM_CODE_LENGTH;
+}
+
+/**
+ * Whether a code edit crossed the point at which the nickname should take the
+ * keyboard. Keeping this transition pure makes the screen's focus hand-off
+ * explicit without putting a TextInput ref in the join-entry rules.
+ */
+export function shouldMoveToNickname(previousCode: string, nextCode: string): boolean {
+  return !isCodeComplete(previousCode) && isCodeComplete(nextCode);
 }
 
 /**

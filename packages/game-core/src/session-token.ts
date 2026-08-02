@@ -21,7 +21,7 @@ export const SESSION_TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
  * Characters per Session Token. Twenty-four over a 36-character alphabet spans
  * 36^24 values, which is why `joinRoom` inserts a freshly drawn token without
  * first asking whether some other player holds it: the read-then-draw loop
- * `createRoom` needs for its 390,625 Room Codes would be checking against a
+ * `createRoom` needs for its 456,976 Room Codes would be checking against a
  * collision that does not happen.
  *
  * Read that as headroom against collisions, not as 124 bits of entropy. The
