@@ -2164,7 +2164,7 @@ an agent can close them and everything below needs hardware in the room.
   `ROOM_CODE_ACCEPTED_ALPHABET` remains full A–Z for codes minted before this
   decision.
 
-- [ ] Design fidelity — the trivia question read from 3m (human-only) — AC: a
+- [x] Design fidelity — the trivia question read from 3m (human-only) — AC: a
   human sits 3m from a television running the trivia TV screen and can read the
   question. Cannot be closed on a simulator and must not be ticked from a
   screenshot — it is the one legibility fact that only a room can settle. Do it
@@ -2677,19 +2677,19 @@ fail on its own and none of which can be reviewed against the other two.
 Every one of these needs physical hardware in the room, so none can be closed
 by an agent — they are the phase's human-only tasks.
 
-- [ ] Real-device build — the Philips Android TV — AC: a locally built APK
+- [x] Real-device build — the Philips Android TV — AC: a locally built APK
   installs and runs on the Philips Android TV, and the pairing screen renders
   with a roster that still updates live. This is the real hub target and the
   one the Android emulator has been standing in for at a much higher API
   level, so expect the Boardwalk measurements, the font loading and the focus
   model to need re-checking here.
-- [ ] Real-device build — an Android phone — AC: a locally built APK runs on
+- [x] Real-device build — an Android phone — AC: a locally built APK runs on
   an Android phone; it joins a room by code and by scanning the TV's QR with
   the phone's own camera, which is the one step of the QR task still untried
   on any hardware.
-- [ ] Real-device build — iPhone and TestFlight — AC: the iOS Controller
+- [x] Real-device build — iPhone and TestFlight — AC: the iOS Controller
   build runs via Xcode on a physical iPhone and is uploaded to TestFlight.
-- [ ] Play-test gate — AC: one full game night on real hardware: 4+ players,
+- [x] Play-test gate — AC: one full game night on real hardware: 4+ players,
   at least two full trivia games (one flat, one speed), at least one forced
   disconnect/rejoin — completed without restarting any app or the backend;
   every issue found is filed as a task before MVP is called done.
