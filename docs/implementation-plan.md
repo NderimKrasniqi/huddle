@@ -143,6 +143,14 @@ demoable by force-quitting apps mid-lobby.
   and the nickname goes to `colors.mutedText` rather than dimming — ink at 30%
   over the screen colour measures ~1.8:1, unreadable across a room. A real pill
   belongs with the §3 lobby cards when they land.
+  (Superseded on 2026-08-02: nothing lands. §3 is not coming, and the seat this
+  visual was drawn on is never drawn with a player in it — the carousel replaces
+  the pairing screen at the first join — so the dimmed avatar, the muted dot and
+  the muted nickname were deleted with the rest of `PlayerSeat`; see "Delete the
+  TV's unreachable seat code" below. Between games the television now says
+  nothing at all about a non-Host player being away, and the Host Roster on the
+  Host's phone is the only surface that does. The away *rules* are untouched, as
+  is away in-game: the excluded denominator and the scoreboard's muted row.)
 
   Verified against `convex-test` on a fake clock, and the schema is now pushed
   to the dev deployment — but the real scheduler's punctuality, which the 2s of
@@ -180,6 +188,12 @@ demoable by force-quitting apps mid-lobby.
   screen's cream, is the one channel none of the ten fills collide with. The
   HOST pill still waits on the §3 lobby card either way. There is nothing yet
   for a host to press.
+  (Superseded on 2026-08-02: it waits on nothing, and the tangerine shadow was
+  never on a television at all — the pairing seat that carried it is only ever
+  drawn empty, so it has been deleted; see "Delete the TV's unreachable seat
+  code" below. The role is said where it can be read: §6's footer line names the
+  Host on the TV, and the real HOST pill is the phone's, in §4's header and on
+  the §5 roster row.)
 
   Every client learns the host from the `roster` projection, which is why a
   handover reaches the new host's phone as a push rather than at its next
@@ -236,7 +250,9 @@ demoable by force-quitting apps mid-lobby.
   player's claimed color with Bungee initials; a newly joined player's seat
   carries the pink "JUST JOINED!" treatment for ~4s. The handoff draws both on
   the §3 lobby card, which does not exist yet — as with the HOST pill, they land
-  on the pairing seat that does, and move to the card when it arrives.
+  on the pairing seat that does, and move to the card when it arrives. (The card
+  never arrived and the pairing seat turned out to be undrawable; what became of
+  both is at the end of this task.)
 
   The pink is the accent Offset Shadow the handoff's signature rules already
   give that card (`8px 8px 0 #E23D6D`), not a pill: a pill wide enough to read
@@ -258,6 +274,16 @@ demoable by force-quitting apps mid-lobby.
   `useJustJoined` is a React hook with no test around it — a literal `400` in
   its place would leave the suite green. So the "~4s" rests on inspection plus
   the simulator run above, and would not survive a careless edit.
+  (Superseded on 2026-08-02: the seat this was built on is never drawn with a
+  player in it, and the colored circle, the initials, the nickname, the pink
+  arrival shadow and `useJustJoined` have all been deleted — see "Delete the TV's
+  unreachable seat code" below. What the pass observed was real and is history:
+  those frames were captured before the carousel took the screen. The AC's two
+  halves survive elsewhere and are still built — a player's claimed color with
+  their initials is drawn on their own phone (§4) and on the Host Roster (§5),
+  and the four seconds of pink are the Carousel Footer Line's greeting, counted
+  in `BrowsingLine` against the same `JUST_JOINED_MS`. The untested-timer caveat
+  moves with it unchanged.)
 - [x] TV room-open resilience — AC: a TV that launches before the backend is
   reachable recovers on its own, with no human touching the remote (the TV app
   is defined as untouched after launch); `openRoom` already clears its memo on
@@ -1344,7 +1370,9 @@ existed, and bundling it would have let a reviewer judge neither well.
     and `avatarAway`/`statusDotAway`/`seatNameAway` are **unreachable in any
     shipped build**. They are dead code, and the plan should stop citing them
     as live. Deleting them is not this task's business, but the next person to
-    touch that footer should know they are drawing for nobody.
+    touch that footer should know they are drawing for nobody. (Done on
+    2026-08-02, and the claim re-checked before the deletion: "Delete the TV's
+    unreachable seat code" below.)
   - **The away pill is dropped from the television**, against the away-badge
     task's own measurement (an "AWAY" pill at 18px overhangs a 72px seat) and
     §3, which is where its only home was. The carousel has no roster, so there
@@ -1355,8 +1383,10 @@ existed, and bundling it would have let a reviewer judge neither well.
     **Say the consequence plainly, because it is the decision and not a
     detail: after the first join the television says nothing at all about a
     non-Host player being away.** The dimmed face and muted dot that the
-    away-badge task argued for are on the pairing seats, and the pairing seats
+    away-badge task argued for were on the pairing seats, and the pairing seats
     are unreachable once anybody is in the room (see the HOST bullet above).
+    (Done on 2026-08-02: those unreachable treatments were deleted; this
+    sentence keeps the historical explanation.)
     Away-ness is still visible to the party on their own phones, and the
     scoreboard's muted row and the "n/m ANSWERED" denominator still exclude an
     away player *during* a game — Phase 4 watched both. What is gone is the
@@ -2047,7 +2077,7 @@ an agent can close them and everything below needs hardware in the room.
   matters more than the mechanism: the failure mode of a naive fix is deleting
   the code off a working television mid-party.
 
-- [ ] Delete the TV's unreachable seat code — AC: `PlayerSeat`,
+- [x] Delete the TV's unreachable seat code — AC: `PlayerSeat`,
   `seatHighlightShadow`, `seatHighlight` and the away styling are gone or
   demonstrably reachable, and no doc still defers anything to them.
 
@@ -2069,6 +2099,54 @@ an agent can close them and everything below needs hardware in the room.
   rather than a reason to keep it. Check what `apps/tv/src/just-joined.ts` is
   still for once the seats go; the carousel's greeting uses `Arrivals` and
   `isArrival`, so part of it stays and part may not.
+
+  Deleted on 2026-08-02, after re-checking the reachability claim rather than
+  taking it from the task above. The chain is three files long and each link is
+  read, not assumed: `GAME_REGISTRY` is `[triviaGameModule]`, one entry;
+  `clampBrowsingIndex(stored, 1)` returns 0 for every input including `null`,
+  `NaN`, negatives and infinities, so `carouselWindow` always indexes 0 and
+  never returns `undefined`; `OpenRoomStage` therefore takes the
+  `seats.length > 0 && browsing !== undefined` branch on the first roster push
+  that seats anybody, and `RosterFooter` is reached only with an empty roster.
+  Not even for a frame: `browsingAt` is its own subscription and does not wait
+  on the roster, so no render exists in which a seat is taken and the carousel
+  is not up. The premise is now pinned by a test rather than left to the next
+  reader — `carouselWindow` is asserted defined across the index range in
+  `packages/game-registry/src/carousel.test.ts`, and that test fails on an empty
+  Registry (checked by emptying it).
+
+  **Gone:** `PlayerSeat`, `seatHighlightShadow`, `useJustJoined` and the styles
+  only they used (`avatarTaken`, `avatarAway`, `avatarInitials`, `statusDot`,
+  `statusDotAway`, `seatName`, `seatNameAway`) from `apps/tv/app/index.tsx`;
+  `seatHighlight`, `SeatHighlight` and the now-unused `seat.statusDot` /
+  `seat.statusInset` measurements from `apps/tv/src/roster.ts`, with their four
+  tests. `RosterFooter` no longer takes `arrivals` and maps every slot to
+  `EmptySeat`. Four passing tests were deleted and one added: 542 → 539.
+
+  **Kept, deliberately.** The seat box still reserves the nickname's line
+  (`seat.nameGap` + `seat.nameLine`), though no nickname can be drawn: those 30
+  points are the footer's height, and the footer's height is where the row of
+  circles sits on `tools/design-fidelity/01-tv-pairing.png`. Reclaiming them
+  would move the code tiles and the seats on a screen this phase measured, which
+  is a design change rather than a deletion. The count line and
+  `footerSeatCount` are kept for the same reason they read from the roster at
+  all, and this is the one loose end: with the footer only ever drawn for an
+  empty room, `rosterFooterText` can only ever produce "0 of 10 joined — waiting
+  for players…" on a television, so its other branch and every seat count past
+  four are as unreachable as the seats were. They are §1's own copy with tests
+  behind them, and cutting them would rewrite what a pairing footer *is* rather
+  than delete a treatment — left for whoever decides whether that footer should
+  still be a roster at all.
+
+  `just-joined.ts` stays whole: `Arrivals`, `noteArrivals`, `isArrival` and
+  `JUST_JOINED_MS` are all still read by the carousel's greeting
+  (`carousel-footer.ts` and `BrowsingLine`). Only its docstring changed — it
+  named `PlayerSeat` as the thing counting the four seconds, and the counter is
+  now the footer line.
+
+  Typecheck, lint and `pnpm test:unit` green. Not seen on a simulator: nothing
+  here changes a pixel a shipped build can draw, which is the claim being made
+  and the reason the reachability chain above is written out in full.
 
 - [ ] Decide whether Room Codes take `I` back — AC: `ROOM_CODE_MINT_ALPHABET`
   either returns to the full A–Z or keeps its 25 letters with the reason

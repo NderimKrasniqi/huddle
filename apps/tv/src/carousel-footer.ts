@@ -11,9 +11,10 @@ import type { RosterSeat } from './roster';
  * JOINED!" pill — on the §3 TV lobby card, and §3 is never coming: the focused
  * carousel card is 520 of the stage's 720 points, so a roster of 216×264 player
  * cards cannot share the screen with it, and the television therefore goes
- * pairing → carousel the moment anybody joins. Everything the pairing seats say
- * — the Host's tangerine shadow, an arrival's punch one, an away player's
- * dimming — goes with that screen.
+ * pairing → carousel the moment anybody joins. Everything the pairing seats used
+ * to say — the Host's tangerine shadow, an arrival's punch one, an away player's
+ * dimming — went with that screen, and has since been deleted from it: those
+ * seats are only ever drawn empty.
  *
  * Two of those three survive the loss, because §6 already says them or the room
  * does not need them said (the reasoning is written out against the task in
@@ -103,9 +104,9 @@ export function arrivalToGreet(
  * somebody in it has a Host. The screen says what it is waiting for rather than
  * leaving a gap where a sentence goes.
  *
- * An arrival comes first even when it is the Host's own, the way it does on a
- * seat (`seatHighlight`): the room's first player is both at once, and for
- * those four seconds the news is that somebody is here at all.
+ * An arrival comes first even when it is the Host's own, the way it did on a
+ * seat while seats could say anything: the room's first player is both at once,
+ * and for those four seconds the news is that somebody is here at all.
  */
 export function carouselFooterLine(
   host: RosterSeat | undefined,

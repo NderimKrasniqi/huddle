@@ -4,23 +4,28 @@ import type { RosterSeat } from './roster';
  * "JUST JOINED!", as logic: which seats this television watched being taken.
  *
  * The handoff holds the treatment for about four seconds after a player lands
- * (its avatar pop-in) and then lets the seat settle, so the news is a fact about
+ * (its avatar pop-in) and then lets it settle, so the news is a fact about
  * *this screen's* last few seconds rather than anything the room holds. It is
  * worked out here, from the roster snapshots the subscription pushes, rather
  * than asked of the backend: the room has no reason to remember when a seat was
  * taken, and a `joinedAt` on the wire would be a server timestamp compared
  * against a television's own clock, which nothing in Huddle keeps in step.
  *
- * There is no clock here either, for the same kind of reason. The four seconds
- * are counted by the seat that is drawing them (`PlayerSeat`), from the moment
- * it appears; all this has to answer is whether a seat *appeared* — whether the
- * screen watched somebody take it, or merely found them sitting there. A seat
- * already taken when the screen started watching is news to nobody: a relaunched
- * app has not just seen ten people walk in, and a room coming back from a game
- * has not either.
+ * It outlived the seats it was written for. The pairing screen's taken seat is
+ * unreachable — the carousel replaces that screen at the first join — so what
+ * spends these four seconds is now the Carousel Footer Line's greeting
+ * (`carousel-footer.ts`, and `BrowsingLine` on the screen), which reads the same
+ * arrivals for the same reason.
+ *
+ * There is no clock here, for the same kind of reason there is no timestamp. The
+ * four seconds are counted by whatever is drawing them; all this has to answer
+ * is whether a seat *appeared* — whether the screen watched somebody take it, or
+ * merely found them sitting there. A seat already taken when the screen started
+ * watching is news to nobody: a relaunched app has not just seen ten people walk
+ * in, and a room coming back from a game has not either.
  */
 
-/** How long a new seat carries the pink treatment: the handoff's "~4s". */
+/** How long an arrival is greeted in pink: the handoff's "~4s". */
 export const JUST_JOINED_MS = 4_000;
 
 /**

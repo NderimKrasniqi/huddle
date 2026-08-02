@@ -46,6 +46,18 @@ describe('the carousel window', () => {
     // The screens draw page dots off this, so it has to be the clamped one.
     expect(carouselWindow(99)?.index).toBe(LAST);
   });
+
+  it('always has a card for a build that installs a game', () => {
+    // `undefined` is reserved for an empty Registry, which no build ships — and
+    // the TV app rests on that: the carousel wins the moment anybody joins, so
+    // the pairing screen's seats are only ever drawn empty and the treatments
+    // that needed a player were deleted. Pinned here rather than assumed, since
+    // this is the premise that deletion stands on ("Delete the TV's unreachable
+    // seat code" in docs/implementation-plan.md).
+    for (const index of [-3, 0, 1, LAST, 99, Number.NaN]) {
+      expect(carouselWindow(index)).toBeDefined();
+    }
+  });
 });
 
 describe('where the Host’s arrows go', () => {

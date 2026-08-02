@@ -119,8 +119,9 @@ describe('carouselFooterLine', () => {
   });
 
   it('greets the Host’s own arrival, since the room’s first player is both', () => {
-    // The same precedence `seatHighlight` gives a seat: for those four seconds
-    // the news is that somebody is here at all.
+    // The precedence the pairing seat used to give an arrival over the Host,
+    // and the only surface left that gives it: for those four seconds the news
+    // is that somebody is here at all.
     expect(carouselFooterLine(ada, ada)).toEqual({
       text: 'Ada just joined!',
       greeting: true,

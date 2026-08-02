@@ -17,8 +17,6 @@ import {
   minBodyFontSize,
   motionDuration,
   opacity,
-  playerFace,
-  playerInitials,
   popIn,
   radius,
   shadowDepth,
@@ -33,7 +31,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { cardEntryOffset } from '../src/card-transition';
 import { arrivalToGreet, carouselFooterLine } from '../src/carousel-footer';
-import { type Arrivals, isArrival, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
+import { type Arrivals, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
 import { closeExpiredRoom, deployed, openRoom } from '../src/room';
 import {
   keepOpeningRoom,
@@ -43,14 +41,7 @@ import {
   type RoomOpeningCaption,
   roomOpeningCaption,
 } from '../src/room-opening';
-import {
-  footerSeatCount,
-  type RosterSeat,
-  rosterFooterText,
-  seat,
-  seatHighlight,
-  type SeatHighlight,
-} from '../src/roster';
+import { footerSeatCount, type RosterSeat, rosterFooterText, seat } from '../src/roster';
 import { TvStage } from '../src/tv-stage';
 
 /** The QR's edge, per the handoff ("~196px QR"). */
@@ -64,41 +55,6 @@ const QR_SIZE = 196;
  * than an inferred one.
  */
 const FOOTER_TEXT_LINE = 28;
-
-/**
- * How a seat wears its news: Boardwalk's accent offset shadow, which is the
- * system's own way of highlighting a card — the handoff's signature rules give
- * the "JUST JOINED!" card an 8px shadow in punch pink.
- *
- * It rides the shadow rather than the border, where the §3 lobby card puts it,
- * because on a card the border is spare and on a seat it is not: the circle's
- * fill is the player's claimed color and its ink border is what makes the circle
- * a Boardwalk object at all. The shadow — offset outside the circle, onto the
- * screen's cream — is the one channel none of the ten fills can collide with.
- *
- * The Host's tangerine moves here from the circle's fill for that same reason.
- * The fill now says who a player is, and `tangerine` is one of the ten colors
- * anybody can claim, so a Host wearing it as a fill was about to be
- * indistinguishable from whoever claimed it. The palette still names tangerine
- * for the Host ("Brand accent, Host avatar").
- *
- * None of this reaches a television any more, and the honest thing is to say so
- * here rather than let the next reader work it out. The carousel takes over the
- * moment `seats.length > 0`, so a seat is only ever drawn for an *empty* room:
- * every highlight below, and the away treatment on `PlayerSeat`, is unreachable
- * in a shipped build. The §3 lobby card these were waiting for is not coming —
- * the decision, and what the television says instead, are written up against the
- * "TV carousel closes its two departures" task in docs/implementation-plan.md.
- */
-const seatHighlightShadow: Record<
-  SeatHighlight,
-  { readonly depth: number; readonly color: string }
-> = {
-  justJoined: { depth: shadowDepth.tvCardHighlight, color: colors.punch },
-  // A step shallower than an arrival, so a phone landing mid-party visibly
-  // lifts above the seat that is merely running the room.
-  host: { depth: shadowDepth.tvCard, color: colors.tangerine },
-};
 
 /**
  * The TV — Pairing screen (docs/design/design-handoff.md §1): the Room Code in
@@ -115,11 +71,7 @@ export default function TvPairingScreen() {
   // its empty seats from nothing.
   if (room === undefined) {
     return (
-      <PairingStage
-        opening={opening}
-        code={undefined}
-        footer={<RosterFooter roster={[]} arrivals={undefined} />}
-      />
+      <PairingStage opening={opening} code={undefined} footer={<RosterFooter roster={[]} />} />
     );
   }
 
@@ -198,7 +150,7 @@ function OpenRoomStage({
     <PairingStage
       opening={opening}
       code={room.code}
-      footer={<RosterFooter roster={seats} arrivals={arrivals} />}
+      footer={<RosterFooter roster={seats} />}
     />
   );
 }
@@ -617,49 +569,35 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
 }
 
 /**
- * The footer of a screen that has a room: its roster, live, and a watch on the
- * room itself in case it ends.
+ * The roster under the code: the handoff's dashed circles, and the count of who
+ * is in the room.
  *
- * Both subscriptions are here rather than on the screen because this is the only
- * part of it that is mounted once a room is open, which is what keeps them — and
- * the `ConvexProvider` they need above them — out of a launch that never reached
- * a backend.
- */
-/**
- * The roster under the code: a seat per player, and dashed empty ones for as
- * long as the room looks empty. A player's seat carries their nickname because
- * that is the point of the screen — the room's own name for them, up on the TV,
- * the moment their phone lands.
+ * Every seat it draws is empty, and that is the screen rather than a case it
+ * handles: the carousel replaces this footer the moment anybody joins
+ * (`CarouselStage` above, which a build with a game installed always reaches at
+ * `seats.length > 0`), so a seat with a player in it cannot be drawn on a
+ * television. The circles say "there is room for you", which is the whole job.
  *
- * An away player keeps their seat. Presence is drawn on it, never subtracted
- * from it: the room still holds their place, and the count under the seats is
- * how many phones are in the room, not how many are awake.
+ * It is still handed the roster and still counts off it rather than printing the
+ * empty room's line as a constant: the count is §1's own copy, tested at nought,
+ * one and ten (`rosterFooterText`), and a footer that had forgotten how to count
+ * would have to be taught again by whoever decides this screen should outlive
+ * the first join.
+ *
+ * The seat treatments that needed a player — the claimed-color circle, the
+ * initials, the nickname, the status dot, the arrival's punch shadow, the Host's
+ * tangerine one and the away dimming — were deleted rather than left drawing for
+ * nobody ("Delete the TV's unreachable seat code" in docs/implementation-plan.md).
+ * What the television says instead is §6's footer line, and what it no longer
+ * says about an away player is the Host Roster's job on the Host's own phone.
  */
-function RosterFooter({
-  roster,
-  arrivals,
-}: {
-  readonly roster: readonly RosterSeat[];
-  readonly arrivals: Arrivals | undefined;
-}) {
+function RosterFooter({ roster }: { readonly roster: readonly RosterSeat[] }) {
   return (
     <View style={styles.footer}>
       <View style={styles.seats}>
-        {Array.from({ length: footerSeatCount(roster.length) }, (_unused, position) => {
-          const player = roster[position];
-          return player === undefined ? (
-            <EmptySeat key={`empty-${position}`} />
-          ) : (
-            <PlayerSeat
-              // Keyed by the player, so a seat belongs to one of them for as
-              // long as they are in the room: it is the seat's own mount that
-              // starts the four seconds below.
-              key={player.playerId}
-              player={player}
-              arrived={arrivals !== undefined && isArrival(arrivals, player.playerId)}
-            />
-          );
-        })}
+        {Array.from({ length: footerSeatCount(roster.length) }, (_unused, position) => (
+          <EmptySeat key={position} />
+        ))}
       </View>
       <Text style={styles.footerText}>{rosterFooterText(roster.length)}</Text>
     </View>
@@ -671,71 +609,6 @@ function EmptySeat() {
   return (
     <View style={styles.seat}>
       <View style={[styles.avatar, styles.avatarEmpty]} />
-    </View>
-  );
-}
-
-/**
- * A player in their seat: their claimed color as the circle, their initials on
- * it in Bungee, the nickname under it, and the handoff's status dot on the
- * circle's edge — green while the room is hearing from their phone.
- *
- * The circle is a plain Boardwalk card face until a color is claimed, because a
- * player is seated the moment they join and the picker is the next screen their
- * phone shows them; `playerFace` is where both answers live, so a seat and the
- * hero avatar on that phone are never the same player in two different colors.
- * The monogram's own color comes with the fill: one ink cannot be read on all
- * ten (see `packages/ui/src/player-colors.ts`).
- *
- * Whatever else the seat has to say rides the offset shadow — an arrival in
- * punch pink, the Host in tangerine — for the reasons `seatHighlightShadow`
- * gives. An ordinary seat has no shadow at all, which is how the handoff draws
- * the footer's circles.
- *
- * Away dims the face the way Boardwalk dims anything present but not available,
- * and mutes the dot; the dimming goes on the wrapper so that a Host's shadow
- * fades with the circle it falls from. The nickname is not dimmed with them —
- * it is the one thing on the seat that has to be read from a sofa, and ink at
- * 30% over the screen color falls below any legible contrast. It takes the
- * muted text color the footer count is already set in, which says the same
- * thing and survives the room. The dot stays at full strength, because it is
- * what is doing the saying.
- */
-function PlayerSeat({
-  player,
-  arrived,
-}: {
-  readonly player: RosterSeat;
-  readonly arrived: boolean;
-}) {
-  const { nickname, away, color } = player;
-  const justJoined = useJustJoined(arrived);
-  const face = playerFace(color);
-  const highlight = seatHighlight(player, justJoined);
-  const news = highlight === undefined ? undefined : seatHighlightShadow[highlight];
-
-  return (
-    <View style={styles.seat}>
-      <StickerSurface
-        // No news, no shadow: a seat with nothing to say is the flat circle the
-        // handoff's pairing footer draws.
-        depth={news?.depth ?? 0}
-        shadowColor={news?.color}
-        style={[styles.avatar, styles.avatarTaken, { backgroundColor: face.fill }]}
-        wrapperStyle={away ? styles.avatarAway : undefined}
-      >
-        <Text style={[styles.avatarInitials, { color: face.monogram }]}>
-          {playerInitials(nickname)}
-        </Text>
-      </StickerSurface>
-      {/* A sibling of the circle rather than a child of it. The dot sits half
-          off the circle's edge, which is precisely the geometry a rounded
-          parent would be entitled to clip; positioning it against the seat
-          instead leaves nothing for either platform to decide. */}
-      <View style={[styles.statusDot, away && styles.statusDotAway]} />
-      <Text style={[styles.seatName, away && styles.seatNameAway]} numberOfLines={1}>
-        {nickname}
-      </Text>
     </View>
   );
 }
@@ -838,16 +711,6 @@ function useArrivals(roster: readonly RosterSeat[] | undefined): Arrivals | unde
 }
 
 /**
- * A seat's four seconds of "JUST JOINED!", counted from the moment the seat
- * appears — which is this component mounting, since the footer keys a seat to
- * its player.
- *
- * The screen holds a clock nobody has to agree with, so this is a timer rather
- * than a timestamp: a seat settles when nothing at all has happened, and nothing
- * happening is precisely what a live query never reports. A seat the screen did
- * not watch arrive never starts one.
- */
-/**
  * Which arrivals this television has already spent its four seconds on.
  *
  * Being an Arrival is permanent — a player stays one for as long as they stay
@@ -939,7 +802,8 @@ function useCardTransition(
  *
  * The handoff hangs it on the §3 lobby card of the player who just joined, and
  * §3 is never coming; the pairing Seat that stood in for that card is drawn only
- * for an *empty* room, so a spring there would run for nobody. What survived the
+ * for an *empty* room, so a spring there would have run for nobody — which is
+ * why that seat now draws nothing but a circle. What survived the
  * loss is the greeting itself: the Carousel Footer Line hands its four seconds
  * to the newest Arrival, in punch, on the screen the whole party is looking at.
  * That is what pops in — the same event, the same treatment, the same ~300ms,
@@ -983,22 +847,6 @@ function usePopIn(greeting: boolean): { readonly transform: readonly [{ scale: A
   }, [greeting, scale]);
 
   return { transform: [{ scale }] };
-}
-
-function useJustJoined(arrived: boolean): boolean {
-  const [settled, setSettled] = useState(false);
-
-  useEffect(() => {
-    if (!arrived) {
-      return undefined;
-    }
-
-    const timer = setTimeout(() => setSettled(true), JUST_JOINED_MS);
-
-    return () => clearTimeout(timer);
-  }, [arrived]);
-
-  return arrived && !settled;
 }
 
 // Every measurement below is the handoff's own, at its 1280×720 design size;
@@ -1333,11 +1181,15 @@ const styles = StyleSheet.create({
   },
   seat: {
     width: seat.size,
-    // The nickname's line is reserved on every seat, taken or not, so that the
-    // screen holds still when a phone joins mid-party.
+    // The circle keeps the box the handoff draws it in, reserved name line and
+    // all, though no seat can carry a nickname any more (see `RosterFooter`).
+    // That line is 30pt of the footer's height, and the footer's height is where
+    // this row of circles sits: giving it back to the centre group would move
+    // the code tiles and the seats off the frame the fidelity pass measured
+    // them on (`tools/design-fidelity/01-tv-pairing.png`), which is a screen
+    // change and not a deletion.
     height: seat.size + seat.nameGap + seat.nameLine,
     alignItems: 'center',
-    gap: seat.nameGap,
   },
   avatar: {
     width: seat.size,
@@ -1350,54 +1202,6 @@ const styles = StyleSheet.create({
   avatarEmpty: {
     borderColor: colors.mutedBorder,
     borderStyle: 'dashed',
-  },
-  // The fill is the player's claimed color and arrives with the seat; the ink
-  // border is what every Boardwalk surface is drawn with, and stays put through
-  // all ten of them.
-  avatarTaken: {
-    borderColor: colors.ink,
-  },
-  // Boardwalk's own treatment for something present but not available: the
-  // handoff dims a claimed color swatch to 30%, and an away player's face is
-  // the same kind of statement. Only the circle — text at this opacity stops
-  // being readable across a room, which is the one thing a TV cannot afford.
-  avatarAway: {
-    opacity: opacity.unavailable,
-  },
-  // On the lower-right of the avatar circle, where the handoff puts the online
-  // dot. Absolute against the seat, whose width is the circle's own.
-  statusDot: {
-    position: 'absolute',
-    top: seat.size - seat.statusDot - seat.statusInset,
-    right: seat.statusInset,
-    width: seat.statusDot,
-    height: seat.statusDot,
-    backgroundColor: colors.green,
-    borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
-    borderRadius: radius.pill,
-  },
-  statusDotAway: {
-    backgroundColor: colors.mutedBorder,
-  },
-  // The monogram's own color comes with the fill, from `playerFace`.
-  avatarInitials: {
-    fontFamily: fontFamily.display,
-    fontSize: 24,
-    // Bungee's line box runs taller than its caps; pinning it centres the
-    // monogram in the circle instead of letting it ride low.
-    lineHeight: 26,
-  },
-  seatName: {
-    color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
-    // A seat is only as wide as its avatar, so the nickname is set at the
-    // smallest size Boardwalk allows on a TV and clipped if it runs past.
-    fontSize: minBodyFontSize.tv,
-    lineHeight: seat.nameLine,
-  },
-  seatNameAway: {
-    color: colors.mutedText,
   },
   footerText: {
     color: colors.mutedText,

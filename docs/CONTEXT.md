@@ -121,8 +121,9 @@ working must add it here.
   Shadow. The HOST and away pills are *not* here: the line already names the
   Host, and the away pill is dropped outright — which means that between games
   the television says nothing at all about a non-Host player being away, since
-  the Seat treatments that used to say it are unreachable once anybody is in
-  the room; the Host Roster is where that went instead. A greeting is spent
+  the Seat treatments that used to say it were unreachable once anybody was in
+  the room and have since been deleted; the Host Roster is where that went
+  instead. A greeting is spent
   once and remembered by the screen, so a game
   ending does not re-announce the arrival that preceded it; and because the
   slot holds one sentence, two phones landing inside a single roster push greet
@@ -171,17 +172,19 @@ working must add it here.
   not drawn: an Arrival is already greeted on the television for the same four
   seconds. Host-only, like §5 — a non-Host player still learns nothing about
   anybody else's presence between games, which is accepted rather than solved.
-- **Seat** — one place on the TV's roster: a dashed empty circle until a player
-  takes it, then their claimed color with their Bungee initials, and the
-  nickname under it. A room has ten of them (`ROOM_PLAYER_CAP` in game-core, the
-  plan's pinned cap); the pairing screen's footer always draws at least the
-  handoff's four. Because the circle's fill is now the player, everything else
-  a seat has to say rides its Offset Shadow — punch for Just Joined, tangerine
-  for the Host — which is the one channel none of the ten fills can collide
-  with. Neither stands in for anything any more: the §3 lobby card that was to
-  draw them as pills is never coming, and the HOST pill and the away pill are
-  now decided against the television outright (see Carousel Footer Line, which
-  is where the third of them went).
+- **Seat** — one place on the TV's roster: a dashed empty circle, on the Pairing
+  Screen, saying there is room for you. A room has ten of them
+  (`ROOM_PLAYER_CAP` in game-core, the plan's pinned cap); the pairing screen's
+  footer always draws at least the handoff's four, and the line beside them
+  counts who is in.
+  **A Seat never holds a player**, which is the whole of what is left to know
+  about it: the Carousel replaces this screen at the first join, so a taken seat
+  cannot appear on a television. It could once — claimed-color fill, Bungee
+  initials, nickname, Status Dot, and an Offset Shadow in punch for Just Joined
+  or tangerine for the Host — and all of it was deleted rather than left drawing
+  for nobody, once the §3 lobby card those treatments were standing in for was
+  decided against. What the television says instead is the Carousel Footer Line;
+  what it no longer says about an away player is the Host Roster's job.
 - **Host** — the player with room-control privileges (pick game, settings,
   start/skip/end). First to join; auto-transfers to the longest-connected
   active player on disconnect. Plays games like any other player. Held as the
@@ -261,28 +264,29 @@ working must add it here.
 - **Status Dot** — the dot beside a player saying whether the room is hearing
   from their phone: Boardwalk green when it is, muted when they are Away.
   Boardwalk's online dot, which the handoff draws on the Host Roster's rows and
-  which is drawn there; the TV's pairing Seats specify avatar and nickname only
-  and carry it anyway, because presence is news wherever a player is drawn.
+  which is drawn there — and there alone. A TV Seat carried one too, on the
+  grounds that presence is news wherever a player is drawn, until it turned out
+  no Seat is ever drawn with a player in it.
   Colour is the whole of the difference between its two states, so any surface
   drawing one owes a screen reader the word as well (`rosterRowSpokenAs`).
-- **Just Joined** — the pink treatment a Seat wears for about four seconds after
-  its player appears (the handoff's avatar pop-in), then settles. A fact about
+- **Just Joined** — the four seconds of pink a player earns when the television
+  watches them land (the handoff's avatar pop-in), then settles. A fact about
   what one screen has watched, not about the room: the TV works it out by
   comparing the roster snapshots it has been pushed, since the room does not
   record when a seat was taken and a server timestamp would be read against a
   television's own clock. Seats already taken when a screen starts watching are
   greeted by nobody. Distinct from an **Arrival** (`noteArrivals`, `isArrival`),
   which is the permanent fact that this screen watched the seat being taken;
-  Just Joined is the four seconds that fact earns, counted by the seat itself.
-  A seat is not the only thing that spends them: the Carousel Footer Line spends
-  the same four on the newest Arrival, counted the same way, because after the
-  first join the television has no seats left to draw.
+  Just Joined is the four seconds that fact earns. The Carousel Footer Line is
+  what spends them, on the newest Arrival, and the only thing that does: the
+  Seat wore this treatment first, but a Seat is never drawn with a player in it,
+  so the pink went where the party is looking.
 - **Pop-in** — the spring an arrival is announced with: scale 0.6 → 1 with a
   slight overshoot over about 300ms (`motionDuration.popIn`, `popIn`), the
   handoff's "avatar pop-in". It runs on the Carousel Footer Line's greeting and
   nowhere else, because that line is what inherited the announcement when §3's
-  lobby card was dropped — the Seat the handoff's card became is unreachable
-  once anybody is in the room, and a spring there would run for nobody. So a
+  lobby card was dropped — the Seat the handoff's card became is never drawn
+  with a player in it, so a spring there would have run for nobody. So a
   party sees a sentence spring in, not an avatar. The four seconds it introduces
   are Just Joined's and are counted separately: the spring is how the greeting
   arrives, not how long it stays.
