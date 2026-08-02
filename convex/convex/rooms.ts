@@ -18,9 +18,9 @@ export type RoomCodeExhausted = {
 };
 
 /**
- * How many codes `createRoom` draws before it gives up. With 456,976 codes and
+ * How many codes `createRoom` draws before it gives up. With 390,625 codes and
  * a scope of roughly ten concurrent rooms, a single collision is already a
- * ~1-in-45,000 event, so ten collisions in a row means something is wrong
+ * ~1-in-39,000 event, so ten collisions in a row means something is wrong
  * (the alphabet, the randomness, or a table that never expires rooms) and the
  * TV should hear about it instead of the mutation spinning.
  */

@@ -23,7 +23,9 @@ tech-stack.md; device-visible criteria verified manually on dev builds). A
 phase is done when its slice works end-to-end and is tested.
 
 ## Pinned Defaults
-4-letter room codes (A–Z) · 10-player cap (per-game property; trivia: 2–10) ·
+4-letter room codes, minted from A–Z without I and accepted as any of A–Z
+(the tvOS blank-tile mitigation below; codes minted before it still hold an
+I) · 10-player cap (per-game property; trivia: 2–10) ·
 20s question timer · 10-minute room expiry · answers lock on tap · speed
 scoring `100 + round(100 × secondsRemaining / 20)`.
 
@@ -784,8 +786,109 @@ Goal: the app matches the Boardwalk design on real hardware; a full game night
 runs without touching a dev tool.
 - [ ] A Room Code tile sometimes draws empty on tvOS — AC: reproduce a blank
   tile deliberately, then prove the fix by an A/B of the identical crop rather
-  than by one screenshot that looks right. **Do not act on the "letter I"
-  theory below — it was tested and is wrong.**
+  than by one screenshot that looks right.
+
+  **A mitigation landed on 2026-07-31; the AC above is not met and this task
+  stays open.** `ROOM_CODE_ALPHABET` was dropped to A–Z without I and renamed
+  `ROOM_CODE_MINT_ALPHABET` (`packages/game-core/src/room-code.ts`), so no
+  newly minted code can contain the failing glyph. What it does *not* buy: the
+  rendering fault is untouched and its mechanism still unknown, so a code
+  minted before the change still holds an I and its tile still blanks, and the
+  next letter to hit the same fault would not be caught by this. It is a
+  narrower alphabet, not a fix, and the A/B the AC asks for is still owed by
+  whoever finds the mechanism.
+
+  Reading a code stayed at the full A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`, which
+  is what the join screen's `codeEntry` filters by) on purpose: rooms minted
+  before the change are live and on a television, and a phone that swallowed
+  the I they can see would turn a rendering mitigation into a room nobody can
+  join. `joinRoom`'s `normalizeRoomCode` never checked an alphabet and still
+  does not.
+
+  **It now reproduces on demand, and the "letter I" reading is back — read
+  this before the 2026-07-30 account below, which the warning at the top of
+  this task used to contradict.**
+
+  On 2026-07-31, 28 instrumented cold launches on the tvOS simulator against
+  the cloud dev deployment, real product path, random server-dealt codes:
+
+  | | code contains an I | no I |
+  |---|---|---|
+  | a tile blanked | **5** | 0 |
+  | every tile drew | 0 | **23** |
+
+  The five were `SHIN` (pos 2), `IQYV` (pos 0), `IJUN` (pos 0), `IEAN` (pos 0)
+  and `QIYB` (pos 1) — five positions across two accent runs, and in every one
+  the blank tile is exactly where the I is. No tile holding any other letter
+  has ever blanked, in 28 launches or in any earlier session.
+
+  **How this squares with the disproof.** The earlier experiment — a bare `I`
+  in all four tiles drawing correctly on five consecutive launches — disproves
+  "I *always* blanks". It does not touch "*only* I blanks", which is what every
+  observation before and since is consistent with, including this plan's own
+  note that the clean eleven-launch run "happened to contain no I". The two
+  readings were conflated and the task was warned off the live hypothesis. The
+  honest statement is: **the failure is specific to the letter I and is not
+  deterministic** — a hardcoded I has drawn fine, while a server-dealt I has
+  now failed 5 times out of 5.
+
+  **The instrument.** Cold launch, wait for a *stable* frame, then measure ink
+  coverage inside each of the four tile cards: a drawn glyph covers ~16%, an
+  empty card keeps only its ~3% border. Calibrated against a real frame and a
+  synthetically blanked copy so it is known to fire. Two traps it must handle,
+  both of which produced false positives first time round: a dev build takes
+  longer than 9s to fetch its bundle, and a frame where *all four* tiles are
+  empty is the room code not having arrived yet — the QR card is empty in
+  those frames too — not four holes.
+
+  **It is not dev-only — it ships.** A Release build (`expo run:ios
+  --configuration Release`, embedded bundle, no Metro) drew room `RJBI` as
+  `R J B _` on its first launch, QR fully drawn so the code had arrived. So
+  this reaches users, and a blank tile makes the room unjoinable from the
+  television. That removes the "wait and see whether it only happens in dev"
+  option and makes a mitigation urgent even ahead of the mechanism.
+
+  **It reproduces deterministically, and the axis is not the one anyone
+  guessed.** Pin a code containing an I in `RoomCodeTiles` and vary only *when*
+  it arrives:
+
+  | how the code reaches the tiles | blank |
+  |---|---|
+  | present at the component's first render | **0 / 8** |
+  | delivered after mount by a 900ms timer | **8 / 8** |
+  | delivered after mount by a 60ms timer | **6 / 6** |
+
+  So it is not timing, not the font, not the colour, not the position, and not
+  the letter alone: **an I that is not in the first committed render does not
+  paint.** Every other letter survives the same path — all 23 non-I codes in
+  the launch runs were server-delivered and drew.
+
+  This also explains the 2026-07-30 contradiction that sent this task wrong:
+  the hardcoded experiments that passed had the letter present at first render,
+  and the ones that failed did not.
+
+  **Fixes tried and disproven, so nobody pays for them twice** — each re-run
+  against the deterministic repro, all still 8/8 blank:
+  - `key` on the `<Text>` so a changed letter mounts a fresh node;
+  - `key` on the whole `StickerSurface` so the entire tile subtree remounts.
+
+  That a *freshly mounted* text view still blanks is the sharp part: this is
+  not React reusing a node, so the fault is below it, in native text layout on
+  a non-initial pass. The next thing to try is rendering the tiles only once
+  the code is known (letter present in the first commit), which the current
+  "draw empty tiles so the screen does not reflow" comment deliberately rules
+  out — that decision is now in tension with a correctness bug and should be
+  revisited first.
+
+  Next: the mechanism is still unknown, so a fix still cannot be chosen. Of the
+  two escape routes previously ruled out for chasing a disproven cause, the
+  first — dropping I from the minting alphabet — was taken on 2026-07-31 and is
+  recorded at the top of this task; it buys time rather than correctness. The
+  second, setting the tiles in another face, is untried and remains available.
+  The unexplored lead on the fault itself is rendering the tiles only once the
+  code is known, so the letter is present in the first commit, which the
+  current "draw empty tiles so the screen does not reflow" comment deliberately
+  rules out.
 
   Seen three times on the tvOS simulator on 2026-07-30, the first time the
   pairing screen had been run since the Boardwalk work: room code `OVAI` drew
@@ -838,7 +941,9 @@ runs without touching a dev tool.
   chosen until it reproduces on demand, and the two escape routes floated
   earlier (dropping I from `ROOM_CODE_ALPHABET`, or setting the tiles in
   another face) would both change a documented decision to chase a cause that
-  has now been disproven.
+  has now been disproven. (Superseded: the cause was re-established on
+  2026-07-31 and the first route was taken — see the top of this task. The
+  constant is now `ROOM_CODE_MINT_ALPHABET`.)
 - [ ] Design fidelity pass — AC: hub screens (pairing, join, lobby ×3,
   carousel ×3) spot-checked side-by-side against the Boardwalk mock; trivia
   screens extend Boardwalk using only theme tokens; TV body text ≥18px at the

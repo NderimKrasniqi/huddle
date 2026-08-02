@@ -1,4 +1,8 @@
-import { NICKNAME_MAX_LENGTH, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '@huddle/game-core';
+import {
+  NICKNAME_MAX_LENGTH,
+  ROOM_CODE_ACCEPTED_ALPHABET,
+  ROOM_CODE_LENGTH,
+} from '@huddle/game-core';
 
 /**
  * What the join screen's two fields make of what is typed into them.
@@ -20,10 +24,15 @@ import { NICKNAME_MAX_LENGTH, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '@hudd
  * from a scanned Join Link — and every one of them should land on the same four
  * tiles. It matches `joinRoom`'s own normalisation, so what the tiles show is
  * what the server will look a room up by.
+ *
+ * The alphabet it filters by is what a code may *hold*
+ * (`ROOM_CODE_ACCEPTED_ALPHABET`), not the shorter one new codes are minted
+ * from: a room minted before the I came out is still on a television, and a
+ * screen that swallowed its letter would leave that room unjoinable.
  */
 export function codeEntry(typed: string): string {
   return [...typed.toUpperCase()]
-    .filter((letter) => ROOM_CODE_ALPHABET.includes(letter))
+    .filter((letter) => ROOM_CODE_ACCEPTED_ALPHABET.includes(letter))
     .slice(0, ROOM_CODE_LENGTH)
     .join('');
 }

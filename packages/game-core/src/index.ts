@@ -60,7 +60,8 @@ export {
 export { ROOM_EXPIRY_MS } from './room-expiry';
 export {
   generateRoomCode,
-  ROOM_CODE_ALPHABET,
+  ROOM_CODE_ACCEPTED_ALPHABET,
+  ROOM_CODE_MINT_ALPHABET,
   ROOM_CODE_LENGTH,
   type RandomSource,
 } from './room-code';
