@@ -1,4 +1,4 @@
-import { generateRoomCode, ROOM_EXPIRY_MS } from '@huddle/game-core';
+import { generateRoomCode, ROOM_EXPIRY_MS, UNJOINED_ROOM_EXPIRY_MS } from '@huddle/game-core';
 import { ConvexError, v } from 'convex/values';
 
 import { internal } from './_generated/api';
@@ -62,6 +62,12 @@ async function drawUnusedRoomCode(ctx: MutationCtx): Promise<string> {
 /**
  * Opens a room. The TV app calls this on launch and shows the returned code;
  * phones join by typing it or by scanning the QR that encodes it.
+ *
+ * Every room is born with a check against it, because a room that never seats
+ * anybody has no other way out: expiry runs on the last heartbeat a room heard,
+ * and this one never hears a first. That check is armed here rather than
+ * anywhere later for the same reason — there is no later. See
+ * `expireUnjoinedRoom`.
  */
 export const createRoom = mutation({
   args: {},
@@ -69,6 +75,9 @@ export const createRoom = mutation({
   handler: async (ctx) => {
     const code = await drawUnusedRoomCode(ctx);
     const roomId = await ctx.db.insert('rooms', { code });
+    await ctx.scheduler.runAfter(UNJOINED_ROOM_EXPIRY_MS, internal.rooms.expireUnjoinedRoom, {
+      roomId,
+    });
 
     return { roomId, code };
   },
@@ -138,7 +147,8 @@ export async function watchForDesertion(ctx: MutationCtx, roomId: Id<'rooms'>): 
   // "Every player is away" is vacuously true of no players, and that reading
   // would expire the room a television is showing to a party that has not
   // arrived yet. A room nobody has joined has not been deserted — nobody has
-  // left it — so its Room Code stays on the screen for as long as the TV is on.
+  // left it — and it is not this clock's to end: `expireUnjoinedRoom` is what
+  // eventually lets one go, on a clock of hours rather than of heartbeats.
   if (seated.length === 0 || !seated.every((player) => player.away)) {
     return;
   }
@@ -199,6 +209,56 @@ export const expireRoom = internalMutation({
 
     for (const player of seated) {
       await ctx.db.delete('players', player._id);
+    }
+
+    await ctx.db.delete('rooms', room._id);
+    return null;
+  },
+});
+
+/**
+ * The other end of a room: one that never seated anybody at all, let go
+ * `UNJOINED_ROOM_EXPIRY_MS` after it was minted so that its Room Code goes back
+ * to the pool.
+ *
+ * Expiry proper cannot reach these. Its clock is the newest `lastSeenAt` among a
+ * room's players, and a room with no players has none — so every launch that
+ * opened a room and never got a join held its code forever, which is exactly
+ * what a hundred rooms and no players on the dev deployment were.
+ *
+ * A single check, armed by `createRoom` and never re-armed, because the only
+ * thing that can happen to an unjoined room is a join — and a join hands it to
+ * the ten-minute clock permanently, so a seat found here means this check has
+ * nothing left to do rather than that it should look again later. Deleting is
+ * therefore conditioned on the roster being empty and on nothing else: the room
+ * has no clock of its own to re-read, and the time this check waited is the
+ * whole of the decision.
+ *
+ * It deletes no players for the same reason it looks for none. Should a room
+ * ever be able to lose its last player without being deleted, this would find an
+ * empty room hours later and take it — which is the treatment an unjoined room
+ * gets today and is why the guard is written as a count rather than as "was
+ * never joined", a fact nothing records.
+ *
+ * Internal, like `expireRoom`: a room ending is the room's own business.
+ */
+export const expireUnjoinedRoom = internalMutation({
+  args: { roomId: v.id('rooms') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+
+    // Already gone: a room that seated a party and outlived it by ten minutes
+    // still has this check pending against it for the rest of the two hours.
+    if (room === null) {
+      return null;
+    }
+
+    // The guests arrived. This room is on the party's clock now and this check
+    // is spent — taking a code off a television mid-party is the one thing this
+    // must never do.
+    if ((await seatedIn(ctx, args.roomId)).length > 0) {
+      return null;
     }
 
     await ctx.db.delete('rooms', room._id);

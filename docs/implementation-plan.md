@@ -330,12 +330,15 @@ demoable by force-quitting apps mid-lobby.
   runs instead, and leaves a room that has been rejoined standing; the phone that
   returned will go quiet again, and `markAway` starts the ten minutes over then.
 
-  A room nobody has ever joined never expires: nobody left it, and its Room Code
-  is on a television somebody may be reading across the room, so taking it away
-  is the one thing expiry must not do. The consequence is that never-joined rooms
-  accumulate — the dev deployment holds about twenty-five from past TV launches —
-  which is flagged rather than fixed, because every fix for it is a fix that can
-  delete a code off a working screen.
+  A room nobody has ever joined never expires *by this clock*: nobody left it,
+  and its Room Code is on a television somebody may be reading across the room,
+  so taking it away is the one thing expiry must not do. The consequence is that
+  never-joined rooms accumulate — the dev deployment holds about twenty-five from
+  past TV launches — which is flagged rather than fixed here, because every fix
+  for it is a fix that can delete a code off a working screen. (Superseded on
+  2026-08-02 by Phase 5's "A room nobody joins is never deleted" task, which
+  gives that room a second, much longer clock of its own rather than putting it
+  on this one. This clock is unchanged.)
 
   **Seen, on the real scheduler.** The tvOS simulator against the cloud dev
   deployment: the TV opened `DKZS`, a player joined and took a seat, and the
@@ -1954,10 +1957,69 @@ Two findings from a cleanup pass on 2026-08-02, after the phase's last
 agent-doable task. Both are placed here, ahead of the human-only work, because
 an agent can close them and everything below needs hardware in the room.
 
-- [ ] A room nobody joins is never deleted, so Room Codes leak — AC: a room
+- [x] A room nobody joins is never deleted, so Room Codes leak — AC: a room
   whose television has gone is eventually deleted and its code returned to the
   pool, with an integration test that pins the case a live room must survive
   (a TV showing a code to a party that has not arrived yet).
+
+  **Fixed on 2026-08-02 with the constant, not the television heartbeat.**
+  `createRoom` arms one check against every room it mints —
+  `expireUnjoinedRoom`, at `UNJOINED_ROOM_EXPIRY_MS` (two hours,
+  `packages/game-core/src/room-expiry.ts`, beside `ROOM_EXPIRY_MS`) — which
+  deletes the room if and only if its roster is still empty when the check comes
+  due. It is a single check and is never re-armed: a join hands the room to the
+  ten-minute desertion clock permanently, so a seat found here means the check is
+  spent rather than that it should look again. It deletes no players, because it
+  can only ever run on a room that has none.
+
+  The heartbeat was the bigger idea and was rejected on the AC's own hazard. A
+  television that beats is a television that can *stop* beating while it is
+  switched on and a party is walking in — so the shape meant to protect a live
+  room is the shape that can take one, which is exactly the naive fix the task
+  warned about wearing a better disguise. It would also patch the `rooms` row
+  every few seconds, the same row every Game Event patches, against a schema
+  comment that already argues the other way about the phones. The constant's
+  whole exposure is instead "a television shows a code nobody used for two
+  hours", and the recovery from that is a round trip: `useRoomExpiry` sits in
+  `OpenRoomStage`, which wraps the pairing screen, so a collected room reopens
+  and draws a fresh code rather than stranding a dead one. Two hours is 12× the
+  desertion clock and two orders of magnitude more than the gap between a
+  television being switched on and the first guest arriving.
+
+  **The must-survive pin is the strong version, and was mutation-checked at
+  review rather than trusted.** The party joins 60s *before* the check fires, so
+  the check runs mid-evening and has to find work to skip, and the test asserts
+  the roster as well as `stillOpen` — a fix that deleted the room but left the
+  player rows still fails it. Four mutations, each failing exactly the test that
+  owns it and nothing else: dropping the seat guard (the naive fix) fails
+  `stops being one the moment somebody joins`; never arming the check fails both
+  deletion tests; arming at half the window fails the two survival tests; and
+  throwing instead of returning on a missing room fails the already-ended-party
+  test, so that one is not vacuous either.
+
+  Review also traced independently that the new clock can never take a room a
+  party is using: the only `db.delete` of a player anywhere in the backend is
+  inside `expireRoom`, which deletes the room in the same transaction, so an
+  empty roster at the two-hour mark means either nobody ever joined or the room
+  is already gone. There is no leave-room mutation. And an unjoined room can hold
+  nothing that would be orphaned — every mutation in `games.ts` is Session Token
+  gated, so a room with no players can carry no `game`, no deadline and no
+  browsing index.
+
+  What this does not carry: **the check is prospective, so the leak that found
+  this task is still on the deployment.** The 100+ stranded rooms were minted
+  before `createRoom` armed anything and have nothing scheduled against them;
+  they will hold their codes forever, and the dev deployment will still count
+  100+ rooms against 0 players after this ships. That is 100 of 390,625 codes and
+  the AC is about behaviour rather than a backfill, so it was left — but anyone
+  who counts the deployment again should read this paragraph before concluding
+  the fix did not land. Clearing them is one `npx convex import --table rooms
+  --replace` against a live deployment; sweeping them, and covering any future
+  case where a scheduled check is lost, wants a cron, and there is no
+  `convex/convex/crons.ts` today. Nothing here has been watched on the real
+  scheduler the way Phase 2's ten-minute clock was — a two-hour window is not
+  something a session waits out — so the arming is `convex-test` on a fake clock
+  plus the birth-armed job being visible in `_scheduled_functions`.
 
   Found by counting the dev deployment, not by reading: **100+ rooms and 0
   players**. Every one is a launch that opened a room and never got a join.

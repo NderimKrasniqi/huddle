@@ -233,12 +233,31 @@ working must add it here.
   for the reason Away is one: a query re-runs when rows change, not when time
   passes. A Heartbeat inside the ten minutes saves the room without cancelling
   anything — the check re-reads the clock when it runs and leaves a room that
-  has been rejoined standing. A room nobody has joined never expires: nobody
-  left it, and its Room Code is on a screen somebody may be reading. Expiry is
-  what returns a Room Code to the pool, and what sends a phone whose party
-  ended back to the Join Screen, since its Session Token then answers nothing.
+  has been rejoined standing. It cannot reach an Unjoined Room at all — that
+  room has never heard a Heartbeat for the ten minutes to run from — which is
+  the other clock's job. Expiry is what returns a Room Code to the pool, and what
+  sends a phone whose party ended back to the Join Screen, since its Session
+  Token then answers nothing.
   The TV learns of it from the `stillOpen` subscription and opens a fresh room
   (`closeExpiredRoom`) rather than showing a code that belongs to no room.
+- **Unjoined Room** — a room no phone has ever joined: a Pairing Screen on a
+  television, and the one room Room Expiry has no clock for. Deleted
+  `UNJOINED_ROOM_EXPIRY_MS` (two hours) after it was minted, by a check
+  `createRoom` arms at birth (`expireUnjoinedRoom`) — a single check, never
+  re-armed, because the only thing that can happen to such a room is a join, and
+  a join hands it to Room Expiry's clock permanently. Without it a launch that
+  opened a room and never got a join held its Room Code forever, and codes leaked
+  monotonically; a hundred rooms and no players on the dev deployment was that
+  and nothing else. Two hours because the only thing this clock can get wrong is
+  taking a code off a screen somebody is reading it from, and guests arrive
+  minutes after a television is switched on, never hours — and because the cost
+  of being wrong is only that the TV opens a fresh room and shows a fresh code.
+  A constant rather than a Heartbeat from the television, which would let the
+  room know its TV had gone: nothing but a phone speaks to a room, so a TV left
+  on and a TV switched off are the same silence and the only question is how long
+  to wait it out — and a TV beat would put a write every few seconds on the one
+  row every Game Event patches, to protect a case that a long enough window
+  already covers.
 - **Status Dot** — the dot beside a player saying whether the room is hearing
   from their phone: Boardwalk green when it is, muted when they are Away.
   Boardwalk's online dot, which the handoff draws on the Host Roster's rows and
