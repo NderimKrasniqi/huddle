@@ -1950,6 +1950,72 @@ green. The second half is now grouped with the phase's other human-only work.
   as the 3m trivia question does. And the handoff's §2 line is annotated, not
   changed at source — the mock in the design project still says 13, so anyone
   re-fetching it will find the same contradiction.
+Two findings from a cleanup pass on 2026-08-02, after the phase's last
+agent-doable task. Both are placed here, ahead of the human-only work, because
+an agent can close them and everything below needs hardware in the room.
+
+- [ ] A room nobody joins is never deleted, so Room Codes leak — AC: a room
+  whose television has gone is eventually deleted and its code returned to the
+  pool, with an integration test that pins the case a live room must survive
+  (a TV showing a code to a party that has not arrived yet).
+
+  Found by counting the dev deployment, not by reading: **100+ rooms and 0
+  players**. Every one is a launch that opened a room and never got a join.
+  Rooms that *did* seat somebody expired correctly and took their players with
+  them, which is exactly why the two counts look like that.
+
+  The mechanism is in `convex/rooms.ts`. `expireRoom` deletes a room and its
+  players together, but `watchForDesertion` returns early on
+  `seated.length === 0` — and that early return is *right* for the case it was
+  written for: "a room nobody has joined has not been deserted", so a
+  television showing a Room Code to an empty living room keeps it. What is
+  missing is that nothing distinguishes that television from one switched off
+  yesterday, so the room and its code are held forever.
+
+  Slow but monotonic, and it never improves on its own:
+  `drawUnusedRoomCode` redraws `MAX_CODE_DRAWS` times against a 390,625-code
+  pool (25⁴, I having been dropped from minting) and then throws
+  `roomCodeExhausted`. This is a Phase 2 lifecycle gap rather than anything
+  Phase 5 introduced — it is filed here because this is where it was found.
+
+  The obvious shapes are a much longer idle timeout for a room that has never
+  seated anybody, or a heartbeat from the television itself the way phones
+  already beat. The second is the bigger change and would also let the room
+  know its TV is gone; the first is a constant. Whichever, the AC's test
+  matters more than the mechanism: the failure mode of a naive fix is deleting
+  the code off a working television mid-party.
+
+- [ ] Delete the TV's unreachable seat code — AC: `PlayerSeat`,
+  `seatHighlightShadow`, `seatHighlight` and the away styling are gone or
+  demonstrably reachable, and no doc still defers anything to them.
+
+  They are unreachable in any shipped build, and this is checkable rather than
+  argued: `GAME_REGISTRY` holds one module, so `carouselWindow` never returns
+  `undefined`, so `CarouselStage` always wins the moment `seats.length > 0` and
+  `RosterFooter` is only ever reached with an empty roster. `EmptySeat` still
+  draws; everything that needs a *player* does not.
+
+  This is not tidiness. Three earlier tasks each deferred a pill — HOST, JUST
+  JOINED!, away — to this component, and the "TV carousel closes its two
+  departures" task spent a review round on a decision record that cited its
+  tangerine shadow and away dimming as live channels when neither can appear.
+  Dead code that documents itself as dead is the minimum; deleting it is the
+  fix.
+
+  Note before starting: `seatHighlight` in `apps/tv/src/roster.ts` has its own
+  passing tests, so the suite will not notice its removal — that is the point
+  rather than a reason to keep it. Check what `apps/tv/src/just-joined.ts` is
+  still for once the seats go; the carousel's greeting uses `Arrivals` and
+  `isArrival`, so part of it stays and part may not.
+
+- [ ] Decide whether Room Codes take `I` back — AC: `ROOM_CODE_MINT_ALPHABET`
+  either returns to the full A–Z or keeps its 25 letters with the reason
+  recorded against the constant, rather than sitting as an unexplained scar.
+  The tile bug it worked around is fixed and A/B'd (see the first task of this
+  phase), so the narrower alphabet is now a spare belt rather than the only
+  one. Reading a code must stay at the full A–Z either way — rooms minted
+  before the change are still typeable off a television.
+
 - [ ] Design fidelity — the trivia question read from 3m (human-only) — AC: a
   human sits 3m from a television running the trivia TV screen and can read the
   question. Cannot be closed on a simulator and must not be ticked from a
