@@ -491,9 +491,10 @@ function UnknownGameStage({ gameId }: { readonly gameId: string }) {
  * are drawn before the code arrives so the screen does not reflow around it —
  * on a local backend the room opens well inside a couple of frames.
  *
- * Drawing them empty first is what used to blank an I on tvOS, and the decision
- * survives the fix rather than being traded for it: the letter takes its box
- * from the tile (`codeLetterBox`), so nothing here depends on measuring a glyph.
+ * Drawing them empty first is what used to blank an I on tvOS. The Code Letter
+ * Box fix keeps that no-reflow decision safe: the letter takes its box from the
+ * tile, so nothing here depends on measuring a glyph and the full alphabet can
+ * be minted again.
  */
 function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   return (

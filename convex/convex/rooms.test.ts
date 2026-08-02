@@ -23,9 +23,9 @@ type Backend = ReturnType<typeof convexTest>;
  * The `Math.random()` draw that lands on a given letter, aimed at the middle of
  * the letter's slice of [0, 1) so no rounding can push it into a neighbour.
  *
- * A letter the alphabet does not hold — an I, since the tvOS mitigation — is a
- * test pinning a code `createRoom` could never mint, so it fails here rather
- * than pinning a different code than the one it names.
+ * A letter the alphabet does not hold is a test pinning a code `createRoom`
+ * could never mint, so it fails here rather than pinning a different code than
+ * the one it names.
  */
 function drawFor(letter: string): number {
   const index = ROOM_CODE_MINT_ALPHABET.indexOf(letter);
@@ -59,13 +59,28 @@ afterEach(() => {
 });
 
 describe('createRoom', () => {
+  it('can mint a Room Code holding I after the tvOS tile fix', async () => {
+    const t = convexTest(schema, modules);
+    pinDrawsTo('RIJI');
+
+    const room = await t.mutation(api.rooms.createRoom, {});
+
+    expect(room.code).toBe('RIJI');
+    // `convex-test` uses Math.random for its snapshot runner too; the pin is
+    // only for the Room Code draw, so release it before inspecting the row.
+    vi.restoreAllMocks();
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(room.roomId)).toMatchObject({ code: 'RIJI' });
+    });
+  });
+
   it('returns a room whose Room Code is minted from the minting alphabet', async () => {
     const t = convexTest(schema, modules);
 
     const room = await t.mutation(api.rooms.createRoom, {});
 
-    // Driven off the alphabet rather than /^[A-Z]{4}$/, which would pass just
-    // as happily on a code holding the I that tvOS draws blank.
+    // Driven off the product alphabet rather than /^[A-Z]{4}$/, so this test
+    // stays coupled to the Room Code decision, including the restored I.
     expect(room.code).toHaveLength(ROOM_CODE_LENGTH);
     expect([...room.code].every((letter) => ROOM_CODE_MINT_ALPHABET.includes(letter))).toBe(true);
     await t.run(async (ctx) => {

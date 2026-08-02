@@ -13,13 +13,12 @@ working must add it here.
 - **Room Code** — 4-letter code identifying a room, shown on the TV and
   encoded in its QR deep link (`huddle://join/<code>`). Minted server-side by
   `createRoom`, which redraws until the code is held by no live room; an
-  expired room's code returns to the pool. It is minted from A–Z *without I*
-  (`ROOM_CODE_MINT_ALPHABET`) — a mitigation for a tvOS tile that drew an I
-  blank, which has outlived the bug: the tile itself is fixed (Code Letter Box),
-  so the narrower alphabet is now a spare belt rather than the only one, and
-  taking I back is its own decision. A code may still be *read* as
-  any of A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`), because rooms minted before the I
-  came out are still live and still have to be typeable off a television.
+  expired room's code returns to the pool. It is minted and read as the full
+  A–Z (`ROOM_CODE_MINT_ALPHABET` and `ROOM_CODE_ACCEPTED_ALPHABET`). The
+  temporary no-I mitigation for a tvOS tile that drew an I blank ended on
+  2026-08-02: the tile itself is fixed (Code Letter Box), so the full alphabet
+  is safe to mint again. The accepted alphabet stays full A–Z so rooms minted
+  under the former mitigation are still typeable off a television.
 - **Join Link** — the `huddle://join/<code>` deep link that puts a phone into a
   room. The TV's QR encodes it; both apps register its scheme (`huddle`).
   Built by `roomJoinLink` in game-core, because it is protocol both sides share.

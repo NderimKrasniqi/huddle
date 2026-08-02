@@ -23,9 +23,9 @@ tech-stack.md; device-visible criteria verified manually on dev builds). A
 phase is done when its slice works end-to-end and is tested.
 
 ## Pinned Defaults
-4-letter room codes, minted from A–Z without I and accepted as any of A–Z
-(the tvOS blank-tile mitigation below; codes minted before it still hold an
-I) · 10-player cap (per-game property; trivia: 2–10) ·
+4-letter room codes, minted and accepted as the full A–Z (the Code Letter Box
+fix restored I after the tvOS blank-tile mitigation) · 10-player cap
+(per-game property; trivia: 2–10) ·
 20s question timer · 10-minute room expiry · answers lock on tap · speed
 scoring `100 + round(100 × secondsRemaining / 20)`.
 
@@ -901,29 +901,25 @@ runs without touching a dev tool.
   the same construction with room to spare — a 58px content box for a glyph that
   is at most ~31px at that size. The Controller is not installed on a simulator
   here and was not rebuilt for it. Nothing was reported upstream. A code minted before PR #8 was not resurrected to watch it draw
-  (nothing can mint an I any more), but such a code is exactly the pinned repro:
+  (the mitigation had stopped new codes from containing I), but such a code is
+  exactly the pinned repro:
   an I-holding code delivered after mount, which now draws 8/8. Whether the
-  minting alphabet should take I back now that the tile is fixed is a separate
-  decision and was deliberately left alone.
+  minting alphabet should take I back now that the tile is fixed was a separate
+  decision at the time; it was settled on 2026-08-02 in the task below.
 
-  **A mitigation landed on 2026-07-31 (superseded above — it is no longer the
-  only thing standing between a room and a blank tile).** `ROOM_CODE_ALPHABET`
+  **A mitigation landed on 2026-07-31 and was retired on 2026-08-02.**
+  `ROOM_CODE_ALPHABET`
   was dropped to A–Z without I and renamed
   `ROOM_CODE_MINT_ALPHABET` (`packages/game-core/src/room-code.ts`), so no
-  newly minted code can contain the failing glyph. What it does *not* buy: the
-  rendering fault is untouched and its mechanism still unknown, so a code
-  minted before the change still holds an I and its tile still blanks, and the
-  next letter to hit the same fault would not be caught by this. It is a
-  narrower alphabet, not a fix, and the A/B the AC asks for is still owed by
-  whoever finds the mechanism. (All of that was true when it was written and
-  the last two sentences are now spent: the mechanism is at the top of this
-  task, an I delivered after mount draws, and there is no "next letter" — the
-  fault was never about the alphabet, only ever about the one string React
-  Native measures empty text with.)
+  newly minted code could not contain the failing glyph. At the time, the
+  rendering fault was still unexplained, so the mitigation was a narrower
+  alphabet rather than a fix; a code minted before it still held an I and its
+  tile could blank. The Code Letter Box fix and its A/B made that workaround
+  unnecessary, so the minting alphabet returned to A–Z in the decision below.
 
-  Reading a code stayed at the full A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`, which
-  is what the join screen's `codeEntry` filters by) on purpose: rooms minted
-  before the change are live and on a television, and a phone that swallowed
+  Reading a code remains at the full A–Z (`ROOM_CODE_ACCEPTED_ALPHABET`, which
+  is what the join screen's `codeEntry` filters by): rooms minted under the
+  former mitigation are live and on a television, and a phone that swallowed
   the I they can see would turn a rendering mitigation into a room nobody can
   join. `joinRoom`'s `normalizeRoomCode` never checked an alphabet and still
   does not.
@@ -2040,7 +2036,7 @@ an agent can close them and everything below needs hardware in the room.
   this task is still on the deployment.** The 100+ stranded rooms were minted
   before `createRoom` armed anything and have nothing scheduled against them;
   they will hold their codes forever, and the dev deployment will still count
-  100+ rooms against 0 players after this ships. That is 100 of 390,625 codes and
+  100+ rooms against 0 players after this ships. That is 100 of 456,976 codes and
   the AC is about behaviour rather than a backfill, so it was left — but anyone
   who counts the deployment again should read this paragraph before concluding
   the fix did not land. Clearing them is one `npx convex import --table rooms
@@ -2065,8 +2061,8 @@ an agent can close them and everything below needs hardware in the room.
   yesterday, so the room and its code are held forever.
 
   Slow but monotonic, and it never improves on its own:
-  `drawUnusedRoomCode` redraws `MAX_CODE_DRAWS` times against a 390,625-code
-  pool (25⁴, I having been dropped from minting) and then throws
+  `drawUnusedRoomCode` redraws `MAX_CODE_DRAWS` times against the current
+  456,976-code pool (26⁴, the full A–Z) and then throws
   `roomCodeExhausted`. This is a Phase 2 lifecycle gap rather than anything
   Phase 5 introduced — it is filed here because this is where it was found.
 
@@ -2148,13 +2144,25 @@ an agent can close them and everything below needs hardware in the room.
   here changes a pixel a shipped build can draw, which is the claim being made
   and the reason the reachability chain above is written out in full.
 
-- [ ] Decide whether Room Codes take `I` back — AC: `ROOM_CODE_MINT_ALPHABET`
+- [x] Decide whether Room Codes take `I` back — AC: `ROOM_CODE_MINT_ALPHABET`
   either returns to the full A–Z or keeps its 25 letters with the reason
   recorded against the constant, rather than sitting as an unexplained scar.
   The tile bug it worked around is fixed and A/B'd (see the first task of this
-  phase), so the narrower alphabet is now a spare belt rather than the only
-  one. Reading a code must stay at the full A–Z either way — rooms minted
-  before the change are still typeable off a television.
+  phase), so the narrower alphabet was a spare belt rather than the only one.
+  Reading a code stays at the full A–Z either way — rooms minted under the
+  former mitigation are still typeable off a television.
+
+  **Settled on 2026-08-02: return I.** `ROOM_CODE_MINT_ALPHABET` is now the
+  full A–Z. The Code Letter Box fix makes the tile's layout independent of a
+  glyph's first measurement, and the committed A/B showed an I-holding code
+  drawing after the fix. Keeping the 25-letter mitigation would preserve a
+  workaround after its cause was fixed and would shrink the pool from 26⁴
+  (456,976 codes) to 25⁴ (390,625) without a product benefit.
+
+  The decision is pinned in `packages/game-core/src/room-code.test.ts`, and the
+  backend path is pinned by `convex/convex/rooms.test.ts`, which mints `RIJI`.
+  `ROOM_CODE_ACCEPTED_ALPHABET` remains full A–Z for codes minted before this
+  decision.
 
 - [ ] Design fidelity — the trivia question read from 3m (human-only) — AC: a
   human sits 3m from a television running the trivia TV screen and can read the

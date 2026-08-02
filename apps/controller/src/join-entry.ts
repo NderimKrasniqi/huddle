@@ -26,9 +26,9 @@ import {
  * what the server will look a room up by.
  *
  * The alphabet it filters by is what a code may *hold*
- * (`ROOM_CODE_ACCEPTED_ALPHABET`), not the shorter one new codes are minted
- * from: a room minted before the I came out is still on a television, and a
- * screen that swallowed its letter would leave that room unjoinable.
+ * (`ROOM_CODE_ACCEPTED_ALPHABET`), which is also the full alphabet new codes
+ * are minted from. Keeping this contract at A–Z means a pre-existing code from
+ * the former no-I mitigation remains typeable too.
  */
 export function codeEntry(typed: string): string {
   return [...typed.toUpperCase()]
