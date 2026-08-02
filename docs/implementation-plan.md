@@ -2665,6 +2665,12 @@ an agent can close them and everything below needs hardware in the room.
   longer exists to restore. And the Controller's 6 converted surfaces have never
   been run on any device; they are converted, type-checked and unit-tested, and
   nothing more. Both are for the design fidelity pass to close.
+
+- [x] Join Screen Room Code focus recovery — AC: after focus moves to the
+  Nickname field, tapping the Room Code cells explicitly restores the code
+  field and keyboard; the code-to-nickname focus transition remains covered by
+  a unit test. Physical confirmation is part of the iPhone build below.
+
 Split on 2026-07-31, for the second time and for the same reason the Android
 toolchain came out of it: three targets in one checkbox, each of which can
 fail on its own and none of which can be reviewed against the other two.

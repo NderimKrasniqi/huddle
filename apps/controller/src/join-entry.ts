@@ -52,6 +52,15 @@ export function isCodeComplete(entry: string): boolean {
 }
 
 /**
+ * Whether a code edit crossed the point at which the nickname should take the
+ * keyboard. Keeping this transition pure makes the screen's focus hand-off
+ * explicit without putting a TextInput ref in the join-entry rules.
+ */
+export function shouldMoveToNickname(previousCode: string, nextCode: string): boolean {
+  return !isCodeComplete(previousCode) && isCodeComplete(nextCode);
+}
+
+/**
  * The nickname as the field holds it: capped at the longest name a room
  * accepts, because a client that lets someone type a name the server will
  * refuse is a client that lies.

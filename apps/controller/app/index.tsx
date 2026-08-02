@@ -44,6 +44,7 @@ import {
   codeEntry,
   isCodeComplete,
   nicknameEntry,
+  shouldMoveToNickname,
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
@@ -183,7 +184,7 @@ function JoinForm({
     setFailure(undefined);
     // The last letter advances the way every letter before it did — off the
     // tiles and into the only field left to fill.
-    if (isCodeComplete(entered) && !isCodeComplete(code)) {
+    if (shouldMoveToNickname(code, entered)) {
       nameField.current?.focus();
     }
   }
@@ -314,6 +315,15 @@ function CodeTiles({
 }) {
   const [focused, setFocused] = useState(false);
   const activeCell = activeCodeCell(code);
+  const codeField = useRef<TextInput>(null);
+
+  // The visible tiles are deliberately not TextInputs. On iOS, moving from
+  // the nickname field back to an invisible TextInput is not reliable if the
+  // keyboard is already changing owners, so give the whole row an explicit
+  // focus target and ask for focus again after the tap has settled.
+  function focusCodeField() {
+    requestAnimationFrame(() => codeField.current?.focus());
+  }
 
   return (
     <View>
@@ -343,17 +353,26 @@ function CodeTiles({
         })}
       </View>
 
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={focusCodeField}
+        accessible={false}
+      />
+
       <TextInput
+        ref={codeField}
         style={styles.codeInput}
         value={code}
         onChangeText={onChange}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
+        onPressIn={focusCodeField}
         autoFocus={autoFocus}
         autoCapitalize="characters"
         autoComplete="off"
         autoCorrect={false}
         spellCheck={false}
+        showSoftInputOnFocus
         // No `maxLength`: the entry is what caps the code at four letters, and
         // it does it after discarding whatever is not a letter — so a pasted
         // " kwrd " still lands as KWRD instead of stopping at a space.
