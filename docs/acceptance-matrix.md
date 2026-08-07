@@ -73,8 +73,8 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | End the room / room closes | 🔁 | 🔁 | `rooms.test.ts` › expiry (`expireRoom`) |
 | Host is also a normal player; can act in the game | ✅ | ✅ | `games.test.ts` › "is open to every player, not only the Host"; Voting votes from the host seat in `voting-lifecycle.test.ts` |
 | Host cannot read another player's private state | ✅ | 🔁 | Trivia: `games.test.ts`/`players.test.ts` private-projection; Voting has **no** private per-player state — the tally is anonymous (`voting-lifecycle.test.ts` › "keeps the tally anonymous") |
-| **Manually transfer host status** | ⛔ | ⛔ | **Not implemented — see Findings F1** |
-| **Remove a player** | ⛔ | ⛔ | **Not implemented — see Findings F2** |
+| **Manually transfer host status** | 🔁 | 🔁 | `players.test.ts` › host controls › transferHost (added by 3.7 — see Findings F1). Backend done; host-roster UI pending |
+| **Remove a player** | 🔁 | 🔁 | `players.test.ts` › host controls › removePlayer (added by 3.7 — see Findings F2). Backend done; host-roster UI pending |
 
 ## Game selection and configuration
 
@@ -129,21 +129,25 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 
 ## Findings (input to 5.6)
 
-**F1 — Manual host transfer is not implemented. (Blocker for MVP acceptance.)**
-`project-scope.md` (Host) lists "manually transfer host status," and the plan's
-3.3 note claims "manual transfer." The codebase has only automatic
-`handOverRoom` (promotes the longest-connected eligible player when the host
-goes away or the room is handed over on presence loss) — there is no mutation a
-host can call to hand the room to a specific player while connected. No
-automated or manual check can pass for this workflow because the capability does
-not exist. Decision needed: implement a `transferHost` mutation, or amend the
-scope to automatic-only transfer.
+**F1 — Manual host transfer — RESOLVED by task 3.7 (backend).** Was: scope
+lists "manually transfer host status" but only automatic `handOverRoom` existed.
+Now implemented as the host-authorized `transferHost` mutation
+(`convex/convex/players.ts`): hands the room to a chosen **connected** player,
+refuses a non-host caller / stale token / out-of-room target / the host's own
+seat / an away target. Covered by `players.test.ts` › host controls; independent
+security review PASS. **Remaining:** wire the control into the host-roster screen
+(`apps/controller/app/index.tsx`) — design-informed, RN screen not unit-tested
+per the stack. Until then the capability is tested and authorized but not
+reachable from the UI.
 
-**F2 — Host-initiated player removal is not implemented. (Blocker for MVP
-acceptance.)** Scope (Host; Phone Backgrounding and Disconnection) lists "remove
-players" and "the host can … remove the player," with removal invalidating the
-old participant. There is no `removePlayer` mutation. The plan's 3.2 note claims
-this behavior. Decision needed: implement removal, or amend the scope.
+**F2 — Host-initiated player removal — RESOLVED by task 3.7 (backend).** Was:
+scope lists "remove players" (removal invalidates the old participant) with no
+`removePlayer` mutation. Now implemented (`convex/convex/players.ts`): deletes
+the target's seat so their Session Token no longer resolves (`session` returns
+null; they may rejoin fresh), allowed mid-game (the beat resolves on the server
+clock), with the same host gate and refusals as transfer. Covered by
+`players.test.ts` › host controls; security review PASS. **Remaining:** the same
+host-roster screen wiring as F1.
 
 **F3 — TV disconnection is modeled through player presence, not a TV heartbeat
 or an explicit pause.** Scope (TV Disconnection) describes the TV disconnecting,

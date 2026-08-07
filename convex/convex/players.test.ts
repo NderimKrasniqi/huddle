@@ -1,6 +1,8 @@
 import {
+  AWAY_AFTER_MS,
   type ColorRejection,
   HEARTBEAT_INTERVAL_MS,
+  type HostControlRejection,
   type JoinRejection,
   PLAYER_COLOR_NAMES,
 } from '@huddle/game-core';
@@ -1119,5 +1121,287 @@ describe('host transfer', () => {
     expect(rejoined).toMatchObject({ playerId: ada.playerId, nickname: 'Ada' });
     expect(await hostName(t, room.roomId)).toBe('Grace');
     expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+});
+
+/**
+ * The Host's two direct controls over the roster: handing the room to another
+ * player (`transferHost`) and removing one (`removePlayer`). Both name a seat by
+ * the `playerId` the roster publishes to every client, and both are gated on the
+ * Session Token holding the room's host — a public function trusts neither the
+ * caller's claimed authority nor the id it sends.
+ */
+describe('host controls', () => {
+  /** The refusal a refused host control carried, or `undefined` if it went through. */
+  async function refusalOf(
+    attempt: Promise<unknown>,
+  ): Promise<HostControlRejection | undefined> {
+    try {
+      await attempt;
+      return undefined;
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConvexError);
+      return (error as ConvexError<HostControlRejection>).data;
+    }
+  }
+
+  describe('transferHost', () => {
+    it('hands the room to the named player', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+
+      await t.mutation(api.players.transferHost, {
+        sessionToken: ada.sessionToken,
+        playerId: grace.playerId,
+      });
+
+      // The pill moves to Grace, and there is still exactly one.
+      expect(await hostName(t, room.roomId)).toBe('Grace');
+      expect(await hostCount(t, room.roomId)).toBe(1);
+    });
+
+    it('refuses a phone that is not the Host', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+      // A phone that does not run the room cannot hand it to anybody, itself
+      // included — the whole of "manage the room" is the Host's.
+      expect(
+        await refusalOf(
+          t.mutation(api.players.transferHost, {
+            sessionToken: grace.sessionToken,
+            playerId: grace.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'notHost' });
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+    });
+
+    it('refuses a token no seat answers to', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+      expect(
+        await refusalOf(
+          t.mutation(api.players.transferHost, {
+            sessionToken: 'a-token-no-seat-holds',
+            playerId: ada.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'notInRoom' });
+    });
+
+    it('refuses a target in another room', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const elsewhere = await openRoom(t);
+      const outsider = await t.mutation(api.players.joinRoom, {
+        code: elsewhere.code,
+        nickname: 'Zoe',
+      });
+
+      // The id is real and names a real seat — just not one of this room's — so
+      // the room the Host runs has no such player to hand itself to.
+      expect(
+        await refusalOf(
+          t.mutation(api.players.transferHost, {
+            sessionToken: ada.sessionToken,
+            playerId: outsider.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'targetNotInRoom' });
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+    });
+
+    it('refuses the Host handing the room to themselves', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+      expect(
+        await refusalOf(
+          t.mutation(api.players.transferHost, {
+            sessionToken: ada.sessionToken,
+            playerId: ada.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'targetIsSelf' });
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+    });
+
+    it('refuses handing the room to a phone it has stopped hearing from', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+      // Grace's phone last spoke long enough ago that the room counts her gone —
+      // the same `lastSeenAt` reading the automatic handover uses to pick a
+      // successor. A room a game runs in must have a host who can run it.
+      await t.run(async (ctx) => {
+        await ctx.db.patch(grace.playerId, { lastSeenAt: Date.now() - AWAY_AFTER_MS - 1 });
+      });
+
+      expect(
+        await refusalOf(
+          t.mutation(api.players.transferHost, {
+            sessionToken: ada.sessionToken,
+            playerId: grace.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'targetAway' });
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+    });
+  });
+
+  describe('removePlayer', () => {
+    it('deletes the seat and invalidates its token', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+      await t.mutation(api.players.removePlayer, {
+        sessionToken: ada.sessionToken,
+        playerId: grace.playerId,
+      });
+
+      // Off the roster, and her token now answers to no seat — which is the
+      // whole of being removed: her phone falls back to the Join Screen.
+      expect(await rosterNames(t, room.roomId)).toEqual(['Ada']);
+      expect(await t.query(api.players.session, { sessionToken: grace.sessionToken })).toBeNull();
+      // The Host is untouched: removal never unseats the room's host.
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+    });
+
+    it('lets a removed person rejoin as a fresh seat', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+      await t.mutation(api.players.removePlayer, {
+        sessionToken: ada.sessionToken,
+        playerId: grace.playerId,
+      });
+
+      // The name is free again, so the same person can come back — as a new
+      // participant with a new token, not the seat that was taken from them.
+      // There is no ban list; a new join is a new seat.
+      const rejoined = await t.mutation(api.players.joinRoom, {
+        code: room.code,
+        nickname: 'Grace',
+      });
+
+      expect(rejoined.sessionToken).not.toBe(grace.sessionToken);
+      expect(rejoined.playerId).not.toBe(grace.playerId);
+      expect(await t.query(api.players.session, { sessionToken: grace.sessionToken })).toBeNull();
+      expect(
+        await t.query(api.players.session, { sessionToken: rejoined.sessionToken }),
+      ).not.toBeNull();
+      expect(await rosterNames(t, room.roomId)).toEqual(['Ada', 'Grace']);
+    });
+
+    it('refuses a phone that is not the Host', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+      // A player cannot remove the Host, or anybody else: removal is a host
+      // power, not a vote.
+      expect(
+        await refusalOf(
+          t.mutation(api.players.removePlayer, {
+            sessionToken: grace.sessionToken,
+            playerId: ada.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'notHost' });
+      expect(await rosterNames(t, room.roomId)).toEqual(['Ada', 'Grace']);
+    });
+
+    it('refuses a token no seat answers to', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+      expect(
+        await refusalOf(
+          t.mutation(api.players.removePlayer, {
+            sessionToken: 'a-token-no-seat-holds',
+            playerId: ada.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'notInRoom' });
+    });
+
+    it('refuses a target in another room', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const elsewhere = await openRoom(t);
+      const outsider = await t.mutation(api.players.joinRoom, {
+        code: elsewhere.code,
+        nickname: 'Zoe',
+      });
+
+      expect(
+        await refusalOf(
+          t.mutation(api.players.removePlayer, {
+            sessionToken: ada.sessionToken,
+            playerId: outsider.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'targetNotInRoom' });
+      // The outsider is untouched in their own room.
+      expect(await rosterNames(t, elsewhere.roomId)).toEqual(['Zoe']);
+    });
+
+    it('refuses the Host removing themselves', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+
+      // A host leaves by ending the room, not by removing their own seat — which
+      // would drop the room's host and leave nobody named to run it.
+      expect(
+        await refusalOf(
+          t.mutation(api.players.removePlayer, {
+            sessionToken: ada.sessionToken,
+            playerId: ada.playerId,
+          }),
+        ),
+      ).toEqual({ kind: 'targetIsSelf' });
+      expect(await rosterNames(t, room.roomId)).toEqual(['Ada']);
+    });
+
+    it('removes a player mid-game, and the room stays in its game', async () => {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      await t.mutation(api.games.startGame, { sessionToken: ada.sessionToken, gameId: 'trivia' });
+
+      // A phone that went quiet mid-game and will not be back. Removing it is
+      // allowed while a game runs; the room keeps playing (now below trivia's
+      // minimum, which is the Host's to end or wait out — the beat the removed
+      // seat is holding up still resolves on the room's own clock).
+      await t.mutation(api.players.removePlayer, {
+        sessionToken: ada.sessionToken,
+        playerId: grace.playerId,
+      });
+
+      expect(await t.query(api.games.running, { roomId: room.roomId })).not.toBeNull();
+      expect(await rosterNames(t, room.roomId)).toEqual(['Ada']);
+    });
   });
 });

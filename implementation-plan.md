@@ -65,10 +65,10 @@
   - Done: `players.ts` heartbeat + `lastSeenAt` + `away`; scheduled `markAway`; grace period so brief backgrounding is not an immediate disconnect; fake-time tested.
 
 - [x] **3.2 — Recover ordinary players**
-  - Done: disconnected identity/state preserved for the recovery window; reconnect with the valid SecureStore token restores the same participant; host may wait/continue/remove; removal invalidates the old participant.
+  - Done: disconnected identity/state preserved for the recovery window; reconnect with the valid SecureStore token restores the same participant; host may wait or continue (a game never waits for an away player). Host-initiated *removal* (which invalidates the old participant) landed later as `removePlayer` — see **3.7**, since it did not exist when this task was first marked done.
 
 - [x] **3.3 — Handle host transfer and loss**
-  - Done: manual transfer; `handOverRoom` promotes the longest-connected eligible player on deliberate leave and on unrecovered disconnect; hostless empty-room behavior preserved.
+  - Done: automatic loss handling — `handOverRoom` promotes the longest-connected eligible player on unrecovered disconnect; hostless empty-room behavior preserved. *Manual* transfer landed later as `transferHost` — see **3.7**, since it did not exist when this task was first marked done.
 
 - [x] **3.4 — Recover the TV or close the room**
   - Done: TV-disconnect pause; room/game state preserved for a recovery window; restore on return; `expireRoom` cleans up and frees the code when the window lapses.
@@ -78,6 +78,36 @@
 
 - [x] **3.6 — Run lifecycle regression tests with fake time**
   - Done: player/host/TV timeouts, scheduled transitions, cleanup, and reconnect races covered deterministically under fake timers in the convex suite.
+
+- [ ] **3.7 — Host management controls: manual transfer and player removal** *(added by 5.4 — closes findings F1/F2; backend done, host-roster UI remains)*
+  - The 5.4 acceptance matrix found two approved host powers (`project-scope.md`
+    Host; Phone Backgrounding and Disconnection) with no implementation: manual
+    host transfer and host-initiated player removal. The 3.2/3.3 notes claimed
+    them; only automatic presence-driven `handOverRoom` existed.
+  - **Done (backend + client plumbing, fully tested):** host-authorized
+    `transferHost` and `removePlayer` mutations (`convex/convex/players.ts`).
+    Transfer hands the room to a chosen **connected** player (an away target is
+    refused, `targetAway`, mirroring the automatic handover's connected-successor
+    rule); removal deletes the target's seat, invalidating their Session Token
+    (`session` then returns null; they may rejoin as a fresh seat). Both share a
+    Session-Token host gate and refuse a non-host caller (`notHost`), a stale
+    token (`notInRoom`), a target outside the room (`targetNotInRoom`), and the
+    host's own seat (`targetIsSelf`). Removal is allowed mid-game — the running
+    beat still resolves on the room's server clock. New `HostControlRejection`
+    type in game-core; controller mapper `host-control-rejection.ts` turns each
+    refusal into a host-readable line. 13 new convex tests + 5 controller tests;
+    `room-phase.ts` and the 3.2/3.3 notes corrected. **Independent security
+    review: PASS** (token-first authorization complete, cross-room/self-target
+    guards hold, credential invalidation total, no mid-game deadlock).
+  - **Remaining:** wire the controls into the Host's roster screen
+    (`apps/controller/app/index.tsx`) — a design-informed change
+    (`docs/design/design-handoff.md` §5 defines the roster and does not yet
+    specify transfer/remove affordances), and RN screen code is not unit-tested
+    per the stack. Until then the capability exists and is authorized/tested but
+    is not reachable from the UI.
+  - **Verify (met for the backend):** happy paths + every refusal in
+    `players.test.ts`; a removed token no longer resolves via `session`; a
+    transfer flips `host` on the roster; the controller maps each refusal.
 
 ## Phase 4 — Build the Full Trivia Game
 
