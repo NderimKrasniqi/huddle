@@ -27,3 +27,6 @@ tools/blank-watch/
 .DS_Store
 *.log
 *.tsbuildinfo
+
+# Local workflow backups
+.ai-workflow/backups/

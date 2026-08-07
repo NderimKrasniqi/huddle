@@ -1,17 +1,30 @@
-# Huddle
+# Repository Workflow
 
-Planning docs live in `docs/`: `project-scope.md` (what and why),
-`tech-stack.md` (tools and testing strategy), `implementation-plan.md`
-(phased tasks with acceptance criteria), `CONTEXT.md` (domain vocabulary),
-and `design/design-handoff.md` (the Boardwalk design system — the visual
-source of truth).
+Use AI Project Workflow Core.
 
-- Plan tasks are implemented by running `/build`, never ad hoc — the
-  implement → review → fix loop and commit discipline always apply.
-- Sessions follow `docs/implementation-plan.md` in phase order.
-- All names in code use the vocabulary in `docs/CONTEXT.md`; update it when
-  new terms appear.
-- When a decision changes, update the affected doc in `docs/` in the same
-  session.
+```text
+/project-plan
+/implement-task [<task-id>]
+/workflow-code-review
+/workflow-security-review
+```
 
-Tracker: local
+## Rules
+
+- `project-scope.md`, `tech-stack.md`, and `implementation-plan.md` are project truth.
+- Plan the full MVP as capability-oriented phases with stable numbered tasks.
+- Implement one task at a time by default and keep `.ai-workflow/session-state.md` resumable.
+- Update future unchecked tasks when implementation evidence proves the roadmap should change.
+- Preserve unrelated work and avoid speculative architecture.
+- Code review is independent and read-only.
+- Run security review for explicit audits or meaningful security-boundary changes.
+
+## Huddle project references
+
+Beyond the project-truth files above, this repo keeps two Huddle-specific
+sources of truth in `docs/`:
+
+- `docs/CONTEXT.md` — domain vocabulary. All names in code use these terms;
+  update it when new terms appear.
+- `docs/design/design-handoff.md` — the Boardwalk design system, the visual
+  source of truth.
