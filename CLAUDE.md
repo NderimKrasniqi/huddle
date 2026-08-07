@@ -16,8 +16,22 @@ Use AI Project Workflow Core.
 - Implement one task at a time by default and keep `.ai-workflow/session-state.md` resumable.
 - Update future unchecked tasks when implementation evidence proves the roadmap should change.
 - Preserve unrelated work and avoid speculative architecture.
-- Code review is independent and read-only.
-- Run security review for explicit audits or meaningful security-boundary changes.
+- Code review and security review are independent and read-only — see "Reviews".
+
+## Reviews
+
+- Code review and security review MUST run as their own subagents, in a fresh
+  context — spawn the `workflow-code-reviewer` and `workflow-security-reviewer`
+  agents (via the Agent tool). Do NOT invoke the `workflow-code-review` /
+  `workflow-security-review` skills inline: a skill loads into the current
+  session, so the author reviews their own work in the context that wrote it,
+  which is not an independent review.
+- Give each reviewer agent only the boundary to review (the task, its diff or
+  files, and the checks already run). Relay its findings and resolve blocking
+  ones before marking a task complete.
+- Run security review when the task materially affects a trust boundary
+  (auth, ownership, credentials, private/participant data, public attack
+  surface, privileged operations).
 
 ## Git workflow
 
