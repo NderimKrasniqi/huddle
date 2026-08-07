@@ -129,10 +129,10 @@
   - Confirm no accidental scope crept in and no unnecessary server/realtime/state/cloud-build/persistence infrastructure was introduced.
   - **Verify:** every MVP requirement maps to completed behavior and no blocking discrepancy remains.
 
-- [ ] **5.7 — Align the Controller to the `react-native-tvos` fork** *(remaining — correction)*
-  - `apps/controller/package.json` uses `react-native@0.86.0`; `tech-stack.md` architecture requires all apps to use the matching `react-native-tvos` fork to avoid dependency conflicts (the TV already does).
-  - Switch the controller to `npm:react-native-tvos@~0.86.0-2`, reinstall, re-run typecheck/tests, and confirm a clean local Android/iOS controller build.
-  - **Verify:** both apps resolve the same RN fork; `pnpm typecheck` and `pnpm test` stay green; controller builds and runs locally.
+- [x] **5.7 — Align the Controller to the `react-native-tvos` fork**
+  - Done: `apps/controller/package.json` now uses `react-native: npm:react-native-tvos@~0.86.0-2`, matching the TV. `pnpm install` re-resolved the controller's whole tree onto the fork and deduped the redundant plain-RN dependency tree (lockfile −442/+27; `--frozen-lockfile` clean). Both apps now resolve one RN fork.
+  - Verified: `pnpm typecheck` clean (incl. `apps/controller`); `pnpm test` green (702); `pnpm lint` clean. `expo prebuild --clean` regenerated the controller's iOS project and `pod install` resolved cleanly against the fork (`React-Core 0.86.0-2`; `require('react-native')` → `react-native-tvos@0.86.0-2`) — the dependency-conflict surface this task targets, at both the JS and native layers. A full `xcodebuild`/simulator launch was not run; the fork is the same drop-in the TV already compiles.
+  - No `@react-native-tvos/config-tv` and no `EXPO_TV` on the controller, so it stays a phone build.
 
 - [ ] **5.8 — (Optional) Remember last-used name and avatar locally**
   - Persist the last-used display name and avatar in AsyncStorage so returning players are prefilled; scope treats this as optional ("the app *may* remember").
