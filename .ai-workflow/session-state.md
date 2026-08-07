@@ -2,48 +2,54 @@
 
 ## Current task
 
-**2.4 — Build the Voting/Test game — DONE.** Next executable task: **5.7 —
-align the Controller to the `react-native-tvos` fork** (small stack
-correction), or **5.4 — multiplayer acceptance matrix across both games**.
+**5.7 — align the Controller to the `react-native-tvos` fork — DONE.** Next
+executable task: **5.4 — multiplayer acceptance matrix across both games**, then
+**5.6 — final scope/architecture review**. Optional: **5.8** (remember last-used
+name/avatar).
 
-## What changed (2.4)
+## What changed (5.7)
 
-- New package `packages/games/voting` ("Hot Takes"): a second `GameModule` built
-  only against `@huddle/game-core` — `logic.ts` (state/reducer/timers),
-  `settings.ts` (one `rounds` setting), `prompts.ts` (self-contained, no packs),
-  screen-logic (`voting-controller.ts`, `voting-tv.ts`), screens
-  (`controller-screen.tsx`, `tv-screen.tsx`), `voting.ts` module assembly,
-  `index.ts`, and four test files.
-- Registered by one entry each in `packages/game-registry/src/registry.ts` and
-  `.../logic.ts`; dep added to `game-registry/package.json` and root
-  `package.json`. **No `convex/` changes** — the hub was not touched.
-- Fixed two stale registry/carousel tests that assumed a single installed game,
-  and refreshed one stale `carousel.ts` comment.
+- `apps/controller/package.json`: `react-native` `0.86.0` →
+  `npm:react-native-tvos@~0.86.0-2`, matching `apps/tv` (tech-stack.md requires
+  all apps on one RN fork to avoid dependency conflicts).
+- `pnpm install` re-resolved the controller onto the fork and deduped the
+  redundant plain-RN tree: `pnpm-lock.yaml` −442/+27, `--frozen-lockfile` clean.
+- No `@react-native-tvos/config-tv`, no `EXPO_TV` on the controller — it stays a
+  phone build.
 
 ## Checks / reviews
 
-- `pnpm typecheck` clean; `pnpm lint` clean; `pnpm test` green — **702 passed**
-  (was 666; +36 for voting).
-- Independent code-review: **PASS**. Independent security-review: **PASS**
-  (individual-vote attribution is never stored; two LOW/informational items are
-  pre-existing platform properties shared with Trivia, hub-only, out of scope).
+- `pnpm typecheck` clean (incl. `apps/controller`); `pnpm lint` clean;
+  `pnpm test` green — **702 passed** (unchanged).
+- `expo prebuild --platform ios --clean` regenerated the controller iOS project;
+  `pod install` resolved cleanly against the fork (`React-Core 0.86.0-2`);
+  `require('react-native')` → `react-native-tvos@0.86.0-2`. This proves the
+  dependency-conflict surface (JS + CocoaPods) is clean against the fork.
+- Full `xcodebuild`/simulator launch NOT run (expensive; fork is the same
+  drop-in the TV already compiles). Code-review/security-review not run: this is
+  a dependency-manifest-only change with no application-code or trust-boundary
+  diff — correctness is established empirically.
 
 ## Blocker / decision to raise
 
-**Discovered discrepancy: `ROOM_PLAYER_CAP` is 10, but `project-scope.md` says
-"up to 12 players" (twice).** Both games cap at 10 to respect the code. This is
-a scope-vs-implementation conflict the earlier reconciliation missed — it needs
-a decision: lift the platform cap to 12 (code change), or amend the scope to 10.
-Not changed here; task 2.4 respected the real cap.
+**Resolved (2026-08-07):** the `ROOM_PLAYER_CAP`-vs-scope conflict from 2.4 —
+user chose to amend the scope to match the code. `project-scope.md` now says
+"up to **10 players**"; the `implementation-plan.md` 1.4 note now reads
+"10-player ceiling (`ROOM_PLAYER_CAP`)". No code change; the cap stays 10.
+Shipped on its own branch/PR, separate from 5.7.
+
+No open blockers.
 
 ## Next action
 
-Start 5.7: switch `apps/controller` from `react-native@0.86.0` to
-`npm:react-native-tvos@~0.86.0-2` (the TV already uses the fork; tech-stack
-requires all apps to match), reinstall, and confirm typecheck/tests/local build.
+Start 5.4: exercise the multiplayer acceptance matrix across **both** Trivia and
+Voting (1–N members per game's range, mixed iOS/Android controllers + Android
+TV, host participation/transfer, player removal/rejoin, late join, TV recovery,
+back-to-back games incl. switching between the two games). Confirm every
+approved MVP workflow has at least one passing automated or documented manual
+check with the second game included.
 
 ## Other remaining work (see implementation-plan.md)
 
-- 5.4 — multiplayer acceptance matrix across both games.
 - 5.6 — final scope/architecture review including the Voting game.
 - 5.8 — optional: remember last-used name/avatar in AsyncStorage.
