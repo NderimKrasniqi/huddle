@@ -153,6 +153,32 @@ are iPhone-sized (~390×844).
     that stops such a greeting repeating after a game lives in the TV app.
     Deferred rather than dropped; written up against the "§5's phone roster"
     task in docs/implementation-plan.md.
+- **Host controls — transfer and remove (not in the original handoff; added by
+  task 3.7).** §5 draws a row that *states* a player's presence; it did not draw
+  the Host acting on one. The two approved host powers — hand the room to another
+  player (`transferHost`), take a player out of it (`removePlayer`) — are wired
+  here as a **manage sheet**, chosen over per-row buttons for two of this
+  section's own reasons: the rows already run below the fold from about the
+  sixth player (a per-row pair of buttons would push the count line further
+  off-screen), and removal deletes a seat and is not undone, which is worth the
+  deliberate second surface a stray thumb does not land on.
+  - Every non-Host row gains a muted disclosure chevron (§7's own Bungee "›")
+    and becomes a button; the Host's own row stays a plain label, since the
+    server refuses both powers against it (`targetIsSelf`). Tapping a row opens
+    the sheet: a centred Boardwalk confirm dialog over an ink scrim (ink at ~45%,
+    so the room reads as still there), showing the player's avatar and name, then
+    two full-width buttons — **"Make host"** (cobalt primary) and **"Remove"**
+    (punch, the same "this ends something" face as Back to lobby) — a failure
+    line, and a muted "Cancel". A tap off the panel dismisses.
+  - **Transfer is disabled for an away target** — the room a game runs in needs
+    a host who can run it, so `transferHost` refuses an away successor the way
+    the automatic handover picks a connected one; the dimmed button carries a
+    line saying to hand the room to someone still here. **Remove stays live for
+    an away target** — clearing out a phone that has gone quiet is the main
+    thing a Host removes anyone for. Which controls a row offers and whether
+    each is live is the pure `apps/controller/src/host-controls.ts`
+    (`rosterRowControls`), the same answer the row's chevron is gated on, so the
+    sheet and the server never disagree about what is on offer.
 - Footer: "<n> players in — you can start anytime" + cobalt primary button
   "Choose a game →".
   - The line is drawn, and drops "you can start anytime" when the room is too
