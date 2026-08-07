@@ -81,7 +81,7 @@ A room code identifies a room; it is not an authorization credential.
 
 ## Players
 
-The platform supports up to **12 players** in a room.
+The platform supports up to **10 players** in a room.
 
 Each game declares its own:
 

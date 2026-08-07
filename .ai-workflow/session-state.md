@@ -32,9 +32,13 @@ name/avatar).
 
 ## Blocker / decision to raise
 
-**Still open from 2.4:** `ROOM_PLAYER_CAP` is 10, but `project-scope.md` says
-"up to 12 players" (twice). Needs a decision: lift the platform cap to 12 (code)
-or amend the scope to 10. Not touched here.
+**Resolved (2026-08-07):** the `ROOM_PLAYER_CAP`-vs-scope conflict from 2.4 —
+user chose to amend the scope to match the code. `project-scope.md` now says
+"up to **10 players**"; the `implementation-plan.md` 1.4 note now reads
+"10-player ceiling (`ROOM_PLAYER_CAP`)". No code change; the cap stays 10.
+Shipped on its own branch/PR, separate from 5.7.
+
+No open blockers.
 
 ## Next action
 
