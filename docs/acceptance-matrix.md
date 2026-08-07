@@ -1,0 +1,174 @@
+# MVP Acceptance Matrix
+
+> **Task 5.4 — the multiplayer acceptance matrix across both games.**
+> Every approved MVP workflow (`project-scope.md`) mapped to at least one
+> passing check, with the **second game (Voting) included** alongside Trivia.
+
+## Method
+
+- **Automated** rows cite a passing test suite by file and, where it helps,
+  `describe`/`it`. The whole suite is `pnpm test` — **62 files, 721 tests, 0
+  failures** as of this task (was 61 files / 702 tests; +1 file and +19 tests
+  for the Voting hub suite added here).
+- The hub (`convex/convex/{rooms,players,games}.ts`) is game-independent: it
+  never names a game and dispatches to whatever the Registry installs. So a
+  workflow that runs *through* the hub without touching game rules (host
+  transfer, presence, room expiry, join) is proven **once, game-agnostically** —
+  running it a second time with Voting would exercise the same code. Those rows
+  are marked **game-agnostic**.
+- Workflows that **do** reach a game's own rules (start/range/settings, events,
+  the game's clock, end/replay/switch, late-join, away-in-game) are the ones
+  that must include the second game. Until this task they ran through the hub
+  only with Trivia; `convex/convex/voting-lifecycle.test.ts` (19 tests, added
+  here) now runs the same platform workflows with `gameId: 'voting'`. That file
+  is this matrix's "second game included" backbone.
+- **Manual** rows are workflows that need real hardware — two phone OSes, a
+  physical Android TV, a phone camera scanning a QR — that no automated suite in
+  this repo can stand in for. They cite the documented device runs from 5.3
+  (see git history) and are re-confirmed per release.
+- **Gap** rows are approved scope with no implementation to check. They are
+  listed in **Findings** below and are input to 5.6, not silently passed.
+
+Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ gap
+
+---
+
+## Room lifecycle
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| TV launch creates a room with a 4-char code | 🔁 | 🔁 | `rooms.test.ts` › createRoom; codes unique, redraw-on-collision |
+| Room persists across games; ending returns to the same room | ✅ | ✅ | `games.test.ts` › ending (roster/host/code intact); `voting-lifecycle.test.ts` › "returns the room to its lobby with roster, host and code intact" |
+| Switching games returns to the room, no state carried | ✅ | ✅ | `voting-lifecycle.test.ts` › "switches between the two games, carrying nothing across" (Voting→Trivia→Voting) |
+| Empty room stays open while TV holds; next joiner hosts | 🔁 | 🔁 | `players.test.ts` › host ("leaves the room with an away host when nobody is there to take it"); `rooms.test.ts` › unjoined-room window |
+| Room closes when its recovery/expiry window lapses; state discarded | 🔁 | 🔁 | `rooms.test.ts` › room expiry ("deleted once the window passes", "gives its Room Code back to the pool") |
+
+## Joining and identity
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Join by 4-char code | 🔁 | 🔁 | `players.test.ts` › joinRoom; `apps/controller/src/join-entry.test.ts` |
+| Join by scanning the TV QR (phone OS camera → deep link) | 🧪 | 🧪 | Manual (5.3 device runs); QR payload built in `apps/tv` + `packages/game-core/src/join-link.test.ts` |
+| Choose display name + built-in avatar/color before joining | 🔁 | 🔁 | `apps/controller/src/color-picker.test.ts`, `color-rejection.test.ts`; `players.test.ts` › claimColor |
+| Session Token issued and stored in SecureStore; validated server-side | 🔁 | 🔁 | `players.test.ts` › session; `apps/controller/src/session.test.ts`; `packages/game-core/src/session-token.test.ts` |
+| Simultaneous joins seat one host, no lost seats | 🔁 | 🔁 | `players.test.ts` › "joinRoom under simultaneous joins", "hands one host to a room a dozen phones join at once" |
+| Room code locates a room but is never authorization | 🔁 | 🔁 | `games.test.ts`/`players.test.ts` — every mutation gates on the Session Token, not the code |
+| iOS **and** Android controllers with an Android TV | 🧪 | 🧪 | Manual (5.3 device runs); one automated logic layer serves both OSes (tech-stack: RN client logic in `apps/*/src`) |
+
+## Players and capacity
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Up to 10 players in a room (`ROOM_PLAYER_CAP`) | 🔁 | 🔁 | `players.test.ts` › joinRoom (roomFull at the cap); `packages/game-core/src/room-capacity.ts` = 10 |
+| Each game declares its own player range; start gated on it | ✅ | ✅ | Trivia 2–10 `games.test.ts` › "refuses a party smaller than the game is playable by"; Voting 2–10 `voting-lifecycle.test.ts` › "refuses a party below Voting's declared minimum" |
+
+## Host controls
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Browse / select / configure a game from the phone | ✅ | ✅ | `game-registry` carousel/registry/logic suites; `apps/controller/src/settings-choice.test.ts`, `host.test.ts` |
+| Start a game; non-host start refused | ✅ | ✅ | `games.test.ts` + `voting-lifecycle.test.ts` › "refuses a phone that is not the Host" |
+| Settings locked at start (re-start refused mid-game) | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › "refuses to start a second game over the one being played" (`alreadyInGame`) |
+| End the active game; discard state, keep room | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › ending |
+| End the room / room closes | 🔁 | 🔁 | `rooms.test.ts` › expiry (`expireRoom`) |
+| Host is also a normal player; can act in the game | ✅ | ✅ | `games.test.ts` › "is open to every player, not only the Host"; Voting votes from the host seat in `voting-lifecycle.test.ts` |
+| Host cannot read another player's private state | ✅ | 🔁 | Trivia: `games.test.ts`/`players.test.ts` private-projection; Voting has **no** private per-player state — the tally is anonymous (`voting-lifecycle.test.ts` › "keeps the tally anonymous") |
+| **Manually transfer host status** | ⛔ | ⛔ | **Not implemented — see Findings F1** |
+| **Remove a player** | ⛔ | ⛔ | **Not implemented — see Findings F2** |
+
+## Game selection and configuration
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Catalog + metadata (name, art, range, duration, modes) | ✅ | ✅ | `game-registry` browsing/carousel suites; both modules' metadata in `packages/games/*/src/logic.ts` |
+| TV mirrors the host's selection/configuration | 🔁 | 🔁 | `games.test.ts` › browsing query; `apps/tv/src/carousel-footer.test.ts` |
+| Settings settled against the game's own schema (validate/default) | ✅ | ✅ | Trivia (3 settings) `games.test.ts`; Voting (1 setting) `voting-lifecycle.test.ts` › "starts on the rounds the Host chose…", "refuses a value…", "refuses a setting…" |
+| A game the build does not install is refused | 🔁 | 🔁 | `games.test.ts` › "refuses a game the Registry does not install" |
+
+## Playing a game
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Player event reaches the module; room keeps the result | ✅ | ✅ | `games.test.ts` › event suite; `voting-lifecycle.test.ts` › "carries the vote to the module…" |
+| Event attributed by Session Token, never by the phone's claim | ✅ | ✅ | Both suites › "names the {player,voter} from the Session Token, never from the phone" |
+| Private input stays private; only shared state on the TV | ✅ | ✅ | Trivia private answers `answering.test.ts`; Voting privacy is **structural** — `voting-lifecycle.test.ts` asserts the payload holds no voter→choice map |
+| Simultaneous inputs without races | ✅ | 🔁 | Trivia `games.test.ts` › "takes a whole party answering at once"; same transaction path serves Voting votes |
+| Authoritative timers; clients render countdowns locally | ✅ | ✅ | Trivia question clock `games.test.ts` › "the clock a question runs on"; Voting **both** beats server-clocked `voting-lifecycle.test.ts` › "the room's own clock, driving both of Voting's beats" |
+| A whole game plays out to a finish | ✅ | ✅ | Trivia `playToTheFinalScores`; Voting › "plays a whole game to finished on its own clock, with no phone awake" |
+| Rounds / scoring / results | ✅ | n/a | Trivia scoring `games.test.ts` + `packages/games/trivia`; Voting is scoreless by design (proves modularity) |
+| Shared TV gameplay surface (question/prompt, timer, results, podium) | 🔁 | 🔁 | `apps/tv/src/*`; `packages/games/trivia/src/watching.test.ts`, `packages/games/voting/src/voting-tv.test.ts` |
+
+## Late joining
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| A player may always join the room while it exists | 🔁 | ✅ | `voting-lifecycle.test.ts` › "leaves a mid-game joiner in the room but out of the game" |
+| A latecomer sees room status but does not enter active play or get private info | ✅ | ✅ | Trivia standings fixed at start `packages/games/trivia`; Voting `players` fixed at start, latecomer's vote ignored (`voting-lifecycle.test.ts`) |
+
+## Presence, disconnect and recovery
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Brief backgrounding is not an immediate disconnect (grace period) | 🔁 | 🔁 | `players.test.ts` › presence ("marks a backgrounded phone away — after ten seconds…"); `packages/game-core/src/presence.test.ts` |
+| A game never waits for an away player | ✅ | ✅ | Trivia `games.test.ts` › "the away players it names"; Voting `voting-lifecycle.test.ts` › "reveals past an away player" |
+| Reconnect with the valid credential restores the same participant | 🔁 | 🔁 | `players.test.ts` › presence/session ("brings a player back the moment their phone beats again"); `apps/controller/src/presence.test.ts` |
+| Host disconnect → longest-connected eligible player becomes host | 🔁 | 🔁 | `players.test.ts` › host transfer ("hands the room to the longest-connected active player", "moves the room inside the fifteen seconds a host may be gone for", "passes over players who have gone quiet") |
+| Below-minimum after a departure: game cannot continue | 🔁 | 🔁 | Enforced at start for both (`refusalToStart`); mid-game below-minimum is the host's wait/end decision (see Findings F2 for the missing removal control) |
+| TV disconnect → room preserved for a window, then closes | 🔁 | 🔁 | Realized via player-presence + room expiry (`rooms.test.ts`), **not** a distinct TV heartbeat/pause — see Findings F3 |
+| Back-to-back games, including switching between the two | ✅ | ✅ | `voting-lifecycle.test.ts` › "switches between the two games…", "replays Voting from a clean state" |
+
+## Persistence and scope boundaries
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| Room/game state ephemeral; discarded when the room closes | 🔁 | 🔁 | `rooms.test.ts` › `expireRoom` deletes room + players |
+| No score carried between games | ✅ | ✅ | `games.test.ts` › "leaves its scores behind"; `voting-lifecycle.test.ts` › switching carries nothing across |
+| Only convenience prefs (last name/avatar) may persist locally | n/a | n/a | Optional per scope; not yet implemented (tracked in 5.8) |
+
+---
+
+## Findings (input to 5.6)
+
+**F1 — Manual host transfer is not implemented. (Blocker for MVP acceptance.)**
+`project-scope.md` (Host) lists "manually transfer host status," and the plan's
+3.3 note claims "manual transfer." The codebase has only automatic
+`handOverRoom` (promotes the longest-connected eligible player when the host
+goes away or the room is handed over on presence loss) — there is no mutation a
+host can call to hand the room to a specific player while connected. No
+automated or manual check can pass for this workflow because the capability does
+not exist. Decision needed: implement a `transferHost` mutation, or amend the
+scope to automatic-only transfer.
+
+**F2 — Host-initiated player removal is not implemented. (Blocker for MVP
+acceptance.)** Scope (Host; Phone Backgrounding and Disconnection) lists "remove
+players" and "the host can … remove the player," with removal invalidating the
+old participant. There is no `removePlayer` mutation. The plan's 3.2 note claims
+this behavior. Decision needed: implement removal, or amend the scope.
+
+**F3 — TV disconnection is modeled through player presence, not a TV heartbeat
+or an explicit pause.** Scope (TV Disconnection) describes the TV disconnecting,
+gameplay *pausing*, a recovery window, and restore-on-reconnect. In the
+implementation the TV does not heartbeat; room lifetime runs off the newest
+player `lastSeenAt` (`rooms.ts`), and there is no `paused` room phase — a game
+"pauses" only in the sense that away players are not waited on. This satisfies
+the *outcome* (a room survives a window and then closes, gameplay does not
+advance on absent players) but not the scope's literal mechanism. 5.6 should
+decide whether to reconcile the scope's wording to the presence-based model or
+add a TV-presence/pause concept. Not a blocker on its own; the outcome holds.
+
+**Resolved — player cap.** Scope now says 10, matching `ROOM_PLAYER_CAP`
+(reconciled in the 5.7 branch).
+
+## Manual checks to run per release
+
+The rows marked 🧪 have no repo automation and are the documented manual matrix,
+last exercised in 5.3 (real-device verification, see git history). Re-run before
+release:
+
+1. iOS phone + Android phone + Android TV in one room, both games played.
+2. QR scanned by each phone OS camera opens the join deep link.
+3. Host participates while managing the room; host leaves and transfer lands
+   (automatic — see F1).
+4. Player backgrounds/locks/switches apps mid-game and reconnects.
+5. Late join during each game; TV app relaunch/recovery within the window.
+6. Back-to-back games including a Trivia↔Voting switch.

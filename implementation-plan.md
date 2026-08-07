@@ -115,10 +115,24 @@
 - [x] **5.3 — Harden phone app lifecycle and deep links**
   - Done: foreground/background, lock/unlock, QR deep links, cold start, and reconnection credentials verified, including real-device verification (see git history).
 
-- [ ] **5.4 — Run the multiplayer acceptance matrix across both games** *(remaining — after 2.4)*
-  - Exercise 1–12 members where the selected game supports it, across **both** Trivia and Voting.
+- [ ] **5.4 — Run the multiplayer acceptance matrix across both games** *(matrix delivered; blocked on F1/F2 decisions)*
+  - Exercise up to 10 members where the selected game supports it, across **both** Trivia and Voting.
   - Test mixed iOS/Android controllers with Android TV, host participation, host transfer, player removal/rejoin, late join, TV recovery, and back-to-back games (including switching between the two games).
   - **Verify:** every approved MVP workflow has at least one passing automated or documented manual check, with the second game included.
+  - Done so far: `docs/acceptance-matrix.md` maps every approved MVP workflow to
+    its evidence with Trivia **and** Voting columns. The "second game included"
+    gap at the hub level is now closed by `convex/convex/voting-lifecycle.test.ts`
+    (19 new tests driving the game-agnostic hub with `gameId: 'voting'` —
+    start/range/settings, event dispatch, anonymous-tally privacy, away-in-game,
+    both server-clocked beats, end/replay, and Trivia↔Voting switching). Suite:
+    62 files / 721 tests green.
+  - **Blocked:** the matrix surfaced two approved workflows with no
+    implementation, so no check can pass for them — **F1 manual host transfer**
+    and **F2 host-initiated player removal** (see `docs/acceptance-matrix.md`
+    Findings). Both need a decision: implement, or amend the scope. **F3** (TV
+    recovery modeled via player presence, not a TV heartbeat/pause) is a
+    reconciliation note for 5.6, not a blocker. Manual mixed-hardware rows (🧪)
+    remain per-release checks, last run in 5.3.
 
 - [x] **5.5 — Finalize local build and verification commands**
   - Done: single-command root `typecheck`/`test`/`test:unit`/`test:integration`; per-app run scripts; commands reconciled into `tech-stack.md`.
