@@ -116,10 +116,20 @@
     removed token no longer resolves via `session`; a transfer flips `host` on
     the roster; the controller maps each refusal. UI logic — `host-controls.test.ts`
     (own row offers nothing; present row offers both live; away row dims transfer
-    and keeps remove). Typecheck and lint clean across the workspace. A live
-    simulator pass of the sheet is a per-release manual check (see
-    `docs/acceptance-matrix.md`), unrun in the authoring session because standing
-    up a reachable Convex backend there needed an interactive login.
+    and keeps remove). Typecheck and lint clean across the workspace.
+  - **On-device pass (iPhone 17 simulator, against the cloud dev deployment):**
+    joined as host → own row shows the HOST pill and *no* chevron; a second
+    (CLI-seeded) player appears as a non-Host row with the online dot and
+    disclosure chevron, footer flips to "2 players in — you can start anytime";
+    that player going away drew the away treatment (dimmed avatar, muted name,
+    muted dot) with the chevron kept; the row press opened the manage sheet over
+    a dimmed room; the sheet showed **transfer dimmed with the away hint** and
+    **remove live**; **Remove ran end-to-end** — `removePlayer` fired, the sheet
+    closed, the row dropped, and the footer returned to "1 player in". The
+    enabled-transfer tap was not exercised on device (the seeded player was away
+    by then), but it is the identical `run()` path as remove and `transferHost`
+    itself was verified live against the same deployment. Remaining manual
+    mixed-hardware rows stay per-release checks (see `docs/acceptance-matrix.md`).
 
 ## Phase 4 — Build the Full Trivia Game
 

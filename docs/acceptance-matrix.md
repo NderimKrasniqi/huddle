@@ -73,8 +73,8 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | End the room / room closes | 🔁 | 🔁 | `rooms.test.ts` › expiry (`expireRoom`) |
 | Host is also a normal player; can act in the game | ✅ | ✅ | `games.test.ts` › "is open to every player, not only the Host"; Voting votes from the host seat in `voting-lifecycle.test.ts` |
 | Host cannot read another player's private state | ✅ | 🔁 | Trivia: `games.test.ts`/`players.test.ts` private-projection; Voting has **no** private per-player state — the tally is anonymous (`voting-lifecycle.test.ts` › "keeps the tally anonymous") |
-| **Manually transfer host status** | 🔁 | 🔁 | `players.test.ts` › host controls › transferHost + `host-controls.test.ts` (row offers, away-target disable) — task 3.7, see Findings F1. Host Roster manage sheet wired; on-device render is a 🧪 per-release check |
-| **Remove a player** | 🔁 | 🔁 | `players.test.ts` › host controls › removePlayer + `host-controls.test.ts` — task 3.7, see Findings F2. Host Roster manage sheet wired; on-device render is a 🧪 per-release check |
+| **Manually transfer host status** | 🔁 | 🔁 | `players.test.ts` › host controls › transferHost + `host-controls.test.ts` (row offers, away-target disable) — task 3.7, see Findings F1. Host Roster manage sheet wired; sheet + away-disabled transfer verified on-device (iPhone 17 sim) |
+| **Remove a player** | 🔁 | 🔁 | `players.test.ts` › host controls › removePlayer + `host-controls.test.ts` — task 3.7, see Findings F2. Host Roster manage sheet wired; **Remove verified end-to-end on-device** (iPhone 17 sim: seat dropped, footer returned to "1 player in") |
 
 ## Game selection and configuration
 
@@ -140,8 +140,11 @@ sheet (`apps/controller/app/index.tsx`) — a non-Host row opens a Boardwalk
 confirm dialog whose "Make host" runs `transferHost`, dimmed for an away target;
 `docs/design/design-handoff.md` §5 and `docs/CONTEXT.md` (Host Controls, Manage
 Sheet) now specify the affordance. Row-offer logic is `host-controls.ts` (Vitest);
-the RN screen is not unit-tested per the stack, so its on-device render is a 🧪
-per-release check.
+the RN screen is not unit-tested per the stack, but the sheet was exercised
+on-device (iPhone 17 sim against the cloud dev deployment): the away target drew
+"Make host" dimmed with the away hint, confirming the disabled path; the
+enabled-transfer tap was not run on device (target was away by then) but is the
+identical `run()` path as Remove and `transferHost` was verified live via CLI.
 
 **F2 — Host-initiated player removal — RESOLVED by task 3.7.** Was:
 scope lists "remove players" (removal invalidates the old participant) with no
@@ -151,7 +154,9 @@ null; they may rejoin fresh), allowed mid-game (the beat resolves on the server
 clock), with the same host gate and refusals as transfer. Covered by
 `players.test.ts` › host controls; security review PASS. **Wired into the UI
 (task 3.7):** the same manage sheet as F1 — "Remove" (punch) runs `removePlayer`
-and stays live for an away target.
+and stays live for an away target. Verified end-to-end on-device (iPhone 17 sim):
+tapping Remove on an away player dropped their row and returned the footer to
+"1 player in".
 
 **F3 — TV disconnection is modeled through player presence, not a TV heartbeat
 or an explicit pause.** Scope (TV Disconnection) describes the TV disconnecting,
