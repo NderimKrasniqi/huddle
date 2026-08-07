@@ -91,9 +91,9 @@ working must add it here.
   Starting is refused over a running game, and refused for a party smaller than
   the game's `playerRange.min`; ending is unconditional, because Back to lobby
   is a button a thumb can hit twice and the second tap asks for the lobby the
-  room is already in. A room too *large* for a game is not refused — Huddle cannot
-  remove a player, so that belongs in the Host's picker, where there is still
-  something to be done about it.
+  room is already in. A room too *large* for a game is not refused at the start
+  control — the Host shrinks it instead, from the Host Roster, where **Remove a
+  player** (see Host Controls) now takes a seat out of the room.
 - **Back to lobby** — the Host's control on their phone while a game runs, and
   the whole of the Game Lifecycle's `endGame` from the room's side: the room
   returns to its lobby with the same Roster — every player, their Nickname and
@@ -171,6 +171,26 @@ working must add it here.
   not drawn: an Arrival is already greeted on the television for the same four
   seconds. Host-only, like §5 — a non-Host player still learns nothing about
   anybody else's presence between games, which is accepted rather than solved.
+  Every non-Host row is also a button that opens the Manage Sheet (Host
+  Controls); the Host's own row is not, since there is nothing to do to oneself.
+- **Host Controls** — the two approved Host powers over another player, run from
+  the Host Roster: **Transfer host** (`transferHost` — hand the room to a chosen
+  player) and **Remove a player** (`removePlayer` — take a seat out of the room,
+  which invalidates that phone's Session Token; they may rejoin as a fresh
+  Seat). Both are Host-only writes gated on the Session Token, and both refuse
+  the Host's own seat (`targetIsSelf`); transfer additionally refuses an Away
+  successor (`targetAway`), the same connected-successor rule the automatic
+  handover keeps, while removal has no presence bar — removing an Away phone is
+  the point of it.
+- **Manage Sheet** — the surface the Host Controls are offered on: a centred
+  Boardwalk confirm dialog, summoned over an ink scrim by tapping a non-Host
+  roster row, showing that player and two buttons — "Make host" (cobalt) and
+  "Remove" (punch). A sheet rather than per-row buttons because the roster
+  already runs below the fold on a full room and removal deletes a seat, so the
+  act is worth a deliberate second surface. Which of its controls are live is
+  the pure `host-controls.ts` (`rosterRowControls`) — transfer dimmed for an
+  Away target, remove always live — the same answer the row's disclosure chevron
+  is gated on.
 - **Seat** — one place on the TV's roster: a dashed empty circle, on the Pairing
   Screen, saying there is room for you. A room has ten of them
   (`ROOM_PLAYER_CAP` in game-core, the plan's pinned cap); the pairing screen's

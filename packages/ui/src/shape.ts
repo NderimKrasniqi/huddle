@@ -44,6 +44,13 @@ export const opacity = {
    * of those meanings changed.
    */
   carouselSideCard: 0.5,
+  /**
+   * 45% — the ink scrim behind a modal (the Host Roster's manage sheet). Its own
+   * name for the same reason the two above have theirs: a scrim dims *the room
+   * behind a dialog*, which is neither a thing made unavailable nor a card
+   * standing back, so a shared number would drift the moment one meaning moved.
+   */
+  scrim: 0.45,
 } as const;
 
 /**

@@ -79,7 +79,7 @@
 - [x] **3.6 — Run lifecycle regression tests with fake time**
   - Done: player/host/TV timeouts, scheduled transitions, cleanup, and reconnect races covered deterministically under fake timers in the convex suite.
 
-- [ ] **3.7 — Host management controls: manual transfer and player removal** *(added by 5.4 — closes findings F1/F2; backend done, host-roster UI remains)*
+- [x] **3.7 — Host management controls: manual transfer and player removal** *(added by 5.4 — closes findings F1/F2)*
   - The 5.4 acceptance matrix found two approved host powers (`docs/project-scope.md`
     Host; Phone Backgrounding and Disconnection) with no implementation: manual
     host transfer and host-initiated player removal. The 3.2/3.3 notes claimed
@@ -99,15 +99,37 @@
     `room-phase.ts` and the 3.2/3.3 notes corrected. **Independent security
     review: PASS** (token-first authorization complete, cross-room/self-target
     guards hold, credential invalidation total, no mid-game deadlock).
-  - **Remaining:** wire the controls into the Host's roster screen
-    (`apps/controller/app/index.tsx`) — a design-informed change
-    (`docs/design/design-handoff.md` §5 defines the roster and does not yet
-    specify transfer/remove affordances), and RN screen code is not unit-tested
-    per the stack. Until then the capability exists and is authorized/tested but
-    is not reachable from the UI.
-  - **Verify (met for the backend):** happy paths + every refusal in
-    `players.test.ts`; a removed token no longer resolves via `session`; a
-    transfer flips `host` on the roster; the controller maps each refusal.
+  - **Done (host-roster UI):** both controls are wired into the Host's roster
+    screen (`apps/controller/app/index.tsx`) as a **manage sheet** — the
+    design decision, since `docs/design/design-handoff.md` §5 drew the roster
+    but not the act of managing a player; §5 and `docs/CONTEXT.md` (Host
+    Controls, Manage Sheet) now specify it. Every non-Host row gains a
+    disclosure chevron and opens a centred Boardwalk confirm dialog offering
+    "Make host" (cobalt) and "Remove" (punch); the Host's own row offers
+    nothing (`targetIsSelf`), transfer is disabled for an away target
+    (`targetAway`), and each refusal is surfaced through
+    `hostControlFailureMessage`. Which controls a row offers and their live
+    state is the pure `apps/controller/src/host-controls.ts` (`rosterRowControls`,
+    `rosterRowIsManageable`) with 7 Vitest tests, matching the `host-roster.ts`
+    pattern; the RN screen itself is not unit-tested per the stack.
+  - **Verify:** backend — happy paths + every refusal in `players.test.ts`; a
+    removed token no longer resolves via `session`; a transfer flips `host` on
+    the roster; the controller maps each refusal. UI logic — `host-controls.test.ts`
+    (own row offers nothing; present row offers both live; away row dims transfer
+    and keeps remove). Typecheck and lint clean across the workspace.
+  - **On-device pass (iPhone 17 simulator, against the cloud dev deployment):**
+    joined as host → own row shows the HOST pill and *no* chevron; a second
+    (CLI-seeded) player appears as a non-Host row with the online dot and
+    disclosure chevron, footer flips to "2 players in — you can start anytime";
+    that player going away drew the away treatment (dimmed avatar, muted name,
+    muted dot) with the chevron kept; the row press opened the manage sheet over
+    a dimmed room; the sheet showed **transfer dimmed with the away hint** and
+    **remove live**; **Remove ran end-to-end** — `removePlayer` fired, the sheet
+    closed, the row dropped, and the footer returned to "1 player in". The
+    enabled-transfer tap was not exercised on device (the seeded player was away
+    by then), but it is the identical `run()` path as remove and `transferHost`
+    itself was verified live against the same deployment. Remaining manual
+    mixed-hardware rows stay per-release checks (see `docs/acceptance-matrix.md`).
 
 ## Phase 4 — Build the Full Trivia Game
 
@@ -133,7 +155,7 @@
 
 ## Phase 5 — Harden the Local MVP
 
-**Outcome:** The complete MVP runs reliably on Android TV + iOS/Android phones and is checked against the approved scope. **— Mostly complete; 5.4/5.6 depend on the Voting game, plus one stack correction (5.7).**
+**Outcome:** The complete MVP runs reliably on Android TV + iOS/Android phones and is checked against the approved scope. **— Nearly complete; only 5.6 (final scope/architecture review) remains. The Voting game shipped, 5.4's F1/F2 gap was closed by task 3.7, and the 5.7 stack correction landed.**
 
 - [x] **5.1 — Handle join and network failure UX**
   - Done: invalid/expired code, full room, and rejection states (`join-rejection.ts`, `game-rejection.ts`, `color-rejection.ts`); duplicate-submission guards; tested.
@@ -145,7 +167,7 @@
 - [x] **5.3 — Harden phone app lifecycle and deep links**
   - Done: foreground/background, lock/unlock, QR deep links, cold start, and reconnection credentials verified, including real-device verification (see git history).
 
-- [ ] **5.4 — Run the multiplayer acceptance matrix across both games** *(matrix delivered; blocked on F1/F2 decisions)*
+- [x] **5.4 — Run the multiplayer acceptance matrix across both games** *(matrix delivered; F1/F2 implemented by 3.7)*
   - Exercise up to 10 members where the selected game supports it, across **both** Trivia and Voting.
   - Test mixed iOS/Android controllers with Android TV, host participation, host transfer, player removal/rejoin, late join, TV recovery, and back-to-back games (including switching between the two games).
   - **Verify:** every approved MVP workflow has at least one passing automated or documented manual check, with the second game included.
@@ -156,13 +178,16 @@
     start/range/settings, event dispatch, anonymous-tally privacy, away-in-game,
     both server-clocked beats, end/replay, and Trivia↔Voting switching). Suite:
     62 files / 721 tests green.
-  - **Blocked:** the matrix surfaced two approved workflows with no
-    implementation, so no check can pass for them — **F1 manual host transfer**
-    and **F2 host-initiated player removal** (see `docs/acceptance-matrix.md`
-    Findings). Both need a decision: implement, or amend the scope. **F3** (TV
+  - **Unblocked:** the two approved workflows the matrix surfaced with no
+    implementation — **F1 manual host transfer** and **F2 host-initiated player
+    removal** — were implemented rather than dropped, in task **3.7**: the
+    `transferHost`/`removePlayer` mutations (tested, security-reviewed) and the
+    Host Roster's manage sheet (`host-controls.ts` tests). Both matrix rows now
+    have passing automated coverage for their logic; the sheet's on-device render
+    joins the manual mixed-hardware rows (🧪) as a per-release check. **F3** (TV
     recovery modeled via player presence, not a TV heartbeat/pause) is a
-    reconciliation note for 5.6, not a blocker. Manual mixed-hardware rows (🧪)
-    remain per-release checks, last run in 5.3.
+    reconciliation note for 5.6, not a blocker. Manual rows remain per-release
+    checks, last run in 5.3.
 
 - [x] **5.5 — Finalize local build and verification commands**
   - Done: single-command root `typecheck`/`test`/`test:unit`/`test:integration`; per-app run scripts; commands reconciled into `docs/tech-stack.md`.
