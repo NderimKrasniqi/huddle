@@ -2,54 +2,62 @@
 
 ## Current task
 
-**5.7 — align the Controller to the `react-native-tvos` fork — DONE.** Next
-executable task: **5.4 — multiplayer acceptance matrix across both games**, then
-**5.6 — final scope/architecture review**. Optional: **5.8** (remember last-used
-name/avatar).
+**5.4 — multiplayer acceptance matrix across both games — MATRIX DELIVERED,
+BLOCKED on two product decisions (F1/F2).** Not markable complete until F1/F2 are
+resolved. After that: **5.6 — final scope/architecture review** (should adopt the
+matrix + findings). Optional: **5.8** (remember last-used name/avatar).
 
-## What changed (5.7)
+## What changed (5.4)
 
-- `apps/controller/package.json`: `react-native` `0.86.0` →
-  `npm:react-native-tvos@~0.86.0-2`, matching `apps/tv` (tech-stack.md requires
-  all apps on one RN fork to avoid dependency conflicts).
-- `pnpm install` re-resolved the controller onto the fork and deduped the
-  redundant plain-RN tree: `pnpm-lock.yaml` −442/+27, `--frozen-lockfile` clean.
-- No `@react-native-tvos/config-tv`, no `EXPO_TV` on the controller — it stays a
-  phone build.
+- New `docs/acceptance-matrix.md`: every approved MVP workflow (`project-scope.md`)
+  mapped to a passing automated or documented-manual check, with **Trivia and
+  Voting** columns and a legend (✅ automated · 🔁 game-agnostic · 🧪 manual ·
+  ⛔ gap). Includes a Findings section and a per-release manual checklist.
+- New `convex/convex/voting-lifecycle.test.ts` (19 tests): drives the
+  game-agnostic Convex hub with `gameId: 'voting'` — the automated "second game
+  included" backbone. Covers start/range/settings, event dispatch, anonymous-
+  tally privacy at the wire boundary, away-in-game, both server-clocked beats,
+  end/replay, mid-game late-join, and Trivia↔Voting switching (no state leak).
+- `implementation-plan.md` 5.4 note updated (cap wording 10; delivered vs
+  blocked); this file.
 
-## Checks / reviews
+## Checks
 
-- `pnpm typecheck` clean (incl. `apps/controller`); `pnpm lint` clean;
-  `pnpm test` green — **702 passed** (unchanged).
-- `expo prebuild --platform ios --clean` regenerated the controller iOS project;
-  `pod install` resolved cleanly against the fork (`React-Core 0.86.0-2`);
-  `require('react-native')` → `react-native-tvos@0.86.0-2`. This proves the
-  dependency-conflict surface (JS + CocoaPods) is clean against the fork.
-- Full `xcodebuild`/simulator launch NOT run (expensive; fork is the same
-  drop-in the TV already compiles). Code-review/security-review not run: this is
-  a dependency-manifest-only change with no application-code or trust-boundary
-  diff — correctness is established empirically.
+- `pnpm typecheck` clean; `pnpm lint` clean; `pnpm test` green — **721 passed**
+  (was 702; +19), **62 files** (was 61). Voting suite alone: 19/19.
+- Independent code-review: **could not complete** — the workflow-code-reviewer
+  subagent was cut off by the account monthly spend limit after one finding
+  (a file-count typo in the matrix, since fixed to 62). Self-review done inline:
+  each new test fails if the hub is broken (away-test needs real presence-feed to
+  reveal; switch-test proves no leak both directions; privacy-test guards the
+  wire key-set). Re-running the independent review is a recommended follow-up
+  once the limit resets.
 
-## Blocker / decision to raise
+## Blockers / decisions to raise
 
-**Resolved (2026-08-07):** the `ROOM_PLAYER_CAP`-vs-scope conflict from 2.4 —
-user chose to amend the scope to match the code. `project-scope.md` now says
-"up to **10 players**"; the `implementation-plan.md` 1.4 note now reads
-"10-player ceiling (`ROOM_PLAYER_CAP`)". No code change; the cap stays 10.
-Shipped on its own branch/PR, separate from 5.7.
-
-No open blockers.
+- **F1 — manual host transfer is not implemented.** Scope lists it; only
+  automatic presence-driven `handOverRoom` exists (no mutation to hand the room
+  to a chosen player while connected). No check can pass. Decide: implement a
+  `transferHost` mutation, or amend the scope to automatic-only.
+- **F2 — host-initiated player removal is not implemented.** Scope lists "remove
+  players"; there is no `removePlayer` mutation. Decide: implement, or amend the
+  scope.
+- **F3 — TV recovery is modeled via player presence + room expiry, not a TV
+  heartbeat/pause phase.** Outcome holds; wording mismatch. Reconcile in 5.6.
+- The plan's 3.2/3.3 notes claim manual transfer + removal are "Done" — that is
+  inaccurate given F1/F2 and should be corrected when F1/F2 are decided.
 
 ## Next action
 
-Start 5.4: exercise the multiplayer acceptance matrix across **both** Trivia and
-Voting (1–N members per game's range, mixed iOS/Android controllers + Android
-TV, host participation/transfer, player removal/rejoin, late join, TV recovery,
-back-to-back games incl. switching between the two games). Confirm every
-approved MVP workflow has at least one passing automated or documented manual
-check with the second game included.
+Get the F1/F2 decision (implement vs. amend scope). If implement: plan a small
+capability task for `transferHost` + `removePlayer` (host-authorized mutations,
+old-participant invalidation on removal, tests, and the controller host-control
+UI). If amend: update `project-scope.md` Host + Phone-Disconnection sections and
+the 3.2/3.3 plan notes, then 5.4's ⛔ rows become documented decisions and 5.4
+can close. Then proceed to 5.6.
 
-## Other remaining work (see implementation-plan.md)
+## Open PRs (unmerged; stacked)
 
-- 5.6 — final scope/architecture review including the Voting game.
-- 5.8 — optional: remember last-used name/avatar in AsyncStorage.
+- PR #14 `chore/5.7-controller-rn-tvos-fork` — 5.7 RN-fork alignment + scope→10.
+- 5.4 work is stacked on that branch (shared plan/session-state files would
+  otherwise conflict). See its PR.
