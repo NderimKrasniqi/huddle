@@ -58,7 +58,7 @@ export type VoteScreen =
 /**
  * What a phone with nothing to press is told, which is always where to look.
  *
- * "Eyes up" is the platform's own principle (docs/CONTEXT.md): a phone out of
+ * "Eyes up" is the platform's own principle: a phone out of
  * things to do says so and points at the television, rather than competing with
  * it for the room's attention.
  */

@@ -4,8 +4,8 @@ import { CURATED_PACK, type PackQuestion, RESERVED_CATEGORY } from '@huddle/pack
  * Where a game of trivia's questions come from: the Curated Pack, filtered and
  * counted to the settings the Host chose.
  *
- * Trivia holds questions, not packs. The pack is the only way it gets content
- * (docs/CONTEXT.md), but what the rules ask is a plain list, and everything a
+ * Trivia holds questions, not packs. The pack is the only way it gets content,
+ * but what the rules ask is a plain list, and everything a
  * pack knows that the rules do not — the category the Host filtered by, the
  * difficulty an author sorted by — is dropped on the way in. That is not
  * tidiness: a game's state is handed to every phone in the room, so a field the

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type QuestionPack, questionPackSchema } from './question-pack';
 
 /**
- * The Question Pack format, held to the shape docs/CONTEXT.md gives it.
+ * The Question Pack format, held to its specified shape.
  *
  * Every test here is a way a hand-written pack goes wrong — three options
  * instead of four, an answer index pointing past the end, a difficulty nobody

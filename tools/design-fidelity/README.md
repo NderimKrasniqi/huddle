@@ -204,9 +204,8 @@ seating five phones for.
 **Driven, not seeded.** Ada was joined on the phone itself — Join Link opened
 (`huddle://join/GGGU`), nickname typed, Join tapped. The join-form pair is the
 same phone sent to a *second* room's link (`huddle://join/HHWH`), which is the
-one case a seated Controller is let back to the form (see Rejoin in
-docs/CONTEXT.md); it is the join screen with a scanned code in it, not a fresh
-launch.
+one case a seated Controller is let back to the form (a Rejoin exception); it
+is the join screen with a scanned code in it, not a fresh launch.
 
 ## The two handoff animations
 

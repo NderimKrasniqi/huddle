@@ -102,8 +102,7 @@
   - **Done (host-roster UI):** both controls are wired into the Host's roster
     screen (`apps/controller/app/index.tsx`) as a **manage sheet** — the
     design decision, since `docs/design/design-handoff.md` §5 drew the roster
-    but not the act of managing a player; §5 and `docs/CONTEXT.md` (Host
-    Controls, Manage Sheet) now specify it. Every non-Host row gains a
+    but not the act of managing a player; §5 now specifies it. Every non-Host row gains a
     disclosure chevron and opens a centred Boardwalk confirm dialog offering
     "Make host" (cobalt) and "Remove" (punch); the Host's own row offers
     nothing (`targetIsSelf`), transfer is disabled for an away target

@@ -138,8 +138,7 @@ seat / an away target. Covered by `players.test.ts` › host controls; independe
 security review PASS. **Wired into the UI (task 3.7):** the Host Roster's manage
 sheet (`apps/controller/app/index.tsx`) — a non-Host row opens a Boardwalk
 confirm dialog whose "Make host" runs `transferHost`, dimmed for an away target;
-`docs/design/design-handoff.md` §5 and `docs/CONTEXT.md` (Host Controls, Manage
-Sheet) now specify the affordance. Row-offer logic is `host-controls.ts` (Vitest);
+`docs/design/design-handoff.md` §5 now specifies the affordance. Row-offer logic is `host-controls.ts` (Vitest);
 the RN screen is not unit-tested per the stack, but the sheet was exercised
 on-device (iPhone 17 sim against the cloud dev deployment): the away target drew
 "Make host" dimmed with the away hint, confirming the disabled path; the

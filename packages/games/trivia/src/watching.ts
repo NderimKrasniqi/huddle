@@ -57,8 +57,8 @@ export type ScoreRow = {
  */
 export type FinalStanding = ScoreRow & {
   /**
-   * Competition rank, so ties share the top one (docs/CONTEXT.md, Victory
-   * Screen): two players level on the highest score are both 1st, and the
+   * Competition rank, so ties share the top one (the Victory Screen): two
+   * players level on the highest score are both 1st, and the
    * player behind them is 3rd — the rank they took between them is spent.
    */
   readonly rank: number;

@@ -24,8 +24,8 @@ const boardwalk = {
 // focusable button on it would be in perfect Boardwalk style.
 const huddle = { rules: { 'tv-remote-surface': tvRemoteSurface } };
 
-// The one file allowed to hold the remote's key listener — see the rule, and
-// About Panel in docs/CONTEXT.md. Repo-relative, like every other path here.
+// The one file allowed to hold the remote's key listener — see the rule.
+// Repo-relative, like every other path here.
 const THE_REMOTE_OWNER = 'apps/tv/src/tv-about.tsx';
 
 // Boardwalk's floors, as `packages/ui` holds them (`minBodyFontSize`). Written
