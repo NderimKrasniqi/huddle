@@ -10,13 +10,13 @@ Record only choices this project actually needs.
 | Mobile | Expo SDK 57 + React Native 0.86 | Native iOS/Android with shared implementation. |
 | TV | `react-native-tvos@0.86-stable` | Android TV support while remaining compatible with normal mobile targets. |
 | Navigation | Expo Router | Shared Expo-native navigation model. |
-| Styling | NativeWind v4 stable | Utility-first styling with React Native/TV support without adopting preview v5. |
+| Styling | Boardwalk design tokens + React Native `StyleSheet` | A shared design-token system in `@huddle/ui` (colors, typography, motion, shadows, shape) consumed through `StyleSheet`, verified for Android TV legibility through Phase 5. NativeWind was evaluated and not adopted; its v4 behavior on Android TV was an open risk and the token system already met the design handoff. |
 | Backend/realtime | Convex | Authoritative room/game state, reactive queries, transactional mutations, and scheduled functions without a separate API or realtime service. |
 | Local preferences | AsyncStorage | Last-used name, avatar, and other non-sensitive convenience preferences. |
 | Session credential storage | Expo SecureStore | Protect participant/session credentials used for reconnection and authorization. |
 | Workspace | pnpm workspaces | Simple monorepo sharing without Turborepo/Nx. |
 | Backend tests | Vitest + `convex-test` | Convex/domain tests, fake time, lifecycle and scheduled-function verification. |
-| Client tests | Jest + `jest-expo` + React Native Testing Library | Expo/React Native UI and interaction tests. |
+| Client tests | Vitest (node) over extracted logic modules | App behaviour is factored into pure modules (`apps/*/src/*.ts`) and tested with Vitest in a node environment. React Native Testing Library component-rendering tests are out of MVP scope. |
 | Builds | Local Expo/native builds | MVP development and verification without EAS Build infrastructure. |
 
 ## Architecture
@@ -37,12 +37,14 @@ Record only choices this project actually needs.
 ## Verification
 
 ```text
-install: pnpm install
-typecheck: pnpm typecheck
-backend tests: pnpm test:backend
-client tests: pnpm test:client
-android phone: pnpm mobile:android
-ios phone: pnpm mobile:ios
-android tv: pnpm tv:android
-convex check/push: pnpm convex:check
+install:              pnpm install
+typecheck:            pnpm typecheck            # root tsc + every workspace
+lint:                 pnpm lint
+all tests:            pnpm test                 # convex + packages + apps + lint-rules (Vitest)
+unit tests:           pnpm test:unit            # packages + apps + lint-rules
+backend/integration:  pnpm test:integration     # convex (edge-runtime)
+android tv:           pnpm --filter @huddle/tv android
+android phone:        pnpm --filter @huddle/controller android
+ios phone:            pnpm --filter @huddle/controller ios
+convex dev:           pnpm --filter @huddle/convex dev
 ```
