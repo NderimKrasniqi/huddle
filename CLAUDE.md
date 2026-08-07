@@ -19,6 +19,17 @@ Use AI Project Workflow Core.
 - Code review is independent and read-only.
 - Run security review for explicit audits or meaningful security-boundary changes.
 
+## Git workflow
+
+- After a task's tests and typecheck pass, branch, commit, and open a PR
+  without asking each time. Never commit straight to `main`; always work on a
+  branch.
+- Stop before merging to `main`: leave the PR for the user to review and merge.
+  Do not fast-forward, squash, or merge into `main` unless the user says so in
+  the moment.
+- Never force-push, hard-reset shared history, or delete branches without
+  explicit confirmation, regardless of permission settings.
+
 ## Huddle project references
 
 Beyond the project-truth files above, this repo keeps two Huddle-specific
