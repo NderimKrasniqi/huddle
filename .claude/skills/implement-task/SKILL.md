@@ -1,7 +1,7 @@
 ---
 name: implement-task
 disable-model-invocation: true
-description: Use when implementation-plan.md has a ready or in-progress numbered task. Implement, verify, review, update progress, and leave the repository resumable. Do not use to invent scope, choose initial architecture, or implement materially undefined work.
+description: Use when docs/implementation-plan.md has a ready or in-progress numbered task. Implement, verify, review, update progress, and leave the repository resumable. Do not use to invent scope, choose initial architecture, or implement materially undefined work.
 compatibility: Portable to Agent Skills-compatible coding agents. Repository editing and command execution are required; a fresh read-only reviewer improves independent review.
 ---
 

@@ -16,7 +16,7 @@ import schema from './schema';
  * the reference game, so trivia is the right thing to test the hub against; but
  * a hub tested against one game has only shown it runs *that* game, and the
  * whole reason Voting exists is to show the platform is game-independent
- * (project-scope.md: "prove that the platform is genuinely game-independent").
+ * (docs/project-scope.md: "prove that the platform is genuinely game-independent").
  *
  * So this file re-runs the game-touching platform workflows with `gameId:
  * 'voting'`: a differently-shaped module (one setting not three, a 2–10 range,

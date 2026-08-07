@@ -56,7 +56,7 @@ export default defineConfig({
           environment: 'node',
         },
       },
-      // The apps are mostly React Native, which tech-stack.md deliberately does
+      // The apps are mostly React Native, which docs/tech-stack.md deliberately does
       // not test — but the plumbing under `src/` that holds an app together is
       // plain TypeScript, and that much is worth a unit test.
       {

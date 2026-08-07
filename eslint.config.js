@@ -43,6 +43,11 @@ module.exports = defineConfig([
     '**/.expo/**',
     '**/expo-env.d.ts',
     'convex/convex/_generated/**',
+    // Linked git worktrees the agent harness checks out under here for
+    // background tasks: a whole second copy of the repo (with its own generated
+    // files), gitignored and transient. `eslint .` walks the filesystem, not
+    // git, so without this it lints another branch's checkout and fails on it.
+    '.claude/**',
   ]),
 
   expoConfig,

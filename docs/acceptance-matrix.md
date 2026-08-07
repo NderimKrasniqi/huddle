@@ -1,7 +1,7 @@
 # MVP Acceptance Matrix
 
 > **Task 5.4 — the multiplayer acceptance matrix across both games.**
-> Every approved MVP workflow (`project-scope.md`) mapped to at least one
+> Every approved MVP workflow (`docs/project-scope.md`) mapped to at least one
 > passing check, with the **second game (Voting) included** alongside Trivia.
 
 ## Method

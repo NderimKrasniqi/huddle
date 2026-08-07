@@ -16,8 +16,8 @@
   },
   "project_truth": [
     ".ai-workflow/session-state.md",
-    "implementation-plan.md",
-    "project-scope.md",
-    "tech-stack.md"
+    "docs/implementation-plan.md",
+    "docs/project-scope.md",
+    "docs/tech-stack.md"
   ]
 }

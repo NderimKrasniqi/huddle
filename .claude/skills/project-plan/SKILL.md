@@ -7,7 +7,7 @@ compatibility: Portable to Agent Skills-compatible coding agents; repository/web
 
 # Project Plan
 
-Create/update only `project-scope.md`, `tech-stack.md`, `implementation-plan.md`, and `.ai-workflow/session-state.md`. Do not write production code while planning.
+Create/update only `docs/project-scope.md`, `docs/tech-stack.md`, `docs/implementation-plan.md`, and `.ai-workflow/session-state.md`. Do not write production code while planning.
 
 ## 1. Discover the project
 
@@ -15,11 +15,11 @@ If a repository exists, inspect instructions, structure, manifests, tests, CI, d
 
 Interview adaptively. Ask only unresolved questions that could materially change the product or implementation. Never repeat answered questions; recommend sensible defaults for reversible details.
 
-When the project can be described coherently, write `project-scope.md`.
+When the project can be described coherently, write `docs/project-scope.md`.
 
 ## 2. Challenge the scope until complete
 
-Read `project-scope.md` fresh as if another engineer wrote it:
+Read `docs/project-scope.md` fresh as if another engineer wrote it:
 
 > Review it and ask me clarifying questions. Help me find gaps or things I haven't thought through.
 
@@ -35,15 +35,15 @@ Read the approved scope and repository reality. Derive the technical capabilitie
 
 Ask for meaningful stack preferences or constraints. Preserve a working stack unless there is a concrete reason to change it; otherwise recommend the simplest suitable stack and explain why. If the user delegates the choice, use the recommendation. Do not make them choose every library or provider.
 
-Only after the direction is agreed, write a small `tech-stack.md`: choices and why, essential architecture/dependency rules, and verification commands. Verify version-sensitive choices when needed.
+Only after the direction is agreed, write a small `docs/tech-stack.md`: choices and why, essential architecture/dependency rules, and verification commands. Verify version-sensitive choices when needed.
 
-Re-read it against `project-scope.md` only for contradictions, omissions, or accidental complexity. Correct genuine mistakes; do not use post-write review as the normal place to design the stack.
+Re-read it against `docs/project-scope.md` only for contradictions, omissions, or accidental complexity. Correct genuine mistakes; do not use post-write review as the normal place to design the stack.
 
 ## 4. Reason through the roadmap, then write it
 
-Before writing the plan, reason through the complete approved MVP using `project-scope.md`, `tech-stack.md`, and repository reality. Determine capability order, dependencies, cross-cutting work at first need, task boundaries, verification, and the simplest path to MVP.
+Before writing the plan, reason through the complete approved MVP using `docs/project-scope.md`, `docs/tech-stack.md`, and repository reality. Determine capability order, dependencies, cross-cutting work at first need, task boundaries, verification, and the simplest path to MVP.
 
-Write `implementation-plan.md` as:
+Write `docs/implementation-plan.md` as:
 
 ```text
 Project
@@ -53,7 +53,7 @@ Project
 
 Use stable numbering (`1.1`, `1.2`, `2.1`). Keep tasks focused enough for one implementation session and independently verifiable without fragmenting trivial work. Avoid layer-first phases; use a foundation phase only when genuinely required.
 
-Then read `implementation-plan.md` fresh with `project-scope.md` and `tech-stack.md`. Find missing MVP work, bad ordering/dependencies, vague or oversized tasks, trivial fragmentation, missing required cross-cutting work, or unnecessary architecture. Fix actual defects; ask only if review exposes a real unresolved product or architecture decision.
+Then read `docs/implementation-plan.md` fresh with `docs/project-scope.md` and `docs/tech-stack.md`. Find missing MVP work, bad ordering/dependencies, vague or oversized tasks, trivial fragmentation, missing required cross-cutting work, or unnecessary architecture. Fix actual defects; ask only if review exposes a real unresolved product or architecture decision.
 
 Update future unchecked tasks when implementation evidence proves the roadmap wrong; preserve completed history unless incorrect.
 
