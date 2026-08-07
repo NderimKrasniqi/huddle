@@ -36,7 +36,7 @@ import { StickerSurface } from '@huddle/ui/native';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   activeCodeCell,
@@ -48,6 +48,13 @@ import {
 } from '../src/join-entry';
 import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
 import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
+import { hostControlFailureMessage, hostControlRejectionMessage } from '../src/host-control-rejection';
+import {
+  type HostControlAction,
+  type RosterRowControl,
+  rosterRowControls,
+  rosterRowIsManageable,
+} from '../src/host-controls';
 import {
   backToLobbyLabel,
   browsedGameMeta,
@@ -597,17 +604,29 @@ function HostRoster({
   readonly roster: readonly RosterSeat[];
   readonly canStart: boolean;
 }) {
+  // Which player's row the Host has opened to manage, if any. Held as the id
+  // rather than the seat so the sheet always reads the *current* row off the
+  // live roster: a target that goes away between opening the sheet and acting
+  // dims transfer without the sheet reopening, and a target that leaves the room
+  // (or is removed) drops out of `roster` and closes the sheet on its own.
+  const [managing, setManaging] = useState<RosterSeat['playerId']>();
+  const managingSeat = roster.find((seat) => seat.playerId === managing);
+
   return (
     <View style={styles.field}>
       <Text style={styles.label}>YOUR ROOM</Text>
 
       <View style={styles.roster}>
         {roster.map((seat) => (
-          <RosterRow key={seat.playerId} seat={seat} />
+          <RosterRow key={seat.playerId} seat={seat} onManage={setManaging} />
         ))}
       </View>
 
       <Text style={styles.aside}>{rosterFooterLine(roster.length, canStart)}</Text>
+
+      {managingSeat === undefined ? null : (
+        <ManagePlayerSheet seat={managingSeat} onDismiss={() => setManaging(undefined)} />
+      )}
     </View>
   );
 }
@@ -622,39 +641,268 @@ function HostRoster({
  * nickname goes to muted text rather than dimming with the circle — 30% ink is
  * not text any more. The dot's colour is the only part of that a screen reader
  * cannot see, which is what `rosterRowSpokenAs` is for.
+ *
+ * Every row but the Host's own opens the manage sheet (task 3.7): the room is
+ * the Host's to hand over or clear a seat from, and `rosterRowIsManageable` is
+ * where "every row but the Host's own" is decided, so the row draws a
+ * disclosure chevron and becomes a button exactly where a control is on offer.
+ * The Host's own row stays a plain label — there is nothing to do to oneself
+ * (`targetIsSelf`).
  */
-function RosterRow({ seat }: { readonly seat: RosterSeat }) {
+function RosterRow({
+  seat,
+  onManage,
+}: {
+  readonly seat: RosterSeat;
+  readonly onManage: (playerId: RosterSeat['playerId']) => void;
+}) {
   const slot = rosterRowSlot(seat);
   const away = slot === 'away';
   const face = playerFace(seat.color);
+  const manageable = rosterRowIsManageable(seat);
+
+  const row = (
+    <StickerSurface
+      depth={shadowDepth.phoneSmall}
+      style={styles.rosterRow}
+      wrapperStyle={styles.stretch}
+    >
+      <View
+        style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
+      >
+        <Text style={[styles.rosterInitials, { color: face.monogram }]}>
+          {playerInitials(seat.nickname)}
+        </Text>
+      </View>
+
+      <Text style={[styles.rosterName, away && styles.rosterNameAway]} numberOfLines={1}>
+        {seat.nickname}
+      </Text>
+
+      {slot === 'host' ? (
+        <HostPill />
+      ) : (
+        <View style={[styles.statusDot, away && styles.statusDotAway]} />
+      )}
+
+      {/* The disclosure chevron a mobile list wears to say a row opens onto
+          more — drawn only where there is more, so the Host's own row does not
+          invite a tap that has nothing behind it. */}
+      {manageable ? <Text style={styles.rosterDisclosure}>›</Text> : null}
+    </StickerSurface>
+  );
+
+  // The label and role are on the wrapper rather than the surface: `StickerSurface`
+  // is a shadow and a face, and forwards no accessibility of its own. A
+  // manageable row is a button that opens the sheet; the Host's own row is a
+  // plain label with nothing to press.
+  return manageable ? (
+    <Pressable
+      style={styles.stretch}
+      onPress={() => onManage(seat.playerId)}
+      accessibilityRole="button"
+      accessibilityLabel={rosterRowSpokenAs(seat)}
+      accessibilityHint="Opens options to make host or remove"
+    >
+      {row}
+    </Pressable>
+  ) : (
+    <View accessible accessibilityLabel={rosterRowSpokenAs(seat)} style={styles.stretch}>
+      {row}
+    </View>
+  );
+}
+
+/**
+ * The Host's controls for one player, over the lobby (task 3.7): make them host,
+ * or remove them from the room.
+ *
+ * It is a sheet — a confirm surface summoned over the roster — rather than
+ * buttons on every row, for two reasons the roster's own notes give: the rows
+ * already run below the fold from about the sixth player (docs/CONTEXT.md, Host
+ * Roster), so per-row controls would push the count line further off-screen, and
+ * removal deletes a seat, which is worth the deliberate second surface a stray
+ * thumb does not land on. Opening the row *is* naming the target; the sheet is
+ * where the act is chosen and confirmed.
+ *
+ * Which controls it draws and whether each is live comes from `rosterRowControls`
+ * — the same pure answer the row's chevron is gated on — so the sheet and the
+ * server agree on what is offered. Every refusal the mutations can still throw
+ * (the roster is a live subscription and can be a beat stale) is read for its
+ * kind and shown by `hostControlFailureMessage`, never swallowed: a host who
+ * taps and sees nothing happen has no way to make sense of it.
+ */
+function ManagePlayerSheet({
+  seat,
+  onDismiss,
+}: {
+  readonly seat: RosterSeat;
+  readonly onDismiss: () => void;
+}) {
+  const transferHost = useMutation(api.players.transferHost);
+  const removePlayer = useMutation(api.players.removePlayer);
+  // Which action is in flight, so the pressed control alone reads as busy and
+  // both are locked while either runs.
+  const [busy, setBusy] = useState<HostControlAction>();
+  const [failure, setFailure] = useState<string>();
+  const controls = rosterRowControls(seat);
+  const face = playerFace(seat.color);
+  const away = rosterRowSlot(seat) === 'away';
+
+  async function run(action: HostControlAction) {
+    setBusy(action);
+    setFailure(undefined);
+
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+
+      if (sessionToken === null) {
+        // A phone that cannot say who it is is in no room to run — the server's
+        // own word for that is the one to show.
+        setFailure(hostControlRejectionMessage({ kind: 'notInRoom' }));
+        return;
+      }
+
+      const mutate = action === 'transfer' ? transferHost : removePlayer;
+      await mutate({ sessionToken, playerId: seat.playerId });
+      // The room's own subscription now carries the result — a transfer unseats
+      // this phone as Host and takes the whole roster section with it, a removal
+      // drops the row — so there is nothing left to manage and the sheet closes.
+      onDismiss();
+    } catch (error) {
+      setFailure(hostControlFailureMessage(error));
+    } finally {
+      setBusy(undefined);
+    }
+  }
 
   return (
-    // The label is on a wrapper rather than the surface: `StickerSurface` is a
-    // shadow and a face, and forwards no accessibility of its own.
-    <View accessible accessibilityLabel={rosterRowSpokenAs(seat)} style={styles.stretch}>
-      <StickerSurface
-        depth={shadowDepth.phoneSmall}
-        style={styles.rosterRow}
-        wrapperStyle={styles.stretch}
-      >
-        <View
-          style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
+    <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
+      <View style={styles.sheetRoot}>
+        {/* The scrim is the backdrop and the way out: a tap anywhere off the
+            panel dismisses, the way tapping away from a sheet does everywhere. */}
+        <Pressable
+          style={[StyleSheet.absoluteFill, styles.sheetScrim]}
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
+
+        <StickerSurface
+          depth={shadowDepth.phoneCard}
+          style={styles.sheet}
+          wrapperStyle={styles.sheetWrapper}
         >
-          <Text style={[styles.rosterInitials, { color: face.monogram }]}>
-            {playerInitials(seat.nickname)}
-          </Text>
-        </View>
+          <View style={styles.sheetHeader}>
+            <View
+              style={[
+                styles.rosterAvatar,
+                { backgroundColor: face.fill },
+                away && styles.rosterAway,
+              ]}
+            >
+              <Text style={[styles.rosterInitials, { color: face.monogram }]}>
+                {playerInitials(seat.nickname)}
+              </Text>
+            </View>
+            <Text style={styles.sheetName} numberOfLines={1}>
+              {seat.nickname}
+            </Text>
+          </View>
 
-        <Text style={[styles.rosterName, away && styles.rosterNameAway]} numberOfLines={1}>
-          {seat.nickname}
-        </Text>
+          {controls.map((control) => (
+            <ManageAction
+              key={control.action}
+              control={control}
+              nickname={seat.nickname}
+              busy={busy === control.action}
+              // One action at a time: while either is in flight, neither is
+              // pressable.
+              locked={busy !== undefined}
+              onPress={() => void run(control.action)}
+            />
+          ))}
 
-        {slot === 'host' ? (
-          <HostPill />
-        ) : (
-          <View style={[styles.statusDot, away && styles.statusDotAway]} />
+          {failure === undefined ? null : (
+            <Text style={styles.failure} accessibilityLiveRegion="polite">
+              {failure}
+            </Text>
+          )}
+
+          <Pressable
+            style={styles.sheetCancel}
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text style={styles.sheetCancelLabel}>Cancel</Text>
+          </Pressable>
+        </StickerSurface>
+      </View>
+    </Modal>
+  );
+}
+
+/**
+ * One control in the manage sheet: a full-width Boardwalk button that runs a
+ * host power, or sits dimmed with the line saying why it cannot.
+ *
+ * Remove wears Boardwalk's punch — the same "this ends something" face as Back
+ * to lobby, and for the same reason: deleting a seat is not undone. Transfer is
+ * the cobalt primary. A disabled transfer (an away target) keeps its place and
+ * says what to do instead rather than vanishing, the way the start control does
+ * for a room it cannot start.
+ */
+function ManageAction({
+  control,
+  nickname,
+  busy,
+  locked,
+  onPress,
+}: {
+  readonly control: RosterRowControl;
+  readonly nickname: string;
+  readonly busy: boolean;
+  readonly locked: boolean;
+  readonly onPress: () => void;
+}) {
+  const remove = control.action === 'remove';
+  const pressable = control.enabled && !locked;
+  // Naming the target on the button, not just in the header above, is the
+  // courtesy a destructive tap earns: the reader confirms who as they confirm
+  // what.
+  const spokenAs =
+    control.action === 'transfer'
+      ? `Make ${nickname} host`
+      : `Remove ${nickname} from the room`;
+
+  return (
+    <View style={styles.stretch}>
+      <Pressable
+        style={styles.stretch}
+        disabled={!pressable}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={spokenAs}
+        accessibilityState={{ disabled: !pressable }}
+      >
+        {({ pressed }) => (
+          <StickerSurface
+            depth={shadowDepth.phoneCard}
+            style={[styles.button, remove && styles.sheetRemove, pressed && styles.buttonPressed]}
+            // Dimmed whenever it cannot be pressed — a disabled transfer (away
+            // target), and either action while the other is in flight — so a
+            // button that ignores a tap never looks fully live.
+            wrapperStyle={[styles.stretch, !pressable && styles.buttonUnavailable]}
+          >
+            <Text style={styles.buttonLabel}>{busy ? 'Working…' : control.label}</Text>
+          </StickerSurface>
         )}
-      </StickerSurface>
+      </Pressable>
+
+      {control.disabledBecause === undefined ? null : (
+        <Text style={styles.waitingFor}>{control.disabledBecause}</Text>
+      )}
     </View>
   );
 }
@@ -1733,6 +1981,71 @@ const styles = StyleSheet.create({
   // from this phone.
   statusDotAway: {
     backgroundColor: colors.mutedBorder,
+  },
+  // The disclosure chevron on a manageable row — Boardwalk's own glyph (§7's
+  // picker draws the same one), muted so it reads as an affordance the row
+  // carries rather than a control competing with the name.
+  rosterDisclosure: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    // Bungee rides low in its own line box; pinning it centres the chevron on
+    // the row.
+    lineHeight: 24,
+  },
+
+  // The manage sheet (task 3.7): a centred confirm dialog over a dimmed room.
+  // Centred rather than a bottom sheet so it clears the home indicator without
+  // this screen reaching for the safe area the Modal renders outside of.
+  sheetRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  // Boardwalk's scrim: ink pulled back to a wash, so the room reads as still
+  // there behind the dialog. A separate view from the panel, which is its
+  // sibling and so keeps its full-strength surface.
+  sheetScrim: {
+    backgroundColor: colors.ink,
+    opacity: opacity.scrim,
+  },
+  sheetWrapper: {
+    alignSelf: 'stretch',
+  },
+  sheet: {
+    alignSelf: 'stretch',
+    gap: 14,
+    padding: 20,
+    backgroundColor: colors.surface,
+    borderColor: colors.ink,
+    borderWidth: borderWidth.medium,
+    borderRadius: radius.card,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sheetName: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 20,
+  },
+  // Boardwalk's "this ends something" face, the same punch as Back to lobby:
+  // removing a player deletes their seat and is not undone.
+  sheetRemove: {
+    backgroundColor: colors.punch,
+  },
+  sheetCancel: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  sheetCancelLabel: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
   },
   // Boardwalk's aside on a phone screen: something true about the room rather
   // than something to press — §5's count line, §7's swipe hint, §8's caption.
