@@ -1,5 +1,6 @@
 import type { GameLogic, GameLogicRegistry } from '@huddle/game-core';
 import { triviaGameLogic } from '@huddle/game-trivia/logic';
+import { votingGameLogic } from '@huddle/game-voting/logic';
 
 import { clampBrowsingIndex } from './browsing';
 
@@ -11,8 +12,10 @@ import { clampBrowsingIndex } from './browsing';
  * filter over the other list because the point is what is *not* imported: the
  * Convex mutations that seed and reduce a game's state reach for this one, and
  * a module's screens are React Native that has no business in a server bundle.
+ * Each game's `/logic` entry point is taken here, so the two `/logic` exports
+ * are all the server ever pulls in.
  */
-export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic];
+export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, votingGameLogic];
 
 /**
  * The installed game answering to `gameId`, or `undefined` if none does.

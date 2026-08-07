@@ -4,6 +4,7 @@ import {
   type GameSettingsSchema,
 } from '@huddle/game-core';
 import { triviaGameModule } from '@huddle/game-trivia';
+import { votingGameModule } from '@huddle/game-voting';
 import { describe, expect, it } from 'vitest';
 
 import { GAME_LOGIC_REGISTRY, gameLogicById } from './logic';
@@ -30,8 +31,8 @@ function settingsDefaultingOutsideTheirOptions(schema: GameSettingsSchema): stri
  * something a hub screen would otherwise have to check, or get wrong, per game.
  */
 describe('the Registry', () => {
-  it('installs trivia, and for now nothing else', () => {
-    expect(GAME_REGISTRY).toEqual([triviaGameModule]);
+  it('installs trivia and the voting game, in that order', () => {
+    expect(GAME_REGISTRY).toEqual([triviaGameModule, votingGameModule]);
   });
 
   it('gives every game a name of its own, since a room stores the id', () => {
@@ -107,6 +108,7 @@ describe('the Registry the server reads', () => {
 
   it('finds a game by the id a phone names', () => {
     expect(gameLogicById('trivia')).toBe(GAME_LOGIC_REGISTRY[0]);
+    expect(gameLogicById('voting')).toBe(GAME_LOGIC_REGISTRY[1]);
   });
 
   it('answers for a game it does not install, rather than throwing', () => {

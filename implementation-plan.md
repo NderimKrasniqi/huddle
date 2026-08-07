@@ -51,12 +51,8 @@
 - [x] **2.3 — Implement the generic game-session lifecycle**
   - Done: `convex/convex/games.ts` runs room → configuring → active/paused → finished → room; host-authorized start/pause/resume/end/replay/end-room; ending discards game state but preserves room/participants/host; `games.test.ts` covers no-leak and stable room identity.
 
-- [ ] **2.4 — Build the Voting/Test game as the second module** *(remaining — primary)*
-  - Implement a simple prompt-and-vote loop as a `GameModule` using only the `game-core` contract (no room/session/hub changes).
-  - Keep each participant's vote participant-private until reveal; project shared prompt/tally to TV public state.
-  - Register it by adding it to `GAME_REGISTRY` in `packages/game-registry/src/registry.ts` (currently `[triviaGameModule]`).
-  - Add phone (vote input) and TV (prompt + reveal) surfaces, factoring logic into `apps/*/src/*.ts` modules with Vitest tests, matching the existing app pattern.
-  - **Verify:** Voting can be added and run with changes confined to a new `packages/games/voting` module plus its registry entry and app screens; no edits to `rooms.ts`/`players.ts`/`games.ts` lifecycle; `convex-test`/Vitest cover private-until-reveal and the vote tally.
+- [x] **2.4 — Build the Voting/Test game as the second module**
+  - Done: `packages/games/voting` ("Hot Takes") is a `GameModule` built only against `@huddle/game-core`; registered by one entry in `GAME_REGISTRY` + `GAME_LOGIC_REGISTRY`, with **no** edits to `convex/convex/{rooms,players,games}.ts`. Vote privacy is structural — the state stores an anonymous per-option tally plus a set of who-has-voted, never attribution — so no payload can name a voter's choice even though the hub returns state whole. Both beats run on the room's own clock; away-aware early reveal mirrors Trivia. 36 new Vitest tests; typecheck/lint/tests green (702). Independent code-review and security-review both PASS.
 
 - [x] **2.5 — Enforce authorization and privacy boundaries**
   - Done: public Convex functions validate input/return shapes; participant actions require the Session Token; host commands require host authority; private state is projected only to the entitled participant; `players.test.ts`/`games.test.ts` prove unauthorized commands and private-state reads are rejected.

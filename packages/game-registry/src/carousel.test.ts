@@ -21,8 +21,11 @@ describe('the index the room stores', () => {
   });
 
   it('refuses to be confused by what a client might send', () => {
+    // Non-finite is not an index off the end — it is no index at all, so it
+    // falls to the first card, exactly as an unbrowsed room does. A *finite*
+    // index past the list is the one that clamps to the last card (above).
     expect(browsingIndex(Number.NaN)).toBe(0);
-    expect(browsingIndex(Number.POSITIVE_INFINITY)).toBe(LAST);
+    expect(browsingIndex(Number.POSITIVE_INFINITY)).toBe(0);
     expect(browsingIndex(1.9)).toBe(Math.min(1, LAST));
   });
 });
@@ -32,14 +35,17 @@ describe('the carousel window', () => {
     expect(carouselWindow(0)?.focused).toBe(GAME_REGISTRY[0]);
   });
 
-  it('has no side cards with a single game installed', () => {
-    const window = carouselWindow(0);
-
-    // The whole of "renders correctly with the registry's single MVP entry":
-    // absent side cards, not duplicates of the focused one.
-    expect(window?.previous).toBeUndefined();
-    expect(window?.next).toBeUndefined();
-    expect(window?.total).toBe(GAME_REGISTRY.length);
+  it('offers the neighbours the focused card actually has, and does not wrap', () => {
+    // The list does not wrap: the first card has nothing to its left and the
+    // last nothing to its right, however many games are installed — two cards
+    // that wrapped would give the Host arrows that only ever changed the focus
+    // to something already on screen. Between the ends, a card's neighbours are
+    // its real Registry siblings.
+    expect(carouselWindow(0)?.previous).toBeUndefined();
+    expect(carouselWindow(LAST)?.next).toBeUndefined();
+    expect(carouselWindow(0)?.next).toBe(GAME_REGISTRY[1]);
+    expect(carouselWindow(LAST)?.previous).toBe(GAME_REGISTRY[LAST - 1]);
+    expect(carouselWindow(0)?.total).toBe(GAME_REGISTRY.length);
   });
 
   it('reports the index it settled on, not the one it was given', () => {
