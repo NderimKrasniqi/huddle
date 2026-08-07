@@ -10,7 +10,7 @@ import type { RosterSeat } from './host';
  * muted dot — but the carousel replaces that screen at the first join, so those
  * seats are unreachable in any shipped build, and the task above this one
  * dropped the away treatment from the television outright (see the Carousel
- * Footer Line in docs/CONTEXT.md). A lobby where somebody has put their phone
+ * Footer Line). A lobby where somebody has put their phone
  * down would otherwise look, everywhere in the product, exactly like one where
  * nobody has — and the person who needs to know is the one deciding whether to
  * start.
@@ -25,7 +25,7 @@ import type { RosterSeat } from './host';
  * dot / pink NEW! pill").
  *
  * `away` is not one of §5's three, and it is not an invention either: it is the
- * Status Dot's own muted variant (docs/CONTEXT.md), which the system already
+ * Status Dot's own muted variant, which the system already
  * decided is how a listed player's presence reads. The pink NEW! pill is the
  * one of the three that is *not* here — see the departure recorded against §5.
  */

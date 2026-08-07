@@ -36,7 +36,7 @@ const {
  * That boundary is what keeps the rule off the
  * domain: `keyArt: { color: 'punch' }` and `<NamePill color={row.color} />`
  * carry a *Player Color name*, which is protocol from game-core
- * (docs/CONTEXT.md) and not a colour at all, and `depth` is an ordinary word
+ * and not a colour at all, and `depth` is an ordinary word
  * for a tree node's nesting. A rule that fired on those would be firing on the
  * vocabulary.
  *

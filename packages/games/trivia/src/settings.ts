@@ -13,7 +13,7 @@ import { EVERY_CATEGORY, PACK_CATEGORIES } from './questions';
  * side of a schema the hub reads as labelled strings.
  */
 
-/** How a correct answer scores (docs/CONTEXT.md: Scoring Mode). */
+/** How a correct answer scores (the Scoring Mode). */
 export const SCORING_MODES = ['flat', 'speed'] as const;
 
 export type ScoringMode = (typeof SCORING_MODES)[number];

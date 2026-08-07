@@ -376,7 +376,7 @@ describe('the Victory Screen', () => {
     const party = [player(ADA, 'Ada'), player(GRACE, 'Grace'), player(LINUS, 'Linus')];
     const screen = victoryOf(playedToTheEnd(party, everyoneRightExcept(LINUS)), party);
 
-    // "Ties share the top rank" (docs/CONTEXT.md): two winners are both first,
+    // "Ties share the top rank": two winners are both first,
     // and the player behind them is third rather than second.
     expect(screen.standings.map((row) => [row.nickname, row.rank, row.winner])).toEqual([
       ['Ada', 1, true],

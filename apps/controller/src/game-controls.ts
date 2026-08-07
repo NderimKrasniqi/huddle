@@ -102,8 +102,7 @@ export function startControl(
 }
 
 /**
- * What the Host's way out of a running game says (docs/CONTEXT.md, "Back to
- * lobby").
+ * What the Host's way out of a running game says ("Back to lobby").
  *
  * One label on every beat, and it names where the room goes rather than what it
  * is leaving: the hub never reads a game's state, so this phone cannot know

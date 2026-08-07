@@ -3,7 +3,7 @@ import type { RosterSeat } from './host';
 /**
  * What the Host can do to another player's row, and whether they can do it now
  * (task 3.7 in docs/implementation-plan.md; the roster it sits on is §5, the
- * Host Roster in docs/CONTEXT.md).
+ * Host Roster).
  *
  * The two powers are `transferHost` and `removePlayer` (`convex/convex/players.ts`),
  * and this module is only the *offer* of them: which controls a row shows and

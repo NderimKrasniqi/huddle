@@ -46,10 +46,8 @@ Use AI Project Workflow Core.
 
 ## Huddle project references
 
-Beyond the project-truth files above, this repo keeps two Huddle-specific
-sources of truth in `docs/`:
+Beyond the project-truth files above, this repo keeps one Huddle-specific
+source of truth in `docs/`:
 
-- `docs/CONTEXT.md` — domain vocabulary. All names in code use these terms;
-  update it when new terms appear.
 - `docs/design/design-handoff.md` — the Boardwalk design system, the visual
   source of truth.

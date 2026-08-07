@@ -5,7 +5,7 @@ import { type GameSettings, type GameSettingsSchema, settingsFrom } from '@huddl
  * draw, what a tap on one produces, and what the room would start on right now.
  *
  * Nothing here reads a setting. A Settings Schema is a labelled key with a
- * closed list of labelled values (docs/CONTEXT.md), so "which chip is lit" and
+ * closed list of labelled values, so "which chip is lit" and
  * "what would be sent" are both answerable by comparing strings — which is what
  * lets one screen draw whatever the chosen game declares without knowing what
  * any of it means.

@@ -52,7 +52,7 @@ function validatePackFile(directory: string, file: string): PackFileReport {
     return { file, ok: false, problem: z.prettifyError(parsed.error) };
   }
 
-  // A pack is named after its id (docs/CONTEXT.md), which the schema cannot see
+  // A pack is named after its id, which the schema cannot see
   // — it is only ever handed the contents. Left unchecked, renaming the file or
   // editing the id would leave the pack findable by one name and referred to by
   // another, with CI green either way.

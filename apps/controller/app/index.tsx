@@ -425,7 +425,7 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   // The Host's settings, held here rather than on the picker below because this
   // screen is the one that survives a game: the picker is unmounted for the
   // whole of a game and remounted on "Back to lobby", and a party playing twice
-  // in an evening (docs/CONTEXT.md, Question Deal) would otherwise find their
+  // in an evening (the Question Deal) would otherwise find their
   // twenty questions quietly back at ten. It costs nothing on a phone that is
   // not running the room — a choice nothing draws and nothing sends.
   const [settingsChoice, setSettingsChoice] = useState<SettingsChoice>();
@@ -719,8 +719,8 @@ function RosterRow({
  *
  * It is a sheet — a confirm surface summoned over the roster — rather than
  * buttons on every row, for two reasons the roster's own notes give: the rows
- * already run below the fold from about the sixth player (docs/CONTEXT.md, Host
- * Roster), so per-row controls would push the count line further off-screen, and
+ * already run below the fold from about the sixth player (the Host Roster), so
+ * per-row controls would push the count line further off-screen, and
  * removal deletes a seat, which is worth the deliberate second surface a stray
  * thumb does not land on. Opening the row *is* naming the target; the sheet is
  * where the act is chosen and confirmed.
@@ -991,7 +991,7 @@ function HostGamePicker({
 
 /**
  * The Host's settings for the card they are on, drawn from whatever the game
- * declares (docs/CONTEXT.md, Settings Schema).
+ * declares (the Settings Schema).
  *
  * It reads its schema off the module the carousel is focused on and its labels
  * off that schema, so it names no game and no setting: a game that declares
@@ -1353,7 +1353,7 @@ function PlayerGameScreen({
 }
 
 /**
- * Back to lobby (docs/CONTEXT.md): the Host's way out of a running game, with
+ * Back to lobby: the Host's way out of a running game, with
  * the room and its roster intact.
  *
  * On every beat the Host can be on, and deliberately: the room's other way
@@ -1977,7 +1977,7 @@ const styles = StyleSheet.create({
   rosterNameAway: {
     color: colors.mutedText,
   },
-  // The muted half of the Status Dot (docs/CONTEXT.md): the room is not hearing
+  // The muted half of the Status Dot: the room is not hearing
   // from this phone.
   statusDotAway: {
     backgroundColor: colors.mutedBorder,

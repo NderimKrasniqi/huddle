@@ -860,7 +860,7 @@ describe('the clock a question runs on', () => {
 
     await elapse(t, clockOn(await stateOf(t, roomId)));
 
-    // The Reveal Beat, which still comes from a phone (docs/CONTEXT.md).
+    // The Reveal Beat, which still comes from a phone.
     await t.mutation(api.games.sendEvent, {
       sessionToken: tokens.Ada ?? '',
       event: { kind: 'advance', questionIndex: 0, phase: 'reveal' },

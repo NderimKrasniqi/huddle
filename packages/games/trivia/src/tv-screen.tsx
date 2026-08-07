@@ -57,7 +57,7 @@ function Option({ option }: { readonly option: WatchedOption }) {
  * A player's name in their claimed color.
  *
  * Deliberately not called a Seat: a Seat is the TV roster's place in the lobby,
- * a dashed circle until somebody takes it (docs/CONTEXT.md). This is a name on
+ * a dashed circle until somebody takes it. This is a name on
  * a scoreboard row, and reusing that word for it would put two things behind
  * one term.
  */
@@ -85,7 +85,7 @@ function VerdictRow({ verdict }: { readonly verdict: PlayerVerdict }) {
  * hearing from that phone, muted once it has gone quiet.
  *
  * The same badge the pairing roster wears on its seats, because presence is
- * news wherever a player is drawn (docs/CONTEXT.md, Status Dot) — and here it
+ * news wherever a player is drawn (the Status Dot) — and here it
  * is also the answer to a question the scoreboard raises by itself: a player
  * whose score has stopped moving is either losing or away, and the room can
  * only tell from the dot.
@@ -147,7 +147,7 @@ function Placing({ standing }: { readonly standing: FinalStanding }) {
 }
 
 /**
- * The Victory Screen (docs/CONTEXT.md): the final standings with the winner
+ * The Victory Screen: the final standings with the winner
  * celebrated, and the last thing the television shows before the Host takes the
  * room back to its lobby.
  *

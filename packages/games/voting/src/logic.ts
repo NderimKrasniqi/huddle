@@ -144,7 +144,7 @@ function isPlaying(state: VotingState, playerId: GamePlayerId): boolean {
  * denominator: everyone the room is still hearing from, plus anyone already in.
  *
  * Away is subtracted because a room cannot wait for a phone it has stopped
- * hearing from (docs/CONTEXT.md: a game never waits for an away player), and a
+ * hearing from (a game never waits for an away player), and a
  * vote already cast is added back because it is already cast: a count that
  * dropped a player the moment their phone went quiet would be the television
  * losing a vote the room has. The exact rule trivia counts its answers by.

@@ -29,7 +29,7 @@ export type GamePlayerId = string;
  *
  * A game is handed the same players the TV's seats draw, because it draws them
  * too — a scoreboard is nicknames and claimed colors. `host` is not among them
- * on purpose: the Host plays like everybody else (docs/CONTEXT.md), and a game
+ * on purpose: the Host plays like everybody else, and a game
  * that could tell would eventually treat them differently. `away` *is*, because
  * a game must never wait for a phone that has gone quiet.
  */
@@ -114,7 +114,7 @@ export type GameEvent = {
    * rather than in any module's own event because presence is the *room's* —
    * it lives on the players, not in any game's state, and it changes while no
    * game event is being sent at all, so a game that must never wait for a quiet
-   * phone (docs/CONTEXT.md, Away) has no other way to be told.
+   * phone (Away) has no other way to be told.
    *
    * Absent means the room could not say, which is a room dealt its beat by a
    * deployment older than this field. A game that reads it decides what nothing
