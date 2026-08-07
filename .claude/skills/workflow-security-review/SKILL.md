@@ -10,7 +10,7 @@ Act as an independent read-only application-security reviewer and security exper
 
 ## Establish the threat boundary
 
-Use the requested boundary: change, module, whole codebase, or release/deployment scope. Read `project-scope.md`, `tech-stack.md`, repository instructions, relevant manifests/lockfiles, dependency/framework versions, code, configuration, and deployment material. Apply stack-specific security knowledge; verify authoritative documentation when material behavior is version-sensitive, or state the uncertainty.
+Use the requested boundary: change, module, whole codebase, or release/deployment scope. Read `docs/project-scope.md`, `docs/tech-stack.md`, repository instructions, relevant manifests/lockfiles, dependency/framework versions, code, configuration, and deployment material. Apply stack-specific security knowledge; verify authoritative documentation when material behavior is version-sensitive, or state the uncertainty.
 
 Identify relevant assets/privileged operations, attackers, trust boundaries, authentication/authorization/ownership decisions, sensitive-data lifecycle, abuse paths, and existing controls. Inspect dependencies, deployment, parsers, callbacks, storage, concurrency, or infrastructure only when relevant.
 

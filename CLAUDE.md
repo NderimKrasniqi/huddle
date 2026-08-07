@@ -11,7 +11,7 @@ Use AI Project Workflow Core.
 
 ## Rules
 
-- `project-scope.md`, `tech-stack.md`, and `implementation-plan.md` are project truth.
+- `docs/project-scope.md`, `docs/tech-stack.md`, and `docs/implementation-plan.md` are project truth.
 - Plan the full MVP as capability-oriented phases with stable numbered tasks.
 - Implement one task at a time by default and keep `.ai-workflow/session-state.md` resumable.
 - Update future unchecked tasks when implementation evidence proves the roadmap should change.

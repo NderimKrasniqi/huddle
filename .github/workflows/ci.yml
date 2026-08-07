@@ -1,6 +1,6 @@
 name: CI
 
-# tech-stack.md: the gates run "on every push". Solo project, no PR flow yet —
+# docs/tech-stack.md: the gates run "on every push". Solo project, no PR flow yet —
 # add a `pull_request:` trigger here the day one exists.
 on: push
 
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  # tech-stack.md's gates run as separate steps in one job rather than separate
+  # docs/tech-stack.md's gates run as separate steps in one job rather than separate
   # jobs: each gate is still named and still fails the run on its own, but they
   # share one checkout and one install, which is what keeps a run cheap.
   checks:

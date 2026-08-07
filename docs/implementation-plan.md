@@ -23,7 +23,7 @@
 
 - [x] **1.1 — Establish the monorepo and local build baseline**
   - Done: pnpm workspaces (`apps/*`, `convex`, `packages/*`, `packages/games/*`), Expo SDK 57, RN 0.86, `react-native-tvos` on TV, Expo Router, Convex providers in both apps, root `typecheck`/`test` scripts, local iOS/Android/TV run scripts, native `ios/`+`android/` projects present.
-  - Note: styling uses the Boardwalk design-token system, not NativeWind (see `tech-stack.md`). Controller RN fork alignment is tracked in 5.7.
+  - Note: styling uses the Boardwalk design-token system, not NativeWind (see `docs/tech-stack.md`). Controller RN fork alignment is tracked in 5.7.
 
 - [x] **1.2 — Create authoritative room state**
   - Done: `convex/convex/rooms.ts` + `schema.ts` model rooms/players with room-code and membership indexes; 4-char codes; transactional creation; `rooms.test.ts` covers lookup and uniqueness.
@@ -80,7 +80,7 @@
   - Done: player/host/TV timeouts, scheduled transitions, cleanup, and reconnect races covered deterministically under fake timers in the convex suite.
 
 - [x] **3.7 — Host management controls: manual transfer and player removal** *(added by 5.4 — closes findings F1/F2)*
-  - The 5.4 acceptance matrix found two approved host powers (`project-scope.md`
+  - The 5.4 acceptance matrix found two approved host powers (`docs/project-scope.md`
     Host; Phone Backgrounding and Disconnection) with no implementation: manual
     host transfer and host-initiated player removal. The 3.2/3.3 notes claimed
     them; only automatic presence-driven `handOverRoom` existed.
@@ -190,11 +190,11 @@
     checks, last run in 5.3.
 
 - [x] **5.5 — Finalize local build and verification commands**
-  - Done: single-command root `typecheck`/`test`/`test:unit`/`test:integration`; per-app run scripts; commands reconciled into `tech-stack.md`.
+  - Done: single-command root `typecheck`/`test`/`test:unit`/`test:integration`; per-app run scripts; commands reconciled into `docs/tech-stack.md`.
   - Optional follow-up: add convenience root aliases (`test:backend`, per-target run scripts) if desired.
 
 - [ ] **5.6 — Perform final scope/architecture review** *(remaining — last)*
-  - Re-read `project-scope.md`, `tech-stack.md`, and this plan against the implemented behavior **including the Voting game**.
+  - Re-read `docs/project-scope.md`, `docs/tech-stack.md`, and this plan against the implemented behavior **including the Voting game**.
   - Confirm no accidental scope crept in and no unnecessary server/realtime/state/cloud-build/persistence infrastructure was introduced.
   - **Verify:** every MVP requirement maps to completed behavior and no blocking discrepancy remains.
 
