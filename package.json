@@ -19,6 +19,7 @@
     "@huddle/game-core": "workspace:*",
     "@huddle/game-registry": "workspace:*",
     "@huddle/game-trivia": "workspace:*",
+    "@huddle/game-voting": "workspace:*",
     "@huddle/packs": "workspace:*",
     "@huddle/ui": "workspace:*",
     "convex-test": "^0.0.54",

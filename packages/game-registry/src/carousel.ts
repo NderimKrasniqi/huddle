@@ -44,11 +44,11 @@ export function browsingIndex(stored: number | undefined | null): number {
  * `undefined` only if nothing is installed, which no build ships — it is here
  * so the screens have something to draw rather than an entry to assume.
  *
- * With the MVP's single entry both neighbours are `undefined`, and that is the
- * whole of "renders correctly with the registry's single MVP entry": the side
- * cards are absent rather than duplicates of the focused one, and prev/next
- * have nowhere to go. Nothing wraps — a list of one that wrapped would offer
- * the Host two buttons that changed nothing.
+ * A card's neighbours are its real Registry siblings, and the list does not
+ * wrap: the first card's `previous` and the last card's `next` are `undefined`,
+ * so the Host's arrows die at the ends rather than looping the focus back to a
+ * card already on screen. With Trivia and Hot Takes installed the focused card
+ * has exactly one neighbour at each end of the list.
  */
 export function carouselWindow(index: number): CarouselWindow | undefined {
   const at = browsingIndex(index);

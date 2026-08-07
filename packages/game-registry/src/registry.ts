@@ -1,5 +1,6 @@
 import type { GameRegistry } from '@huddle/game-core';
 import { triviaGameModule } from '@huddle/game-trivia';
+import { votingGameModule } from '@huddle/game-voting';
 
 /**
  * The installed games, in the order the hub offers them.
@@ -10,8 +11,10 @@ import { triviaGameModule } from '@huddle/game-trivia';
  * is this array growing by one, and nothing else (docs/project-scope.md:
  * "adding a hypothetical game #2 requires no hub changes").
  *
- * Trivia is alone in it for the whole MVP, which is exactly why it is a list:
- * a hub that reads a registry of one and a hub that reads a registry of six are
- * the same hub, and a hub written around the one game it has is not.
+ * Hot Takes joining Trivia here is that promise kept: a whole second game — a
+ * different loop, a different player range, private votes and no scoring —
+ * installed by one import and one entry, with not a line of the hub touched to
+ * carry it. That the list is what makes a game installed is exactly why it was
+ * written as a list while Trivia was alone in it.
  */
-export const GAME_REGISTRY: GameRegistry = [triviaGameModule];
+export const GAME_REGISTRY: GameRegistry = [triviaGameModule, votingGameModule];
