@@ -1,203 +1,149 @@
 # Implementation Plan
 
+> **Reconciled 2026-08-07 against the existing implementation.**
+> Huddle was built through a prior plan into Phase 5. This roadmap has been
+> rebaselined against the actual repository. Completed tasks are checked with a
+> one-line evidence note; unchecked tasks are the real remaining work.
+>
+> **Evidence baseline:** `pnpm typecheck` clean; `pnpm test` green — 57 files,
+> 666 tests, 0 failures. Backend (`convex/convex/{rooms,players,games}.ts`),
+> platform packages (`game-core`, `game-registry`, `packs`, `ui`), the Trivia
+> module (`packages/games/trivia`), and both apps (`apps/tv`, `apps/controller`)
+> are implemented and tested.
+>
+> **Primary remaining work:** the Voting/Test game (2.4) — the second game the
+> approved scope requires to prove modularity — plus the follow-on acceptance
+> matrix (5.4) and final review (5.6) that depend on it, and one stack
+> correction (5.7). The monorepo apps are `apps/tv` + `apps/controller`
+> (the "mobile" naming in the original draft mapped to the controller).
+
 ## Phase 1 — Create and Join a Live Room
 
-**Outcome:** A locally built Android TV creates a room, native iOS/Android phones join it, and all clients see the same lobby.
+**Outcome:** A locally built Android TV creates a room, native iOS/Android phones join it, and all clients see the same lobby. **— Complete.**
 
-- [ ] **1.1 — Establish the monorepo and local build baseline**
-  - Create `apps/mobile`, `apps/tv`, shared packages, and the Convex backend.
-  - Configure Expo SDK 57, `react-native-tvos@0.86-stable`, Expo Router, NativeWind v4, pnpm workspaces, and common TypeScript settings.
-  - Add the minimum local run/build scripts for iOS phone, Android phone, and Android TV.
-  - Wire Convex providers into both client apps.
-  - Add baseline typecheck and test commands.
-  - **Verify:** clean install succeeds; both apps typecheck; Android TV, Android phone, and iOS phone can each launch locally.
+- [x] **1.1 — Establish the monorepo and local build baseline**
+  - Done: pnpm workspaces (`apps/*`, `convex`, `packages/*`, `packages/games/*`), Expo SDK 57, RN 0.86, `react-native-tvos` on TV, Expo Router, Convex providers in both apps, root `typecheck`/`test` scripts, local iOS/Android/TV run scripts, native `ios/`+`android/` projects present.
+  - Note: styling uses the Boardwalk design-token system, not NativeWind (see `tech-stack.md`). Controller RN fork alignment is tracked in 5.7.
 
-- [ ] **1.2 — Create authoritative room state**
-  - Model rooms and participants in Convex with indexes for room-code and room-membership reads.
-  - Generate unique 4-character room codes.
-  - Make the TV create/recover its room identity and expose room status reactively.
-  - Add room lifecycle validators and backend tests.
-  - **Verify:** room creation is transactional; duplicate active codes are prevented; room lookup is indexed and tested.
+- [x] **1.2 — Create authoritative room state**
+  - Done: `convex/convex/rooms.ts` + `schema.ts` model rooms/players with room-code and membership indexes; 4-char codes; transactional creation; `rooms.test.ts` covers lookup and uniqueness.
 
-- [ ] **1.3 — Build the TV lobby**
-  - Display the room code, QR join payload, room status, and empty lobby.
-  - Keep the QR destination native-app-only; do not introduce a browser controller or web join flow.
-  - Handle loading, invalid room recovery, and TV-created room restoration.
-  - **Verify:** the QR resolves to the correct native join flow and entering the code manually reaches the same room.
+- [x] **1.3 — Build the TV lobby**
+  - Done: `apps/tv/app/index.tsx` + `src/tv-stage.tsx` show room code, QR join payload, and lobby; QR destination is native-app-only; invalid-room/restoration handled.
 
-- [ ] **1.4 — Build native phone joining and participant identity**
-  - Add join-by-code plus native QR scanning/deep-link handling, choosing the simplest reliable native path during implementation.
-  - Let players choose a display name and built-in avatar.
-  - Store name/avatar preferences in AsyncStorage.
-  - Issue and store a participant/session credential in SecureStore.
-  - Enforce the platform ceiling of 12 players.
-  - Make the first joined player host.
-  - **Verify:** two or more phones join the same room, receive distinct identities, and only the first receives host authority.
+- [x] **1.4 — Build native phone joining and participant identity**
+  - Done: `apps/controller/app/join/[code].tsx` join-by-code + deep link; display name and built-in avatar/color selection; Session Token issued and stored in SecureStore (`src/session-store.ts`); 12-player ceiling; first joiner becomes host.
+  - Note: QR is scanned by the phone OS camera, which opens the join deep link (no in-app camera dependency). Local persistence of the *last-used* name/avatar (AsyncStorage) is not implemented — optional per scope ("the app *may* remember"); tracked in 5.8.
 
-- [ ] **1.5 — Complete the reactive room lobby**
-  - Show the live participant roster and host identity on TV and phones.
-  - Preserve the room when all players leave while the TV remains connected.
-  - Make the next player become host when a hostless empty room receives a join.
-  - **Verify:** joins/leaves update all clients without manual refresh and the empty-room behavior matches scope.
+- [x] **1.5 — Complete the reactive room lobby**
+  - Done: live roster + host identity on TV and phones; empty room preserved while the TV holds; next joiner becomes host in a hostless room; covered by `players.test.ts` / `rooms.test.ts`.
 
 ## Phase 2 — Select and Run a Modular Game
 
-**Outcome:** The host selects/configures a game from the phone, the TV mirrors that choice, and the voting game runs end-to-end through a generic game runtime.
+**Outcome:** The host selects/configures a game from the phone, the TV mirrors the choice, and a game runs end-to-end through a generic runtime. **— Platform complete; the Voting game (2.4) is the main remaining MVP feature.**
 
-- [ ] **2.1 — Define the platform game contract**
-  - Define game metadata, min/max players, configuration, lifecycle states (including pause/recovery), commands, public TV state, and participant-private state.
-  - Define how games declare late-join safe points, continue-after-leave behavior, optional additional readiness, and host pause/resume capability.
-  - Treat lobby join as ready by default unless a game explicitly requires more.
-  - Keep the contract independent of Trivia and Voting specifics.
-  - **Verify:** both planned MVP games can be described through the contract without platform-specific exceptions.
+- [x] **2.1 — Define the platform game contract**
+  - Done: `packages/game-core/src/game-module.ts` + `game-settings.ts` + `room-phase.ts` define metadata, min/max, config, lifecycle/pause, commands, public vs participant-private state, late-join and continue-after-leave; kept independent of Trivia.
 
-- [ ] **2.2 — Build the game catalog and host configuration flow**
-  - Register the built-in games.
-  - Let the host browse/select a game from the phone.
-  - Mirror highlighted/selected game information and configuration on TV.
-  - Enforce game min/max player compatibility before start.
-  - Lock configuration when the game starts.
-  - **Verify:** non-hosts cannot select/start games; incompatible player counts block start with a clear reason.
+- [x] **2.2 — Build the game catalog and host configuration flow**
+  - Done: `packages/game-registry` (`registry.ts`, `browsing.ts`, `carousel.ts`) + host picker; TV mirrors selection/config; min/max enforced before start; config locked on start; non-host start rejected (tested).
 
-- [ ] **2.3 — Implement the generic game-session lifecycle**
-  - Add room → configuring → active/paused → finished → room transitions.
-  - Make start, supported pause/resume, end-game, replay, and end-room commands host-authorized.
-  - Ensure ending a game discards unfinished game state but preserves the room, participants, avatars, and host.
-  - Ensure ending the room invalidates the room/session rather than returning to the lobby.
-  - **Verify:** repeated game sessions do not leak prior game state, room identity remains stable between games, and an ended room cannot accept new actions.
+- [x] **2.3 — Implement the generic game-session lifecycle**
+  - Done: `convex/convex/games.ts` runs room → configuring → active/paused → finished → room; host-authorized start/pause/resume/end/replay/end-room; ending discards game state but preserves room/participants/host; `games.test.ts` covers no-leak and stable room identity.
 
-- [ ] **2.4 — Build the voting/test game as the first module**
-  - Implement one simple prompt-and-vote loop using the generic contract.
-  - Keep each participant's vote private until reveal.
-  - Show appropriate shared prompt/result state on TV.
-  - **Verify:** Voting can be added/run without adding Voting-specific logic to room/session infrastructure.
+- [ ] **2.4 — Build the Voting/Test game as the second module** *(remaining — primary)*
+  - Implement a simple prompt-and-vote loop as a `GameModule` using only the `game-core` contract (no room/session/hub changes).
+  - Keep each participant's vote participant-private until reveal; project shared prompt/tally to TV public state.
+  - Register it by adding it to `GAME_REGISTRY` in `packages/game-registry/src/registry.ts` (currently `[triviaGameModule]`).
+  - Add phone (vote input) and TV (prompt + reveal) surfaces, factoring logic into `apps/*/src/*.ts` modules with Vitest tests, matching the existing app pattern.
+  - **Verify:** Voting can be added and run with changes confined to a new `packages/games/voting` module plus its registry entry and app screens; no edits to `rooms.ts`/`players.ts`/`games.ts` lifecycle; `convex-test`/Vitest cover private-until-reveal and the vote tally.
 
-- [ ] **2.5 — Enforce authorization and privacy boundaries**
-  - Validate every public Convex function input and return shape.
-  - Require participant/session credentials for participant actions.
-  - Require host authority for host commands.
-  - Ensure room codes alone cannot impersonate a participant or host.
-  - Ensure private game state is projected only to the entitled participant.
-  - **Verify:** backend tests prove unauthorized host commands and private-state reads are rejected.
+- [x] **2.5 — Enforce authorization and privacy boundaries**
+  - Done: public Convex functions validate input/return shapes; participant actions require the Session Token; host commands require host authority; private state is projected only to the entitled participant; `players.test.ts`/`games.test.ts` prove unauthorized commands and private-state reads are rejected.
 
 ## Phase 3 — Survive Disconnects and Ownership Changes
 
-**Outcome:** Phone, host, and TV interruptions recover predictably without corrupting room/game state.
+**Outcome:** Phone, host, and TV interruptions recover predictably without corrupting state. **— Complete.**
 
-- [ ] **3.1 — Add presence and background grace periods**
-  - Track last-seen/heartbeat state for phones and TV.
-  - Avoid treating brief screen locks/backgrounding as immediate disconnects.
-  - Use authoritative timestamps and scheduled checks rather than client-local disconnect decisions.
-  - **Verify:** fake-time tests distinguish temporary backgrounding from a real disconnect.
+- [x] **3.1 — Add presence and background grace periods**
+  - Done: `players.ts` heartbeat + `lastSeenAt` + `away`; scheduled `markAway`; grace period so brief backgrounding is not an immediate disconnect; fake-time tested.
 
-- [ ] **3.2 — Recover ordinary players**
-  - Preserve disconnected participant identity and relevant active-game state during the recovery window.
-  - Pause active gameplay after a player is classified disconnected.
-  - Restore the same participant when the valid SecureStore credential reconnects.
-  - Let the host wait, continue if the game permits it, or remove the participant.
-  - Make removal invalidate the old participant state while allowing a later fresh join.
-  - **Verify:** reconnect restores identity/state; removed participants cannot reclaim the old participant slot.
+- [x] **3.2 — Recover ordinary players**
+  - Done: disconnected identity/state preserved for the recovery window; reconnect with the valid SecureStore token restores the same participant; host may wait/continue/remove; removal invalidates the old participant.
 
-- [ ] **3.3 — Handle host transfer and loss**
-  - Support manual host transfer.
-  - On deliberate host leave, transfer to the longest-connected eligible remaining player before removal.
-  - On unrecovered host disconnect, promote the longest-connected eligible connected player.
-  - Preserve hostless empty-room behavior.
-  - **Verify:** ownership transitions are deterministic and stale clients cannot retain host authority.
+- [x] **3.3 — Handle host transfer and loss**
+  - Done: manual transfer; `handOverRoom` promotes the longest-connected eligible player on deliberate leave and on unrecovered disconnect; hostless empty-room behavior preserved.
 
-- [ ] **3.4 — Recover the TV or close the room**
-  - Pause active gameplay when the TV is classified disconnected.
-  - Preserve room/game state for a TV recovery window.
-  - Restore the same room/game when the TV returns.
-  - Close and clean up the room when the recovery window expires.
-  - **Verify:** recovery resumes the existing session; expiry makes the old room code unusable.
+- [x] **3.4 — Recover the TV or close the room**
+  - Done: TV-disconnect pause; room/game state preserved for a recovery window; restore on return; `expireRoom` cleans up and frees the code when the window lapses.
 
-- [ ] **3.5 — Enforce game rules during membership changes**
-  - Apply each game's late-join policy.
-  - Keep unsupported late joiners in the room but outside active gameplay.
-  - Prevent continuation when active participants fall below the game's minimum.
-  - Allow continue-without-player only when the game explicitly supports it and minimums remain satisfied.
-  - **Verify:** lifecycle tests cover late join, continue, wait, remove, below-minimum, and end-game paths.
+- [x] **3.5 — Enforce game rules during membership changes**
+  - Done: late-join policy and below-minimum handling in the runtime; Trivia away-players-in-game behavior shipped (see git history); covered by tests.
 
-- [ ] **3.6 — Run lifecycle regression tests with fake time**
-  - Cover player/host/TV timeouts, scheduled transitions, cleanup, and concurrent reconnect attempts.
-  - Check that repeated interruption/recovery cannot create duplicate participants or multiple hosts.
-  - **Verify:** backend lifecycle suite is deterministic and passes under fake timers.
+- [x] **3.6 — Run lifecycle regression tests with fake time**
+  - Done: player/host/TV timeouts, scheduled transitions, cleanup, and reconnect races covered deterministically under fake timers in the convex suite.
 
 ## Phase 4 — Build the Full Trivia Game
 
-**Outcome:** A complete multiplayer Trivia game exercises the platform's private inputs, shared TV state, timers, rounds, scoring, and recovery behavior.
+**Outcome:** A complete multiplayer Trivia game exercises private inputs, shared TV state, timers, rounds, scoring, and recovery. **— Complete.**
 
-- [ ] **4.1 — Define Trivia metadata, rules, and built-in content**
-  - Add a small curated built-in question set.
-  - Define supported player range, round/question count, answer duration, scoring rules, and late-join/continue behavior.
-  - Expose the configuration through the generic game contract.
-  - **Verify:** Trivia can be selected/configured without platform changes.
+- [x] **4.1 — Define Trivia metadata, rules, and built-in content**
+  - Done: curated question packs in `packages/packs`; player range, round/question counts, answer duration, scoring, and late-join/continue exposed through the contract.
 
-- [ ] **4.2 — Implement the authoritative Trivia state machine**
-  - Model round/question/answer/reveal/result states.
-  - Validate answer eligibility and one-answer-per-player rules.
-  - Store authoritative deadlines instead of per-second countdown state.
-  - Use Convex scheduled functions to close timed phases.
-  - Compute scoring server-side.
-  - **Verify:** `convex-test` covers valid/invalid answers, deadline enforcement, scoring, and state transitions.
+- [x] **4.2 — Implement the authoritative Trivia state machine**
+  - Done: round/question/answer/reveal/result states; one-answer-per-player validation; authoritative deadlines with Convex scheduled functions; server-side scoring (incl. speed mode); `games.test.ts` covers valid/invalid answers, deadlines, and scoring.
 
-- [ ] **4.3 — Build the phone Trivia experience**
-  - Show participant-private answer controls and submission state.
-  - Prevent answer changes after rules/deadlines disallow them.
-  - Integrate reconnect and waiting/paused states.
-  - **Verify:** UI tests cover answer submission, locked state, pause, reconnect, and result transitions.
+- [x] **4.3 — Build the phone Trivia experience**
+  - Done: participant-private answer controls + submission/locked states; reconnect/paused handling; logic tested in `apps/controller/src`.
 
-- [ ] **4.4 — Build the TV Trivia experience**
-  - Show shared question content, answer countdown, round progress, reveal/results, scoreboards, and podium.
-  - Render countdowns locally from the authoritative deadline.
-  - Never expose another participant's private answer before the reveal state permits it.
-  - **Verify:** TV UI follows backend lifecycle state and does not depend on local authoritative decisions.
+- [x] **4.4 — Build the TV Trivia experience**
+  - Done: shared question, locally-rendered countdown from the authoritative deadline, round progress, reveal/results, scoreboard, podium; no local authoritative decisions.
 
-- [ ] **4.5 — Integrate Trivia with platform interruption rules**
-  - Exercise late join, ordinary-player disconnect, host disconnect/transfer, below-minimum handling, and TV recovery.
-  - Define whether/when Trivia can continue without a disconnected player.
-  - **Verify:** interruption scenarios produce the same outcomes defined by the platform contract.
+- [x] **4.5 — Integrate Trivia with platform interruption rules**
+  - Done: late join, player disconnect, host disconnect/transfer, below-minimum, and TV recovery exercised against Trivia.
 
-- [ ] **4.6 — Finish, replay, and return to room**
-  - Complete final scoring/podium behavior.
-  - Support replay through a new clean Trivia session.
-  - Return to the existing room and allow selection of Voting or Trivia again.
-  - **Verify:** multiple back-to-back games do not leak scores, answers, timers, or prior configuration.
+- [x] **4.6 — Finish, replay, and return to room**
+  - Done: final scoring/podium; replay via a clean session; return to the existing room; back-to-back games do not leak prior state (tested).
 
 ## Phase 5 — Harden the Local MVP
 
-**Outcome:** The complete MVP is reliable enough to run locally on Android TV plus iOS/Android phones and is checked against the approved scope.
+**Outcome:** The complete MVP runs reliably on Android TV + iOS/Android phones and is checked against the approved scope. **— Mostly complete; 5.4/5.6 depend on the Voting game, plus one stack correction (5.7).**
 
-- [ ] **5.1 — Handle join and network failure UX**
-  - Add clear states for invalid/expired codes, full rooms, unavailable backend, reconnecting, and ended rooms.
-  - Prevent duplicate submissions caused by retries/reconnects.
-  - **Verify:** failure-state tests and manual checks produce actionable UI instead of silent failure.
+- [x] **5.1 — Handle join and network failure UX**
+  - Done: invalid/expired code, full room, and rejection states (`join-rejection.ts`, `game-rejection.ts`, `color-rejection.ts`); duplicate-submission guards; tested.
 
-- [ ] **5.2 — Harden the Android TV shared display**
-  - Verify large-screen layout, overscan/safe-area behavior, typography, animations, and readability at living-room distance.
-  - Confirm NativeWind v4 behavior on Android TV for the actual display components used.
-  - Ensure no room/game flow accidentally requires TV remote input.
-  - **Verify:** every MVP flow can be completed from phones while the TV remains a shared display only.
+- [x] **5.2 — Harden the Android TV shared display**
+  - Done: large-screen layout, safe-area, typography floors, and the two handoff animations landed in Phase 5 design-fidelity work; every flow is driven from phones with the TV as display only.
+  - Note: the earlier "confirm NativeWind on Android TV" check is retired — styling is the Boardwalk token system.
 
-- [ ] **5.3 — Harden phone app lifecycle and deep links**
-  - Verify foreground/background transitions, lock/unlock, QR deep links, cold starts, and reconnection credentials.
-  - Ensure short interruptions do not trigger false disconnects.
-  - **Verify:** iOS and Android manual lifecycle matrix passes.
+- [x] **5.3 — Harden phone app lifecycle and deep links**
+  - Done: foreground/background, lock/unlock, QR deep links, cold start, and reconnection credentials verified, including real-device verification (see git history).
 
-- [ ] **5.4 — Run the multiplayer acceptance matrix**
-  - Exercise 1–12 room members where supported by the selected game.
-  - Test mixed iOS/Android controllers with Android TV.
-  - Test host participation, host transfer, player removal/rejoin, late join, TV recovery, and back-to-back games.
-  - **Verify:** all approved MVP workflows have at least one passing automated or documented manual check.
+- [ ] **5.4 — Run the multiplayer acceptance matrix across both games** *(remaining — after 2.4)*
+  - Exercise 1–12 members where the selected game supports it, across **both** Trivia and Voting.
+  - Test mixed iOS/Android controllers with Android TV, host participation, host transfer, player removal/rejoin, late join, TV recovery, and back-to-back games (including switching between the two games).
+  - **Verify:** every approved MVP workflow has at least one passing automated or documented manual check, with the second game included.
 
-- [ ] **5.5 — Finalize local build and verification commands**
-  - Make clean local builds reproducible for Android TV, Android phone, and iOS phone.
-  - Ensure typecheck, backend tests, and client tests are single-command operations from the workspace root.
-  - **Verify:** a clean checkout can install, test, and launch every MVP target using the documented commands.
+- [x] **5.5 — Finalize local build and verification commands**
+  - Done: single-command root `typecheck`/`test`/`test:unit`/`test:integration`; per-app run scripts; commands reconciled into `tech-stack.md`.
+  - Optional follow-up: add convenience root aliases (`test:backend`, per-target run scripts) if desired.
 
-- [ ] **5.6 — Perform final scope/architecture review**
-  - Re-read `project-scope.md`, `tech-stack.md`, and this plan against the implemented behavior.
-  - Remove accidental MVP scope and fix any missing required behavior.
-  - Confirm no unnecessary server, realtime, state-management, cloud-build, or persistence infrastructure was introduced.
+- [ ] **5.6 — Perform final scope/architecture review** *(remaining — last)*
+  - Re-read `project-scope.md`, `tech-stack.md`, and this plan against the implemented behavior **including the Voting game**.
+  - Confirm no accidental scope crept in and no unnecessary server/realtime/state/cloud-build/persistence infrastructure was introduced.
   - **Verify:** every MVP requirement maps to completed behavior and no blocking discrepancy remains.
+
+- [ ] **5.7 — Align the Controller to the `react-native-tvos` fork** *(remaining — correction)*
+  - `apps/controller/package.json` uses `react-native@0.86.0`; `tech-stack.md` architecture requires all apps to use the matching `react-native-tvos` fork to avoid dependency conflicts (the TV already does).
+  - Switch the controller to `npm:react-native-tvos@~0.86.0-2`, reinstall, re-run typecheck/tests, and confirm a clean local Android/iOS controller build.
+  - **Verify:** both apps resolve the same RN fork; `pnpm typecheck` and `pnpm test` stay green; controller builds and runs locally.
+
+- [ ] **5.8 — (Optional) Remember last-used name and avatar locally**
+  - Persist the last-used display name and avatar in AsyncStorage so returning players are prefilled; scope treats this as optional ("the app *may* remember").
+  - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore.
+
+## MVP Acceptance
+
+The MVP is complete when Phase 2.4 (Voting game) ships, 5.4 passes across both
+games, 5.7 is corrected, and 5.6 finds no blocking discrepancy against the
+approved scope and stack.
