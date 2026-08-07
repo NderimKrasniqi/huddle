@@ -89,10 +89,10 @@ export function phaseAfter(intent: GameLifecycleIntent): RoomPhase {
  * Nor is there one for a room that is too *large* for a game. The room cap is
  * ten and no installed game may declare a maximum above it
  * (`registry.test.ts`), so today the rule could never fire; and were a smaller
- * game installed tomorrow, refusing at the tap would strand a party with no
- * remedy, since Huddle has no way to remove a player from a room. That belongs
- * in the Host's picker, which can decline to offer a game the room has outgrown
- * while there is still something the Host can do about it.
+ * game installed tomorrow, refusing at the tap would strand a party mid-tap.
+ * That belongs in the Host's picker, which can decline to offer a game the room
+ * has outgrown before the Host commits to it — and, since `removePlayer`, the
+ * Host also has a direct remedy for a room grown past a game it wants to play.
  */
 export function refusalToStart(
   phase: RoomPhase,

@@ -1,4 +1,5 @@
 export type { ColorRejection } from './color-rejection';
+export type { HostControlRejection } from './host-control-rejection';
 // The Game Module interface: the whole of what the hub knows about a game, and
 // the reason a second game is an entry in the Registry rather than a change to
 // the hub.

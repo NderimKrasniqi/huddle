@@ -2,6 +2,7 @@ import {
   AWAY_AFTER_MS,
   type ColorRejection,
   generateSessionToken,
+  type HostControlRejection,
   isPlayerColorName,
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
@@ -453,6 +454,135 @@ export const claimColor = mutation({
     // Re-tapping the color they already hold is not a claim to refuse; it is a
     // player confirming what the screen already shows.
     await ctx.db.patch(player._id, { color: args.color });
+    return null;
+  },
+});
+
+/**
+ * The room this phone runs and the seat it holds, or the refusal that says why
+ * it does not — the gate `transferHost` and `removePlayer` share.
+ *
+ * Both are the Host naming another seat, so both ask the same two questions the
+ * lifecycle does (`games.ts`, `roomThisPhoneRuns`): which player holds this
+ * phone, and does the room point at them. The Session Token is the only thing a
+ * phone presents, so the lookup starts there and a phone naming itself is never
+ * believed.
+ */
+async function hostSeatAndRoom(
+  ctx: MutationCtx,
+  sessionToken: string,
+): Promise<{ actor: Doc<'players'>; room: Doc<'rooms'> }> {
+  const actor = await ctx.db
+    .query('players')
+    .withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken))
+    .first();
+
+  if (actor === null) {
+    throw new ConvexError<HostControlRejection>({ kind: 'notInRoom' });
+  }
+
+  const room = await ctx.db.get(actor.roomId);
+
+  if (room === null) {
+    throw new ConvexError<HostControlRejection>({ kind: 'notInRoom' });
+  }
+
+  // Asked at the tap and never cached, because the host moves: a player who
+  // joined second holds it the moment the room gives up on the first.
+  if (room.hostPlayerId !== actor._id) {
+    throw new ConvexError<HostControlRejection>({ kind: 'notHost' });
+  }
+
+  return { actor, room };
+}
+
+/**
+ * The seat a host control names, resolved against the room the Host runs — or
+ * the refusal that says why it cannot be the target.
+ *
+ * A phone sends a `playerId` the roster handed every client, so the id itself is
+ * public and proves nothing: the guard is that it names a seat *in this room*
+ * (not a stale id, and not a seat in someone else's room) and not the Host's own
+ * (there is no room to hand oneself, and no self to remove — a host leaves by
+ * ending the room, or transfers first).
+ */
+async function targetSeatIn(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  actor: Doc<'players'>,
+  targetPlayerId: Id<'players'>,
+): Promise<Doc<'players'>> {
+  const target = await ctx.db.get(targetPlayerId);
+
+  if (target === null || target.roomId !== room._id) {
+    throw new ConvexError<HostControlRejection>({ kind: 'targetNotInRoom' });
+  }
+
+  if (target._id === actor._id) {
+    throw new ConvexError<HostControlRejection>({ kind: 'targetIsSelf' });
+  }
+
+  return target;
+}
+
+/**
+ * The Host hands the room to another player, and every screen follows the pill.
+ *
+ * The successor must be a phone the room is still hearing from — a room a game
+ * runs in needs a host who can run it, the same reason the automatic
+ * `handOverRoom` picks a connected seat. Presence is read off `lastSeenAt`
+ * rather than the `away` flag for that same reason: the flag lags a phone going
+ * quiet by up to a scheduled check, and inside a mutation the room knows better.
+ *
+ * Unlike the automatic handover, this is a deliberate act: the Host chose this
+ * seat off the roster, so there is no "longest-connected" search — the named
+ * seat is the successor, if it is present.
+ */
+export const transferHost = mutation({
+  args: { sessionToken: v.string(), playerId: v.id('players') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { actor, room } = await hostSeatAndRoom(ctx, args.sessionToken);
+    const target = await targetSeatIn(ctx, room, actor, args.playerId);
+
+    if (silenceOf(target) >= AWAY_AFTER_MS) {
+      throw new ConvexError<HostControlRejection>({ kind: 'targetAway' });
+    }
+
+    await ctx.db.patch(room._id, { hostPlayerId: target._id });
+    return null;
+  },
+});
+
+/**
+ * The Host removes a player: their seat is deleted, which is the whole of
+ * invalidating them.
+ *
+ * A deleted row answers no Session Token — `session` returns `null` and the
+ * phone falls back to the Join Screen — so the removed person is out of the room
+ * and can rejoin only as a fresh participant, exactly as the scope asks (there
+ * is no ban list; a new join is a new seat). Any check still pending on the row
+ * (`markAway`) finds it gone and does nothing, the same tolerance room expiry
+ * already relies on.
+ *
+ * Allowed while a game is running: the target may be a phone that went quiet
+ * mid-game and will not come back. The game's own state still lists them among
+ * the players it was dealt, and the room does not rewrite it here — the beat
+ * they are holding up resolves on the room's own server clock (the Question and
+ * Vote timers), so a removal never strands a beat, it at most lets it run its
+ * time out. A Host who does not want to wait ends the game.
+ *
+ * The target is never the Host (`targetSeatIn` refuses the Host's own seat), so
+ * removal never unseats the room's host and needs no handover.
+ */
+export const removePlayer = mutation({
+  args: { sessionToken: v.string(), playerId: v.id('players') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { actor, room } = await hostSeatAndRoom(ctx, args.sessionToken);
+    const target = await targetSeatIn(ctx, room, actor, args.playerId);
+
+    await ctx.db.delete(target._id);
     return null;
   },
 });
