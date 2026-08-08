@@ -137,8 +137,11 @@ something the board settles, and it is out of scope for the token swap.
 ## Open
 
 1. **Font family** — blocks the swap.
-2. **Twelve avatars at the corrected spec** — see `packages/ui/assets/README.md`.
-   The delivered five are unusable in both variants.
+2. **Two more avatars, and re-art on `yellow-robot`.** The cleaned batch landed
+   ten usable characters — exactly `ROOM_PLAYER_CAP`, so a full room leaves the
+   last player no choice. `yellow-robot`'s background is the canvas colour, so
+   it draws no disc at all. See `packages/ui/assets/README.md`. Circle art is no
+   longer needed: the circular avatar is the square under `borderRadius`.
 3. **App icons** — all four bake a corner radius over a black or white surround.
    Not shippable until regenerated full-bleed.
 4. **Six screens need designing** — the unknown-game pair, both game frames, the

@@ -3,50 +3,62 @@
 Artwork that ships **inside** the apps. Design references that must never reach a
 bundle live in `docs/design/reference/` instead.
 
-Source: the approved Soft Minimal asset package (`HUDDLE ASSETS`, 2026-08-08).
-Files are committed at the resolution they were delivered at.
+Source: the approved Soft Minimal asset package (`HUDDLE ASSETS`, 2026-08-08),
+plus the cleaned avatar batch delivered the same day.
 
 ## Status: staged, not yet wired
 
-Nothing here is imported by a screen yet. The Soft Minimal token swap is the
-change that consumes it. Two directories additionally need **regenerated art**
-before they can be used at all — see the defects below.
+Nothing here is imported by a screen. The Soft Minimal token swap is the change
+that consumes it.
 
 ## `avatars/`
 
-Per `docs/design/soft-minimal/HANDOFF-SOURCE.md` §9, each character ships twice:
-a square asset for phone pickers and roster rows, a circular one for player
-presence and the TV strip.
+Ten characters, generated from the delivered batch by
+`tools/prepare-avatars.py` — which documents the transform and can be re-run
+when a further batch arrives:
 
-Naming is `<character>-<square|circle>.png`, and the character segment is the
-avatar's stable id — the value stored on a player, so it may never be renamed
-once a room has used it.
+```bash
+python3 tools/prepare-avatars.py <batch-dir>
+```
 
-**Defect — the delivered five are not usable as-is:**
+One 640×640 file per character. The filename stem is the avatar's stable id —
+the value stored on a player, so it may never be renamed once a room has used
+it.
 
-1. The `-circle` files are 1024×1536 portrait illustrations with a soft radial
-   glow, transparent to the frame edge on all five. There is no circular cutout
-   to mask; a round frame crops the character's body or letterboxes it.
-2. `-square` framing is inconsistent: the art inset is 0px on bunny and fox,
-   9px on alien, ~20px on purple-owl and 38px on blue-robot, so characters sit
-   at visibly different scales in a grid. Corners are opaque `#FDFDFD`, which
-   reads as pale wedges against the `#FFF7F2` canvas, and the corner radius is
-   baked into the pixels rather than tracking the `radius` token.
-3. Only five characters exist. `ROOM_PLAYER_CAP` is 10 and avatars are
-   exclusive, so a full room needs at least 10 — 12 is the target, which is
-   also a clean 4×3 picker grid.
-4. 17MB for five characters. The largest rendered size is the 128px hero on the
-   waiting screen, so 512×512 is ample.
+### One asset, two shapes
 
-Required spec for the full set of 12:
+A batch ships `squares/` and `circles/`. **Only the squares are used.** The
+delivered circles are 1024×1536 portraits where the character breaks out of the
+disc at the shoulders and dissolves into a glow, with the disc's diameter and
+centre drifting ~80px across characters — masking one to a circle cuts the body
+at a different place for every avatar.
 
-| | Square | Circle |
-|---|---|---|
-| Canvas | 512×512 | 512×512 |
-| Bleed | full, all four edges | character on a centred disc touching all edges |
-| Alpha | none | transparent outside the disc, no white ring |
-| Radius | none — the UI applies it | n/a |
-| Framing | identical across the set: head centred, same cap height, shoulders cropped at the bottom edge |
+The square does not have that problem, and its background is already the
+character's own colour family, so the circular avatar is just the square under
+`borderRadius: size / 2`. That satisfies §9's "no white border" for free and
+removes any way for the two shapes to drift apart.
+
+**Do not commission more circle art.** It is not used.
+
+### Fixed in the pipeline
+
+`mint-cat` (14px) and `teal-bear` (8px) shipped with a pure-black stroke baked
+around the rounded square that the other eight do not have. The script detects
+and trims it per-file, so a later batch that fixes it upstream needs no change
+here.
+
+### Outstanding — needs re-art
+
+**`yellow-robot`'s background is `#FAF6F2`**, which is the `#FFF7F2` canvas.
+Every other avatar has a clearly tinted disc; this one has none, so on the TV
+player strip and in the picker it reads as a robot floating with no avatar
+behind it. It needs a pale yellow background in the character's own colour
+family, like the other nine.
+
+**Ten characters is exactly `ROOM_PLAYER_CAP`.** Avatars are exclusive, so a
+full room consumes every one and the tenth player to join gets no choice at all.
+Twelve is the target. The delivered batch README refers to a `batch-2/`, which
+was not in the folder.
 
 ## `game-art/`
 
