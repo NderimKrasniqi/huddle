@@ -59,7 +59,7 @@ describe('the contrast maths these promises rest on', () => {
   });
 
   it('calls a color no distance from itself, and black and white a long way apart', () => {
-    expect(perceptualDistance(colors.cobalt, colors.cobalt)).toBeCloseTo(0, 5);
+    expect(perceptualDistance(colors.accent, colors.accent)).toBeCloseTo(0, 5);
     expect(perceptualDistance('#000000', '#FFFFFF')).toBeCloseTo(100, 0);
   });
 });
@@ -130,14 +130,14 @@ describe('the player palette', () => {
     }
   });
 
-  it('reuses the Boardwalk accents rather than restating them', () => {
-    // A player's cobalt has to be the Join button's cobalt; a second value that
-    // merely looks the same is a palette that drifts.
-    expect(playerColor('cobalt').fill).toBe(colors.cobalt);
-    expect(playerColor('punch').fill).toBe(colors.punch);
-    expect(playerColor('tangerine').fill).toBe(colors.tangerine);
-    expect(playerColor('yellow').fill).toBe(colors.yellow);
-    expect(playerColor('green').fill).toBe(colors.green);
+  // The tie to `colors` is deliberately gone. These ten are Boardwalk values
+  // living out their notice period until avatars replace claimed colors, and
+  // pointing them back at Soft Minimal tokens would assert a shared identity
+  // that no longer exists — a player's fill is not the primary action's orange.
+  it('holds its own values, which no longer come from the theme', () => {
+    for (const { name } of playerPalette) {
+      expect(playerColor(name).fill).toMatch(/^#[0-9A-F]{6}$/i);
+    }
   });
 });
 

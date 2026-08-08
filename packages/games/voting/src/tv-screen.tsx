@@ -61,7 +61,7 @@ function TallyBar({ row, highest }: { readonly row: TallyRow; readonly highest: 
     <View style={styles.tallyRow}>
       <StickerSurface
         depth={row.leading ? shadowDepth.tvCardHighlight : shadowDepth.tvCard}
-        shadowColor={row.leading ? colors.punch : colors.ink}
+        shadowColor={row.leading ? colors.accent : colors.ink}
         style={styles.tallyLabel}
         wrapperStyle={[styles.tallyLabelBlock, !row.leading && row.count === 0 && styles.tallyEmpty]}
       >
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   votedChip: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.soft,
     borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thin,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   countdownText: {
-    color: colors.cobalt,
+    color: colors.accent,
     fontFamily: fontFamily.bold,
     fontSize: 36,
   },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: stickerTilt.badge }],
   },
   finalBadge: {
-    backgroundColor: colors.tangerine,
+    backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thick,

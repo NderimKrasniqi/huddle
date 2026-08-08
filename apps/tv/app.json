@@ -6,22 +6,27 @@
     "version": "0.1.0",
     "orientation": "landscape",
     "userInterfaceStyle": "light",
-    "//backgroundColor": "Boardwalk's `colors.screen`, the token tv-stage.tsx paints. Stated here so the native window is already the right cream before any React view exists — otherwise a cold start flashes the platform default while the fonts resolve and TvLayout returns null. Kept honest by color-literals.test.ts, which is also why the value is written out: Expo transpiles app.config.ts and then requires it, so importing the token is not possible.",
-    "backgroundColor": "#F7F1E6",
+    "//backgroundColor": "Soft Minimal's `colors.screen`, which the TV letterboxes with and which shows through the gaps in the background image. Stated here so the native window is already right before any React view exists \u2014 otherwise a cold start flashes the platform default while the fonts resolve and TvLayout returns null. Kept honest by color-literals.test.ts, which is also why the value is written out: Expo transpiles app.config.ts and then requires it, so importing the token is not possible.",
+    "backgroundColor": "#FFF7F2",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.hub"
     },
     "ios": {
       "bundleIdentifier": "tv.huddle.hub",
-      "//infoPlist": "CALayer.allowsEdgeAntialiasing is false by default, and a layer carrying a transform is composited without antialiasing — so Boardwalk's ±1–2° sticker tilts turn every tile border into a visible staircase (measured: a rotated edge steps 2px per 50 rows with no intermediate pixel values, where Android feathers the same edge). This key turns edge antialiasing on app-wide. Apple documents a rendering cost; the TV screens are near-static, so it does not matter here. Only the TV app needs it — nothing in the Controller is rotated.",
+      "//infoPlist": "CALayer.allowsEdgeAntialiasing is false by default, and a layer carrying a transform is composited without antialiasing \u2014 so Boardwalk's \u00b11\u20132\u00b0 sticker tilts turn every tile border into a visible staircase (measured: a rotated edge steps 2px per 50 rows with no intermediate pixel values, where Android feathers the same edge). This key turns edge antialiasing on app-wide. Apple documents a rendering cost; the TV screens are near-static, so it does not matter here. Only the TV app needs it \u2014 nothing in the Controller is rotated.",
       "infoPlist": {
         "UIViewEdgeAntialiasing": true
       }
     },
     "plugins": [
       "expo-router",
-      ["@react-native-tvos/config-tv", { "isTV": true }]
+      [
+        "@react-native-tvos/config-tv",
+        {
+          "isTV": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

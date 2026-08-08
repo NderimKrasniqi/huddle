@@ -564,7 +564,7 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
      * tangerine is the brand's, green is presence, yellow is the chip printed
      * on the card itself. Its Bungee title sets in ink.
      */
-    keyArt: { color: 'punch' },
+    keyArt: { color: 'ink' },
     /** The scope's "2–10 players", the second of which is a full room. */
     playerRange: { min: 2, max: 10 },
     /**

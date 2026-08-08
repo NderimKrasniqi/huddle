@@ -25,20 +25,32 @@ export type PlayerColor = {
 };
 
 /**
- * The five Boardwalk accents are referenced through `colors` rather than
- * repeated, so a player's cobalt is the same cobalt as the Join button's. The
- * five additions are written here because this is the file that owns them — no
- * other surface has a use for `lagoon`.
+ * ## This whole module is scheduled for deletion
+ *
+ * Soft Minimal replaces claimed colors with claimed avatars: the choice moves
+ * to the join form and a player is identified by a character, not a swatch
+ * (`soft-minimal-handoff.md`, "Avatars replace colors"). That change also takes
+ * `players.claimColor`, `color-picker.ts` and `color-rejection.ts` with it, and
+ * it is a schema change rather than a palette one — so it is not this commit.
+ *
+ * Until it lands, every value is written out here rather than read from
+ * `colors`. Five of them used to be Boardwalk accents, and those accents no
+ * longer exist; pointing the other five at Soft Minimal tokens would spend real
+ * effort making a doomed table look native, and would quietly claim that a
+ * player's fill and the Join button's orange are meant to be the same value
+ * again. They are not. These are ten Boardwalk colors living out their notice
+ * period, and `packages/ui/src` is exempt from `color-literals.test.ts`
+ * precisely so the theme can hold values.
  */
 const PLAYER_COLORS: Record<PlayerColorName, PlayerColor> = {
-  cobalt: { fill: colors.cobalt, monogram: colors.surface },
+  cobalt: { fill: '#2B4BF2', monogram: colors.surface },
   grape: { fill: '#6D3FD1', monogram: colors.surface },
   plum: { fill: '#B449C8', monogram: colors.surface },
-  punch: { fill: colors.punch, monogram: colors.ink },
-  tangerine: { fill: colors.tangerine, monogram: colors.ink },
-  yellow: { fill: colors.yellow, monogram: colors.ink },
+  punch: { fill: '#E23D6D', monogram: colors.ink },
+  tangerine: { fill: '#FF7A1A', monogram: colors.ink },
+  yellow: { fill: '#FFD84D', monogram: colors.ink },
   lime: { fill: '#8DC63F', monogram: colors.ink },
-  green: { fill: colors.green, monogram: colors.ink },
+  green: { fill: '#17A34A', monogram: colors.ink },
   lagoon: { fill: '#0FA3A3', monogram: colors.ink },
   sky: { fill: '#38B6FF', monogram: colors.ink },
 };

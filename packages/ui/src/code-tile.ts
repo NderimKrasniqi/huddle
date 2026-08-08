@@ -1,24 +1,19 @@
-import { accentFace } from './accent-face';
-
 /**
- * A Room Code is rendered one letter per tile — on the TV's pairing screen and,
- * later, in the Controller's code entry. Boardwalk gives the tiles a fixed
- * per-position treatment (docs/design/design-handoff.md): the letters run
- * cobalt, tangerine, punch, green "in order", and the tiles are tilted ±1–2°,
- * "alternating direction between siblings".
+ * A Room Code is rendered one letter per tile — on the TV's pairing screen and
+ * in the Controller's code entry.
  *
- * Both are functions of the tile's position rather than tables to index into,
- * so a position is total — every caller gets an answer, no caller handles an
+ * Boardwalk coloured the letters by position, running its four accents "in
+ * order". Soft Minimal draws every letter in deep navy: the approved board
+ * shows four identical white tiles with one navy character each, on both the
+ * phone and the television. `codeLetterColor` went with the cycle — a caller
+ * that wants the colour of a code letter wants `colors.ink`, and a function
+ * that returns the same value for every input is a function pretending a
+ * decision is still being made.
+ *
+ * The tilt below stays a function of position rather than a table, so a
+ * position is total — every caller gets an answer, no caller handles an
  * out-of-range hole that a 4-letter code cannot produce anyway.
  */
-
-/**
- * The color the letter in position `index` is drawn in — the accent cycle, of
- * which this is the oldest use rather than a second copy (`accent-face.ts`).
- */
-export function codeLetterColor(index: number): string {
-  return accentFace(index).fill;
-}
 
 /**
  * How a Room Code letter sits in its tile: the box is the tile's, never the

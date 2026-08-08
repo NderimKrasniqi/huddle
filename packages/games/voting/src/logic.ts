@@ -276,7 +276,7 @@ export const votingGameLogic: GameLogic<VotingState, VotingEvent, GameSettings> 
      * of the five each card wears is a design-fidelity call (task 5.2), and this
      * gives the party game a face of its own until that pass settles it.
      */
-    keyArt: { color: 'tangerine' },
+    keyArt: { color: 'accent' },
     /** 2 up to the room's whole capacity (`ROOM_PLAYER_CAP`): a poll wants everyone at the table in it. */
     playerRange: { min: 2, max: 10 },
     /** Three prompts by default at 20 seconds and a short reveal apiece: about two minutes. */

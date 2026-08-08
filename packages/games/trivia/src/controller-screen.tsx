@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   lockedIn: {
     alignSelf: 'center',
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thin,

@@ -9,7 +9,6 @@ import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/
 import {
   borderWidth,
   codeLetterBox,
-  codeLetterColor,
   codeTileTilt,
   colors,
   fontFamily,
@@ -375,7 +374,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
   return (
     <StickerSurface
       depth={shadowDepth.tvHero}
-      shadowColor={colors.cobalt}
+      shadowColor={colors.accent}
       style={styles.focusedCard}
     >
       <View style={[styles.keyArt, { backgroundColor: colors[keyArt.color] }]}>
@@ -387,7 +386,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
         <View style={styles.chips}>
           <Chip text={`${playerRange.min}–${playerRange.max} players`} />
           <Chip text={`~${estimatedMinutes} min`} />
-          <Chip text={category} tone={colors.yellow} />
+          <Chip text={category} tone={colors.soft} />
         </View>
       </View>
     </StickerSurface>
@@ -508,7 +507,7 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
           // it off its own shadow.
           wrapperStyle={{ transform: [{ rotate: codeTileTilt(position) }] }}
         >
-          <Text style={[styles.tileLetter, { color: codeLetterColor(position) }]}>
+          <Text style={styles.tileLetter}>
             {code?.charAt(position) ?? ''}
           </Text>
         </StickerSurface>
@@ -868,7 +867,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
   },
   logoPeriod: {
-    color: colors.tangerine,
+    color: colors.accent,
   },
 
   // Bungee at the header's right end, opposite the wordmark: the game's name,
@@ -901,7 +900,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.chip,
   },
   roomChipText: {
-    color: colors.cobalt,
+    color: colors.ink,
     fontFamily: fontFamily.semibold,
     fontSize: 24,
     letterSpacing: letterSpacing.roomCode,
@@ -1020,13 +1019,13 @@ const styles = StyleSheet.create({
   pageDot: {
     width: 12,
     height: 12,
-    backgroundColor: colors.mutedBorder,
+    backgroundColor: colors.border,
     borderRadius: radius.pill,
   },
   // The active dot is a cobalt pill with an ink border (§6).
   pageDotActive: {
     width: 32,
-    backgroundColor: colors.cobalt,
+    backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
   },
@@ -1041,7 +1040,7 @@ const styles = StyleSheet.create({
   // the footer's own sentence changing colour, and a line box that could not
   // move is a footer that cannot grow back into the card's shadow.
   arrivalLine: {
-    color: colors.punch,
+    color: colors.justJoined,
   },
 
   gameTitle: {
@@ -1077,7 +1076,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 26,
     paddingVertical: 10,
-    backgroundColor: colors.tangerine,
+    backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
@@ -1110,9 +1109,10 @@ const styles = StyleSheet.create({
     // to its own glyph — which is what keeps an I from vanishing on tvOS. See
     // `codeLetterBox`; it carries the whole story.
     ...codeLetterBox,
+    color: colors.ink,
     fontFamily: fontFamily.semibold,
     fontSize: 88,
-    // Bungee's line box is taller than its caps; pinning it keeps the letter
+    // Inter's line box is taller than its caps; pinning it keeps the letter
     // optically centred in the tile instead of riding low.
     lineHeight: 96,
   },
@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
   troubleChip: {
     paddingHorizontal: 26,
     paddingVertical: 10,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.soft,
     borderColor: colors.ink,
     borderWidth: borderWidth.thick,
     borderRadius: radius.pill,
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
     borderWidth: borderWidth.medium,
   },
   avatarEmpty: {
-    borderColor: colors.mutedBorder,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   footerText: {

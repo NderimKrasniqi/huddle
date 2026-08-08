@@ -133,7 +133,7 @@ function Placing({ standing }: { readonly standing: FinalStanding }) {
   return (
     <StickerSurface
       depth={standing.winner ? shadowDepth.tvCardHighlight : shadowDepth.tvCard}
-      shadowColor={standing.winner ? colors.punch : colors.ink}
+      shadowColor={standing.winner ? colors.accent : colors.ink}
       style={styles.placing}
       wrapperStyle={styles.placingBlock}
     >
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   answeredChip: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.soft,
     borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thin,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   countdownText: {
-    color: colors.cobalt,
+    color: colors.accent,
     fontFamily: fontFamily.bold,
     fontSize: 36,
   },
@@ -426,13 +426,13 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 18,
     height: 18,
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.pill,
   },
   statusDotAway: {
-    backgroundColor: colors.mutedBorder,
+    backgroundColor: colors.away,
   },
   namePill: {
     borderRadius: radius.pill,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: stickerTilt.badge }],
   },
   finalBadge: {
-    backgroundColor: colors.tangerine,
+    backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thick,
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     width: 44,
   },
   rankWinner: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.accent,
   },
   rankText: {
     color: colors.ink,

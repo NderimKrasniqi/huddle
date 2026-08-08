@@ -19,7 +19,6 @@ import {
 import {
   borderWidth,
   codeLetterBox,
-  codeLetterColor,
   colors,
   fontFamily,
   letterSpacing,
@@ -438,7 +437,7 @@ function CodeTiles({
               {letter === '' ? (
                 active && focused ? <BlinkingCaret /> : null
               ) : (
-                <Text style={[styles.tileLetter, { color: codeLetterColor(position) }]}>
+                <Text style={styles.tileLetter}>
                   {letter}
                 </Text>
               )}
@@ -2034,7 +2033,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   logoPeriod: {
-    color: colors.tangerine,
+    color: colors.accent,
   },
   title: {
     color: colors.ink,
@@ -2087,10 +2086,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.chip,
   },
   tileActive: {
-    borderColor: colors.cobalt,
+    borderColor: colors.ink,
   },
   tileEmpty: {
-    borderColor: colors.mutedBorder,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   tileLetter: {
@@ -2101,16 +2100,17 @@ const styles = StyleSheet.create({
     // poisons an I — but the rule is the rule, and one of them keeping it by
     // accident is not worth the difference.
     ...codeLetterBox,
+    color: colors.ink,
     fontFamily: fontFamily.semibold,
     fontSize: 36,
-    // As on the TV's tiles: Bungee rides low in its own line box unless the
-    // line is pinned to the cap height.
+    // As on the TV's tiles: the line box is taller than the caps unless it is
+    // pinned to the cap height.
     lineHeight: 40,
   },
   caret: {
     width: 3,
     height: 36,
-    backgroundColor: colors.cobalt,
+    backgroundColor: colors.accent,
   },
   caretHidden: {
     opacity: 0,
@@ -2158,7 +2158,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     justifyContent: 'center',
     minHeight: 56,
-    backgroundColor: colors.cobalt,
+    backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderWidth: borderWidth.medium,
     borderRadius: radius.button,
@@ -2180,7 +2180,7 @@ const styles = StyleSheet.create({
   },
   failure: {
     alignSelf: 'stretch',
-    color: colors.punch,
+    color: colors.accent,
     fontFamily: fontFamily.medium,
     fontSize: 15,
     lineHeight: 20,
@@ -2243,7 +2243,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.chip,
   },
   codeChipText: {
-    color: colors.cobalt,
+    color: colors.ink,
     fontFamily: fontFamily.semibold,
     fontSize: 20,
     letterSpacing: letterSpacing.roomCode,
@@ -2373,7 +2373,7 @@ const styles = StyleSheet.create({
   // The muted half of the Status Dot: the room is not hearing
   // from this phone.
   statusDotAway: {
-    backgroundColor: colors.mutedBorder,
+    backgroundColor: colors.away,
   },
   // The disclosure chevron on a manageable row — Boardwalk's own glyph (§7's
   // picker draws the same one), muted so it reads as an affordance the row
@@ -2428,7 +2428,7 @@ const styles = StyleSheet.create({
   // Boardwalk's "this ends something" face, the same punch as Back to lobby:
   // removing a player deletes their seat and is not undone.
   sheetRemove: {
-    backgroundColor: colors.punch,
+    backgroundColor: colors.accent,
   },
   // The end-room sheet's own title: `sheetName` is a row item beside an avatar
   // and stretches to fill it, which is not what a heading on its own line does.
@@ -2563,7 +2563,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.chip,
   },
   settingOptionChosen: {
-    backgroundColor: colors.cobalt,
+    backgroundColor: colors.accent,
   },
   settingOptionLabel: {
     color: colors.ink,
@@ -2578,12 +2578,12 @@ const styles = StyleSheet.create({
   // Boardwalk's "this ends something" surface, and the only punch button on a
   // phone screen — it is meant to be found, not stumbled into.
   backToLobbyButton: {
-    backgroundColor: colors.punch,
+    backgroundColor: colors.accent,
   },
   // The same punch every irreversible control in Huddle wears (see
   // `sheetRemove`): ending the room deletes every seat in it.
   endRoomButton: {
-    backgroundColor: colors.punch,
+    backgroundColor: colors.accent,
   },
   waitingFor: {
     alignSelf: 'stretch',
@@ -2601,7 +2601,7 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 12,
     height: 12,
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderRadius: radius.pill,
   },
   statusText: {

@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   voteIn: {
     alignSelf: 'center',
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderColor: colors.ink,
     borderRadius: radius.pill,
     borderWidth: borderWidth.thin,
