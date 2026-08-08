@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@huddle/convex": "workspace:*",
+    "@react-native-async-storage/async-storage": "~2.2.0",
     "@huddle/game-core": "workspace:*",
     "@huddle/game-registry": "workspace:*",
     "@huddle/ui": "workspace:*",

@@ -13,9 +13,9 @@
 >
 > **Remaining work (as of 2026-08-08):** every required task is complete. 5.6
 > closed the MVP after finding and fixing two blocking issues (a private-state
-> broadcast and the missing end-room control). What is left is optional or
-> follow-up: **5.8** (remember last-used name/avatar) and **5.9** (keep the
-> question pack out of the Controller bundle). The monorepo apps are `apps/tv` +
+> broadcast and the missing end-room control), and 5.8 (the optional
+> remember-me) has since shipped. What is left is the single follow-up **5.9**
+> (keep the question pack out of the Controller bundle). The monorepo apps are `apps/tv` +
 > `apps/controller` (the "mobile" naming in the original draft mapped to the
 > controller).
 
@@ -35,7 +35,7 @@
 
 - [x] **1.4 — Build native phone joining and participant identity**
   - Done: `apps/controller/app/join/[code].tsx` join-by-code + deep link; display name and built-in avatar/color selection; Session Token issued and stored in SecureStore (`src/session-store.ts`); 10-player ceiling (`ROOM_PLAYER_CAP`); first joiner becomes host.
-  - Note: QR is scanned by the phone OS camera, which opens the join deep link (no in-app camera dependency). Local persistence of the *last-used* name/avatar (AsyncStorage) is not implemented — optional per scope ("the app *may* remember"); tracked in 5.8.
+  - Note: QR is scanned by the phone OS camera, which opens the join deep link (no in-app camera dependency). Local persistence of the *last-used* name/avatar (AsyncStorage) shipped in 5.8.
 
 - [x] **1.5 — Complete the reactive room lobby**
   - Done: live roster + host identity on TV and phones; empty room preserved while the TV holds; next joiner becomes host in a hostless room; covered by `players.test.ts` / `rooms.test.ts`.
@@ -210,9 +210,10 @@
   - Verified: `pnpm typecheck` clean (incl. `apps/controller`); `pnpm test` green (702); `pnpm lint` clean. `expo prebuild --clean` regenerated the controller's iOS project and `pod install` resolved cleanly against the fork (`React-Core 0.86.0-2`; `require('react-native')` → `react-native-tvos@0.86.0-2`) — the dependency-conflict surface this task targets, at both the JS and native layers. A full `xcodebuild`/simulator launch was not run; the fork is the same drop-in the TV already compiles.
   - No `@react-native-tvos/config-tv` and no `EXPO_TV` on the controller, so it stays a phone build.
 
-- [ ] **5.8 — (Optional) Remember last-used name and avatar locally**
+- [x] **5.8 — (Optional) Remember last-used name and avatar locally**
   - Persist the last-used display name and avatar in AsyncStorage so returning players are prefilled; scope treats this as optional ("the app *may* remember").
-  - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore.
+  - Done: a pure, unit-tested seam mirroring `session.ts` — `apps/controller/src/identity.ts` (parse/recall/remember, injectable store) with `identity-store.ts` as the `AsyncStorage` platform half. The name is remembered on a successful `joinRoom` and prefills the join field (seed-only; a `touched` latch never overwrites what the player is typing). The color is remembered on a successful `claimColor` and re-taken on the seated screen the first time a player sits down colorless — gated on the roster having landed, only if the swatch is still free, and silent on refusal. Nothing sensitive leaves SecureStore: only the nickname and a color *name* go to `AsyncStorage`; the Session Token stays in the keystore (`session-store.ts`). 16 new Vitest tests (787 total).
+  - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore. Typecheck/lint/tests green; not yet exercised on hardware.
 
 - [ ] **5.9 — (Follow-up) Keep the question pack out of the Controller bundle**
   - Raised by 5.6's security review. The wire no longer carries unplayed questions or their answers (`redactStateFor`), but `@huddle/packs` is still reachable from the Controller's entry point — `apps/controller` → `@huddle/game-registry` → `@huddle/game-trivia` → `./questions` → `CURATED_PACK` — and `questionsFor` is deterministic, so a **modified** client can reproduce the exact deal locally and know every answer.
