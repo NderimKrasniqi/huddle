@@ -28,11 +28,13 @@ const huddle = { rules: { 'tv-remote-surface': tvRemoteSurface } };
 // Repo-relative, like every other path here.
 const THE_REMOTE_OWNER = 'apps/tv/src/tv-about.tsx';
 
-// Boardwalk's floors, as `packages/ui` holds them (`minBodyFontSize`). Written
+// Soft Minimal's floors, as `packages/ui` holds them (`minBodyFontSize`) — the
+// smallest sizes on the handoff's own scale, phone caption 12 and TV caption
+// 16. Written
 // out here because nothing in this repo compiles a config, so a CommonJS file
 // cannot import the TypeScript token — `eslint-rules/boardwalk-body-text-floor.test.ts`
 // reads this config and the token and fails if the two ever disagree.
-const MIN_BODY_FONT_SIZE = { tv: 18, phone: 14 };
+const MIN_BODY_FONT_SIZE = { tv: 16, phone: 12 };
 
 module.exports = defineConfig([
   globalIgnores([
@@ -76,9 +78,9 @@ module.exports = defineConfig([
   // Boardwalk's other rule, and the half of it that is config: body text is
   // floored at the smallest size the surface it is read from allows, and this
   // is where the repo says which surface a file stands on. Two blocks and not
-  // one, because 14 and 18 are two floors rather than a lax one and a strict
-  // one — a repo-wide 18 would be the television's answer written over the
-  // phone's, and a repo-wide 14 would un-ban on the TV everything the TV block
+  // one, because 12 and 16 are two floors rather than a lax one and a strict
+  // one — a repo-wide 16 would be the television's answer written over the
+  // phone's, and a repo-wide 12 would un-ban on the TV everything the TV block
   // exists to catch. The rule is handed the whole `MIN_BODY_FONT_SIZE` table
   // either way, so each surface can read the *other's* floor as a number when
   // it is written where it does not belong.

@@ -50,19 +50,17 @@ const {
  *
  * ## What counts as body text
  *
- * Everything with a `fontSize` except Boardwalk's display face. A style object
- * that sets `fontFamily` to the theme's `display` (Bungee) is drawing type, not
- * setting a sentence — a wordmark, a room-code letter, a countdown — and the
- * handoff floors *body* text. Everything else is body text, including a style
- * object that names no family at all: the floor applies unless a style says it
- * is display, which is the safe direction for a default.
+ * Everything with a `fontSize`. There is no exemption, because there is nothing
+ * left to exempt: the floors are the smallest sizes on the handoff's own scale
+ * (phone caption 12, TV caption 16), so every size the design system specifies
+ * already clears them.
  *
- * The exemption is load-bearing on the phone and not on the television: the
- * smallest display size on either TV surface is 20px, while the Controller
- * draws its HOST pill in Bungee at 13 — under the phone floor and outside it.
- * It is not an exemption a style can claim by asserting it, which is what makes
- * that safe: it costs `fontFamily.display`, an actual change of face, and one
- * that shows.
+ * Boardwalk needed one. Its floors were 14 and 18 while the Controller drew its
+ * HOST pill in Bungee at 13, so anything set in `fontFamily.display` was waved
+ * through as "drawing type, not setting a sentence". Soft Minimal has no
+ * display face — the wordmark ships as artwork and everything else is Inter at
+ * a weight — so that escape hatch had neither a claimant nor a way to be
+ * claimed, and it went with the face it named.
  *
  * ## What it does not catch
  *
@@ -76,10 +74,8 @@ const {
  * passes.
  */
 
-/** The theme exports this rule has to recognise, and Boardwalk's display face. */
+/** The theme export this rule has to recognise. */
 const FLOOR_TOKEN = 'minBodyFontSize';
-const FAMILY_TOKEN = 'fontFamily';
-const DISPLAY = 'display';
 
 /**
  * Whether a name really is the `@huddle/ui` export called `token`, followed
@@ -87,10 +83,8 @@ const DISPLAY = 'display';
  *
  * Keyed on what was *imported* rather than on the local name, so
  * `import { minBodyFontSize as floors }` is still the token and a local
- * `const fontFamily = { display: 'Comic Sans' }` is not. Both questions this
- * rule asks of a name — is this the floor table? is this the display face? —
- * are answered to this one standard, so neither can be the weaker test that
- * gets copied.
+ * `const minBodyFontSize = { phone: 4 }` is not. An exemption granted on the
+ * *shape* of a name would be no gate at all.
  */
 function isThemeToken(scope, node, token, seen) {
   const value = unwrap(node);
@@ -250,36 +244,6 @@ function sizeOf(scope, node, floors, seen) {
   }
 }
 
-/**
- * Whether a style object sets Boardwalk's display face, which the floor does
- * not govern.
- *
- * The family has to be the theme's own `fontFamily.display` and is proved so,
- * to the same standard the floor table is: an exemption granted on the *shape*
- * of a name would hand it to `const faces = { display: 'Comic Sans' }`. That
- * one is caught by `boardwalk/tokens-only` on the same line, so the practical
- * gap either way is small — but two functions in one file answering "is this
- * really the theme's?" to two standards would invite the weaker to be copied,
- * and only one of them is a rule about a *value*.
- */
-function isDisplayType(scope, object) {
-  return object.properties.some((property) => {
-    if (propertyName(property) !== 'fontFamily') {
-      return false;
-    }
-
-    const family = unwrap(property.value);
-
-    return (
-      family.type === 'MemberExpression' &&
-      !family.computed &&
-      family.property.type === 'Identifier' &&
-      family.property.name === DISPLAY &&
-      isThemeToken(scope, family.object, FAMILY_TOKEN, new Set())
-    );
-  });
-}
-
 module.exports = {
   meta: {
     type: 'problem',
@@ -300,7 +264,7 @@ module.exports = {
     ],
     messages: {
       belowFloor:
-        'Boardwalk floors {{surface}} body text at {{floor}}px and this is {{size}}px at the design size. Take it from `minBodyFontSize.{{surface}}` in @huddle/ui, or set `fontFamily.display` if this is display type rather than body.',
+        'Soft Minimal floors {{surface}} text at {{floor}}px and this is {{size}}px at the design size. Take it from `minBodyFontSize.{{surface}}` in @huddle/ui — a size under the floor is off the handoff\u2019s scale, not merely small.',
     },
   },
 
@@ -320,10 +284,6 @@ module.exports = {
 
     function checkStyleObjects(node) {
       for (const object of objectsIn(node, [])) {
-        if (isDisplayType(sourceCode.getScope(object), object)) {
-          continue;
-        }
-
         for (const property of object.properties) {
           if (propertyName(property) !== 'fontSize') {
             continue;

@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   },
   question: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 22,
     textAlign: 'center',
   },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   answerText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
     textAlign: 'center',
   },
@@ -247,13 +247,13 @@ const styles = StyleSheet.create({
   },
   lockedInText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 14,
     letterSpacing: letterSpacing.badge,
   },
   eyesUp: {
     color: colors.ink,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.regular,
     fontSize: 18,
     textAlign: 'center',
   },

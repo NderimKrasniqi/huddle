@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 20,
     letterSpacing: letterSpacing.badge,
   },
@@ -340,12 +340,12 @@ const styles = StyleSheet.create({
   },
   countdownText: {
     color: colors.cobalt,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 36,
   },
   question: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 44,
     textAlign: 'center',
   },
@@ -377,13 +377,13 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   optionText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 30,
     textAlign: 'center',
   },
   optionTick: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 30,
   },
   revealFoot: {
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   verdictMark: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 24,
   },
   scoreboard: {
@@ -440,12 +440,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   namePillText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 22,
   },
   score: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 26,
     minWidth: 72,
     textAlign: 'right',
@@ -466,13 +466,13 @@ const styles = StyleSheet.create({
   },
   finalBadgeText: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 24,
     letterSpacing: letterSpacing.badge,
   },
   headline: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 52,
     textAlign: 'center',
   },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   },
   rankText: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 22,
   },
   // Pushed to the far end of the row, so every score on the screen lines up

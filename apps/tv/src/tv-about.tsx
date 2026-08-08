@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   headingText: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 20,
     letterSpacing: letterSpacing.badge,
   },
@@ -223,18 +223,18 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.tv,
     letterSpacing: letterSpacing.label,
   },
   value: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 26,
   },
   dismiss: {
     color: colors.mutedText,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.regular,
     fontSize: minBodyFontSize.tv,
   },
 });

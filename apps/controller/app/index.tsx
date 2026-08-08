@@ -2025,12 +2025,12 @@ const styles = StyleSheet.create({
   },
   logo: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 20,
   },
   logoSmall: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 16,
   },
   logoPeriod: {
@@ -2038,7 +2038,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 28,
     // Bungee's line box runs taller than its caps; pinning it keeps the
     // heading's own spacing rather than the font's.
@@ -2063,7 +2063,7 @@ const styles = StyleSheet.create({
   label: {
     alignSelf: 'flex-start',
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.phone,
     letterSpacing: letterSpacing.label,
   },
@@ -2101,7 +2101,7 @@ const styles = StyleSheet.create({
     // poisons an I — but the rule is the rule, and one of them keeping it by
     // accident is not worth the difference.
     ...codeLetterBox,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 36,
     // As on the TV's tiles: Bungee rides low in its own line box unless the
     // line is pinned to the cap height.
@@ -2149,7 +2149,7 @@ const styles = StyleSheet.create({
     // height here, so the field is centred in it rather than pushed off centre.
     paddingVertical: 0,
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 18,
   },
 
@@ -2175,13 +2175,13 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     color: colors.surface,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 18,
   },
   failure: {
     alignSelf: 'stretch',
     color: colors.punch,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
     lineHeight: 20,
   },
@@ -2192,7 +2192,7 @@ const styles = StyleSheet.create({
   notice: {
     alignSelf: 'stretch',
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
     lineHeight: 20,
     textAlign: 'center',
@@ -2219,7 +2219,7 @@ const styles = StyleSheet.create({
   },
   hostPillText: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     // The smallest type on the phone, so the pill reads as the code chip's
     // sibling rather than shouting over it. This 13 was the field label's 13
     // until the Body Text Floor took that one to 14; the handoff sizes this
@@ -2244,7 +2244,7 @@ const styles = StyleSheet.create({
   },
   codeChipText: {
     color: colors.cobalt,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
     letterSpacing: letterSpacing.roomCode,
     // The room-code chip's letter spacing trails the last letter too; pulling
@@ -2265,7 +2265,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   avatarInitials: {
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     // The TV's seat draws a 24px monogram in a 72px circle; this circle is
     // 128px, and the monogram keeps its proportion.
     fontSize: 42,
@@ -2347,7 +2347,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   rosterInitials: {
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     // The proportion the TV's seat and §4's hero avatar both keep — a monogram
     // about a third of the circle it sits in.
     fontSize: 14,
@@ -2362,7 +2362,7 @@ const styles = StyleSheet.create({
   rosterName: {
     flex: 1,
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 16,
   },
   // The nickname mutes rather than dimming with the circle — ink at 30% stops
@@ -2380,7 +2380,7 @@ const styles = StyleSheet.create({
   // carries rather than a control competing with the name.
   rosterDisclosure: {
     color: colors.mutedText,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.medium,
     fontSize: 22,
     // Bungee rides low in its own line box; pinning it centres the chevron on
     // the row.
@@ -2422,7 +2422,7 @@ const styles = StyleSheet.create({
   sheetName: {
     flex: 1,
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 20,
   },
   // Boardwalk's "this ends something" face, the same punch as Back to lobby:
@@ -2435,7 +2435,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     alignSelf: 'stretch',
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
   },
   // What ending the room costs, said before it is done. Body text, so it is read
@@ -2443,7 +2443,7 @@ const styles = StyleSheet.create({
   sheetBody: {
     alignSelf: 'stretch',
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.phone,
     lineHeight: 20,
   },
@@ -2454,7 +2454,7 @@ const styles = StyleSheet.create({
   },
   sheetCancelLabel: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 16,
   },
   // Boardwalk's aside on a phone screen: something true about the room rather
@@ -2464,7 +2464,7 @@ const styles = StyleSheet.create({
   aside: {
     alignSelf: 'stretch',
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
   },
   // §7's hint and §8's caption sit under centred content; §5's count line sits
@@ -2493,7 +2493,7 @@ const styles = StyleSheet.create({
   },
   roundButtonLabel: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 30,
     // Bungee rides low in its own line box; pinning it centres the chevron.
     lineHeight: 34,
@@ -2505,7 +2505,7 @@ const styles = StyleSheet.create({
   },
   pickedTitle: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 22,
     lineHeight: 26,
     textAlign: 'center',
@@ -2515,7 +2515,7 @@ const styles = StyleSheet.create({
   // as wide as a thumb and three chips would wrap into a paragraph.
   pickedMeta: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
     textAlign: 'center',
   },
@@ -2525,7 +2525,7 @@ const styles = StyleSheet.create({
   // this pass has no line to trace.
   pickedPosition: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
   },
   // The settings group sits between the picker and the start button, and is
@@ -2542,7 +2542,7 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 16,
   },
   settingOptions: {
@@ -2567,12 +2567,12 @@ const styles = StyleSheet.create({
   },
   settingOptionLabel: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
   },
   settingOptionLabelChosen: {
     color: colors.surface,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
   },
 
   // Boardwalk's "this ends something" surface, and the only punch button on a
@@ -2588,7 +2588,7 @@ const styles = StyleSheet.create({
   waitingFor: {
     alignSelf: 'stretch',
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 15,
     lineHeight: 20,
   },
@@ -2607,7 +2607,7 @@ const styles = StyleSheet.create({
   statusText: {
     flex: 1,
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 16,
     lineHeight: 22,
   },

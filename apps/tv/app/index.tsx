@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 34,
   },
   logoPeriod: {
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
   },
   roomChipLabel: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.tv,
   },
   roomChip: {
@@ -902,7 +902,7 @@ const styles = StyleSheet.create({
   },
   roomChipText: {
     color: colors.cobalt,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 24,
     letterSpacing: letterSpacing.roomCode,
     marginRight: -letterSpacing.roomCode,
@@ -933,7 +933,7 @@ const styles = StyleSheet.create({
   },
   keyArtTitle: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 46,
     lineHeight: 52,
     textAlign: 'center',
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 34,
     lineHeight: 38,
   },
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.tv,
   },
 
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   },
   sideCardTitle: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 34,
     lineHeight: 40,
     textAlign: 'center',
@@ -1032,7 +1032,7 @@ const styles = StyleSheet.create({
   },
   browsingLine: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 22,
     lineHeight: FOOTER_TEXT_LINE,
   },
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
 
   gameTitle: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 34,
   },
   // Where the module draws — the whole stage under the header. A game that
@@ -1058,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   unknownGameText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.tv,
     textAlign: 'center',
   },
@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
     letterSpacing: letterSpacing.badge,
   },
@@ -1110,7 +1110,7 @@ const styles = StyleSheet.create({
     // to its own glyph — which is what keeps an I from vanishing on tvOS. See
     // `codeLetterBox`; it carries the whole story.
     ...codeLetterBox,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 88,
     // Bungee's line box is taller than its caps; pinning it keeps the letter
     // optically centred in the tile instead of riding low.
@@ -1118,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   caption: {
     color: colors.mutedText,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.regular,
     fontSize: 22,
   },
   // The caption's slot, in Boardwalk's chip accent, when the news is that
@@ -1137,7 +1137,7 @@ const styles = StyleSheet.create({
   },
   troubleChipText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     // The caption's own size, which is well past the 18px a TV allows: this is
     // the one line on the screen that has to be read and acted on.
     fontSize: 22,
@@ -1161,7 +1161,7 @@ const styles = StyleSheet.create({
   },
   qrCaption: {
     color: colors.mutedText,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 20,
   },
 
@@ -1206,7 +1206,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: colors.mutedText,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.regular,
     fontSize: 22,
     lineHeight: FOOTER_TEXT_LINE,
     // Onto the centre line of the avatar circles beside it, where the handoff

@@ -191,7 +191,7 @@ describe('a design value written at a call site', () => {
   it('is caught as a font weight, because a weight is how a face gets chosen by hand', async () => {
     const [message] = await complaints(styles("fontFamily: fontFamily.body,\nfontWeight: '700',"));
 
-    expect(message).toContain('fontFamily.bodyBold');
+    expect(message).toContain('fontFamily.bold');
   });
 });
 

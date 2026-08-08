@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 20,
     letterSpacing: letterSpacing.badge,
   },
@@ -246,12 +246,12 @@ const styles = StyleSheet.create({
   },
   countdownText: {
     color: colors.cobalt,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 36,
   },
   prompt: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 44,
     textAlign: 'center',
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   optionText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 30,
     textAlign: 'center',
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tallyLabelText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 22,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   },
   tallyCount: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 26,
     minWidth: 48,
     textAlign: 'right',
@@ -346,13 +346,13 @@ const styles = StyleSheet.create({
   },
   finalBadgeText: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 24,
     letterSpacing: letterSpacing.badge,
   },
   headline: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 44,
     textAlign: 'center',
   },

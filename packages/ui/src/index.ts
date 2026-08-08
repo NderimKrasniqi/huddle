@@ -4,7 +4,7 @@ export { type AccentFace, accentFace } from './accent-face';
 export { playerInitials } from './avatar';
 export { codeLetterBox, codeLetterColor, codeTileTilt } from './code-tile';
 export { colors, type ColorToken } from './colors';
-// `boardwalkFonts` is deliberately NOT re-exported here: it reaches four .ttf
+// `huddleFonts` is deliberately NOT re-exported here: it reaches four .ttf
 // files, and a barrel is all-or-nothing, so one import of `colors` would drag
 // the font binaries into any plain-Node consumer. It lives at
 // `@huddle/ui/fonts` — see this package's `exports`.
