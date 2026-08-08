@@ -13,19 +13,18 @@ app's. Where the two disagree, this file records which one wins and why.
 | What | Where |
 |---|---|
 | Vendored handoff, tokens, theme files | `soft-minimal/` (verbatim, lint-exempt) |
-| Approved screen board — **final** | `reference/boards/approved-soft-minimal-screen-board.png` |
-| Earlier UI board | `reference/boards/huddle-soft-minimal-ui-board.png` |
+| Approved screen board | `reference/boards/approved-soft-minimal-screen-board.png` |
 | Screen exports | `reference/screens/` |
 | Brand guide | `reference/brand/huddle-brand-guide.png` |
 | Runtime artwork | `packages/ui/assets/` |
 
-**The package's own §14 priority list points at the wrong board.** It ranks
-`design-system/reference/huddle-soft-minimal-ui-board.png` above the screen
-exports, but that file is the *earlier* board — its screen 2 is "You're in
-(player)" carrying a `YOUR COLOR` swatch row that the final board removed. The
-final board is the one under `screens-reference/`, vendored here as
-`approved-soft-minimal-screen-board.png`. When the two disagree, the final board
-wins.
+**The package's own §14 priority list points at a board that is not approved.**
+It ranks `design-system/reference/huddle-soft-minimal-ui-board.png` above the
+screen exports, but that file is an earlier exploration and is **wrong** — its
+screen 2 is a "You're in (player)" step carrying a `YOUR COLOR` swatch row that
+the approved flow does not have. It is deliberately not vendored here, so
+nothing can be built from it by mistake. Ignore §14's ordering and read
+`approved-soft-minimal-screen-board.png` as the board.
 
 ## Palette
 
@@ -142,9 +141,7 @@ something the board settles, and it is out of scope for the token swap.
    last player no choice. `yellow-robot`'s background is the canvas colour, so
    it draws no disc at all. See `packages/ui/assets/README.md`. Circle art is no
    longer needed: the circular avatar is the square under `borderRadius`.
-3. **App icons** — all four bake a corner radius over a black or white surround.
-   Not shippable until regenerated full-bleed.
-4. **Six screens need designing** — the unknown-game pair, both game frames, the
+3. **Six screens need designing** — the unknown-game pair, both game frames, the
    About panel, the End Room sheet.
-5. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art
+4. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art
    but no game.

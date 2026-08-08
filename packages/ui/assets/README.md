@@ -84,17 +84,39 @@ is 1280×720, so it holds for now.
 
 ## `app-icons/`
 
-**Defect — none of the four are shippable.** iOS and Android want a full-bleed
-square with no baked corner radius; the OS applies the mask. All four bake in a
-rounded rect and surround it:
+The production set, replacing the four staged earlier — those baked a corner
+radius over a black or white surround and would have rendered with dark or pale
+corners on the home screen. These are correct and verified:
 
-| File | Surround |
+| File | Check |
 |---|---|
-| `huddle-app-icon-dark.png` | pure black `#000000` |
-| `huddle-app-icon-light-01.png` | pure black `#000000`, icon floats with a drop shadow |
-| `huddle-app-icon-light-02.png` | near-white `#FDFDFE` |
-| `huddle-app-icon-light-03.png` | near-white `#FDFEFE` |
+| `huddle-app-icon-light.png` | 1024², full-bleed `#FFF7F2`, no baked radius |
+| `huddle-app-icon-dark.png` | 1024², full-bleed `#0F172A`, no baked radius |
+| `huddle-android-legacy.png` | 1024², full-bleed `#FFF7F2` |
+| `huddle-android-adaptive-foreground.png` | 1024², transparent, content at 49% of canvas |
+| `huddle-android-monochrome.png` | 1024², transparent, Android 13+ themed icon |
 
-Shipped as-is, each renders with dark or pale corners on the home screen. They
-are staged here for reference until regenerated as 1024×1024 full-bleed with no
-radius. Neither `app.json` references them.
+Both backgrounds are the exact palette tokens, and the adaptive foreground sits
+well inside Android's 66% safe zone, so the OS mask cannot clip the symbol.
+**The Android adaptive background is `#FFF7F2`** — set it alongside the
+foreground, since the foreground alone is transparent.
+
+Not yet referenced by either `app.json`. One thing to settle when wiring: Expo
+resolves `icon` relative to the app directory, so these need
+`../../packages/ui/assets/…`, which reaches outside the app's project root.
+Worth a `prebuild` before trusting it.
+
+## `logo/`
+
+The wordmark and symbol, transparent, in exact token colors:
+
+| File | Content |
+|---|---|
+| `huddle-logo-light.png` | 1327×360, orange symbol + `#0F172A` wordmark, for light surfaces |
+| `huddle-logo-dark.png` | 1327×360, orange symbol + `#FFF7F2` wordmark, for dark surfaces |
+| `huddle-symbol-orange.png` | 1200×1234, standalone `#FF6B4A` symbol |
+
+These replace the drawn `HUDDLE.` wordmark Boardwalk sets in Bungee — §5 of the
+handoff is explicit that the wordmark should use supplied artwork rather than be
+recreated from a text font, which also means the wordmark does not depend on the
+unresolved font decision.
