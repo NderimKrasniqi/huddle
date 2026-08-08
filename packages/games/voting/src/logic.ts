@@ -1,5 +1,6 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
 
+import { votingMetadata } from './metadata';
 import { CURATED_PROMPTS, type VotingPrompt } from './prompts';
 import { votingSettings, VOTING_SETTINGS_SCHEMA } from './settings';
 
@@ -259,31 +260,17 @@ function advanced(
 }
 
 /**
- * The Voting game's metadata, settings schema and rules.
+ * The Voting game's rules.
  *
- * `Settings` is `GameSettings` — the hub's strings — rather than the game's own,
- * because that is what the hub hands a module: it settles the Host's choices
- * against this schema and passes the result back untouched, and `votingSettings`
- * is where they stop being strings.
+ * Its metadata is declared in `./metadata` (the shared object the client module
+ * points at too) and its settings in `./settings`; what is left here is the
+ * game. `Settings` is `GameSettings` — the hub's strings — rather than the
+ * game's own, because that is what the hub hands a module: it settles the Host's
+ * choices against this schema and passes the result back untouched, and
+ * `votingSettings` is where they stop being strings.
  */
 export const votingGameLogic: GameLogic<VotingState, VotingEvent, GameSettings> = {
-  metadata: {
-    id: 'voting',
-    title: 'Hot Takes',
-    /**
-     * Tangerine — the second poster on the carousel, set apart from trivia's
-     * punch. The colors are all Boardwalk accents (`KEY_ART_COLOR_NAMES`); which
-     * of the five each card wears is a design-fidelity call (task 5.2), and this
-     * gives the party game a face of its own until that pass settles it.
-     */
-    keyArt: { color: 'tangerine' },
-    /** 2 up to the room's whole capacity (`ROOM_PLAYER_CAP`): a poll wants everyone at the table in it. */
-    playerRange: { min: 2, max: 10 },
-    /** Three prompts by default at 20 seconds and a short reveal apiece: about two minutes. */
-    estimatedMinutes: 2,
-    /** The genre chip. */
-    category: 'Party',
-  },
+  metadata: votingMetadata,
   settingsSchema: VOTING_SETTINGS_SCHEMA,
   createInitialState: ({ players, settings }) => {
     const chosen = votingSettings(settings);

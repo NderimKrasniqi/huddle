@@ -300,23 +300,30 @@ export interface GameLogic<
 }
 
 /**
- * A game's rules and its two screens: the whole module, as a client holds it.
+ * What a client holds of a game: how the hub draws it, and the two screens it
+ * mounts once it is running. Deliberately *not* the rules.
  *
- * The screens are separated from the rules above rather than declared beside
- * them because the two run in different places. `reduce` and
- * `createInitialState` run inside Convex mutations, so the server imports a
- * Registry of `GameLogic` and nothing else; the screens are React Native and
- * belong only to the TV app and the Controller. They cannot share one object:
- * a module's screens are properties of it, and properties do not tree-shake —
- * a server importing the whole module would bundle the user interface of every
- * installed game. See `@huddle/game-registry`, which ships the two lists
- * through separate entry points for exactly this reason.
+ * `GameModule` does not extend `GameLogic`. A client renders a game — the
+ * carousel card from `metadata`, the Host's options from `settingsSchema`, the
+ * `screens` once it starts — but it never runs one: `createInitialState` and
+ * `reduce` execute inside Convex mutations, and the state a screen draws arrives
+ * from the room. Leaving the rules off this type is not tidiness, it is the seam
+ * that keeps a game's *content* server-side. Trivia's `createInitialState` deals
+ * from the Question Pack, so a module that carried it would carry the pack —
+ * every question and its answer — into the phone bundle, where a modified client
+ * could reproduce the deterministic deal and know each answer before the TV
+ * asked (docs/implementation-plan.md 5.9). The server imports a Registry of
+ * `GameLogic` (the rules, and the pack with them); the clients import this.
+ * `@huddle/game-registry` ships the two lists through separate entry points, and
+ * `registry.test.ts` holds them to one order and one shared `metadata`.
+ *
+ * Screens are React Native and could not sit on the server type anyway — a
+ * module's screens are properties of it, and properties do not tree-shake, so a
+ * server importing them would bundle the user interface of every installed game.
  */
-export interface GameModule<
-  State = unknown,
-  Event extends GameEvent = GameEvent,
-  Settings = unknown,
-> extends GameLogic<State, Event, Settings> {
+export interface GameModule<State = unknown, Event extends GameEvent = GameEvent> {
+  readonly metadata: GameMetadata;
+  readonly settingsSchema: GameSettingsSchema;
   /**
    * The two faces of a running game. Both are React components — plain
    * functions of their props — so the hub mounts them without knowing what
