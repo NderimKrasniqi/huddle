@@ -35,7 +35,7 @@ import {
 import { StickerSurface } from '@huddle/ui/native';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { AppState, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -83,6 +83,7 @@ import {
   resumeSession,
 } from '../src/session';
 import { phoneSessionTokenStore } from '../src/session-store';
+import { seatLossNotice } from '../src/seat-loss';
 import {
   type SettingsChoice,
   settingChosen,
@@ -132,6 +133,12 @@ export default function JoinScreen() {
   // join form is what this screen falls back to rather than what it opens with.
   const [session, setSession] = useState<PlayerSession | null>();
 
+  // Why the phone is on the join form, when it landed there by losing a seat
+  // rather than by never having one. Carried from the seated screen to the form
+  // so a removed player is told they were removed instead of finding themselves
+  // inexplicably back at the start. `undefined` on an ordinary launch.
+  const [notice, setNotice] = useState<string>();
+
   useEffect(() => {
     // Safe on every mount, unlike the TV's `openRoom`: rejoining reads, so a
     // remount asks the same question again instead of taking a second seat.
@@ -164,7 +171,15 @@ export default function JoinScreen() {
     // or removes this player, or the room expires under a party that went quiet.
     // Forgetting the seat here is what sends the phone back to the form — the
     // screen below watches the room for it.
-    return <YoureInScreen session={state.session} onSeatLost={() => setSession(null)} />;
+    return (
+      <YoureInScreen
+        session={state.session}
+        onSeatLost={(reason) => {
+          setNotice(reason);
+          setSession(null);
+        }}
+      />
+    );
   }
 
   // Keyed by the link so a second Join Link scanned while this screen is
@@ -173,15 +188,25 @@ export default function JoinScreen() {
   // covers the phone that already holds a seat and has just scanned another
   // room's TV, since `joinScreenState` sends that scan here. A typed join has
   // no link and so a constant key: nothing remounts under somebody's thumbs.
-  return <JoinForm key={linkedCode ?? ''} linkedCode={linkedCode ?? ''} onSeated={setSession} />;
+  return (
+    <JoinForm
+      key={linkedCode ?? ''}
+      linkedCode={linkedCode ?? ''}
+      onSeated={setSession}
+      notice={notice}
+    />
+  );
 }
 
 function JoinForm({
   linkedCode,
   onSeated,
+  notice,
 }: {
   readonly linkedCode: string;
   readonly onSeated: (session: PlayerSession) => void;
+  /** Why the phone is back here, if it landed by losing a seat rather than fresh. */
+  readonly notice?: string;
 }) {
   const prefilledCode = codeEntry(linkedCode);
 
@@ -189,6 +214,12 @@ function JoinForm({
   const [nickname, setNickname] = useState('');
   const [joining, setJoining] = useState(false);
   const [failure, setFailure] = useState<string>();
+
+  // The seat-loss notice stops being the news the moment the player does
+  // anything about it — touches a field, or taps Join — so it is dismissed on
+  // the first of those rather than lingering over a form they have moved on to.
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
+  const showNotice = notice !== undefined && !noticeDismissed;
 
   const nameField = useRef<TextInput>(null);
   const joinRoom = useMutation(api.players.joinRoom);
@@ -219,6 +250,7 @@ function JoinForm({
     const entered = codeEntry(typed);
     setCode(entered);
     setFailure(undefined);
+    setNoticeDismissed(true);
     // The last letter advances the way every letter before it did — off the
     // tiles and into the only field left to fill.
     if (shouldMoveToNickname(code, entered)) {
@@ -232,12 +264,14 @@ function JoinForm({
     touched.current = true;
     setNickname(nicknameEntry(typed));
     setFailure(undefined);
+    setNoticeDismissed(true);
   }
 
   async function join() {
     const claimed = nickname.trim();
     setJoining(true);
     setFailure(undefined);
+    setNoticeDismissed(true);
 
     try {
       // The token goes to the phone's storage and the seat goes to the screen:
@@ -269,6 +303,12 @@ function JoinForm({
         </Text>
         <Text style={styles.title}>Join the room</Text>
       </View>
+
+      {showNotice ? (
+        <Text style={styles.notice} accessibilityLiveRegion="polite">
+          {notice}
+        </Text>
+      ) : null}
 
       <View style={styles.field}>
         <Text style={styles.label}>ROOM CODE</Text>
@@ -456,7 +496,7 @@ function YoureInScreen({
   onSeatLost,
 }: {
   readonly session: PlayerSession;
-  readonly onSeatLost: () => void;
+  readonly onSeatLost: (reason: string) => void;
 }) {
   const { code, nickname } = session;
   useHeartbeat();
@@ -507,9 +547,12 @@ function YoureInScreen({
 
   useEffect(() => {
     if (seat === null) {
-      onSeatLost();
+      // The roster read in the same render is the room as it was the instant the
+      // seat vanished — still peopled if the Host removed this one player, empty
+      // if the room itself ended — which is how the notice tells the two apart.
+      onSeatLost(seatLossNotice(roster));
     }
-  }, [seat, onSeatLost]);
+  }, [seat, onSeatLost, roster]);
   const screen = runningGameScreen(running);
 
   // The card the room is browsing. Held here rather than by the controls that
@@ -654,6 +697,58 @@ function EndRoomControl() {
 }
 
 /**
+ * The shell both host-confirm sheets wear: a centred Boardwalk card floated over
+ * an ink scrim, dismissed by a tap on the scrim, by the system back gesture, or
+ * by the Cancel that always sits at its foot.
+ *
+ * The Manage Sheet fills it with a player and the powers over them; the End Room
+ * sheet with what closing the room costs. Only their bodies differ, so only
+ * their bodies are theirs — the surface, the scrim, the way out, and the Cancel
+ * are one copy here. A change to how a confirm sheet dismisses, or the scrim it
+ * floats over, reaches both rather than one, which is the whole of why it was
+ * worth lifting out of the two.
+ */
+function ConfirmSheet({
+  onDismiss,
+  children,
+}: {
+  readonly onDismiss: () => void;
+  readonly children: ReactNode;
+}) {
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
+      <View style={styles.sheetRoot}>
+        {/* The scrim is the backdrop and the way out: a tap anywhere off the
+            panel dismisses, the way tapping away from a sheet does everywhere. */}
+        <Pressable
+          style={[StyleSheet.absoluteFill, styles.sheetScrim]}
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
+
+        <StickerSurface
+          depth={shadowDepth.phoneCard}
+          style={styles.sheet}
+          wrapperStyle={styles.sheetWrapper}
+        >
+          {children}
+
+          <Pressable
+            style={styles.sheetCancel}
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text style={styles.sheetCancelLabel}>Cancel</Text>
+          </Pressable>
+        </StickerSurface>
+      </View>
+    </Modal>
+  );
+}
+
+/**
  * The confirm sheet for ending the room: what is lost, and the two ways out.
  *
  * The Manage Sheet's surface — a centred Boardwalk card over an ink scrim,
@@ -691,60 +786,36 @@ function EndRoomSheet({ onDismiss }: { readonly onDismiss: () => void }) {
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
-      <View style={styles.sheetRoot}>
-        <Pressable
-          style={[StyleSheet.absoluteFill, styles.sheetScrim]}
-          onPress={onDismiss}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        />
+    <ConfirmSheet onDismiss={onDismiss}>
+      <Text style={styles.sheetTitle}>{END_ROOM.title}</Text>
+      <Text style={styles.sheetBody}>{END_ROOM.body}</Text>
 
-        <StickerSurface
-          depth={shadowDepth.phoneCard}
-          style={styles.sheet}
-          wrapperStyle={styles.sheetWrapper}
-        >
-          <Text style={styles.sheetTitle}>{END_ROOM.title}</Text>
-          <Text style={styles.sheetBody}>{END_ROOM.body}</Text>
-
-          <Pressable
-            style={styles.stretch}
-            disabled={ending}
-            onPress={() => void confirm()}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: ending }}
+      <Pressable
+        style={styles.stretch}
+        disabled={ending}
+        onPress={() => void confirm()}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: ending }}
+      >
+        {({ pressed }) => (
+          <StickerSurface
+            depth={shadowDepth.phoneSmall}
+            style={[styles.button, styles.endRoomButton, pressed && styles.buttonPressed]}
+            wrapperStyle={styles.stretch}
           >
-            {({ pressed }) => (
-              <StickerSurface
-                depth={shadowDepth.phoneSmall}
-                style={[styles.button, styles.endRoomButton, pressed && styles.buttonPressed]}
-                wrapperStyle={styles.stretch}
-              >
-                <Text style={styles.buttonLabel}>
-                  {ending ? END_ROOM.busyLabel : END_ROOM.confirmLabel}
-                </Text>
-              </StickerSurface>
-            )}
-          </Pressable>
-
-          {failure === undefined ? null : (
-            <Text style={styles.failure} accessibilityLiveRegion="polite">
-              {failure}
+            <Text style={styles.buttonLabel}>
+              {ending ? END_ROOM.busyLabel : END_ROOM.confirmLabel}
             </Text>
-          )}
+          </StickerSurface>
+        )}
+      </Pressable>
 
-          <Pressable
-            style={styles.sheetCancel}
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-          >
-            <Text style={styles.sheetCancelLabel}>Cancel</Text>
-          </Pressable>
-        </StickerSurface>
-      </View>
-    </Modal>
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </ConfirmSheet>
   );
 }
 
@@ -994,69 +1065,38 @@ function ManagePlayerSheet({
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
-      <View style={styles.sheetRoot}>
-        {/* The scrim is the backdrop and the way out: a tap anywhere off the
-            panel dismisses, the way tapping away from a sheet does everywhere. */}
-        <Pressable
-          style={[StyleSheet.absoluteFill, styles.sheetScrim]}
-          onPress={onDismiss}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        />
-
-        <StickerSurface
-          depth={shadowDepth.phoneCard}
-          style={styles.sheet}
-          wrapperStyle={styles.sheetWrapper}
+    <ConfirmSheet onDismiss={onDismiss}>
+      <View style={styles.sheetHeader}>
+        <View
+          style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
         >
-          <View style={styles.sheetHeader}>
-            <View
-              style={[
-                styles.rosterAvatar,
-                { backgroundColor: face.fill },
-                away && styles.rosterAway,
-              ]}
-            >
-              <Text style={[styles.rosterInitials, { color: face.monogram }]}>
-                {playerInitials(seat.nickname)}
-              </Text>
-            </View>
-            <Text style={styles.sheetName} numberOfLines={1}>
-              {seat.nickname}
-            </Text>
-          </View>
-
-          {controls.map((control) => (
-            <ManageAction
-              key={control.action}
-              control={control}
-              nickname={seat.nickname}
-              busy={busy === control.action}
-              // One action at a time: while either is in flight, neither is
-              // pressable.
-              locked={busy !== undefined}
-              onPress={() => void run(control.action)}
-            />
-          ))}
-
-          {failure === undefined ? null : (
-            <Text style={styles.failure} accessibilityLiveRegion="polite">
-              {failure}
-            </Text>
-          )}
-
-          <Pressable
-            style={styles.sheetCancel}
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-          >
-            <Text style={styles.sheetCancelLabel}>Cancel</Text>
-          </Pressable>
-        </StickerSurface>
+          <Text style={[styles.rosterInitials, { color: face.monogram }]}>
+            {playerInitials(seat.nickname)}
+          </Text>
+        </View>
+        <Text style={styles.sheetName} numberOfLines={1}>
+          {seat.nickname}
+        </Text>
       </View>
-    </Modal>
+
+      {controls.map((control) => (
+        <ManageAction
+          key={control.action}
+          control={control}
+          nickname={seat.nickname}
+          busy={busy === control.action}
+          // One action at a time: while either is in flight, neither is pressable.
+          locked={busy !== undefined}
+          onPress={() => void run(control.action)}
+        />
+      ))}
+
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </ConfirmSheet>
   );
 }
 
@@ -2133,6 +2173,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyMedium,
     fontSize: 15,
     lineHeight: 20,
+  },
+
+  // The seat-loss notice under the heading. Ink rather than punch: a removed or
+  // closed-out player is being told what happened, not warned off a mistake, so
+  // it reads as the form's own line and not as the red a rejection wears.
+  notice: {
+    alignSelf: 'stretch',
+    color: colors.ink,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: 15,
+    lineHeight: 20,
+    textAlign: 'center',
   },
 
   seatedHeader: {
