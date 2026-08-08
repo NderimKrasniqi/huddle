@@ -2,10 +2,14 @@
 
 ## Current task
 
-The three smaller residuals recorded by 5.6 are **implemented** on branch
-`fix/5.6-residuals`. Tests, typecheck, and lint are green. Independent code
-review and security review are the remaining gate before the PR is marked
-complete.
+The three smaller residuals recorded by 5.6 are **complete** on branch
+`fix/5.6-residuals`, [PR #22](https://github.com/NderimKrasniqi/huddle/pull/22),
+left for the user to review and merge. Tests, typecheck, and lint are green.
+Independent code review and security review both **PASS**. The only finding
+worth acting on — a LOW nit where a stale seat-loss notice could ride onto a
+newly-scanned room's form — has been fixed (the notice resets when `linkedCode`
+changes). The other LOW (a theoretical loading-roster mislabel) both reviewers
+rated unreachable, so it is left as-is.
 
 ## Where the plan stands
 
