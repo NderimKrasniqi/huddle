@@ -208,6 +208,17 @@ export const expireRoom = internalMutation({
       return null;
     }
 
+    // A running game's clock, stopped before the room goes — the same tidy-up
+    // `endRoom` does when a Host closes the room by hand. A deadline left pending
+    // would fire into a room that no longer exists: harmless, since
+    // `reachDeadline` finds nothing, but it is the room's own scheduled work and
+    // the room ending is where it stops, however the room comes to end.
+    const pending = room.game?.deadline;
+
+    if (pending !== undefined) {
+      await ctx.scheduler.cancel(pending);
+    }
+
     for (const player of seated) {
       await ctx.db.delete('players', player._id);
     }

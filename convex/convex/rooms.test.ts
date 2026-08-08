@@ -8,7 +8,7 @@ import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import type { RoomCodeExhausted } from './rooms';
@@ -346,6 +346,44 @@ describe('room expiry', () => {
     await elapse(t, 15_000);
 
     expect(await pendingExpiryChecks(t, room.roomId)).toBe(1);
+  });
+
+  it('stops a running game’s clock as it deletes the room', async () => {
+    const t = convexTest(schema, modules);
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const host = await seatPlayer(t, room.code, 'Ada');
+    await seatPlayer(t, room.code, 'Grace');
+
+    // A game is running, so the room has a deadline scheduled against itself.
+    await t.mutation(api.games.startGame, { sessionToken: host.sessionToken, gameId: 'trivia' });
+
+    // The party leaves mid-game and the phones go quiet. Rather than run the
+    // clock forward — which would fire the deadline itself and leave nothing to
+    // cancel — the last-seen stamps are aged past the window and the desertion
+    // check is run once with the game's clock still pending. This is the case
+    // `endRoom` covers by hand: a room ending while a game is live.
+    await t.run(async (ctx) => {
+      const stale = Date.now() - (TEN_MINUTES + 1_000);
+      for (const player of await ctx.db.query('players').collect()) {
+        await ctx.db.patch(player._id, { lastSeenAt: stale });
+      }
+    });
+
+    await t.mutation(internal.rooms.expireRoom, { roomId: room.roomId });
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+
+    // The question's own deadline is cancelled, not left to fire into a room that
+    // has gone — asserted as `endRoom`'s twin does, since `reachDeadline`
+    // tolerates a missing room and a test that only checked for no crash would
+    // pass with the cancel deleted.
+    const deadlines = await t.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+        (job) => job.name === 'games:reachDeadline',
+      ),
+    );
+    expect(deadlines).toHaveLength(1);
+    expect(deadlines[0]?.state.kind).toBe('canceled');
   });
 
   /**
