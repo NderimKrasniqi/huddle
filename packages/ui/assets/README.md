@@ -75,12 +75,19 @@ as one language.
 ## `tv-backgrounds/`
 
 1672×941 (16:9), no alpha, clear centre with decoration at the edges per §11.
-`-01` is warmer, `-02` cooler and greyer.
 
-Their base is `#FAF1E9` / `#F8F1EA` — **not** the `#FFF7F2` canvas token. Use
-the image as the TV canvas rather than compositing it over a solid fill, or the
-seam will show. 1672px also upscales soft on a 4K panel; the TV design surface
-is 1280×720, so it holds for now.
+**This is the TV canvas**, on every TV screen — not decoration layered over one.
+It replaces the solid `colors.screen` fill in `TvStage` and scales with the
+stage. The letterbox bars a non-16:9 window leaves stay a solid warm off-white;
+stretching a 16:9 composition into them would draw a second pair of plants.
+
+`-01` is warmer, `-02` cooler and greyer. `-01` is the default for both screens
+until the assignment is settled — see the handoff.
+
+Their base is `#FAF1E9` / `#F8F1EA` rather than the `#FFF7F2` canvas token,
+which is why nothing composites them over a fill: close enough to read as a
+mistake, far enough apart to show a seam. 1672px also upscales soft on a 4K
+panel; the TV design surface is 1280×720, so it holds for now.
 
 ## `app-icons/`
 

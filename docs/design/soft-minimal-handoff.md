@@ -70,6 +70,35 @@ Spacing `4 8 12 16 24 32 40 48 64 80`. Radius: chips 8–12, controls 12–16, c
 18–24, pills 999. Phone content padding 24, controls ≥48 high. TV safe margin
 64, focus = orange border + 1.04 scale, never scale alone.
 
+## The TV canvas is an image
+
+`tv-backgrounds/` is not decoration layered onto a screen — it **is** the TV
+canvas, on every TV screen. Nothing paints a flat colour behind it.
+
+That matters for `TvStage`, which today fills the 1280×720 stage with a solid
+`colors.screen`. The image replaces that fill and scales with the stage, so the
+plants stay at the edges at any panel size.
+
+Two things it does not change:
+
+- **The letterbox bars stay a solid warm off-white.** They are what a non-16:9
+  window leaves over, and the background is a 16:9 composition — tiling or
+  stretching it into the bars would put a second pair of plants beside the
+  first.
+- **The clear centre is load-bearing.** §11 puts decoration near the edges
+  precisely so the room code, the QR, the player strip and the game cards never
+  sit on top of it. A screen that needs the middle of the canvas is a screen
+  that has outgrown this background, not a reason to move the plants.
+
+Two variants ship: `-01` is warmer, `-02` cooler and greyer. The board does not
+clearly assign one per screen and the difference is subtle enough that sampling
+the exports could not settle it, so **`-01` is the default for both TV screens**
+until told otherwise.
+
+Their base is `#FAF1E9`/`#F8F1EA` rather than the `#FFF7F2` canvas token, which
+is exactly why nothing composites them over a fill: the two are close enough to
+look like a mistake and far enough apart to show a seam.
+
 ## Screen inventory
 
 The platform's real surfaces. Six had no design in the package and are marked.
