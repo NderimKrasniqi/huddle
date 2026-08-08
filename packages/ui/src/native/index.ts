@@ -4,3 +4,4 @@
 // run under Node with no renderer, which is why `react-native` is a peer
 // dependency here rather than a dependency of the package.
 export { Surface, type SurfaceProps } from './surface';
+export { Wordmark, type WordmarkProps } from './wordmark';

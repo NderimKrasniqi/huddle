@@ -31,7 +31,7 @@ import {
   radius,
   elevation,
 } from '@huddle/ui';
-import { Surface } from '@huddle/ui/native';
+import { Surface, Wordmark } from '@huddle/ui/native';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
@@ -308,9 +308,7 @@ function JoinForm({
   return (
     <PhoneScreen>
       <View style={styles.heading}>
-        <Text style={styles.logo}>
-          HUDDLE<Text style={styles.logoPeriod}>.</Text>
-        </Text>
+        <Wordmark height={20} />
         <Text style={styles.title}>Join the room</Text>
       </View>
 
@@ -592,9 +590,7 @@ function YoureInScreen({
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
-        <Text style={styles.logoSmall}>
-          HUDDLE<Text style={styles.logoPeriod}>.</Text>
-        </Text>
+        <Wordmark height={16} />
         <View style={styles.seatedHeaderEnd}>
           {standing.youAreHost ? <HostPill /> : null}
           <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
@@ -1516,9 +1512,7 @@ function InGameScreen({
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
-        <Text style={styles.logoSmall}>
-          HUDDLE<Text style={styles.logoPeriod}>.</Text>
-        </Text>
+        <Wordmark height={16} />
         <View style={styles.seatedHeaderEnd}>
           {youAreHost ? <HostPill /> : null}
           <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
@@ -1696,9 +1690,7 @@ function UnknownGameScreen({
   return (
     <PhoneScreen>
       <View style={styles.seatedHeader}>
-        <Text style={styles.logoSmall}>
-          HUDDLE<Text style={styles.logoPeriod}>.</Text>
-        </Text>
+        <Wordmark height={16} />
         <View style={styles.seatedHeaderEnd}>
           {youAreHost ? <HostPill /> : null}
           <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
@@ -1995,19 +1987,6 @@ const styles = StyleSheet.create({
   heading: {
     alignItems: 'center',
     gap: 10,
-  },
-  logo: {
-    color: colors.ink,
-    fontFamily: fontFamily.bold,
-    fontSize: 20,
-  },
-  logoSmall: {
-    color: colors.ink,
-    fontFamily: fontFamily.bold,
-    fontSize: 16,
-  },
-  logoPeriod: {
-    color: colors.accent,
   },
   title: {
     color: colors.ink,

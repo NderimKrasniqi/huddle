@@ -20,7 +20,7 @@ import {
   elevation,
   springOf,
 } from '@huddle/ui';
-import { Surface } from '@huddle/ui/native';
+import { Surface, Wordmark } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -169,9 +169,7 @@ function PairingStage({
     <TvStage>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.logo}>
-            HUDDLE<Text style={styles.logoPeriod}>.</Text>
-          </Text>
+          <Wordmark height={34} />
         </View>
 
         <View style={styles.center}>
@@ -227,9 +225,7 @@ function CarouselStage({
     <TvStage>
       <View style={styles.screen}>
         <View style={styles.carouselHeader}>
-          <Text style={styles.logo}>
-            HUDDLE<Text style={styles.logoPeriod}>.</Text>
-          </Text>
+          <Wordmark height={34} />
           <View style={styles.roomChipGroup}>
             <Text style={styles.roomChipLabel}>room</Text>
             <Surface elevation={elevation.tvCard} style={styles.roomChip}>
@@ -439,9 +435,7 @@ function GameStage({
     <TvStage>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.logo}>
-            HUDDLE<Text style={styles.logoPeriod}>.</Text>
-          </Text>
+          <Wordmark height={34} />
           <Text style={styles.gameTitle}>{module.metadata.title}</Text>
         </View>
 
@@ -463,9 +457,7 @@ function UnknownGameStage({ gameId }: { readonly gameId: string }) {
     <TvStage>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.logo}>
-            HUDDLE<Text style={styles.logoPeriod}>.</Text>
-          </Text>
+          <Wordmark height={34} />
         </View>
 
         <View style={styles.center}>
@@ -853,14 +845,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 56,
     paddingTop: 36,
-  },
-  logo: {
-    color: colors.ink,
-    fontFamily: fontFamily.bold,
-    fontSize: 34,
-  },
-  logoPeriod: {
-    color: colors.accent,
   },
 
   // Bungee at the header's right end, opposite the wordmark: the game's name,
