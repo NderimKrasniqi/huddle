@@ -1719,7 +1719,14 @@ function ColorPicker({
   const [failure, setFailure] = useState<string>();
   const swatches = pickerSwatches(roster, session.playerId);
 
+  // Whether the player has tapped a swatch themselves. It exists only to stand
+  // down the auto-claim below: a returning player who taps a *different* color
+  // in the first moment on screen has just said what they want, and the color
+  // this phone happened to remember must not race in behind that tap and win.
+  const userClaimed = useRef(false);
+
   async function claim(color: PlayerColorName) {
+    userClaimed.current = true;
     // The last refusal stops being true the moment another swatch is tried.
     setFailure(undefined);
 
@@ -1781,6 +1788,12 @@ function ColorPicker({
 
       const sessionToken = await phoneSessionTokenStore.read();
       if (sessionToken === null) {
+        return;
+      }
+      // Checked last, after every await: if the player tapped a swatch while
+      // this was reading storage and the keystore, that tap is the answer and
+      // this one stands down rather than landing on top of it.
+      if (userClaimed.current) {
         return;
       }
       try {
