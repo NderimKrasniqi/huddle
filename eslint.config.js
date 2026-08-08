@@ -43,6 +43,12 @@ module.exports = defineConfig([
     '**/.expo/**',
     '**/expo-env.d.ts',
     'convex/convex/_generated/**',
+    // The incoming Soft Minimal handoff, vendored verbatim so the swap has
+    // something to be checked against. It is a specification, not source: it
+    // carries its own palette and its own token names, so every Boardwalk rule
+    // fires on it by design. Lint it and the only way to pass is to edit the
+    // handoff, which would make it useless as a reference.
+    'docs/design/soft-minimal/**',
     // Linked git worktrees the agent harness checks out under here for
     // background tasks: a whole second copy of the repo (with its own generated
     // files), gitignored and transient. `eslint .` walks the filesystem, not

@@ -1,5 +1,13 @@
 # Handoff: Huddle — TV Lobby & Pairing Flow ("Boardwalk" design system)
 
+> **SUPERSEDED by `soft-minimal-handoff.md`.** Soft Minimal is the approved
+> visual system; Boardwalk is no longer the design target.
+>
+> This file stays until the token swap lands, for one reason: the code still
+> implements Boardwalk, and roughly 200 comments across the screens cite this
+> document's `§` numbers to explain why they draw what they draw. Deleting it
+> now would orphan every one of them. It goes when the last `§` reference does.
+
 > Source: claude.ai/design project "Mobile TV game controller system"
 > (projectId `3efdf6e5-f6d0-4c0b-823e-f2633c986e58`). The full high-fidelity
 > mock is `Boardwalk Flow.dc.html` in that project — fetch via DesignSync when
