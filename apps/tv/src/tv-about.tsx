@@ -6,10 +6,9 @@ import {
   letterSpacing,
   minBodyFontSize,
   radius,
-  shadowDepth,
-  stickerTilt,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import Constants from 'expo-constants';
 import { useCallback, useEffect, useState } from 'react';
 import * as ReactNative from 'react-native';
@@ -104,10 +103,9 @@ export function AboutPanel() {
 
   return (
     <View style={styles.overlay}>
-      <StickerSurface
-        depth={shadowDepth.tvCard}
+      <Surface
+        elevation={elevation.tvCard}
         style={styles.panel}
-        wrapperStyle={styles.panelTilt}
       >
         <View style={styles.heading}>
           <Text style={styles.headingText}>ABOUT</Text>
@@ -120,7 +118,7 @@ export function AboutPanel() {
         {/* The way out, said on the panel itself: every key closes it, and it
             goes on its own in twenty seconds either way. */}
         <Text style={styles.dismiss}>any button closes this</Text>
-      </StickerSurface>
+      </Surface>
     </View>
   );
 }
@@ -195,11 +193,8 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.cardLarge,
-  },
-  panelTilt: {
-    transform: [{ rotate: stickerTilt.aboutPanel }],
   },
 
   // The HOST pill's treatment: ink fill, white Bungee. A quiet badge for a

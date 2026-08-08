@@ -1,31 +1,46 @@
 /**
- * Boardwalk's thick ink borders. Every bordered surface picks one of these
- * three; nothing in the system uses a 1px line.
+ * Soft Minimal draws one border weight, and it is a hairline.
+ *
+ * Boardwalk had three — 2, 3 and 4px of ink — and the weight was the system's
+ * signature. Here a border is a divider rather than a statement: warm grey at
+ * 1px, doing the job the old ink did with contrast that the shadow and the
+ * surface's own fill now carry between them.
+ *
+ * `focus` is the exception and the only place a border is meant to be seen from
+ * across a room: the handoff pins TV focus at a 3px orange border plus a 1.04
+ * scale, and is explicit that scale alone is not enough.
  */
 export const borderWidth = {
-  /** 2px — small phone elements: code tiles, chips. */
-  thin: 2,
-  /** 3px — phone cards, buttons, inputs, and dashed empty slots. */
-  medium: 3,
-  /** 4px — TV cards. */
-  thick: 4,
+  /** 1px — every bordered surface. */
+  hairline: 1,
+  /** 3px — a focused TV card or action, in the accent. */
+  focus: 3,
 } as const;
 
-/** Boardwalk's corner radii, named by the surfaces the handoff applies them to. */
+/**
+ * Soft Minimal's corner radii, named by the surfaces the handoff applies them
+ * to. The names are Boardwalk's; the values are §7's bands — chips 8–12,
+ * inputs and buttons 12–16, cards and sheets 18–24.
+ *
+ * Keeping the names was not laziness. A radius token says *what kind of thing
+ * this is*, and that did not change when the system did: a chip is still the
+ * smallest rounded thing on a screen and a card is still a card. Renaming them
+ * would have churned every call site to say the same thing in new words.
+ */
 export const radius = {
   /** 10px — chips and the smallest elements. */
   chip: 10,
-  /** 16px — inputs and list rows. */
-  input: 16,
-  /** 18px — primary buttons. */
-  button: 18,
-  /** 20px — larger list rows and panels. */
-  row: 20,
-  /** 24px — cards: code tiles, the QR card. */
-  card: 24,
-  /** 28px — large TV cards: player cards, carousel cards. */
-  cardLarge: 28,
-  /** Fully rounded pill badges: HOST, JUST JOINED!, GRAB YOUR PHONE!, chips. */
+  /** 14px — inputs. */
+  input: 14,
+  /** 14px — primary buttons. */
+  button: 14,
+  /** 16px — list rows and panels. */
+  row: 16,
+  /** 20px — cards: code tiles, the QR card, sheets. */
+  card: 20,
+  /** 24px — large TV cards: player cards, carousel cards. */
+  cardLarge: 24,
+  /** Fully rounded pill badges and chips. */
   pill: 999,
 } as const;
 
@@ -51,44 +66,4 @@ export const opacity = {
    * standing back, so a shared number would drift the moment one meaning moved.
    */
   scrim: 0.45,
-} as const;
-
-/**
- * Boardwalk tilts cards and badges like stickers pressed onto the screen
- * (`rotate(-3deg…3deg)`). Named per surface so the same element is never tilted
- * two different ways on two different screens; the room-code tiles get their
- * tilt from `codeTileTilt` instead, because theirs cycles by position.
- */
-export const stickerTilt = {
-  /** -3° — the "GRAB YOUR PHONE!" badge. */
-  badge: '-3deg',
-  /** 1.5° — the TV's QR card. */
-  qrCard: '1.5deg',
-  /**
-   * 2° — a status chip that replaces a line of caption text (the TV's
-   * "reconnecting" chip). Leans the other way from the badge above it, per the
-   * handoff's alternating sibling tilts.
-   */
-  statusChip: '2deg',
-  /**
-   * -2° — the carousel's side cards (handoff §6, "tilted"). Inside Boardwalk's
-   * -3°…3° range and shallower than the badge, so a card standing back from the
-   * focused one does not out-lean the loudest sticker on the screen.
-   */
-  carouselSideCard: '-2deg',
-  /**
-   * -1.5° — the TV's About Panel, which the handoff does not draw. The
-   * shallowest lean in the system, and it leans the opposite way from the QR
-   * card it is the same kind of object as: a panel summoned over a running
-   * screen should read as a sticker pressed on top of it and not as another
-   * card competing with what is underneath.
-   */
-  aboutPanel: '-1.5deg',
-  /**
-   * 2° — trivia's countdown tile, the one number a whole room reads at once.
-   * Its own entry rather than the status chip's, per this table's rule: two
-   * surfaces sharing a number is how one of them ends up re-tilted by a change
-   * meant for the other.
-   */
-  countdownTile: '2deg',
 } as const;

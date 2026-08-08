@@ -29,9 +29,9 @@ import {
   playerFace,
   playerInitials,
   radius,
-  shadowDepth,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
@@ -329,11 +329,9 @@ function JoinForm({
         <Text style={styles.label}>YOUR NAME</Text>
         {/* The Boardwalk surface is the wrapper's, not the field's: the shadow
             is cast by a view, and a TextInput owns its own text box. */}
-        <StickerSurface
-          depth={shadowDepth.phoneSmall}
-          style={styles.nameField}
-          wrapperStyle={styles.stretch}
-        >
+        <Surface
+          elevation={elevation.phoneSmall}
+          style={[styles.stretch, styles.nameField]}>
           <TextInput
             ref={nameField}
             style={styles.nameInput}
@@ -352,7 +350,7 @@ function JoinForm({
             }}
             accessibilityLabel="Your name"
           />
-        </StickerSurface>
+        </Surface>
       </View>
 
       <View style={styles.field}>
@@ -364,15 +362,13 @@ function JoinForm({
           accessibilityState={{ disabled: !ready || joining }}
         >
           {({ pressed }) => (
-            <StickerSurface
-              depth={shadowDepth.phoneCard}
-              style={[styles.button, pressed && styles.buttonPressed]}
+            <Surface
+              elevation={elevation.phoneCard}
               // Dimming belongs to the whole sticker: fading the face alone
               // would leave a solid shadow under a ghosted button.
-              wrapperStyle={[styles.stretch, !ready && styles.buttonUnavailable]}
-            >
+              style={[[styles.stretch, !ready && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
               <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join →'}</Text>
-            </StickerSurface>
+            </Surface>
           )}
         </Pressable>
 
@@ -601,9 +597,9 @@ function YoureInScreen({
         </Text>
         <View style={styles.seatedHeaderEnd}>
           {standing.youAreHost ? <HostPill /> : null}
-          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+          <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
             <Text style={styles.codeChipText}>{code}</Text>
-          </StickerSurface>
+          </Surface>
         </View>
       </View>
 
@@ -612,14 +608,14 @@ function YoureInScreen({
           have picked anything, so the circle has to be drawable without one.
           Both answers come from `playerFace`, which is what stops this circle
           and the same player's seat on the TV from disagreeing. */}
-      <StickerSurface
-        depth={shadowDepth.phoneHero}
+      <Surface
+        elevation={elevation.phoneHero}
         style={[styles.avatar, { backgroundColor: face.fill }]}
       >
         <Text style={[styles.avatarInitials, { color: face.monogram }]}>
           {playerInitials(nickname)}
         </Text>
-      </StickerSurface>
+      </Surface>
 
       <Text style={styles.title}>You’re in, {nickname}!</Text>
 
@@ -640,14 +636,12 @@ function YoureInScreen({
 
       <ColorPicker roster={roster} session={session} />
 
-      <StickerSurface
-        depth={shadowDepth.phoneCard}
-        style={styles.statusCard}
-        wrapperStyle={styles.stretch}
-      >
+      <Surface
+        elevation={elevation.phoneCard}
+        style={[styles.stretch, styles.statusCard]}>
         <View style={styles.statusDot} />
         <Text style={styles.statusText}>{lobbyStatusText(standing)}</Text>
-      </StickerSurface>
+      </Surface>
 
       <LobbyGameControls
         browsing={browsing}
@@ -691,13 +685,11 @@ function EndRoomControl() {
         accessibilityRole="button"
       >
         {({ pressed }) => (
-          <StickerSurface
-            depth={shadowDepth.phoneCard}
-            style={[styles.button, styles.endRoomButton, pressed && styles.buttonPressed]}
-            wrapperStyle={styles.stretch}
-          >
+          <Surface
+            elevation={elevation.phoneCard}
+            style={[styles.stretch, [styles.button, styles.endRoomButton, pressed && styles.buttonPressed]]}>
             <Text style={styles.buttonLabel}>{END_ROOM.label}</Text>
-          </StickerSurface>
+          </Surface>
         )}
       </Pressable>
 
@@ -737,11 +729,9 @@ function ConfirmSheet({
           accessibilityLabel="Close"
         />
 
-        <StickerSurface
-          depth={shadowDepth.phoneCard}
-          style={styles.sheet}
-          wrapperStyle={styles.sheetWrapper}
-        >
+        <Surface
+          elevation={elevation.phoneCard}
+          style={[styles.sheetWrapper, styles.sheet]}>
           {children}
 
           <Pressable
@@ -752,7 +742,7 @@ function ConfirmSheet({
           >
             <Text style={styles.sheetCancelLabel}>Cancel</Text>
           </Pressable>
-        </StickerSurface>
+        </Surface>
       </View>
     </Modal>
   );
@@ -808,15 +798,13 @@ function EndRoomSheet({ onDismiss }: { readonly onDismiss: () => void }) {
         accessibilityState={{ disabled: ending }}
       >
         {({ pressed }) => (
-          <StickerSurface
-            depth={shadowDepth.phoneSmall}
-            style={[styles.button, styles.endRoomButton, pressed && styles.buttonPressed]}
-            wrapperStyle={styles.stretch}
-          >
+          <Surface
+            elevation={elevation.phoneSmall}
+            style={[styles.stretch, [styles.button, styles.endRoomButton, pressed && styles.buttonPressed]]}>
             <Text style={styles.buttonLabel}>
               {ending ? END_ROOM.busyLabel : END_ROOM.confirmLabel}
             </Text>
-          </StickerSurface>
+          </Surface>
         )}
       </Pressable>
 
@@ -960,11 +948,9 @@ function RosterRow({
   const manageable = rosterRowIsManageable(seat);
 
   const row = (
-    <StickerSurface
-      depth={shadowDepth.phoneSmall}
-      style={styles.rosterRow}
-      wrapperStyle={styles.stretch}
-    >
+    <Surface
+      elevation={elevation.phoneSmall}
+      style={[styles.stretch, styles.rosterRow]}>
       <View
         style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
       >
@@ -987,10 +973,10 @@ function RosterRow({
           more — drawn only where there is more, so the Host's own row does not
           invite a tap that has nothing behind it. */}
       {manageable ? <Text style={styles.rosterDisclosure}>›</Text> : null}
-    </StickerSurface>
+    </Surface>
   );
 
-  // The label and role are on the wrapper rather than the surface: `StickerSurface`
+  // The label and role are on the wrapper rather than the surface: `Surface`
   // is a shadow and a face, and forwards no accessibility of its own. A
   // manageable row is a button that opens the sheet; the Host's own row is a
   // plain label with nothing to press.
@@ -1154,16 +1140,14 @@ function ManageAction({
         accessibilityState={{ disabled: !pressable }}
       >
         {({ pressed }) => (
-          <StickerSurface
-            depth={shadowDepth.phoneCard}
-            style={[styles.button, remove && styles.sheetRemove, pressed && styles.buttonPressed]}
+          <Surface
+            elevation={elevation.phoneCard}
             // Dimmed whenever it cannot be pressed — a disabled transfer (away
             // target), and either action while the other is in flight — so a
             // button that ignores a tap never looks fully live.
-            wrapperStyle={[styles.stretch, !pressable && styles.buttonUnavailable]}
-          >
+            style={[[styles.stretch, !pressable && styles.buttonUnavailable], [styles.button, remove && styles.sheetRemove, pressed && styles.buttonPressed]]}>
             <Text style={styles.buttonLabel}>{busy ? 'Working…' : control.label}</Text>
-          </StickerSurface>
+          </Surface>
         )}
       </Pressable>
 
@@ -1340,8 +1324,8 @@ function SettingOption({
     >
       {({ pressed }) =>
         chosen ? (
-          <StickerSurface
-            depth={shadowDepth.phoneSmall}
+          <Surface
+            elevation={elevation.phoneSmall}
             style={[
               styles.settingOption,
               styles.settingOptionChosen,
@@ -1351,7 +1335,7 @@ function SettingOption({
             <Text style={[styles.settingOptionLabel, styles.settingOptionLabelChosen]}>
               {label}
             </Text>
-          </StickerSurface>
+          </Surface>
         ) : (
           // No press travel on the flat chip, as with an unclaimed swatch:
           // Boardwalk's press is a sticker going down onto its own shadow, and
@@ -1379,14 +1363,12 @@ function SettingOption({
 function NowViewing({ browsing }: { readonly browsing: CarouselWindow }) {
   return (
     <View style={styles.field}>
-      <StickerSurface
-        depth={shadowDepth.phoneCard}
-        style={styles.statusCard}
-        wrapperStyle={styles.stretch}
-      >
+      <Surface
+        elevation={elevation.phoneCard}
+        style={[styles.stretch, styles.statusCard]}>
         <View style={styles.statusDot} />
         <Text style={styles.statusText}>{nowViewingLine(browsing.focused.metadata)}</Text>
-      </StickerSurface>
+      </Surface>
       <Text style={[styles.aside, styles.asideCentred]}>{NOW_VIEWING_CAPTION}</Text>
     </View>
   );
@@ -1410,13 +1392,11 @@ function RoundButton({
       accessibilityState={{ disabled: !enabled }}
     >
       {({ pressed }) => (
-        <StickerSurface
-          depth={shadowDepth.phoneSmall}
-          style={[styles.roundButton, pressed && styles.buttonPressed]}
-          wrapperStyle={enabled ? undefined : styles.buttonUnavailable}
-        >
+        <Surface
+          elevation={elevation.phoneSmall}
+          style={[enabled ? undefined : styles.buttonUnavailable, [styles.roundButton, pressed && styles.buttonPressed]]}>
           <Text style={styles.roundButtonLabel}>{label}</Text>
-        </StickerSurface>
+        </Surface>
       )}
     </Pressable>
   );
@@ -1483,15 +1463,13 @@ function StartGameControl({
         accessibilityState={{ disabled: !pressable }}
       >
         {({ pressed }) => (
-          <StickerSurface
-            depth={shadowDepth.phoneCard}
-            style={[styles.button, pressed && styles.buttonPressed]}
-            wrapperStyle={[styles.stretch, !control.enabled && styles.buttonUnavailable]}
-          >
+          <Surface
+            elevation={elevation.phoneCard}
+            style={[[styles.stretch, !control.enabled && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
             <Text style={styles.buttonLabel}>
               {starting ? 'Starting…' : control.label}
             </Text>
-          </StickerSurface>
+          </Surface>
         )}
       </Pressable>
 
@@ -1543,9 +1521,9 @@ function InGameScreen({
         </Text>
         <View style={styles.seatedHeaderEnd}>
           {youAreHost ? <HostPill /> : null}
-          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+          <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
             <Text style={styles.codeChipText}>{code}</Text>
-          </StickerSurface>
+          </Surface>
         </View>
       </View>
 
@@ -1670,13 +1648,11 @@ function BackToLobbyControl() {
         accessibilityState={{ disabled: returning }}
       >
         {({ pressed }) => (
-          <StickerSurface
-            depth={shadowDepth.phoneCard}
-            style={[styles.button, styles.backToLobbyButton, pressed && styles.buttonPressed]}
-            wrapperStyle={styles.stretch}
-          >
+          <Surface
+            elevation={elevation.phoneCard}
+            style={[styles.stretch, [styles.button, styles.backToLobbyButton, pressed && styles.buttonPressed]]}>
             <Text style={styles.buttonLabel}>{backToLobbyLabel(returning)}</Text>
-          </StickerSurface>
+          </Surface>
         )}
       </Pressable>
 
@@ -1725,23 +1701,21 @@ function UnknownGameScreen({
         </Text>
         <View style={styles.seatedHeaderEnd}>
           {youAreHost ? <HostPill /> : null}
-          <StickerSurface depth={shadowDepth.phoneSmall} style={styles.codeChip}>
+          <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
             <Text style={styles.codeChipText}>{code}</Text>
-          </StickerSurface>
+          </Surface>
         </View>
       </View>
 
       <Text style={styles.title}>Update Huddle</Text>
 
-      <StickerSurface
-        depth={shadowDepth.phoneCard}
-        style={styles.statusCard}
-        wrapperStyle={styles.stretch}
-      >
+      <Surface
+        elevation={elevation.phoneCard}
+        style={[styles.stretch, styles.statusCard]}>
         <Text style={styles.statusText}>
           {behind} {whatToDo}
         </Text>
-      </StickerSurface>
+      </Surface>
 
       {youAreHost ? <BackToLobbyControl /> : null}
     </PhoneScreen>
@@ -1908,8 +1882,8 @@ function Swatch({
       accessibilityState={{ disabled: taken, selected: state === 'yours' }}
     >
       {state === 'yours' ? (
-        <StickerSurface
-          depth={shadowDepth.phoneSmall}
+        <Surface
+          elevation={elevation.phoneSmall}
           style={[styles.swatch, styles.swatchYours, { backgroundColor: color.fill }]}
         />
       ) : (
@@ -2080,7 +2054,7 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     // Every state carries the same border width, so a cell filling in never
     // nudges the letter beside it.
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     // Proportional to the TV tile's 24px on 148px, so the phone's smaller tile
     // reads as the same object (handoff: 10–16px on small elements).
     borderRadius: radius.chip,
@@ -2126,7 +2100,7 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
 
-  // A StickerSurface wrapper sits between a full-width surface and its parent,
+  // A Surface wrapper sits between a full-width surface and its parent,
   // so the stretch has to be asked for on the wrapper as well as the surface —
   // otherwise the wrapper shrink-wraps and the card stops filling the column.
   stretch: {
@@ -2138,7 +2112,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.input,
   },
   nameInput: {
@@ -2160,7 +2134,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     backgroundColor: colors.accent,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.button,
   },
   buttonUnavailable: {
@@ -2239,7 +2213,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.chip,
   },
   codeChipText: {
@@ -2261,7 +2235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
   },
   avatarInitials: {
@@ -2290,10 +2264,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   // The handoff gives the selected swatch the ink border and the shadow; the
-  // shadow comes from the StickerSurface this is drawn on.
+  // shadow comes from the Surface this is drawn on.
   swatchYours: {
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
   },
   // Boardwalk's treatment for something present but not available — the same
   // 30% the TV dims an away player's face to.
@@ -2310,7 +2284,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.row,
   },
   // The Host's roster (§5). The rows sit closer together than the screen's own
@@ -2320,7 +2294,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   // §5's row, measurement for measurement: white, 3px ink border, radius 16,
-  // and the 3px shadow its `StickerSurface` casts.
+  // and the 3px shadow its `Surface` casts.
   rosterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2330,7 +2304,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.input,
   },
   // §5's 40px avatar. Its ink is Boardwalk's thin border rather than the row's
@@ -2343,7 +2317,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: colors.ink,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
   },
   rosterInitials: {
@@ -2411,7 +2385,7 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.card,
   },
   sheetHeader: {
@@ -2488,7 +2462,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
   },
   roundButtonLabel: {
@@ -2559,7 +2533,7 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
     // Thin, as Boardwalk borders a chip — these sit inside the picker's own
     // 3px surfaces and would out-weigh them at the same width.
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.chip,
   },
   settingOptionChosen: {

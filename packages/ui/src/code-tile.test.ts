@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { codeLetterBox, codeTileTilt } from './code-tile';
+import { codeLetterBox } from './code-tile';
 
 // These check what the token *declares*, which is all a constant can be checked
 // for: that the letter's box comes from its tile rather than its glyph is a
@@ -13,19 +13,5 @@ describe('codeLetterBox', () => {
 
   it('declares the centring that a stretched box then needs', () => {
     expect(codeLetterBox.textAlign).toBe('center');
-  });
-});
-
-describe('codeTileTilt', () => {
-  it('alternates direction between siblings, within ±1–2°', () => {
-    expect([0, 1, 2, 3].map(codeTileTilt)).toEqual(['-2deg', '1deg', '-1deg', '2deg']);
-  });
-
-  it('never tilts a tile out of the handoff\'s ±1–2° range', () => {
-    for (let index = 0; index < 12; index += 1) {
-      const degrees = Number.parseFloat(codeTileTilt(index));
-      expect(Math.abs(degrees)).toBeGreaterThanOrEqual(1);
-      expect(Math.abs(degrees)).toBeLessThanOrEqual(2);
-    }
   });
 });

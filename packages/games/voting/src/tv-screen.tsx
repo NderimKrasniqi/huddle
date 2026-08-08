@@ -7,10 +7,9 @@ import {
   letterSpacing,
   opacity,
   radius,
-  shadowDepth,
-  stickerTilt,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -31,13 +30,11 @@ function OpenOption({ option }: { readonly option: PromptOption }) {
   const face = accentFace(option.optionIndex);
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
-      style={[styles.option, { backgroundColor: face.fill }]}
-      wrapperStyle={styles.optionBlock}
-    >
+    <Surface
+      elevation={elevation.tvCard}
+      style={[styles.optionBlock, [styles.option, { backgroundColor: face.fill }]]}>
       <Text style={[styles.optionText, { color: face.label }]}>{option.text}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -59,16 +56,13 @@ function TallyBar({ row, highest }: { readonly row: TallyRow; readonly highest: 
 
   return (
     <View style={styles.tallyRow}>
-      <StickerSurface
-        depth={row.leading ? shadowDepth.tvCardHighlight : shadowDepth.tvCard}
-        shadowColor={row.leading ? colors.accent : colors.ink}
-        style={styles.tallyLabel}
-        wrapperStyle={[styles.tallyLabelBlock, !row.leading && row.count === 0 && styles.tallyEmpty]}
-      >
+      <Surface
+        elevation={row.leading ? elevation.tvCardHighlight : elevation.tvCard}
+        style={[styles.tallyLabelBlock, !row.leading && row.count === 0 && styles.tallyEmpty, styles.tallyLabel]}>
         <Text style={[styles.tallyLabelText, { color: face.label, backgroundColor: face.fill }]}>
           {row.text}
         </Text>
-      </StickerSurface>
+      </Surface>
 
       <View style={styles.tallyTrack}>
         <View style={[styles.tallyFill, { backgroundColor: face.fill, flexGrow: fill }]} />
@@ -83,11 +77,11 @@ function TallyBar({ row, highest }: { readonly row: TallyRow; readonly highest: 
 /** "Prompt 2 of 3" — where the room is in the set. */
 function PromptCount({ at, of }: { readonly at: number; readonly of: number }) {
   return (
-    <StickerSurface depth={shadowDepth.phoneSmall} style={styles.chip}>
+    <Surface elevation={elevation.phoneSmall} style={styles.chip}>
       <Text style={styles.chipText}>
         PROMPT {at} OF {of}
       </Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -118,13 +112,11 @@ function Countdown({ seconds }: { readonly seconds: number }) {
   }, []);
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
-      style={styles.countdown}
-      wrapperStyle={styles.countdownBlock}
-    >
+    <Surface
+      elevation={elevation.tvCard}
+      style={[styles.countdownBlock, styles.countdown]}>
       <Text style={styles.countdownText}>{secondsLeft}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -139,9 +131,10 @@ function Countdown({ seconds }: { readonly seconds: number }) {
 function Wrap({ promptCount }: { readonly promptCount: number }) {
   return (
     <View style={styles.stage}>
-      <StickerSurface depth={shadowDepth.tvCard} style={styles.finalBadge} wrapperStyle={styles.finalBadgeBlock}>
+      <Surface elevation={elevation.tvCard}
+  style={[styles.finalBadgeBlock, styles.finalBadge]}>
         <Text style={styles.finalBadgeText}>THAT’S A WRAP</Text>
-      </StickerSurface>
+      </Surface>
       <Text style={styles.headline}>{promptCount} hot takes, settled.</Text>
     </View>
   );
@@ -178,11 +171,11 @@ export function VotingTvScreen({ state, players }: TvGameScreenProps<VotingState
     <View style={styles.stage}>
       <View style={styles.header}>
         <PromptCount at={screen.promptNumber} of={screen.promptCount} />
-        <StickerSurface depth={shadowDepth.phoneSmall} style={styles.votedChip}>
+        <Surface elevation={elevation.phoneSmall} style={styles.votedChip}>
           <Text style={styles.chipText}>
             {screen.voted}/{screen.playerCount} VOTED
           </Text>
-        </StickerSurface>
+        </Surface>
         <Countdown key={screen.promptNumber} seconds={screen.countdownSeconds} />
       </View>
 
@@ -212,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
@@ -220,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.soft,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
@@ -231,14 +224,13 @@ const styles = StyleSheet.create({
     letterSpacing: letterSpacing.badge,
   },
   countdownBlock: {
-    transform: [{ rotate: stickerTilt.countdownTile }],
   },
   countdown: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.card,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     justifyContent: 'center',
     minWidth: 88,
     paddingHorizontal: 12,
@@ -269,7 +261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderColor: colors.ink,
     borderRadius: radius.cardLarge,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     justifyContent: 'center',
     minHeight: 96,
     paddingHorizontal: 24,
@@ -298,12 +290,15 @@ const styles = StyleSheet.create({
     opacity: opacity.unavailable,
   },
   tallyLabel: {
-    borderColor: colors.ink,
+    borderColor: colors.border,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.medium,
-    overflow: 'hidden',
+    borderWidth: borderWidth.hairline,
   },
   tallyLabelText: {
+    // The pill's own radius, carried by the text rather than clipped by the
+    // surface around it: `overflow: 'hidden'` on a view sets `masksToBounds`,
+    // which clips that view's shadow along with its children.
+    borderRadius: radius.pill,
     fontFamily: fontFamily.medium,
     fontSize: 22,
     paddingHorizontal: 16,
@@ -319,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     overflow: 'hidden',
   },
   tallyFill: {
@@ -334,13 +329,12 @@ const styles = StyleSheet.create({
   },
 
   finalBadgeBlock: {
-    transform: [{ rotate: stickerTilt.badge }],
   },
   finalBadge: {
     backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 26,
     paddingVertical: 10,
   },

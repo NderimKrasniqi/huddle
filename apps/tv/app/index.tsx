@@ -9,7 +9,6 @@ import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/
 import {
   borderWidth,
   codeLetterBox,
-  codeTileTilt,
   colors,
   fontFamily,
   letterSpacing,
@@ -18,11 +17,10 @@ import {
   opacity,
   popIn,
   radius,
-  shadowDepth,
+  elevation,
   springOf,
-  stickerTilt,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -178,13 +176,12 @@ function PairingStage({
 
         <View style={styles.center}>
           <View style={styles.codeGroup}>
-            <StickerSurface
-              depth={shadowDepth.phoneCard}
+            <Surface
+              elevation={elevation.phoneCard}
               style={styles.badge}
-              wrapperStyle={styles.badgeTilt}
             >
               <Text style={styles.badgeText}>GRAB YOUR PHONE!</Text>
-            </StickerSurface>
+            </Surface>
             <RoomCodeTiles code={code} />
             <PairingCaption caption={roomOpeningCaption(opening)} />
           </View>
@@ -235,9 +232,9 @@ function CarouselStage({
           </Text>
           <View style={styles.roomChipGroup}>
             <Text style={styles.roomChipLabel}>room</Text>
-            <StickerSurface depth={shadowDepth.tvCard} style={styles.roomChip}>
+            <Surface elevation={elevation.tvCard} style={styles.roomChip}>
               <Text style={styles.roomChipText}>{code}</Text>
-            </StickerSurface>
+            </Surface>
           </View>
         </View>
 
@@ -372,9 +369,8 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
   const { title, keyArt, playerRange, estimatedMinutes, category } = game.metadata;
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvHero}
-      shadowColor={colors.accent}
+    <Surface
+      elevation={elevation.tvHero}
       style={styles.focusedCard}
     >
       <View style={[styles.keyArt, { backgroundColor: colors[keyArt.color] }]}>
@@ -389,7 +385,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
           <Chip text={category} tone={colors.soft} />
         </View>
       </View>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -473,9 +469,9 @@ function UnknownGameStage({ gameId }: { readonly gameId: string }) {
         </View>
 
         <View style={styles.center}>
-          <StickerSurface depth={shadowDepth.phoneCard} style={styles.badge}>
+          <Surface elevation={elevation.phoneCard} style={styles.badge}>
             <Text style={styles.badgeText}>UPDATE HUDDLE</Text>
-          </StickerSurface>
+          </Surface>
           <Text style={styles.unknownGameText}>
             This room is playing {gameId}, which this TV doesn’t have yet.
           </Text>
@@ -499,18 +495,17 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
   return (
     <View style={styles.tiles}>
       {Array.from({ length: ROOM_CODE_LENGTH }, (_unused, position) => (
-        <StickerSurface
+        <Surface
           key={position}
-          depth={shadowDepth.tvCard}
+          elevation={elevation.tvCard}
           style={styles.tile}
           // The tilt goes on the wrapper: rotating the tile alone would swing
           // it off its own shadow.
-          wrapperStyle={{ transform: [{ rotate: codeTileTilt(position) }] }}
         >
           <Text style={styles.tileLetter}>
             {code?.charAt(position) ?? ''}
           </Text>
-        </StickerSurface>
+        </Surface>
       ))}
     </View>
   );
@@ -535,23 +530,21 @@ function PairingCaption({ caption }: { readonly caption: RoomOpeningCaption }) {
   }
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
+    <Surface
+      elevation={elevation.tvCard}
       style={styles.troubleChip}
-      wrapperStyle={styles.troubleChipTilt}
     >
       <Text style={styles.troubleChipText}>{caption.text}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
 /** The Join Link as a QR: scanning it opens the Controller straight into the room. */
 function RoomQrCard({ code }: { readonly code: string | undefined }) {
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
+    <Surface
+      elevation={elevation.tvCard}
       style={styles.qrCard}
-      wrapperStyle={styles.qrCardTilt}
     >
       <View style={styles.qr}>
         {code === undefined ? null : (
@@ -564,7 +557,7 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
         )}
       </View>
       <Text style={styles.qrCaption}>or scan to join</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -896,7 +889,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.chip,
   },
   roomChipText: {
@@ -914,14 +907,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 28,
   },
-  // 440×520 with the ink border and the cobalt offset shadow (§6).
+  // 440×520. This is the TV's focus treatment, which the handoff pins: an
+  // orange border at `borderWidth.focus`, and explicitly *not* scale alone —
+  // the card is already the largest thing on the screen, so a 1.04 lift reads
+  // as nothing from across a room while a 3px orange edge reads immediately.
   focusedCard: {
     width: 440,
     height: 520,
-    overflow: 'hidden',
     backgroundColor: colors.surface,
-    borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderColor: colors.accent,
+    borderWidth: borderWidth.focus,
     borderRadius: radius.cardLarge,
   },
   keyArt: {
@@ -929,6 +924,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    // The card used to clip this to its own corners. It cannot any more —
+    // `overflow: 'hidden'` sets `masksToBounds`, which would clip the card's
+    // shadow too — so the art rounds its own top corners instead, inset by the
+    // focus border so the curve sits inside the orange rather than under it.
+    borderTopLeftRadius: radius.cardLarge - borderWidth.focus,
+    borderTopRightRadius: radius.cardLarge - borderWidth.focus,
   },
   keyArtTitle: {
     color: colors.surface,
@@ -959,7 +960,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.chip,
   },
   chipText: {
@@ -972,7 +973,7 @@ const styles = StyleSheet.create({
   // Boardwalk's own sticker rotation rather than a number invented here.
   sideCardWrapper: {
     opacity: opacity.carouselSideCard,
-    transform: [{ scale: 0.94 }, { rotate: stickerTilt.carouselSideCard }],
+    transform: [{ scale: 0.94 }],
   },
   sideCard: {
     width: 300,
@@ -981,7 +982,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.cardLarge,
   },
   sideCardTitle: {
@@ -1027,7 +1028,7 @@ const styles = StyleSheet.create({
     width: 32,
     backgroundColor: colors.accent,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
   },
   browsingLine: {
     color: colors.mutedText,
@@ -1078,11 +1079,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.accent,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
-  },
-  badgeTilt: {
-    transform: [{ rotate: stickerTilt.badge }],
   },
   badgeText: {
     color: colors.surface,
@@ -1101,7 +1099,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.card,
   },
   tileLetter: {
@@ -1129,11 +1127,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.soft,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
-  },
-  troubleChipTilt: {
-    transform: [{ rotate: stickerTilt.statusChip }],
   },
   troubleChipText: {
     color: colors.ink,
@@ -1149,11 +1144,8 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.card,
-  },
-  qrCardTilt: {
-    transform: [{ rotate: stickerTilt.qrCard }],
   },
   qr: {
     width: QR_SIZE,
@@ -1198,7 +1190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.pill,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
   },
   avatarEmpty: {
     borderColor: colors.border,

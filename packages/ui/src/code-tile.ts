@@ -10,9 +10,9 @@
  * that returns the same value for every input is a function pretending a
  * decision is still being made.
  *
- * The tilt below stays a function of position rather than a table, so a
- * position is total — every caller gets an answer, no caller handles an
- * out-of-range hole that a 4-letter code cannot produce anyway.
+ * Boardwalk also tilted the tiles ±1–2°, "alternating direction between
+ * siblings". Soft Minimal's are upright — the approved board draws four square
+ * tiles in a straight row — so `codeTileTilt` went with the lean.
  */
 
 /**
@@ -42,12 +42,3 @@ export const codeLetterBox = {
   alignSelf: 'stretch',
   textAlign: 'center',
 } as const;
-
-/** The sticker tilt of the tile in position `index`, ready for `rotate`. */
-export function codeTileTilt(index: number): `${number}deg` {
-  const position = Math.abs(index) % 4;
-  const direction = position % 2 === 0 ? -1 : 1;
-  // Outer tiles lean harder than inner ones, which fans the row slightly.
-  const degrees = position === 0 || position === 3 ? 2 : 1;
-  return `${direction * degrees}deg`;
-}

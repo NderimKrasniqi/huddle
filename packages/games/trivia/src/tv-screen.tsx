@@ -8,10 +8,9 @@ import {
   opacity,
   playerFace,
   radius,
-  shadowDepth,
-  stickerTilt,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -42,14 +41,12 @@ function Option({ option }: { readonly option: WatchedOption }) {
   const revealed = option.correct !== undefined;
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
-      style={[styles.option, { backgroundColor: face.fill }]}
-      wrapperStyle={[styles.optionBlock, revealed && !option.correct && styles.optionWrong]}
-    >
+    <Surface
+      elevation={elevation.tvCard}
+      style={[[styles.optionBlock, revealed && !option.correct && styles.optionWrong], [styles.option, { backgroundColor: face.fill }]]}>
       <Text style={[styles.optionText, { color: face.label }]}>{option.text}</Text>
       {option.correct === true ? <Text style={styles.optionTick}>✓</Text> : null}
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -131,18 +128,15 @@ function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
  */
 function Placing({ standing }: { readonly standing: FinalStanding }) {
   return (
-    <StickerSurface
-      depth={standing.winner ? shadowDepth.tvCardHighlight : shadowDepth.tvCard}
-      shadowColor={standing.winner ? colors.accent : colors.ink}
-      style={styles.placing}
-      wrapperStyle={styles.placingBlock}
-    >
+    <Surface
+      elevation={standing.winner ? elevation.tvCardHighlight : elevation.tvCard}
+      style={[styles.placingBlock, styles.placing]}>
       <View style={[styles.rank, standing.winner ? styles.rankWinner : null]}>
         <Text style={styles.rankText}>{standing.rank}</Text>
       </View>
       <NamePill nickname={standing.nickname} color={standing.color} />
       <Text style={[styles.score, styles.placingScore]}>{standing.score}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -164,13 +158,11 @@ function Victory({
 }) {
   return (
     <View style={styles.stage}>
-      <StickerSurface
-        depth={shadowDepth.tvCard}
-        style={styles.finalBadge}
-        wrapperStyle={styles.finalBadgeBlock}
-      >
+      <Surface
+        elevation={elevation.tvCard}
+        style={[styles.finalBadgeBlock, styles.finalBadge]}>
         <Text style={styles.finalBadgeText}>FINAL SCORES</Text>
-      </StickerSurface>
+      </Surface>
 
       <Text style={styles.headline}>{headline}</Text>
 
@@ -186,11 +178,11 @@ function Victory({
 /** "Question 2 of 3" — where the room is in the set. */
 function QuestionCount({ at, of }: { readonly at: number; readonly of: number }) {
   return (
-    <StickerSurface depth={shadowDepth.phoneSmall} style={styles.chip}>
+    <Surface elevation={elevation.phoneSmall} style={styles.chip}>
       <Text style={styles.chipText}>
         QUESTION {at} OF {of}
       </Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -229,13 +221,11 @@ function Countdown({ seconds }: { readonly seconds: number }) {
   }, []);
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
-      style={styles.countdown}
-      wrapperStyle={styles.countdownBlock}
-    >
+    <Surface
+      elevation={elevation.tvCard}
+      style={[styles.countdownBlock, styles.countdown]}>
       <Text style={styles.countdownText}>{secondsLeft}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -252,11 +242,11 @@ export function TriviaTvScreen({ state, players }: TvGameScreenProps<TriviaState
         <QuestionCount at={screen.questionNumber} of={screen.questionCount} />
         {screen.kind === 'question' ? (
           <>
-            <StickerSurface depth={shadowDepth.phoneSmall} style={styles.answeredChip}>
+            <Surface elevation={elevation.phoneSmall} style={styles.answeredChip}>
               <Text style={styles.chipText}>
                 {screen.answered}/{screen.playerCount} ANSWERED
               </Text>
-            </StickerSurface>
+            </Surface>
             <Countdown key={screen.questionNumber} seconds={screen.countdownSeconds} />
           </>
         ) : null}
@@ -299,7 +289,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
@@ -307,7 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.soft,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
@@ -323,14 +313,13 @@ const styles = StyleSheet.create({
   // there is nothing here for the handoff's alternating siblings to alternate
   // against.
   countdownBlock: {
-    transform: [{ rotate: stickerTilt.countdownTile }],
   },
   countdown: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.card,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     justifyContent: 'center',
     // Wide enough for two digits, so the tile does not shrink under the number
     // as the seconds run out.
@@ -368,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderColor: colors.ink,
     borderRadius: radius.cardLarge,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'center',
@@ -428,7 +417,7 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: colors.online,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
   },
   statusDotAway: {
@@ -454,13 +443,12 @@ const styles = StyleSheet.create({
   // The Victory Screen. Boardwalk's badge tilt on the label, the winner's name
   // in the largest display type on the television, and the placings under it.
   finalBadgeBlock: {
-    transform: [{ rotate: stickerTilt.badge }],
   },
   finalBadge: {
     backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 26,
     paddingVertical: 10,
   },
@@ -496,7 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.row,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     flexDirection: 'row',
     gap: 16,
     paddingHorizontal: 20,

@@ -50,6 +50,18 @@ export const colors = {
   justJoined: '#2D9CDB',
   /** Away, and anything present but inactive. */
   away: '#A0A4AA',
+  /**
+   * The ink a shadow is cast in, at the three weights `elevation` uses. The
+   * navy carries its own alpha rather than a shadow taking a colour and an
+   * opacity separately: a shadow is one value, and splitting it is how two
+   * surfaces end up the same colour at different strengths by accident.
+   *
+   * Eight-digit hex because that is what React Native's `boxShadow` reads, and
+   * `color-literals.test.ts` already counts 8 as a legal hex length.
+   */
+  shadowSoft: '#0F172A0F',
+  shadowMedium: '#0F172A1A',
+  shadowStrong: '#0F172A24',
 } as const;
 
 export type ColorToken = keyof typeof colors;
