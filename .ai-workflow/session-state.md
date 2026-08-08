@@ -2,56 +2,56 @@
 
 ## Current task
 
-**3.7 — Host management controls (transferHost + removePlayer) — BACKEND +
-CLIENT PLUMBING DONE, host-roster screen UI remains.** Added by 5.4 to close
-findings F1/F2. Then **5.4** can close (its ⛔ rows are now backend-covered), and
-**5.6** (final scope/architecture review) remains. Optional: **5.8**.
+None in progress. **5.6 is complete**, which closes the last required MVP task.
+The work is committed on a branch with a PR open for review.
 
-## What changed (3.7)
+## Where the plan stands
 
-- `packages/game-core/src/host-control-rejection.ts`: new `HostControlRejection`
-  type (notInRoom · notHost · targetNotInRoom · targetIsSelf · targetAway),
-  exported from index.
-- `convex/convex/players.ts`: `transferHost` and `removePlayer` mutations +
-  shared `hostSeatAndRoom` / `targetSeatIn` helpers. Transfer hands the room to a
-  chosen connected seat (away target refused); removal deletes the seat,
-  invalidating its token. Both host-gated by Session Token.
-- `apps/controller/src/host-control-rejection.ts` (+ test): maps each refusal to
-  a host-readable line, mirroring `game-rejection.ts`.
-- `packages/game-core/src/room-phase.ts`: corrected the stale "no way to remove a
-  player" comment. Plan 3.2/3.3 notes corrected to point at 3.7.
+Every required task is checked. What remains is optional or follow-up:
 
-## Checks / reviews
+- **5.8** — (optional) remember last-used name/avatar locally. Not started.
+- **5.9** — (follow-up, raised by 5.6's security review) keep `@huddle/packs`
+  out of the Controller bundle. The wire no longer carries unplayed questions or
+  their answers, but the pack is still reachable from the client entry point and
+  `questionsFor` is deterministic, so a *modified* client can reproduce the deal.
+  Structural fix: the client-side `GameModule` would stop carrying
+  `createInitialState`. Not started.
 
-- `pnpm typecheck` clean; `pnpm lint` clean; `pnpm test` green — **739 passed**
-  (was 721; +13 convex host-control tests, +5 controller mapper tests),
-  **63 files**.
-- **Independent security review: PASS** (workflow-security-reviewer). Token-first
-  authorization complete; cross-room and self-target guards hold; credential
-  invalidation via row deletion total; no mid-game beat deadlock (server clock);
-  no info disclosure/DoS beyond existing public-mutation envelope.
-- (The independent *code*-review subagent for 5.4 earlier could not finish —
-  account monthly spend limit; 5.4 self-review was inline. 3.7's security review
-  did complete.)
+## What 5.6 changed
 
-## Remaining for 3.7
+Two blocking findings, both fixed, then two rounds of independent review:
 
-Wire the two controls into the Host's roster screen
-(`apps/controller/app/index.tsx`). This is design-informed —
-`docs/design/design-handoff.md` §5 defines the roster and does not yet specify
-transfer/remove affordances — and RN screen code is not unit-tested per the
-stack. A spawn_task chip was raised for it. Until it lands, the capability is
-tested and authorized but not reachable from the UI.
+- **B1** — `games.running` broadcast the game state whole, so every phone and the
+  TV saw each player's answer before the reveal. Fixed with an optional
+  module-owned `redactStateFor(state, viewer)` on `GameLogic`; the viewer is
+  resolved from the Session Token server-side (`viewerIn`), never claimed by a
+  client. It is a read-only view — `reduce` still runs on the stored row.
+- **B2** — no host "end the room" control. Added `rooms.endRoom` behind the
+  shared gate in the new `convex/convex/host-control.ts`, with a confirm sheet.
+  Lobby-only by design; recorded as a scope note on 5.6.
+- **The dealt questions leaked too** (security review): `correctIndex` for every
+  question plus all future text. The first fix covered only the question phase,
+  so the five-second reveal still handed over the rest of the game — caught on
+  re-review, then closed on every beat.
+- **The phones never returned to the Join Screen** (code review): `players.session`
+  was a one-shot read. The seated screen now subscribes to its seat, which also
+  covers `removePlayer` and expiry.
+
+## Checks
+
+`pnpm typecheck` clean (9 workspaces); `pnpm lint` clean; `pnpm test` green —
+**771 passed, 64 files** (746 before this work).
+
+Independent code review and security review both **PASS** on the final tree.
+
+**Not verified on hardware:** both phones reaching the Join Screen after a Host
+ends the room, and the TV opening a fresh room afterwards. Worth doing on device
+before release, along with watching a live reveal payload on the wire.
 
 ## Next action
 
-Decide the host-roster UI approach (design §5 addition) and wire
-`transferHost`/`removePlayer` with confirm affordances + the mapper's failure
-lines. Then close 3.7 and 5.4, and start 5.6.
-
-## Open PRs (unmerged; stacked, merge in order)
-
-- PR #14 `chore/5.7-controller-rn-tvos-fork` — 5.7 RN-fork alignment + scope→10.
-- PR #15 `chore/5.4-acceptance-matrix` (base #14) — 5.4 matrix + Voting hub suite.
-- 3.7 stacked on the 5.4 branch (shared plan/matrix/session-state files would
-  otherwise conflict). See its PR.
+The user's call. Options: 5.8, 5.9, the hardware verification above, or the
+smaller residuals 5.6 recorded (`expireRoom` does not cancel a game deadline
+unlike `endRoom`; a removed player gets no explanation on the join form; the
+confirm-sheet shell is duplicated between the manage sheet and the end-room
+sheet).

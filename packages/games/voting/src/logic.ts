@@ -49,8 +49,11 @@ export type VotingPhase = 'voting' | 'reveal' | 'finished';
  *
  * No arrangement of the two can name a voter's choice, so — unlike a map of
  * player to option — a vote's owner is not in the payload the hub ships to every
- * client (`convex/convex/games.ts`, `running`, which returns the whole state to
- * the TV and every phone alike). That the *tally* is visible before the reveal
+ * client. That is why this module declares no `redactStateFor` (`GameLogic`):
+ * trivia needs one because its state records which option each player picked,
+ * and voting has nothing to hide because it never wrote it down. The structural
+ * answer and the projected one reach the same place; this is the one that cannot
+ * be got wrong later. That the *tally* is visible before the reveal
  * is the price of never storing attribution: a game cannot reveal a count it did
  * not keep, and keeping it anonymously is what lets the reveal show the room its
  * own opinion without ever exposing a person's. The screens hold the count back

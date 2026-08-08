@@ -11,11 +11,13 @@
 > module (`packages/games/trivia`), and both apps (`apps/tv`, `apps/controller`)
 > are implemented and tested.
 >
-> **Primary remaining work:** the Voting/Test game (2.4) — the second game the
-> approved scope requires to prove modularity — plus the follow-on acceptance
-> matrix (5.4) and final review (5.6) that depend on it, and one stack
-> correction (5.7). The monorepo apps are `apps/tv` + `apps/controller`
-> (the "mobile" naming in the original draft mapped to the controller).
+> **Remaining work (as of 2026-08-08):** every required task is complete. 5.6
+> closed the MVP after finding and fixing two blocking issues (a private-state
+> broadcast and the missing end-room control). What is left is optional or
+> follow-up: **5.8** (remember last-used name/avatar) and **5.9** (keep the
+> question pack out of the Controller bundle). The monorepo apps are `apps/tv` +
+> `apps/controller` (the "mobile" naming in the original draft mapped to the
+> controller).
 
 ## Phase 1 — Create and Join a Live Room
 
@@ -40,7 +42,7 @@
 
 ## Phase 2 — Select and Run a Modular Game
 
-**Outcome:** The host selects/configures a game from the phone, the TV mirrors the choice, and a game runs end-to-end through a generic runtime. **— Platform complete; the Voting game (2.4) is the main remaining MVP feature.**
+**Outcome:** The host selects/configures a game from the phone, the TV mirrors the choice, and a game runs end-to-end through a generic runtime. **— Complete; both the Trivia and Voting modules ship on the generic runtime.**
 
 - [x] **2.1 — Define the platform game contract**
   - Done: `packages/game-core/src/game-module.ts` + `game-settings.ts` + `room-phase.ts` define metadata, min/max, config, lifecycle/pause, commands, public vs participant-private state, late-join and continue-after-leave; kept independent of Trivia.
@@ -192,10 +194,16 @@
   - Done: single-command root `typecheck`/`test`/`test:unit`/`test:integration`; per-app run scripts; commands reconciled into `docs/tech-stack.md`.
   - Optional follow-up: add convenience root aliases (`test:backend`, per-target run scripts) if desired.
 
-- [ ] **5.6 — Perform final scope/architecture review** *(remaining — last)*
-  - Re-read `docs/project-scope.md`, `docs/tech-stack.md`, and this plan against the implemented behavior **including the Voting game**.
-  - Confirm no accidental scope crept in and no unnecessary server/realtime/state/cloud-build/persistence infrastructure was introduced.
-  - **Verify:** every MVP requirement maps to completed behavior and no blocking discrepancy remains.
+- [x] **5.6 — Perform final scope/architecture review**
+  - Done: the review ran as an independent reviewer and returned **CHANGES REQUIRED** on two findings, both since implemented and re-reviewed.
+  - **Architecture discipline passed unchanged:** no separate API server, WebSocket gateway, Postgres/Redis, EAS, Docker/K8s or auth provider; no client-side duplication of Convex state; both apps on the `react-native-tvos` fork; the hub still depends on no game module.
+  - **B1 — private player state was broadcast.** `games.running` returned the game state whole, so every phone *and the TV* received each player's chosen option before the reveal — against the scope's "private player state stays private" and "the TV never receives player-private game information". Fixed with a module-owned projection: optional `redactStateFor(state, viewer)` on `GameLogic`, implemented by trivia, applied by `running`, which resolves the viewer from the Session Token server-side (`viewerIn`) and never from client-supplied identity. It is a read-only view: `reduce` always runs on the stored row, so a hidden answer still scores in full.
+  - **B2 — no "end the room" control**, though the scope lists it as a Host power. Added `rooms.endRoom` (Session-Token gated through the shared `host-control.ts`, cancels the game clock, deletes players then the room) and a confirm sheet on the Host's lobby. **Scope note:** it is offered in the lobby only, not mid-game — a Host who wants out of a *game* has "Back to lobby", and the room outlives games by design. `docs/project-scope.md:114` lists the power unqualified.
+  - **Also closed, found by the follow-up security review:** the dealt questions carried `correctIndex` for every question and all future question text, so a client reading its own socket had the whole game — first at the opening payload, then (after an incomplete first fix) at every five-second reveal. The projection now withholds unplayed questions on *every* beat and releases an answer only for a question the room has been shown.
+  - **Also closed, found by the follow-up code review:** the phones never actually returned to the Join Screen — `players.session` was a one-shot read, so nothing noticed a seat ending, and the end-room copy promised what did not happen. The seated screen now subscribes to its seat, which also covers `removePlayer` and room expiry.
+  - **Verify:** `pnpm typecheck` clean (9 workspaces); `pnpm lint` clean; `pnpm test` green — **771 passed, 64 files**. Independent code review and security review both **PASS** on the final tree, each having re-verified the redaction against a real payload.
+  - **Not verified on hardware:** that both phones reach the Join Screen after a Host ends the room, and that the TV opens a fresh room afterwards. Reviewed by reading only, per the stack's no-RN-render-tests rule.
+  - Residual, recorded rather than fixed: **5.9** below (the pack ships in the Controller bundle, so a *modified* client can still reproduce the deal); `expireRoom` still does not cancel a pending game deadline, unlike `endRoom`; a removed player lands on the join form with no explanation.
 
 - [x] **5.7 — Align the Controller to the `react-native-tvos` fork**
   - Done: `apps/controller/package.json` now uses `react-native: npm:react-native-tvos@~0.86.0-2`, matching the TV. `pnpm install` re-resolved the controller's whole tree onto the fork and deduped the redundant plain-RN dependency tree (lockfile −442/+27; `--frozen-lockfile` clean). Both apps now resolve one RN fork.
@@ -205,6 +213,12 @@
 - [ ] **5.8 — (Optional) Remember last-used name and avatar locally**
   - Persist the last-used display name and avatar in AsyncStorage so returning players are prefilled; scope treats this as optional ("the app *may* remember").
   - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore.
+
+- [ ] **5.9 — (Follow-up) Keep the question pack out of the Controller bundle**
+  - Raised by 5.6's security review. The wire no longer carries unplayed questions or their answers (`redactStateFor`), but `@huddle/packs` is still reachable from the Controller's entry point — `apps/controller` → `@huddle/game-registry` → `@huddle/game-trivia` → `./questions` → `CURATED_PACK` — and `questionsFor` is deterministic, so a **modified** client can reproduce the exact deal locally and know every answer.
+  - The redaction is what stops a passive read (the socket, a proxy, an honest client showing too much); this is what would stop a determined one.
+  - The fix is structural rather than a projection: the client-side `GameModule` would have to stop carrying `createInitialState`, so the dealing code — and the pack with it — stays on the server. Deliberately not attempted inside 5.6.
+  - **Verify:** a production Controller bundle contains no pack question text; the server still deals a game unchanged.
 
 ## MVP Acceptance
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   backToLobbyLabel,
   browsedGameMeta,
+  END_ROOM,
   gameToStart,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
@@ -122,5 +123,24 @@ describe('the Host’s way back to the lobby', () => {
 
   it('says the room is on its way while the tap is in flight', () => {
     expect(backToLobbyLabel(true)).toBe('Returning…');
+  });
+});
+
+describe('the Host’s way out of the room', () => {
+  it('names what is lost rather than asking whether they are sure', () => {
+    // The confirm has to earn the second tap it costs. "Are you sure?" tells a
+    // Host nothing they did not already know; what they cannot know without
+    // being told is that the code stops working and everybody is sent home.
+    expect(END_ROOM.title).toBe('End the room?');
+    expect(END_ROOM.body).toBe(
+      'Everyone is sent back to the join screen and the room code stops working. This cannot be undone.',
+    );
+  });
+
+  it('is not a second “Back to lobby”', () => {
+    // The two sit on the same screen and do opposite things: one keeps the room
+    // and ends the game, the other ends the room. Labels that read alike would
+    // be the more destructive of the two being tapped by mistake.
+    expect(END_ROOM.label).not.toBe(backToLobbyLabel(false));
   });
 });

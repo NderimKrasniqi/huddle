@@ -13,6 +13,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
+import { hostSeatAndRoom } from './host-control';
 import { watchForDesertion } from './rooms';
 import { playerColorValidator } from './schema';
 
@@ -457,44 +458,6 @@ export const claimColor = mutation({
     return null;
   },
 });
-
-/**
- * The room this phone runs and the seat it holds, or the refusal that says why
- * it does not — the gate `transferHost` and `removePlayer` share.
- *
- * Both are the Host naming another seat, so both ask the same two questions the
- * lifecycle does (`games.ts`, `roomThisPhoneRuns`): which player holds this
- * phone, and does the room point at them. The Session Token is the only thing a
- * phone presents, so the lookup starts there and a phone naming itself is never
- * believed.
- */
-async function hostSeatAndRoom(
-  ctx: MutationCtx,
-  sessionToken: string,
-): Promise<{ actor: Doc<'players'>; room: Doc<'rooms'> }> {
-  const actor = await ctx.db
-    .query('players')
-    .withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken))
-    .first();
-
-  if (actor === null) {
-    throw new ConvexError<HostControlRejection>({ kind: 'notInRoom' });
-  }
-
-  const room = await ctx.db.get(actor.roomId);
-
-  if (room === null) {
-    throw new ConvexError<HostControlRejection>({ kind: 'notInRoom' });
-  }
-
-  // Asked at the tap and never cached, because the host moves: a player who
-  // joined second holds it the moment the room gives up on the first.
-  if (room.hostPlayerId !== actor._id) {
-    throw new ConvexError<HostControlRejection>({ kind: 'notHost' });
-  }
-
-  return { actor, room };
-}
 
 /**
  * The seat a host control names, resolved against the room the Host runs — or

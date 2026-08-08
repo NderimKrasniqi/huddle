@@ -117,3 +117,24 @@ export function startControl(
 export function backToLobbyLabel(returning: boolean): string {
   return returning ? 'Returning…' : 'Back to lobby';
 }
+
+/**
+ * What the Host's way out of the *room* says, and what it warns before doing it
+ * (the scope's "end the room").
+ *
+ * Deliberately not a second "Back to lobby": that one returns a room to its
+ * lobby with every seat intact, and this one deletes the room and every seat in
+ * it. So the confirm names what is actually lost — the party has to rejoin from
+ * a new code — rather than asking "are you sure?", which tells a Host nothing
+ * they did not already know.
+ *
+ * The room is what ends here, not the app: the phone that tapped goes back to
+ * the Join Screen along with everybody else's, because its own seat is gone too.
+ */
+export const END_ROOM = {
+  label: 'End room',
+  busyLabel: 'Ending…',
+  title: 'End the room?',
+  body: 'Everyone is sent back to the join screen and the room code stops working. This cannot be undone.',
+  confirmLabel: 'End room',
+} as const;

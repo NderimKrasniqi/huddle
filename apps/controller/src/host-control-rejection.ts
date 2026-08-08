@@ -66,7 +66,10 @@ export function hostControlRejectionMessage(rejection: HostControlRejection): st
   }
 }
 
-/** What to show when `transferHost` or `removePlayer` throws, whatever it threw. */
+/**
+ * What to show when a Host control throws, whatever it threw — `transferHost`,
+ * `removePlayer`, or `endRoom`, which share the gate and so share the refusals.
+ */
 export function hostControlFailureMessage(error: unknown): string {
   return error instanceof ConvexError && isHostControlRejection(error.data)
     ? hostControlRejectionMessage(error.data)

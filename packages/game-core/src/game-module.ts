@@ -277,6 +277,26 @@ export interface GameLogic<
    * part of a game module ever reads the time.
    */
   deadline?(state: State): GameDeadline<Event> | undefined;
+  /**
+   * The state as one viewer is entitled to see it, for the broadcast the hub
+   * sends every client. Optional: a game whose whole state is shared declares
+   * none and the hub sends its state to everyone unchanged.
+   *
+   * `viewer` is the player this copy is for, or `undefined` for the television —
+   * and for any phone whose seat is not in this room — which is entitled to no
+   * player's private state. This is where a game keeps one player's in-flight
+   * choices off the wire to the rest of the room: the room stores the state
+   * whole and the hub hands each client only what `redactStateFor` returns (see
+   * `games.running`).
+   *
+   * Pure, and a projection *for reading only*: the redacted copy is never fed
+   * back to `reduce`, which always runs on the unredacted state the room stored.
+   * So hiding a field here can never change what the rules decide — it only
+   * changes what a client is told (see trivia's pre-reveal answers). The hub
+   * cannot do this itself: only the module knows which of its own fields are one
+   * player's and which are the room's.
+   */
+  redactStateFor?(state: State, viewer: GamePlayerId | undefined): State;
 }
 
 /**
