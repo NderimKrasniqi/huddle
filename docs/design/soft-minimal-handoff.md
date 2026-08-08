@@ -45,16 +45,24 @@ implementation values, not brand.
 Boardwalk's cobalt, tangerine, punch and yellow have no successor: Soft Minimal
 carries one accent.
 
-## Typography — unresolved
+## Typography
 
-The package ships no font. §5 states the family was never locked and the theme
-files fall back to the platform system sans, but the boards are plainly set in a
-geometric sans. Shipping the tokens as written produces an app that does not
-match its own reference.
+**Inter**, in four weights, across both apps. The package shipped no font — §5
+states the family was never locked and the theme files fall back to the platform
+system sans — and the boards could not settle it either: the phone body text is
+set in a neo-grotesque and the TV headings in a geometric sans, which is what
+AI-rendered mockups look like rather than a two-family system. So it was chosen
+rather than identified.
 
-Boardwalk currently loads Bungee + Space Grotesk through `@expo-google-fonts`,
-so the loading path in both root layouts already exists and is reusable
-whichever family is chosen. **This blocks the token swap and needs a decision.**
+| Role | Weight |
+|---|---|
+| Screen titles | Inter Bold / 700 |
+| Section headings, buttons, room-code characters | Inter SemiBold / 600 |
+| Player names, small uppercase labels | Inter Medium / 500 |
+| Body and status text | Inter Regular / 400 |
+
+There is no display face. The one thing that genuinely needed a second family
+was the wordmark, and §5 is explicit that it ships as brand artwork.
 
 Baselines are per platform — the TV is not a scaled phone:
 
@@ -69,6 +77,26 @@ Baselines are per platform — the TV is not a scaled phone:
 Spacing `4 8 12 16 24 32 40 48 64 80`. Radius: chips 8–12, controls 12–16, cards
 18–24, pills 999. Phone content padding 24, controls ≥48 high. TV safe margin
 64, focus = orange border + 1.04 scale, never scale alone.
+
+The floors moved with the scale. `minBodyFontSize` was Boardwalk's 14 (phone)
+and 18 (TV); Soft Minimal's own caption sizes are 12 and 16, *under both*, so
+keeping them would have made the design system illegal in its own repo. They now
+sit on the scale's smallest sizes — which also retired the lint rule's escape
+hatch, since nothing the handoff specifies needs exempting any more.
+
+## Contrast: white on orange
+
+**White on `#FF6B4A` measures 2.82:1.** That is under WCAG AA for body text
+(4.5:1) and under the 3:1 allowance for large text as well. Navy on the same
+orange is 6.34:1.
+
+§8 asks for white on orange and that stands where it is about — the primary CTA,
+one high-intent button a player is looking for and cannot miss. It is recorded
+here rather than quietly changed, because it is a brand decision.
+
+It was not left to spread, though. A game's answer options are four blocks read
+at speed and at distance, so they take navy, and `accent-face.test.ts` holds a
+3:1 floor that would catch the next surface reaching for white on orange.
 
 ## The TV canvas is an image
 
@@ -164,13 +192,22 @@ something the board settles, and it is out of scope for the token swap.
 
 ## Open
 
-1. **Font family** — blocks the swap.
-2. **Two more avatars, and re-art on `yellow-robot`.** The cleaned batch landed
+1. **Two more avatars, and re-art on `yellow-robot`.** The cleaned batch landed
    ten usable characters — exactly `ROOM_PLAYER_CAP`, so a full room leaves the
    last player no choice. `yellow-robot`'s background is the canvas colour, so
    it draws no disc at all. See `packages/ui/assets/README.md`. Circle art is no
    longer needed: the circular avatar is the square under `borderRadius`.
-3. **Six screens need designing** — the unknown-game pair, both game frames, the
+2. **Nothing in `packages/ui/assets/` is wired yet.** The tokens are swapped, but
+   the avatars, game art, TV background, logo and app icons are all still
+   staged. Wiring them needs Metro's cross-package asset resolution proved
+   first — worth a `prebuild` before trusting it.
+3. **Avatars have not replaced colors yet.** That is a schema change, not a
+   palette one. `player-colors.ts` is holding ten Boardwalk values as literals
+   until it lands, and says so.
+4. **Six screens need designing** — the unknown-game pair, both game frames, the
    About panel, the End Room sheet.
-4. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art
+5. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art
    but no game.
+6. **`accent-face` is interim.** A game's answer options still need a cycle of
+   distinguishable colours, and the package designs no game screen, so its four
+   faces are a holding pattern rather than a decision.
