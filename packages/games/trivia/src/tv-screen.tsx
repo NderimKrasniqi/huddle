@@ -6,7 +6,7 @@ import {
   fontFamily,
   letterSpacing,
   opacity,
-  playerFace,
+  avatarFace,
   radius,
   elevation,
 } from '@huddle/ui';
@@ -58,12 +58,18 @@ function Option({ option }: { readonly option: WatchedOption }) {
  * a scoreboard row, and reusing that word for it would put two things behind
  * one term.
  */
-function NamePill({ nickname, color }: { readonly nickname: string; readonly color: ScoreRow['color'] }) {
-  const face = playerFace(color);
+function NamePill({
+  nickname,
+  avatar,
+}: {
+  readonly nickname: string;
+  readonly avatar: ScoreRow['avatar'];
+}) {
+  const face = avatarFace(avatar);
 
   return (
     <View style={[styles.namePill, { backgroundColor: face.fill }]}>
-      <Text style={[styles.namePillText, { color: face.monogram }]}>{nickname}</Text>
+      <Text style={[styles.namePillText, { color: face.ink }]}>{nickname}</Text>
     </View>
   );
 }
@@ -71,7 +77,7 @@ function NamePill({ nickname, color }: { readonly nickname: string; readonly col
 function VerdictRow({ verdict }: { readonly verdict: PlayerVerdict }) {
   return (
     <View style={styles.verdict}>
-      <NamePill nickname={verdict.nickname} color={verdict.color} />
+      <NamePill nickname={verdict.nickname} avatar={verdict.avatar} />
       <Text style={styles.verdictMark}>{verdict.correct ? '✓' : '✗'}</Text>
     </View>
   );
@@ -106,7 +112,7 @@ function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
         <View key={row.playerId} style={styles.scoreRow}>
           <View style={styles.scoreName}>
             <StatusDot away={row.away} />
-            <NamePill nickname={row.nickname} color={row.color} />
+            <NamePill nickname={row.nickname} avatar={row.avatar} />
           </View>
           <Text style={styles.score}>{row.score}</Text>
         </View>
@@ -134,7 +140,7 @@ function Placing({ standing }: { readonly standing: FinalStanding }) {
       <View style={[styles.rank, standing.winner ? styles.rankWinner : null]}>
         <Text style={styles.rankText}>{standing.rank}</Text>
       </View>
-      <NamePill nickname={standing.nickname} color={standing.color} />
+      <NamePill nickname={standing.nickname} avatar={standing.avatar} />
       <Text style={[styles.score, styles.placingScore]}>{standing.score}</Text>
     </Surface>
   );

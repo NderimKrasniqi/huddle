@@ -1,9 +1,8 @@
 import {
   AWAY_AFTER_MS,
-  type ColorRejection,
   generateSessionToken,
   type HostControlRejection,
-  isPlayerColorName,
+  isAvatarId,
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
   ROOM_PLAYER_CAP,
@@ -15,7 +14,7 @@ import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { hostSeatAndRoom } from './host-control';
 import { watchForDesertion } from './rooms';
-import { playerColorValidator } from './schema';
+import { avatarValidator } from './schema';
 
 // A join is refused with a `ConvexError` for the reason `createRoom` throws one
 // (see rooms.ts): Convex redacts the message of anything else to "Server
@@ -164,6 +163,11 @@ const playerSessionFields = {
   roomId: v.id('rooms'),
   code: v.string(),
   nickname: v.string(),
+  // The phone's own avatar, so it can draw itself without waiting for the
+  // roster to arrive. It is on the roster too — every *other* phone needs it
+  // from there — but a screen that drew its own player from a subscription
+  // would flash an empty circle on every launch.
+  avatar: avatarValidator,
 };
 
 /**
@@ -193,6 +197,7 @@ export const joinRoom = mutation({
   args: {
     code: v.string(),
     nickname: v.string(),
+    avatar: v.string(),
   },
   returns: v.object({ ...playerSessionFields, sessionToken: v.string() }),
   handler: async (ctx, args) => {
@@ -208,6 +213,13 @@ export const joinRoom = mutation({
         kind: 'nameUnusable',
         maxLength: NICKNAME_MAX_LENGTH,
       });
+    }
+
+    // Asked here for the same reason as the nickname above, and answered the
+    // same way: whether an avatar exists at all is a property of what arrived,
+    // not of any room.
+    if (!isAvatarId(args.avatar)) {
+      throw new ConvexError<JoinRejection>({ kind: 'avatarUnknown', avatar: args.avatar });
     }
 
     const room = await ctx.db
@@ -235,6 +247,15 @@ export const joinRoom = mutation({
       throw new ConvexError<JoinRejection>({ kind: 'nameTaken', nickname });
     }
 
+    // One avatar per room, enforced where the nickname rule is and by the same
+    // read-then-write: this handler already collects every player of the room,
+    // so a competing join writes into the range this one read and Convex re-runs
+    // it. The colour picker used to hold this rule on its own mutation; the
+    // choice moved to the join form, so the rule moved with it.
+    if (seated.some((player) => player.avatar === args.avatar)) {
+      throw new ConvexError<JoinRejection>({ kind: 'avatarTaken', avatar: args.avatar });
+    }
+
     const sessionToken = generateSessionToken();
     const playerId = await ctx.db.insert('players', {
       roomId: room._id,
@@ -245,6 +266,7 @@ export const joinRoom = mutation({
       // same schedule as one that stops mid-party.
       lastSeenAt: Date.now(),
       away: false,
+      avatar: args.avatar,
     });
     await watchForSilence(ctx, playerId);
 
@@ -256,7 +278,7 @@ export const joinRoom = mutation({
       await ctx.db.patch(room._id, { hostPlayerId: playerId });
     }
 
-    return { playerId, roomId: room._id, code, nickname, sessionToken };
+    return { playerId, roomId: room._id, code, nickname, avatar: args.avatar, sessionToken };
   },
 });
 
@@ -302,6 +324,7 @@ export const session = query({
       roomId: room._id,
       code: room.code,
       nickname: player.nickname,
+      avatar: player.avatar,
     };
   },
 });
@@ -396,65 +419,6 @@ export const markAway = internalMutation({
     // here: going quiet is the only thing a room ever learns about a phone, so
     // the last phone going quiet is the only "everybody has left" it can have.
     await watchForDesertion(ctx, player.roomId);
-    return null;
-  },
-});
-
-/**
- * Takes a color for a player, if their room has it going spare.
- *
- * The rule it enforces — one player per color within a room — is read-then-write
- * and holds exactly rather than probably for the reason `joinRoom`'s two rules
- * do: the index read below joins this transaction's read set, so a competing
- * claim on the same color writes into the range this one read, Convex re-runs
- * this mutation against the committed row, and the second phone to tap is
- * refused. Two friends racing for green get one green.
- *
- * Claiming is also *re*-claiming: a player who taps a second swatch moves,
- * rather than collecting colors, and the one they were holding goes back to the
- * room. That falls out of the color being a single field on their row, which is
- * the reason it is one.
- *
- * The Session Token says whose claim this is, for the same reason `heartbeat`
- * is keyed on it: the roster hands every client every player's id, and a claim
- * keyed on that would let any phone in the room repaint anybody else.
- */
-export const claimColor = mutation({
-  args: { sessionToken: v.string(), color: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    // Whether a color exists at all is a property of what was sent, not of any
-    // room, so it is settled before anything is read.
-    if (!isPlayerColorName(args.color)) {
-      throw new ConvexError<ColorRejection>({ kind: 'colorUnknown', color: args.color });
-    }
-
-    const player = await ctx.db
-      .query('players')
-      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
-      .first();
-
-    // Unlike a heartbeat, this is refused rather than ignored: a phone whose
-    // seat has gone would otherwise be left showing a swatch it does not hold.
-    if (player === null) {
-      throw new ConvexError<ColorRejection>({ kind: 'notInRoom' });
-    }
-
-    const seated = await ctx.db
-      .query('players')
-      .withIndex('by_room', (q) => q.eq('roomId', player.roomId))
-      .collect();
-    const heldByAnother = seated.some(
-      (other) => other._id !== player._id && other.color === args.color,
-    );
-
-    if (heldByAnother) {
-      throw new ConvexError<ColorRejection>({ kind: 'colorTaken', color: args.color });
-    }
-
-    // Re-tapping the color they already hold is not a claim to refuse; it is a
-    // player confirming what the screen already shows.
-    await ctx.db.patch(player._id, { color: args.color });
     return null;
   },
 });
@@ -560,11 +524,10 @@ export const removePlayer = mutation({
  * this projection is what keeps it off a screen the entire room is looking at.
  *
  * `away` is here because a seat is drawn differently for a player whose phone
- * has gone quiet, and `color` because a seat is drawn *in* it; `lastSeenAt` is
- * not, because the TV has no clock the room agrees with and no business
- * deciding this. `color` is also how the picker knows which swatches are spoken
- * for — the room's own answer, so a phone dims exactly what the server would
- * refuse. `host` is here for the same reason
+ * has gone quiet, and `avatar` because a seat *is* one; `lastSeenAt` is not,
+ * because the TV has no clock the room agrees with and no business deciding
+ * this. `avatar` is also how the join form knows which avatars are spoken for —
+ * the room's own answer, so a phone dims exactly what the server would refuse. `host` is here for the same reason
  * as `away` — and it is what a Controller reads to know whether *it* is the
  * host, since this is the one live subscription every client in the room
  * already holds. A phone finding itself by `playerId` on the roster it is on
@@ -579,7 +542,7 @@ export const roster = query({
       nickname: v.string(),
       away: v.boolean(),
       host: v.boolean(),
-      color: v.optional(playerColorValidator),
+      avatar: avatarValidator,
     }),
   ),
   handler: async (ctx, args) => {
@@ -594,7 +557,7 @@ export const roster = query({
       nickname: player.nickname,
       away: player.away,
       host: player._id === room?.hostPlayerId,
-      color: player.color,
+      avatar: player.avatar,
     }));
   },
 });

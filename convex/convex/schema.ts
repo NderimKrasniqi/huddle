@@ -2,24 +2,24 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 /**
- * A claimed color, as the database and the `roster` projection both state it.
+ * A claimed avatar, as the database and the `roster` projection both state it.
  *
- * The ten names are written out rather than built from game-core's list because
- * a schema is a contract with the stored data and reads better stated than
- * computed; `players.test.ts` holds the two in step by storing every name
+ * The ten ids are written out rather than built from game-core's list because a
+ * schema is a contract with the stored data and reads better stated than
+ * computed; `players.test.ts` holds the two in step by storing every id
  * game-core knows.
  */
-export const playerColorValidator = v.union(
-  v.literal('cobalt'),
-  v.literal('grape'),
-  v.literal('plum'),
-  v.literal('punch'),
-  v.literal('tangerine'),
-  v.literal('yellow'),
-  v.literal('lime'),
-  v.literal('green'),
-  v.literal('lagoon'),
-  v.literal('sky'),
+export const avatarValidator = v.union(
+  v.literal('fox'),
+  v.literal('green-alien'),
+  v.literal('pink-bunny'),
+  v.literal('blue-robot'),
+  v.literal('purple-owl'),
+  v.literal('yellow-robot'),
+  v.literal('red-robot'),
+  v.literal('teal-bear'),
+  v.literal('mint-cat'),
+  v.literal('puppy'),
 );
 
 export default defineSchema({
@@ -123,9 +123,8 @@ export default defineSchema({
 
   /**
    * A Player: one phone in a room. A player is a nickname on a roster, the
-   * Session Token that phone rejoins with, and whether the room is still
-   * hearing from it — the claimed color arrives with the Phase 2 task that owns
-   * it. Being the Host is not among these: it is the room's `hostPlayerId`,
+   * Session Token that phone rejoins with, the avatar they claimed, and whether
+   * the room is still hearing from it. Being the Host is not among these: it is the room's `hostPlayerId`,
    * because it is a fact about the room and not about the player.
    */
   players: defineTable({
@@ -152,12 +151,14 @@ export default defineSchema({
      */
     away: v.boolean(),
     /**
-     * The color this player has claimed, held by nobody else in their room.
-     * Absent until they tap a swatch — a player is on the roster from the
-     * moment they join, and the picker is the screen they land on, so a seat
-     * has to be drawable without one.
+     * The avatar this player claimed, held by nobody else in their room.
+     *
+     * Required, where the colour it replaced was optional. A colour was claimed
+     * *after* joining, so a seat had to be drawable before the choice existed;
+     * the avatar is chosen on the join form and arrives with the join, so there
+     * is no unclaimed state and nothing has to draw one.
      */
-    color: v.optional(playerColorValidator),
+    avatar: avatarValidator,
   })
     // `joinRoom` reads a room's players to enforce the cap and the nickname
     // rule, and the TV's roster is that same read. Convex orders an index by

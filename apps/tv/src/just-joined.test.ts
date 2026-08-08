@@ -14,7 +14,7 @@ function seatsOf(...names: readonly string[]): RosterSeat[] {
     nickname,
     away: false,
     host: false,
-    color: undefined,
+    avatar: 'fox',
   }));
 }
 
@@ -67,7 +67,7 @@ describe('noteArrivals', () => {
     const seen = noteArrivals(noteArrivals(undefined, []), seatsOf('Ada'));
     const recolored = seatsOf('Ada').map((seat) => ({
       ...seat,
-      color: 'lagoon' as const,
+      avatar: 'fox' as const,
       away: true,
     }));
 

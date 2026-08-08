@@ -1,7 +1,7 @@
 // The Boardwalk design system (docs/design/design-handoff.md): the single
 // source of every color, radius, border, shadow, and font face in Huddle.
 export { type AccentFace, accentFace } from './accent-face';
-export { playerInitials } from './avatar';
+export { type AvatarFace, avatarFace } from './avatar-face';
 export { codeLetterBox } from './code-tile';
 export { colors, type ColorToken } from './colors';
 // `huddleFonts` is deliberately NOT re-exported here: it reaches four .ttf
@@ -10,7 +10,6 @@ export { colors, type ColorToken } from './colors';
 // `@huddle/ui/fonts` — see this package's `exports`.
 export { tvDesignSize, tvStageScale, type WindowSize } from './layout';
 export { motionDuration, popIn, type SpringConfig, springOf } from './motion';
-export { type PlayerColor, playerColor, playerFace, playerPalette } from './player-colors';
 export { elevation, type ElevationToken } from './shadows';
 export { borderWidth, opacity, radius } from './shape';
 export { fontFamily, letterSpacing, minBodyFontSize } from './typography';

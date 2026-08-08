@@ -3,5 +3,6 @@
 // That separation is what lets the tokens — and the guard that enforces them —
 // run under Node with no renderer, which is why `react-native` is a peer
 // dependency here rather than a dependency of the package.
+export { Avatar, type AvatarProps, avatarArtwork } from './avatar';
 export { Surface, type SurfaceProps } from './surface';
 export { Wordmark, type WordmarkProps } from './wordmark';

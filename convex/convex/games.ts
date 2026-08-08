@@ -104,7 +104,7 @@ async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePl
     playerId: player._id,
     nickname: player.nickname,
     away: player.away,
-    color: player.color,
+    avatar: player.avatar,
   }));
 }
 

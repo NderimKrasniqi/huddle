@@ -20,7 +20,7 @@ import {
  */
 
 function player(id: string, away = false): GamePlayer {
-  return { playerId: id, nickname: id.toUpperCase(), away };
+  return { playerId: id, nickname: id.toUpperCase(), away, avatar: 'fox' };
 }
 
 /** A game freshly started with the given players and round count. */

@@ -10,7 +10,7 @@ const seatOf = (nickname: string, host = false): RosterSeat => ({
   nickname,
   away: false,
   host,
-  color: 'lagoon',
+  avatar: 'fox',
 });
 
 const ada = seatOf('Ada', true);

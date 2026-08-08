@@ -1,4 +1,9 @@
-import { type GameSettings, settingsFrom, type GameLifecycleRejection } from '@huddle/game-core';
+import {
+  AVATAR_IDS,
+  type GameSettings,
+  settingsFrom,
+  type GameLifecycleRejection,
+} from '@huddle/game-core';
 import { GAME_REGISTRY } from '@huddle/game-registry';
 import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
@@ -28,8 +33,8 @@ async function roomWithParty(t: Backend): Promise<{
   guest: string;
 }> {
   const room = await t.mutation(api.rooms.createRoom, {});
-  const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-  const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+  const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+  const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
   return { roomId: room.roomId, host: host.sessionToken, guest: guest.sessionToken };
 }
@@ -56,8 +61,12 @@ async function roomPlayingOn(
   const room = await t.mutation(api.rooms.createRoom, {});
   const tokens: Record<string, string> = {};
 
-  for (const nickname of nicknames) {
-    const seated = await t.mutation(api.players.joinRoom, { code: room.code, nickname });
+  for (const [at, nickname] of nicknames.entries()) {
+    const seated = await t.mutation(api.players.joinRoom, {
+      code: room.code,
+      nickname,
+      avatar: AVATAR_IDS[at % AVATAR_IDS.length]!,
+    });
     tokens[nickname] = seated.sessionToken;
   }
 
@@ -312,7 +321,7 @@ describe('the Host starting a game', () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
     // One phone in the room, and trivia declares itself 2–10.
-    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     expect(
       await rejectionFrom(
@@ -328,8 +337,8 @@ describe('the Host starting a game', () => {
   it('lets the same room start once somebody else joins', async () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
-    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
     // The refusal has a remedy, and this is it — which is why it is a refusal
     // and being too *large* for a game is not.
@@ -487,7 +496,7 @@ describe('the Host starting a game', () => {
   it('tells a party too small that, before it tells them about a setting', async () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
-    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     expect(
       await rejectionFrom(
@@ -535,13 +544,16 @@ describe('the Host ending the game', () => {
     const room = await t.mutation(api.rooms.createRoom, {});
     const tokens: Record<string, string> = {};
 
-    for (const [nickname, color] of [
-      ['Ada', 'cobalt'],
-      ['Grace', 'punch'],
-      ['Linus', 'lime'],
+    for (const [nickname, avatar] of [
+      ['Ada', 'fox'],
+      ['Grace', 'green-alien'],
+      ['Linus', 'pink-bunny'],
     ] as const) {
-      const seated = await t.mutation(api.players.joinRoom, { code: room.code, nickname });
-      await t.mutation(api.players.claimColor, { sessionToken: seated.sessionToken, color });
+      const seated = await t.mutation(api.players.joinRoom, {
+        code: room.code,
+        nickname,
+        avatar,
+      });
       tokens[nickname] = seated.sessionToken;
     }
 

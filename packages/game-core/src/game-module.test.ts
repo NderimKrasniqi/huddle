@@ -98,7 +98,7 @@ const eggTimer: GameLogic<{ readonly rung: number }, EggTimerEvent> = {
 };
 
 function player(playerId: string, nickname: string): GamePlayer {
-  return { playerId, nickname, away: false };
+  return { playerId, nickname, away: false, avatar: 'fox' };
 }
 
 describe('the Game Module interface', () => {

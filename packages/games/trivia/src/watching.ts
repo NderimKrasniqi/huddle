@@ -27,8 +27,11 @@ export type WatchedOption = {
 export type PlayerVerdict = {
   readonly playerId: GamePlayerId;
   readonly nickname: string;
-  /** Their claimed color, for the name pill; absent until they claim one. */
-  readonly color: GamePlayer['color'];
+  /**
+   * The avatar they claimed, which is what tints their name pill — `undefined`
+   * for a player the roster no longer holds, whose score outlives their seat.
+   */
+  readonly avatar: GamePlayer['avatar'] | undefined;
   /** False for a wrong answer *and* for no answer, which score the same. */
   readonly correct: boolean;
 };
@@ -37,7 +40,7 @@ export type PlayerVerdict = {
 export type ScoreRow = {
   readonly playerId: GamePlayerId;
   readonly nickname: string;
-  readonly color: GamePlayer['color'];
+  readonly avatar: GamePlayer['avatar'] | undefined;
   readonly score: number;
   /**
    * Whether the room has stopped hearing from their phone, for the row's Status
@@ -130,7 +133,7 @@ function scoreboardOf(state: TriviaState, players: readonly GamePlayer[]): reado
     return {
       playerId: standing.playerId,
       nickname: seated?.nickname ?? 'Player',
-      color: seated?.color,
+      avatar: seated?.avatar,
       score: standing.score,
       away: seated?.away ?? false,
     };
@@ -212,7 +215,7 @@ function verdictsOf(
     return {
       playerId: standing.playerId,
       nickname: seated?.nickname ?? 'Player',
-      color: seated?.color,
+      avatar: seated?.avatar,
       // A player who never answered is not in `answers`, and is wrong — the
       // same as answering wrongly, which is what the scoring says too.
       correct: state.answers[standing.playerId] === question.correctIndex,

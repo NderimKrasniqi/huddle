@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { triviaGameModule } from './trivia';
 
 function player(playerId: string, nickname: string): GamePlayer {
-  return { playerId, nickname, away: false };
+  return { playerId, nickname, away: false, avatar: 'fox' };
 }
 
 describe('the trivia Game Module', () => {

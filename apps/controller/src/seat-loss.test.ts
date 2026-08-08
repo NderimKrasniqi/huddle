@@ -10,7 +10,7 @@ function seat(nickname: string): RosterSeat {
     nickname,
     away: false,
     host: false,
-    color: undefined,
+    avatar: 'fox' as const,
   };
 }
 

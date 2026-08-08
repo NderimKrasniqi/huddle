@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { IdentityStore } from './identity';
 
 /**
- * Where this phone keeps the last-used name and color: `AsyncStorage`, the
+ * Where this phone keeps the last-used name and avatar: `AsyncStorage`, the
  * device's plain key/value store — deliberately *not* the keystore the Session
  * Token lives in (`session-store.ts`).
  *
@@ -15,7 +15,7 @@ import type { IdentityStore } from './identity';
  * matters, and nothing else rides along to dilute that.
  *
  * One key, holding the JSON record `identity.ts` reads and writes. It is
- * overwritten in place: a phone remembers its most recent name and color, not a
+ * overwritten in place: a phone remembers its most recent name and avatar, not a
  * history of them.
  */
 const IDENTITY_KEY = 'huddle.identity';

@@ -12,7 +12,7 @@ import { ConvexError } from 'convex/values';
  * that cannot tell "room full" from "name taken".
  */
 
-/** When the failure is not one of the server's four answers, but the trip itself. */
+/** When the failure is not one of the server's answers, but the trip itself. */
 const UNEXPECTED_FAILURE = 'Could not reach the room. Check your connection and try again.';
 
 /**
@@ -28,6 +28,8 @@ const REJECTION_KINDS: Readonly<Record<JoinRejection['kind'], true>> = {
   roomFull: true,
   nameTaken: true,
   nameUnusable: true,
+  avatarTaken: true,
+  avatarUnknown: true,
 };
 
 /**
@@ -68,6 +70,16 @@ export function rejectionMessage(rejection: JoinRejection): string {
       return `${rejection.nickname} is already in that room. Pick another name.`;
     case 'nameUnusable':
       return `Pick a name of 1 to ${rejection.maxLength} characters.`;
+    case 'avatarTaken':
+      // The grid already dims what the room holds, so reaching this means two
+      // thumbs landed on the same avatar inside a round trip. The avatar is not
+      // named: the player is looking at it.
+      return 'Somebody just took that avatar. Pick another one.';
+    case 'avatarUnknown':
+      // Not reachable from this app's own grid — the server refusing to trust a
+      // caller it cannot authenticate. Said plainly rather than blamed on the
+      // player, who did nothing wrong.
+      return 'That avatar is not available. Pick another one.';
   }
 }
 

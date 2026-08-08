@@ -18,7 +18,7 @@ function seatOf({
     nickname: name,
     away,
     host,
-    color: undefined,
+    avatar: 'fox' as const,
   };
 }
 

@@ -22,7 +22,7 @@ const GRACE = 'p2';
 const LINUS = 'p3';
 
 function player(playerId: string, nickname: string): GamePlayer {
-  return { playerId, nickname, away: false };
+  return { playerId, nickname, away: false, avatar: 'fox' };
 }
 
 /** The same player, with the room no longer hearing from their phone. */

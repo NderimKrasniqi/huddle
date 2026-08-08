@@ -21,6 +21,7 @@ function party(size: number): RosterSeatForGame[] {
     nickname: `Player ${index}`,
     away: false,
     host: index === 0,
+    avatar: 'fox' as const,
   }));
 }
 
@@ -69,8 +70,8 @@ describe('the Host’s start control', () => {
 
   it('counts an away player, since the room still seats them', () => {
     const withOneAway: RosterSeatForGame[] = [
-      { playerId: 'p0', nickname: 'Ada', away: false, host: true },
-      { playerId: 'p1', nickname: 'Grace', away: true, host: false },
+      { playerId: 'p0', nickname: 'Ada', away: false, host: true, avatar: 'fox'  },
+      { playerId: 'p1', nickname: 'Grace', away: true, host: false, avatar: 'fox'  },
     ];
 
     // The same count `startGame` uses — excluding away players is Phase 4's

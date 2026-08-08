@@ -1,12 +1,13 @@
 import { api } from '@huddle/convex';
 import {
+  AVATAR_IDS,
+  type AvatarId,
   gamePlayersFrom,
   type GameEvent,
   type GameModule,
   type GamePlayer,
   type GameSettings,
   type GameSettingsSchema,
-  type PlayerColorName,
   ROOM_CODE_LENGTH,
 } from '@huddle/game-core';
 import {
@@ -24,14 +25,10 @@ import {
   letterSpacing,
   minBodyFontSize,
   opacity,
-  type PlayerColor,
-  playerColor,
-  playerFace,
-  playerInitials,
   radius,
   elevation,
 } from '@huddle/ui';
-import { Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Surface, Wordmark } from '@huddle/ui/native';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
@@ -45,8 +42,6 @@ import {
   nicknameEntry,
   shouldMoveToNickname,
 } from '../src/join-entry';
-import { pickerSwatches, type SwatchState, yourColor } from '../src/color-picker';
-import { claimFailureMessage, rejectionMessage } from '../src/color-rejection';
 import { hostControlFailureMessage, hostControlRejectionMessage } from '../src/host-control-rejection';
 import {
   type HostControlAction,
@@ -70,7 +65,7 @@ import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
 import {
   recallIdentity,
-  rememberColor,
+  rememberAvatar,
   rememberName,
 } from '../src/identity';
 import { phoneIdentityStore } from '../src/identity-store';
@@ -222,6 +217,7 @@ function JoinForm({
 
   const [code, setCode] = useState(prefilledCode);
   const [nickname, setNickname] = useState('');
+  const [avatar, setAvatar] = useState<AvatarId>(AVATAR_IDS[0]);
   const [joining, setJoining] = useState(false);
   const [failure, setFailure] = useState<string>();
 
@@ -244,6 +240,9 @@ function JoinForm({
   useEffect(() => {
     let active = true;
     void recallIdentity(phoneIdentityStore).then((remembered) => {
+      if (active && !touched.current && remembered.avatar !== null) {
+        setAvatar(remembered.avatar);
+      }
       if (active && !touched.current && remembered.nickname !== null) {
         setNickname(remembered.nickname);
       }
@@ -288,11 +287,12 @@ function JoinForm({
       // it is what this player is identified by from now on, and nothing that
       // renders needs to hold it. The nickname shown is the room's, not the one
       // typed — the same value a rejoin would come back with.
-      const { sessionToken, ...seat } = await joinRoom({ code, nickname: claimed });
+      const { sessionToken, ...seat } = await joinRoom({ code, nickname: claimed, avatar });
       await rememberSession(phoneSessionTokenStore, sessionToken);
       // The name that just worked, so the next visit opens with it. A courtesy,
       // not a credential — it never blocks the seat this join already won.
       void rememberName(phoneIdentityStore, claimed);
+      void rememberAvatar(phoneIdentityStore, avatar);
       onSeated(seat);
     } catch (error) {
       // Every reason the room can refuse is one the player can act on, so the
@@ -349,6 +349,32 @@ function JoinForm({
             accessibilityLabel="Your name"
           />
         </Surface>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>PICK YOUR AVATAR</Text>
+        <View style={styles.avatarGrid}>
+          {AVATAR_IDS.map((id) => {
+            const chosen = id === avatar;
+
+            return (
+              <Pressable
+                key={id}
+                onPress={() => setAvatar(id)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: chosen }}
+                accessibilityLabel={id.replace(/-/gu, ' ')}
+              >
+                <Avatar
+                  avatar={id}
+                  size={64}
+                  shape="tile"
+                  style={chosen ? styles.avatarChosen : undefined}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.field}>
@@ -502,12 +528,10 @@ function YoureInScreen({
   readonly session: PlayerSession;
   readonly onSeatLost: (reason: string) => void;
 }) {
-  const { code, nickname } = session;
+  const { code, nickname, avatar } = session;
   useHeartbeat();
   const roster = useRoomRoster(session);
   const standing = lobbyStanding(roster, session.playerId);
-  const claimed = yourColor(roster, session.playerId);
-  const face = playerFace(claimed);
   // The Host's settings, held here rather than on the picker below because this
   // screen is the one that survives a game: the picker is unmounted for the
   // whole of a game and remounted on "Back to lobby", and a party playing twice
@@ -599,19 +623,10 @@ function YoureInScreen({
         </View>
       </View>
 
-      {/* The avatar is the claimed color the moment it is claimed, and a plain
-          Boardwalk face until then: a player lands on this screen before they
-          have picked anything, so the circle has to be drawable without one.
-          Both answers come from `playerFace`, which is what stops this circle
-          and the same player's seat on the TV from disagreeing. */}
-      <Surface
-        elevation={elevation.phoneHero}
-        style={[styles.avatar, { backgroundColor: face.fill }]}
-      >
-        <Text style={[styles.avatarInitials, { color: face.monogram }]}>
-          {playerInitials(nickname)}
-        </Text>
-      </Surface>
+      {/* The avatar they picked on the join form. There is no unclaimed state
+          to draw any more — the choice arrives with the join — so this is the
+          artwork and not a face standing in for one. */}
+      <Avatar avatar={avatar} size={128} label={nickname} style={styles.avatar} />
 
       <Text style={styles.title}>You’re in, {nickname}!</Text>
 
@@ -629,8 +644,6 @@ function YoureInScreen({
           canStart={startControl(roster, browsing.index).enabled}
         />
       ) : null}
-
-      <ColorPicker roster={roster} session={session} />
 
       <Surface
         elevation={elevation.phoneCard}
@@ -940,20 +953,18 @@ function RosterRow({
 }) {
   const slot = rosterRowSlot(seat);
   const away = slot === 'away';
-  const face = playerFace(seat.color);
   const manageable = rosterRowIsManageable(seat);
 
   const row = (
     <Surface
       elevation={elevation.phoneSmall}
       style={[styles.stretch, styles.rosterRow]}>
-      <View
-        style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
-      >
-        <Text style={[styles.rosterInitials, { color: face.monogram }]}>
-          {playerInitials(seat.nickname)}
-        </Text>
-      </View>
+      <Avatar
+        avatar={seat.avatar}
+        size={40}
+        label={seat.nickname}
+        style={away ? styles.rosterAway : undefined}
+      />
 
       <Text style={[styles.rosterName, away && styles.rosterNameAway]} numberOfLines={1}>
         {seat.nickname}
@@ -1026,7 +1037,6 @@ function ManagePlayerSheet({
   const [busy, setBusy] = useState<HostControlAction>();
   const [failure, setFailure] = useState<string>();
   const controls = rosterRowControls(seat);
-  const face = playerFace(seat.color);
   const away = rosterRowSlot(seat) === 'away';
 
   async function run(action: HostControlAction) {
@@ -1059,13 +1069,12 @@ function ManagePlayerSheet({
   return (
     <ConfirmSheet onDismiss={onDismiss}>
       <View style={styles.sheetHeader}>
-        <View
-          style={[styles.rosterAvatar, { backgroundColor: face.fill }, away && styles.rosterAway]}
-        >
-          <Text style={[styles.rosterInitials, { color: face.monogram }]}>
-            {playerInitials(seat.nickname)}
-          </Text>
-        </View>
+        <Avatar
+          avatar={seat.avatar}
+          size={96}
+          label={seat.nickname}
+          style={away ? styles.rosterAway : undefined}
+        />
         <Text style={styles.sheetName} numberOfLines={1}>
           {seat.nickname}
         </Text>
@@ -1714,177 +1723,6 @@ function UnknownGameScreen({
   );
 }
 
-/**
- * YOUR COLOR (handoff §4): the ten swatches, and the tap that claims one.
- *
- * What is dimmed is read from the roster rather than remembered, so the picker
- * shows what the room says right now — a swatch claimed across the room goes
- * unavailable here without this phone touching anything. The claim is still
- * refused server-side when two thumbs land inside a round trip of each other,
- * which is the one refusal a player can actually meet, and it is said out loud
- * rather than swallowed.
- */
-function ColorPicker({
-  roster,
-  session,
-}: {
-  readonly roster: readonly RosterSeat[];
-  readonly session: PlayerSession;
-}) {
-  const claimColor = useMutation(api.players.claimColor);
-  const [failure, setFailure] = useState<string>();
-  const swatches = pickerSwatches(roster, session.playerId);
-
-  // Whether the player has tapped a swatch themselves. It exists only to stand
-  // down the auto-claim below: a returning player who taps a *different* color
-  // in the first moment on screen has just said what they want, and the color
-  // this phone happened to remember must not race in behind that tap and win.
-  const userClaimed = useRef(false);
-
-  async function claim(color: PlayerColorName) {
-    userClaimed.current = true;
-    // The last refusal stops being true the moment another swatch is tried.
-    setFailure(undefined);
-
-    try {
-      // Read from the keystore rather than held in this screen's state, as the
-      // heartbeat does: the token identifies the player and nothing that
-      // renders needs it.
-      const sessionToken = await phoneSessionTokenStore.read();
-
-      if (sessionToken === null) {
-        // A phone that cannot say who it is cannot claim anything, and the
-        // server's own word for that is the one to show.
-        setFailure(rejectionMessage({ kind: 'notInRoom' }));
-        return;
-      }
-
-      await claimColor({ sessionToken, color });
-      // The color that just stuck, so the next room this phone joins opens on it.
-      void rememberColor(phoneIdentityStore, color);
-    } catch (error) {
-      setFailure(claimFailureMessage(error));
-    }
-  }
-
-  // The avatar half of "remember me": a returning player's last color, re-taken
-  // on their behalf the first time they sit down colorless in a room, so the
-  // swatch they know is already theirs.
-  //
-  // It fires at most once per mount (`autoClaimTried`), and only once the roster
-  // has actually landed — an empty roster is the subscription still in flight,
-  // since this player's own seat is always in it once it does, so acting on `[]`
-  // would mean claiming before the room could say this seat already holds a
-  // color. A seat that already has one (a rejoin) is left alone. Unlike a tapped
-  // claim it is silent: a refusal is nobody's mistake to be shown — the swatch
-  // was taken across the room a moment earlier — so it is swallowed, and the
-  // player picks from what the swatches now offer.
-  const autoClaimTried = useRef(false);
-  useEffect(() => {
-    if (autoClaimTried.current || roster.length === 0) {
-      return;
-    }
-    autoClaimTried.current = true;
-
-    if (yourColor(roster, session.playerId) !== undefined) {
-      return;
-    }
-
-    void (async () => {
-      const wanted = (await recallIdentity(phoneIdentityStore)).color;
-      if (wanted === null) {
-        return;
-      }
-      // Only if it is still free — the picker's own answer — so the common case
-      // costs no refusal and no flicker of a failure the player never caused.
-      const swatch = pickerSwatches(roster, session.playerId).find((s) => s.name === wanted);
-      if (swatch?.state !== 'free') {
-        return;
-      }
-
-      const sessionToken = await phoneSessionTokenStore.read();
-      if (sessionToken === null) {
-        return;
-      }
-      // Checked last, after every await: if the player tapped a swatch while
-      // this was reading storage and the keystore, that tap is the answer and
-      // this one stands down rather than landing on top of it.
-      if (userClaimed.current) {
-        return;
-      }
-      try {
-        await claimColor({ sessionToken, color: wanted });
-        void rememberColor(phoneIdentityStore, wanted);
-      } catch {
-        // Swallowed on purpose: this claim was the phone's idea, not the
-        // player's.
-      }
-    })();
-  }, [roster, session.playerId, claimColor]);
-
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>YOUR COLOR</Text>
-      <View style={styles.swatches}>
-        {swatches.map(({ name, state }) => (
-          <Swatch key={name} name={name} state={state} onPress={() => void claim(name)} />
-        ))}
-      </View>
-
-      {failure === undefined ? null : (
-        <Text style={styles.failure} accessibilityLiveRegion="polite">
-          {failure}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-/**
- * One swatch: a 44px circle of the color, per the handoff — the player's own
- * carrying Boardwalk's ink border and shadow, and one somebody else holds
- * dimmed to the opacity Boardwalk dims anything unavailable to.
- *
- * A taken swatch is not pressable, which is the courtesy; `claimColor` is what
- * makes it a rule.
- */
-function Swatch({
-  name,
-  state,
-  onPress,
-}: {
-  readonly name: PlayerColorName;
-  readonly state: SwatchState;
-  readonly onPress: () => void;
-}) {
-  const color: PlayerColor = playerColor(name);
-  const taken = state === 'taken';
-
-  // No press state: the swatches carry Boardwalk's only "dimmed" treatment to
-  // mean *somebody else holds this*, so dipping a free one under a thumb would
-  // say the opposite of what is happening. The feedback is the claim itself —
-  // the swatch gains the ink border and the shadow the moment it is the
-  // player's, which is a round trip away.
-  return (
-    <Pressable
-      disabled={taken}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${name} color`}
-      accessibilityState={{ disabled: taken, selected: state === 'yours' }}
-    >
-      {state === 'yours' ? (
-        <Surface
-          elevation={elevation.phoneSmall}
-          style={[styles.swatch, styles.swatchYours, { backgroundColor: color.fill }]}
-        />
-      ) : (
-        <View style={[styles.swatch, { backgroundColor: color.fill }, taken && styles.swatchTaken]} />
-      )}
-    </Pressable>
-  );
-}
-
 /** Boardwalk's HOST pill (handoff §5): ink fill, white Bungee, fully rounded. */
 function HostPill() {
   return (
@@ -2266,6 +2104,21 @@ const styles = StyleSheet.create({
     borderWidth: borderWidth.hairline,
     borderRadius: radius.row,
   },
+  // The join form's avatar grid: four across, which is what makes ten read as
+  // two full rows and a pair rather than an arbitrary heap.
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  // The chosen one, per §8's selected state: the accent, and a border rather
+  // than a tint, because the artwork already fills the tile.
+  avatarChosen: {
+    borderColor: colors.accent,
+    borderWidth: borderWidth.focus,
+  },
+
   // The Host's roster (§5). The rows sit closer together than the screen's own
   // 28pt section gap: they are one list, not four sections.
   roster: {
