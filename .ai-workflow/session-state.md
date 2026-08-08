@@ -2,10 +2,13 @@
 
 ## Current task
 
-**5.8 is implemented** (optional "remember last-used name/avatar"). Tests,
-typecheck, and lint are green; independent code review and — because the task
-touches where identity is stored — security review are the remaining gate before
-the PR is marked complete.
+**5.8 is complete** (optional "remember last-used name/avatar"), on branch
+`feat/5.8-remember-name-avatar`, [PR #21](https://github.com/NderimKrasniqi/huddle/pull/21),
+left for the user to review and merge. Tests, typecheck, and lint are green.
+Independent code review and security review both **PASS** — the only findings
+were two LOW/non-blocking code-review notes, both since applied:
+a `userClaimed` ref so the auto-claim stands down for a fast manual tap, and the
+`package.json` dependency reordered back into its alphabetical group.
 
 ## Where the plan stands
 
