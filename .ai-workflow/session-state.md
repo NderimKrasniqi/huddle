@@ -2,10 +2,19 @@
 
 ## Current task
 
-**5.9 — keep the Question Pack out of the Controller bundle** is **implemented and
-verified** on branch `fix/5.9-pack-out-of-client-bundle`. Tests, typecheck, and
-lint are green. Independent security review **still to run** (trust-boundary
-change — this is anti-cheat). PR: opened, left for the user to review/merge.
+**5.9 — keep the Question Pack out of the Controller bundle** is **implemented,
+verified, and reviewed** on branch `fix/5.9-pack-out-of-client-bundle`
+([PR #24](https://github.com/NderimKrasniqi/huddle/pull/24), open, left for the
+user to merge). Independent security review returned **PASS, no blocking
+findings** (it confirmed the pack absent from the client graph two ways and the
+server deal intact). Its two actionable non-blocking findings are **fixed**: the
+stale `redactTriviaStateFor` docstring, and the seam tripwire — now moved to
+`@huddle/game-registry` (Node types) and widened to scan every client-bundled
+trivia source, not just the entry.
+
+A first CI run failed because the seam test used `node:fs` inside the RN trivia
+package; fixed by the move to game-registry. Recursive typecheck
+(`tsc --noEmit && pnpm -r typecheck`) clean, eslint clean, **804 tests pass**.
 
 ## Where the plan stands
 
