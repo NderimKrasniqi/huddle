@@ -8,7 +8,13 @@ export { colors, type ColorToken } from './colors';
 // files, and a barrel is all-or-nothing, so one import of `colors` would drag
 // the font binaries into any plain-Node consumer. It lives at
 // `@huddle/ui/fonts` — see this package's `exports`.
-export { tvDesignSize, tvStageScale, type WindowSize } from './layout';
+export {
+  tvDesignSize,
+  tvSafeStageScale,
+  tvStageScale,
+  tvTitleSafeFraction,
+  type WindowSize,
+} from './layout';
 export { motionDuration, popIn, type SpringConfig, springOf } from './motion';
 export { type PlayerColor, playerColor, playerFace, playerPalette } from './player-colors';
 export { shadowDepth, stickerShadowRect, type ShadowRect } from './shadows';

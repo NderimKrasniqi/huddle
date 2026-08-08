@@ -30,3 +30,32 @@ export type WindowSize = {
 export function tvStageScale(window: WindowSize): number {
   return Math.min(window.width / tvDesignSize.width, window.height / tvDesignSize.height);
 }
+
+/**
+ * The share of the fitted surface it is safe to draw on — the inner 90%, a 5%
+ * gutter all round.
+ *
+ * A television crops the outer ~5% of every edge and, unlike a monitor, does it
+ * without saying so: `useWindowDimensions()` reports the whole 1920×1080 while
+ * the bezel hides the border (this is overscan, a leftover from broadcast). The
+ * classic "title-safe" area is that inner 90%, and drawing inside it is the only
+ * guarantee a room code or a footer is not sitting under the plastic.
+ *
+ * This is the one thing the 1280×720 handoff does not carry: it is a flat canvas
+ * with no overscan, so its numbers reach the very edge. Rather than re-inset
+ * every screen — and re-argue every pinned measurement against a new frame — the
+ * whole stage is scaled into the safe rectangle at `tvSafeStageScale`, the single
+ * point it is already scaled to the television.
+ */
+export const tvTitleSafeFraction = 0.9;
+
+/**
+ * What `TvStage` actually scales by: the fit from `tvStageScale`, pulled in to
+ * the title-safe rectangle so overscan crops the screen-colored margin instead
+ * of the screen. Everything inside the stage keeps the handoff's own numbers;
+ * the whole composition just sits `tvTitleSafeFraction` of the way out to the
+ * edge, where the bezel cannot reach it.
+ */
+export function tvSafeStageScale(window: WindowSize): number {
+  return tvStageScale(window) * tvTitleSafeFraction;
+}

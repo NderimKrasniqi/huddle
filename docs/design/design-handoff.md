@@ -58,6 +58,15 @@ Recreate pixel-perfectly with the codebase's existing libraries.
 TV screens are designed at **1280×720** (scale ×1.5 for 1080p). Phone screens
 are iPhone-sized (~390×844).
 
+**Title-safe area:** every measurement below runs to the edge of that 1280×720
+canvas, but a television crops the outer ~5% of every edge without reporting it
+(overscan), so content drawn edge to edge is lost under the bezel on real
+hardware even though it looks perfect in the simulator. The whole TV stage is
+therefore scaled into the inner **90%** (a 5% gutter all round) — see
+`tvSafeStageScale` / `tvTitleSafeFraction` in `@huddle/ui`. Screens keep the
+handoff's numbers exactly; the composition just sits inside the safe rectangle.
+The screen-colored gutter is what the TV crops, not the header or footer.
+
 ### 1. TV — Pairing
 - Header row (padding 36px 56px): Bungee logo "HUDDLE." (34px, tangerine
   period) left.
