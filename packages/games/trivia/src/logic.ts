@@ -443,11 +443,15 @@ function questionsAsAsked(state: TriviaState): readonly TriviaQuestion[] {
  * travelling. No screen reads an unplayed question at all — both clients read
  * `questions[questionIndex]` and the list's length, and nothing else.
  *
- * It closes the wire and not the build: `@huddle/packs` ships in the Controller
- * bundle and `questionsFor` is deterministic, so a *modified* client can still
- * work out the deal locally. What this stops is the passive read — the socket,
- * a proxy, an honest client showing more than it should. Keeping the pack out of
- * the client entirely is a larger change than a projection.
+ * This closes the wire; 5.9 closed the build. The projection is what stops a
+ * passive read — the socket, a proxy, an honest client showing more than it
+ * should — by keeping unplayed questions off the broadcast. Keeping the pack out
+ * of the client bundle entirely, so a *modified* client cannot hold the
+ * deterministic deal and work it out locally, is 5.9's doing (the client-safe
+ * `GameModule`, `./state`, and `@huddle/packs/categories`). The two are
+ * complementary: even with the pack gone from the client, this projection is
+ * still the only thing between one player's in-flight answer and the rest of the
+ * room.
  *
  * Because this copy is never reduced, everything hidden here is still scored in
  * full when the reveal runs on the state the room actually stored (see
