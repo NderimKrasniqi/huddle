@@ -155,6 +155,17 @@ export default function JoinScreen() {
     );
   }, [convex]);
 
+  // A scanned Join Link starting a fresh form is a fresh context: a seat-loss
+  // notice about the room this phone just left has nothing to say about the room
+  // a new link names, so it is dropped the moment the link changes rather than
+  // riding along to it. Adjusted during render — React's own way to reset state
+  // when an input changes — since the notice belongs to the code it arrived on.
+  const [noticeLink, setNoticeLink] = useState(linkedCode);
+  if (noticeLink !== linkedCode) {
+    setNoticeLink(linkedCode);
+    setNotice(undefined);
+  }
+
   const state = joinScreenState(session, linkedCode ?? '');
 
   if (state.kind === 'restoring') {
