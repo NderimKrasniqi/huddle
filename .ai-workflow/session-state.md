@@ -2,56 +2,63 @@
 
 ## Current task
 
-None in progress. **5.6 is complete**, which closes the last required MVP task.
-The work is committed on a branch with a PR open for review.
+**5.8 is complete** (optional "remember last-used name/avatar"), on branch
+`feat/5.8-remember-name-avatar`, [PR #21](https://github.com/NderimKrasniqi/huddle/pull/21),
+left for the user to review and merge. Tests, typecheck, and lint are green.
+Independent code review and security review both **PASS** — the only findings
+were two LOW/non-blocking code-review notes, both since applied:
+a `userClaimed` ref so the auto-claim stands down for a fast manual tap, and the
+`package.json` dependency reordered back into its alphabetical group.
 
 ## Where the plan stands
 
-Every required task is checked. What remains is optional or follow-up:
+Every required MVP task is checked. 5.8 has now shipped, leaving one item:
 
-- **5.8** — (optional) remember last-used name/avatar locally. Not started.
 - **5.9** — (follow-up, raised by 5.6's security review) keep `@huddle/packs`
-  out of the Controller bundle. The wire no longer carries unplayed questions or
-  their answers, but the pack is still reachable from the client entry point and
-  `questionsFor` is deterministic, so a *modified* client can reproduce the deal.
-  Structural fix: the client-side `GameModule` would stop carrying
+  out of the Controller bundle. `questionsFor` is deterministic and the pack is
+  reachable from the client entry point, so a *modified* client can reproduce
+  the deal. Structural fix: the client-side `GameModule` stops carrying
   `createInitialState`. Not started.
 
-## What 5.6 changed
+## What 5.8 changed
 
-Two blocking findings, both fixed, then two rounds of independent review:
+A local "remember me" for the phone, built as a pure seam mirroring `session.ts`:
 
-- **B1** — `games.running` broadcast the game state whole, so every phone and the
-  TV saw each player's answer before the reveal. Fixed with an optional
-  module-owned `redactStateFor(state, viewer)` on `GameLogic`; the viewer is
-  resolved from the Session Token server-side (`viewerIn`), never claimed by a
-  client. It is a read-only view — `reduce` still runs on the stored row.
-- **B2** — no host "end the room" control. Added `rooms.endRoom` behind the
-  shared gate in the new `convex/convex/host-control.ts`, with a confirm sheet.
-  Lobby-only by design; recorded as a scope note on 5.6.
-- **The dealt questions leaked too** (security review): `correctIndex` for every
-  question plus all future text. The first fix covered only the question phase,
-  so the five-second reveal still handed over the rest of the game — caught on
-  re-review, then closed on every beat.
-- **The phones never returned to the Join Screen** (code review): `players.session`
-  was a one-shot read. The seated screen now subscribes to its seat, which also
-  covers `removePlayer` and expiry.
+- **`apps/controller/src/identity.ts`** — pure, injectable-store logic:
+  `parseIdentity` (treats stored JSON as untrusted input — caps the name through
+  the field's own `nicknameEntry`, keeps a color only if it still names a
+  swatch), `recallIdentity`, and `rememberName` / `rememberColor` that each
+  read-merge-write so learning the color never erases the name. 16 new Vitest
+  tests.
+- **`apps/controller/src/identity-store.ts`** — the `AsyncStorage` platform half
+  (new dependency `@react-native-async-storage/async-storage@~2.2.0`).
+  Deliberately *not* SecureStore: the token is a credential and stays in the
+  keystore; a nickname and a color name are conveniences and stay out of it.
+- **`app/index.tsx`** wiring:
+  - Name: remembered on a successful `joinRoom`; prefills the join field as a
+    *seed only* — a `touched` ref latches the first keystroke so a slow read can
+    never overwrite what the player is typing.
+  - Color: remembered on a successful `claimColor`; auto-re-taken on the seated
+    screen the first time a player is colorless. Gated on the roster having
+    landed (`roster.length === 0` is still-loading, since this player's own seat
+    is always present once it lands), only if the swatch is still free, and
+    **silent** on refusal (the phone's idea, not the player's).
 
 ## Checks
 
-`pnpm typecheck` clean (9 workspaces); `pnpm lint` clean; `pnpm test` green —
-**771 passed, 64 files** (746 before this work).
+`pnpm typecheck` clean (all workspaces); `pnpm lint` clean (no source-level
+eslint-disable added); `pnpm test` green — **787 passed, 65 files** (771 before).
 
-Independent code review and security review both **PASS** on the final tree.
+## Not verified on hardware
 
-**Not verified on hardware:** both phones reaching the Join Screen after a Host
-ends the room, and the TV opening a fresh room afterwards. Worth doing on device
-before release, along with watching a live reveal payload on the wire.
+The prefill and auto-claim have not been run on a device/simulator: a returning
+phone opening the join form with its last name filled, and landing on the seated
+screen with its last color already claimed. Worth doing before release. (Also
+still open from 5.6: both phones reaching the Join Screen after a Host ends the
+room; a live reveal payload watched on the wire.)
 
 ## Next action
 
-The user's call. Options: 5.8, 5.9, the hardware verification above, or the
-smaller residuals 5.6 recorded (`expireRoom` does not cancel a game deadline
-unlike `endRoom`; a removed player gets no explanation on the join form; the
-confirm-sheet shell is duplicated between the manage sheet and the end-room
-sheet).
+Relay the code-review and security-review findings; resolve any blocking one;
+then the PR is ready for the user to merge. After that, 5.9 is the last plan
+item.

@@ -69,6 +69,12 @@ import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
 import { rosterFooterLine, rosterRowSlot, rosterRowSpokenAs } from '../src/host-roster';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
+import {
+  recallIdentity,
+  rememberColor,
+  rememberName,
+} from '../src/identity';
+import { phoneIdentityStore } from '../src/identity-store';
 import { type ForegroundWatch, keepPresent } from '../src/presence';
 import {
   joinScreenState,
@@ -187,6 +193,25 @@ function JoinForm({
   const nameField = useRef<TextInput>(null);
   const joinRoom = useMutation(api.players.joinRoom);
 
+  // The name this phone last joined under, dropped into the field the way a
+  // browser fills a login it has seen before. It only ever *seeds* an empty
+  // field: `touched` latches the first keystroke, so a slow read that lands
+  // after the player has started typing their own name is ignored rather than
+  // allowed to overwrite it. Read once per mount — the form remounts on a new
+  // Join Link (see `JoinScreen`), which re-asks on its own.
+  const touched = useRef(false);
+  useEffect(() => {
+    let active = true;
+    void recallIdentity(phoneIdentityStore).then((remembered) => {
+      if (active && !touched.current && remembered.nickname !== null) {
+        setNickname(remembered.nickname);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // A rejection is about what the fields held when Join was tapped, so it stops
   // being true the moment either field changes: "Ada is already in that room"
   // must not still be on screen while its owner types a different name.
@@ -202,6 +227,9 @@ function JoinForm({
   }
 
   function enterNickname(typed: string) {
+    // The player is typing their own name now, so a prefill that has not landed
+    // yet must not land on top of it.
+    touched.current = true;
     setNickname(nicknameEntry(typed));
     setFailure(undefined);
   }
@@ -218,6 +246,9 @@ function JoinForm({
       // typed — the same value a rejoin would come back with.
       const { sessionToken, ...seat } = await joinRoom({ code, nickname: claimed });
       await rememberSession(phoneSessionTokenStore, sessionToken);
+      // The name that just worked, so the next visit opens with it. A courtesy,
+      // not a credential — it never blocks the seat this join already won.
+      void rememberName(phoneIdentityStore, claimed);
       onSeated(seat);
     } catch (error) {
       // Every reason the room can refuse is one the player can act on, so the
@@ -1688,7 +1719,14 @@ function ColorPicker({
   const [failure, setFailure] = useState<string>();
   const swatches = pickerSwatches(roster, session.playerId);
 
+  // Whether the player has tapped a swatch themselves. It exists only to stand
+  // down the auto-claim below: a returning player who taps a *different* color
+  // in the first moment on screen has just said what they want, and the color
+  // this phone happened to remember must not race in behind that tap and win.
+  const userClaimed = useRef(false);
+
   async function claim(color: PlayerColorName) {
+    userClaimed.current = true;
     // The last refusal stops being true the moment another swatch is tried.
     setFailure(undefined);
 
@@ -1706,10 +1744,67 @@ function ColorPicker({
       }
 
       await claimColor({ sessionToken, color });
+      // The color that just stuck, so the next room this phone joins opens on it.
+      void rememberColor(phoneIdentityStore, color);
     } catch (error) {
       setFailure(claimFailureMessage(error));
     }
   }
+
+  // The avatar half of "remember me": a returning player's last color, re-taken
+  // on their behalf the first time they sit down colorless in a room, so the
+  // swatch they know is already theirs.
+  //
+  // It fires at most once per mount (`autoClaimTried`), and only once the roster
+  // has actually landed — an empty roster is the subscription still in flight,
+  // since this player's own seat is always in it once it does, so acting on `[]`
+  // would mean claiming before the room could say this seat already holds a
+  // color. A seat that already has one (a rejoin) is left alone. Unlike a tapped
+  // claim it is silent: a refusal is nobody's mistake to be shown — the swatch
+  // was taken across the room a moment earlier — so it is swallowed, and the
+  // player picks from what the swatches now offer.
+  const autoClaimTried = useRef(false);
+  useEffect(() => {
+    if (autoClaimTried.current || roster.length === 0) {
+      return;
+    }
+    autoClaimTried.current = true;
+
+    if (yourColor(roster, session.playerId) !== undefined) {
+      return;
+    }
+
+    void (async () => {
+      const wanted = (await recallIdentity(phoneIdentityStore)).color;
+      if (wanted === null) {
+        return;
+      }
+      // Only if it is still free — the picker's own answer — so the common case
+      // costs no refusal and no flicker of a failure the player never caused.
+      const swatch = pickerSwatches(roster, session.playerId).find((s) => s.name === wanted);
+      if (swatch?.state !== 'free') {
+        return;
+      }
+
+      const sessionToken = await phoneSessionTokenStore.read();
+      if (sessionToken === null) {
+        return;
+      }
+      // Checked last, after every await: if the player tapped a swatch while
+      // this was reading storage and the keystore, that tap is the answer and
+      // this one stands down rather than landing on top of it.
+      if (userClaimed.current) {
+        return;
+      }
+      try {
+        await claimColor({ sessionToken, color: wanted });
+        void rememberColor(phoneIdentityStore, wanted);
+      } catch {
+        // Swallowed on purpose: this claim was the phone's idea, not the
+        // player's.
+      }
+    })();
+  }, [roster, session.playerId, claimColor]);
 
   return (
     <View style={styles.field}>
