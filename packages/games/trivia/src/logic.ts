@@ -401,6 +401,146 @@ function advanced(
 }
 
 /**
+ * The option index that stands in for a hidden answer in the broadcast state.
+ *
+ * While a question is up, an answerer's *key* stays in `answers` so the room's
+ * "n answered" count holds (`answersIn` counts keys), but the option they picked
+ * is theirs until the Reveal. Outside the real `0..options.length` range, and
+ * read by nothing — a phone draws only its own answer, and the reveal scores off
+ * the stored, unredacted state — so it is shown to no one.
+ */
+export const HIDDEN_ANSWER = -1;
+
+/**
+ * The `correctIndex` that stands in for a question's answer while it is still
+ * being asked.
+ *
+ * Outside the real `0..options.length` range like `HIDDEN_ANSWER`, and for the
+ * same reason: nothing can mark an option correct by matching it, so the failure
+ * direction is "no option is right" rather than "the wrong one is".
+ *
+ * A *different* number from `HIDDEN_ANSWER`, which costs nothing and closes one
+ * whole class of mistake. A verdict is `answers[playerId] === correctIndex`
+ * (`verdictsOf`), and today that is only ever reached at the reveal, where both
+ * sides are real. Were the two sentinels equal, a screen that ever computed a
+ * verdict on question-phase state would find every hidden answer matching every
+ * hidden answer key and draw the whole room as correct — the exact direction the
+ * paragraph above says this chose against.
+ */
+export const HIDDEN_CORRECT_INDEX = -2;
+
+/**
+ * A question the room has not been asked yet, as the broadcast carries it.
+ *
+ * The whole game is dealt into the state at `startGame` (`questionsFor`), so
+ * every question's text and options are sitting in the room's row from the first
+ * beat. Kept in the list rather than dropped so the count the television draws —
+ * "Question 3 of 10" — is still the game's own length, and so every index still
+ * means what it meant.
+ */
+const WITHHELD_QUESTION: TriviaQuestion = {
+  text: '',
+  options: ['', '', '', ''],
+  correctIndex: HIDDEN_CORRECT_INDEX,
+};
+
+/**
+ * The dealt questions as the room may see them: the one being asked, the ones
+ * already played, and nothing at all of the ones still to come.
+ *
+ * The rule is the same on every beat, which is the point. A game is dealt whole
+ * at `startGame`, so "what has this room been asked so far" is the only honest
+ * thing to send it — and the beat that made that obvious was the reveal. Five
+ * seconds of it stand between every pair of questions, so a projection that
+ * relaxed there would hand the rest of the game to anybody willing to wait for
+ * question one to end, which is everybody.
+ *
+ * What the beat *does* decide is the answer to the question on screen: hidden
+ * while it is being asked, and its own once the room has been shown it. Past
+ * questions keep theirs for the same reason — the room has seen them, and a list
+ * where only some entries carry an answer is a list that says which one is live.
+ */
+function questionsAsAsked(state: TriviaState): readonly TriviaQuestion[] {
+  const answersAreOut = state.phase !== 'question';
+
+  return state.questions.map((question, index) => {
+    if (index > state.questionIndex) {
+      return WITHHELD_QUESTION;
+    }
+
+    return answersAreOut ? question : { ...question, correctIndex: HIDDEN_CORRECT_INDEX };
+  });
+}
+
+/**
+ * Trivia's state as one viewer is entitled to see it, for the broadcast the hub
+ * sends the room (`GameLogic.redactStateFor`).
+ *
+ * A question being asked has two things in it nobody may read yet, and they are
+ * different in kind. One is *private to a player*: which option each phone
+ * locked in. The other is simply *not yet earned*: which option is right, and
+ * what the rest of the game is going to ask. Both sit in the same row, because
+ * the state a room stores is the game whole and the rules need all of it.
+ *
+ * The two are held back on different beats, and that difference is the whole of
+ * what this function decides:
+ *
+ * - **The rest of the game is withheld always** (`questionsAsAsked`). Questions
+ *   the room has not reached carry only their place, on every beat, because the
+ *   beat a client would wait for is the reveal — five seconds of it between
+ *   every pair of questions — and a projection that relaxed there would hand
+ *   over the remaining answers to anybody willing to sit through question one.
+ *   The answer to the question on screen is hidden while it is being asked and
+ *   its own once the room has been shown it.
+ * - **A live answer is withheld only while it is live.** Every answerer's key is
+ *   kept — the "n answered" count is those keys and must not move — but the
+ *   option reads `HIDDEN_ANSWER` for everyone except the viewer, whose own
+ *   choice their phone still draws. At the reveal the options are the whole of
+ *   what the screen shows, so nothing is held back. `answerSeconds` goes with
+ *   them: only the reveal prices it, off the stored state.
+ *
+ * The first is not player-privacy but game integrity, and `questions.ts` states
+ * the rule it follows: a field the rules never read is a field with no business
+ * travelling. No screen reads an unplayed question at all — both clients read
+ * `questions[questionIndex]` and the list's length, and nothing else.
+ *
+ * It closes the wire and not the build: `@huddle/packs` ships in the Controller
+ * bundle and `questionsFor` is deterministic, so a *modified* client can still
+ * work out the deal locally. What this stops is the passive read — the socket,
+ * a proxy, an honest client showing more than it should. Keeping the pack out of
+ * the client entirely is a larger change than a projection.
+ *
+ * Because this copy is never reduced, everything hidden here is still scored in
+ * full when the reveal runs on the state the room actually stored (see
+ * `games.running`).
+ */
+export function redactTriviaStateFor(
+  state: TriviaState,
+  viewer: GamePlayerId | undefined,
+): TriviaState {
+  const questions = questionsAsAsked(state);
+
+  // The answers are the room's to show the moment the question is over, so this
+  // half is the one beat that does relax.
+  if (state.phase !== 'question') {
+    return { ...state, questions };
+  }
+
+  // `?? {}` because this runs on the read path now: a state without the field —
+  // a room dealt by a deployment older than it, or a shape nothing has written
+  // yet — would otherwise throw here and take `running` down for every client in
+  // the room, the television included.
+  const answers = Object.fromEntries(
+    Object.entries(state.answers ?? {}).map(([playerId, optionIndex]) => [
+      playerId,
+      playerId === viewer ? optionIndex : HIDDEN_ANSWER,
+    ]),
+  );
+
+  return { ...state, questions, answers, answerSeconds: undefined };
+}
+
+/**
  * Trivia's metadata, settings schema and rules.
  *
  * Its settings are declared in `./settings` and its questions drawn from the
@@ -469,6 +609,9 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
   // The room's own clock, which the hub schedules and no phone has to be awake
   // for. `questionTimer` is where what it does is decided and tested.
   deadline: questionTimer,
+  // A live answer is its player's until the Reveal: the hub broadcasts the state
+  // each client is entitled to, and this is trivia's projection of it.
+  redactStateFor: redactTriviaStateFor,
 };
 
 /**

@@ -14,7 +14,13 @@ import { ConvexError, v } from 'convex/values';
 
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
-import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
+import {
+  internalMutation,
+  mutation,
+  type MutationCtx,
+  query,
+  type QueryCtx,
+} from './_generated/server';
 
 /**
  * The game lifecycle: the Host starting a game, and the Host ending it.
@@ -506,23 +512,62 @@ export const browsing = query({
 });
 
 /**
+ * The player this phone holds in `roomId`, from the Session Token it presents —
+ * or `undefined` for the television, and for a phone whose token names a seat in
+ * another room.
+ *
+ * The viewer a game's state is redacted for, resolved from the token here for
+ * the same reason an event's player is: a phone naming itself is a claim, so the
+ * seat is looked up and never taken on the client's word (see `GameEvent`). A
+ * token for some other room's seat is nobody here — it is handed the same view
+ * the television gets, which is the one that keeps every player's private state.
+ *
+ * The cost, written down so it is not rediscovered: this puts the asking phone's
+ * own `players` row in the read set of its `running` subscription, and
+ * `heartbeat` patches that row every few seconds. So a phone's own beat now
+ * re-runs its own `running` — which is exactly what the query below was split
+ * off to avoid, though only for the phone's own beat rather than for every beat
+ * in the room. The alternative is taking the viewer from a client-supplied
+ * player id, which is the claim this whole lookup exists to refuse.
+ */
+async function viewerIn(
+  ctx: QueryCtx,
+  roomId: Id<'rooms'>,
+  sessionToken: string | undefined,
+): Promise<GamePlayerId | undefined> {
+  if (sessionToken === undefined) {
+    return undefined;
+  }
+
+  const player = await ctx.db
+    .query('players')
+    .withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken))
+    .first();
+
+  return player !== null && player.roomId === roomId ? player._id : undefined;
+}
+
+/**
  * What the room is playing, if anything — the subscription both clients follow
  * out of the lobby and back.
  *
  * It is a query of its own rather than a field on the roster because the two
  * change on completely different beats: a roster redraws when somebody joins,
  * goes away or claims a color, and this changes twice a game. A phone answering
- * a question would otherwise re-render on every heartbeat in the room.
+ * a question would otherwise re-render on every heartbeat in the room — see
+ * `viewerIn` for the half of that this now gives back.
  *
  * `null` is the lobby. The clients get the game's state opaque and hand it
- * straight to the module's screen, exactly as the server stored it — and
- * nothing else the room keeps beside it: the pending deadline is the room's own
- * bookkeeping with its scheduler, and a screen reading it would be counting
- * down against a clock it has no way to compare with (see `Countdown` in
- * trivia's TV screen, which counts its own seconds for that reason).
+ * straight to the module's screen — as the module projects it for whoever is
+ * asking (`redactStateFor`), which for a game with nothing to hide is exactly as
+ * the server stored it. And nothing else the room keeps beside it: the pending
+ * deadline is the room's own bookkeeping with its scheduler, and a screen
+ * reading it would be counting down against a clock it has no way to compare
+ * with (see `Countdown` in trivia's TV screen, which counts its own seconds for
+ * that reason).
  */
 export const running = query({
-  args: { roomId: v.id('rooms') },
+  args: { roomId: v.id('rooms'), sessionToken: v.optional(v.string()) },
   returns: v.union(v.null(), v.object({ gameId: v.string(), state: v.any() })),
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
@@ -531,6 +576,33 @@ export const running = query({
       return null;
     }
 
-    return { gameId: room.game.gameId, state: room.game.state };
+    // The room stores the game's state whole; each client is handed only the
+    // part the module says it may see. The viewer is this phone's own seat, so
+    // its own in-flight choices survive while the rest of the room's stay hidden
+    // until the game reveals them — and the television, which is nobody, sees a
+    // player's private state never. A game that declares no `redactStateFor`, or
+    // one this build does not install, is broadcast whole as it always was.
+    const game = gameLogicById(room.game.gameId);
+    const viewer = await viewerIn(ctx, args.roomId, args.sessionToken);
+    const redact = game?.redactStateFor;
+    const state = redact === undefined ? room.game.state : redact(room.game.state, viewer);
+
+    // A module that declares a projection and then returns nothing is a module
+    // whose secrets would be broadcast whole, silently and for good. Asked apart
+    // from "declares none" rather than folded into a `??`, because the two are
+    // opposite answers — one is a game with nothing to hide and the other is a
+    // game whose hiding just failed — and only one of them may fail open.
+    //
+    // It costs the room the game: a throwing query is a broken subscription on
+    // every phone and on the television, and neither app mounts an error
+    // boundary, so this is a module bug taken as far as it goes rather than
+    // hidden. That is the trade — a room that cannot draw its game is recoverable
+    // by the Host ending it; a room quietly showing everybody everybody's
+    // answers is not.
+    if (redact !== undefined && state === undefined) {
+      throw new Error(`${room.game.gameId} returned no state to show`);
+    }
+
+    return { gameId: room.game.gameId, state };
   },
 });

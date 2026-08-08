@@ -96,7 +96,10 @@ async function playToTheFinalScores(
   // A bound rather than a limit: three inline questions are six beats, and a
   // game that never finishes should fail this test instead of hanging it.
   for (let beat = 0; beat < 100; beat += 1) {
-    const state = (await t.query(api.games.running, { roomId }))?.state;
+    // The room's own state: this fixture plays a game *correctly* on purpose, so
+    // it needs the answers, which is exactly what no client is given while a
+    // question is up (`redactStateFor`).
+    const state = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game?.state);
 
     if (state === undefined || state.phase === 'finished') {
       return;
@@ -131,14 +134,24 @@ async function playToTheFinalScores(
 }
 
 /** The state of the game the room is playing, or a failure if it is playing none. */
+/**
+ * The game state the room actually stored — read from the row, not through
+ * `running`.
+ *
+ * `running` is a *client's* view and hands back the module's projection of it
+ * (`redactStateFor`), which is a question about what a phone may see rather than
+ * about what the room decided. Every rule below is about the latter, so this
+ * reads the row the way the reducer wrote it. What a client sees is asserted on
+ * its own, through `running`, where the redaction is the subject.
+ */
 async function stateOf(t: Backend, roomId: Id<'rooms'>) {
-  const running = await t.query(api.games.running, { roomId });
+  const stored = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
 
-  if (running === null) {
+  if (stored === undefined) {
     throw new Error('this room is in its lobby, not in a game');
   }
 
-  return running.state;
+  return stored.state;
 }
 
 /**
@@ -349,10 +362,14 @@ describe('the Host starting a game', () => {
     return state.questions.map((question) => question.text);
   }
 
-  /** The questions the room is actually holding, by the same measure. */
+  /**
+   * The questions the room is actually holding, by the same measure — read from
+   * the row, since what a client is shown mid-question is deliberately not the
+   * deal (`redactStateFor` withholds the questions the room has not reached).
+   */
   async function questionsInPlay(t: Backend, roomId: Id<'rooms'>): Promise<readonly string[]> {
-    const running = await t.query(api.games.running, { roomId });
-    const questions = running?.state.questions as readonly { readonly text: string }[] | undefined;
+    const stored = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    const questions = stored?.state.questions as readonly { readonly text: string }[] | undefined;
 
     if (questions === undefined) {
       throw new Error('this room is not playing anything');
@@ -628,7 +645,12 @@ describe('a player’s event in the running game', () => {
       event: { kind: 'answer', questionIndex: 0, optionIndex: 2 },
     });
 
-    const running = await t.query(api.games.running, { roomId });
+    // Read as Grace: an answer is that player's own until the Reveal, so hers is
+    // the view her option index survives in (see the redaction tests below).
+    const running = await t.query(api.games.running, {
+      roomId,
+      sessionToken: tokens.Grace ?? '',
+    });
     expect(running?.state.answers).toEqual({ [grace]: 2 });
   });
 
@@ -645,7 +667,10 @@ describe('a player’s event in the running game', () => {
       event: { kind: 'answer', playerId: ada, questionIndex: 0, optionIndex: 1 },
     });
 
-    const running = await t.query(api.games.running, { roomId });
+    const running = await t.query(api.games.running, {
+      roomId,
+      sessionToken: tokens.Grace ?? '',
+    });
     expect(running?.state.answers).toEqual({ [grace]: 1 });
   });
 
@@ -663,7 +688,199 @@ describe('a player’s event in the running game', () => {
 
     // The rule is the reducer's; what this says is that the hub does not
     // overwrite an answer on its way past.
-    expect((await t.query(api.games.running, { roomId }))?.state.answers).toEqual({ [grace]: 2 });
+    const running = await t.query(api.games.running, {
+      roomId,
+      sessionToken: tokens.Grace ?? '',
+    });
+    expect(running?.state.answers).toEqual({ [grace]: 2 });
+  });
+
+  /**
+   * What the room broadcasts of a game in flight, and to whom.
+   *
+   * The scope's "private player state stays private while shared state appears
+   * on the TV" (docs/project-scope.md), at the one place it is decided: the room
+   * stores a game's state whole and `running` hands each client only what the
+   * module says that client may see. Trivia's secret is a live answer, so these
+   * are about the wire and not about any screen — no screen ever drew another
+   * player's choice, and the payload it was drawn from carried it anyway.
+   */
+  describe('a game in flight is broadcast redacted', () => {
+    // Trivia's stand-in for a hidden answer, written out rather than imported:
+    // the hub does not depend on any game module, and a test of the hub that
+    // imported one would be the only thing in `convex/` that names a game.
+    const HIDDEN_ANSWER = -1;
+
+    it('keeps one player’s answer off every other phone, and off the TV', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Grace ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: 2 },
+      });
+
+      // The television presents no token: it is nobody, and is owed nobody's
+      // private state.
+      const onTv = await t.query(api.games.running, { roomId });
+      // Ada is in the room and still answering. She learns that Grace is in —
+      // the "1/2 answered" count is those keys — and not what she chose.
+      const onAdasPhone = await t.query(api.games.running, {
+        roomId,
+        sessionToken: tokens.Ada ?? '',
+      });
+
+      expect(onTv?.state.answers).toEqual({ [grace]: HIDDEN_ANSWER });
+      expect(onAdasPhone?.state.answers).toEqual({ [grace]: HIDDEN_ANSWER });
+      // The count the TV draws is unmoved by the hiding: it is the keys.
+      expect(Object.keys(onTv?.state.answers ?? {})).toEqual([grace]);
+    });
+
+    it('shows a player their own answer', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Grace ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: 2 },
+      });
+
+      // Her phone draws its Locked In button off this, so it is the one copy the
+      // option survives in.
+      const onHerPhone = await t.query(api.games.running, {
+        roomId,
+        sessionToken: tokens.Grace ?? '',
+      });
+
+      expect(onHerPhone?.state.answers).toEqual({ [grace]: 2 });
+    });
+
+    it('gives a token from another room the television’s view', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+      // A phone seated in a different party, presenting a token that is real and
+      // is nobody here.
+      const elsewhere = await roomPlaying(t, 'Linus', 'Ken');
+
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Grace ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: 2 },
+      });
+
+      const seen = await t.query(api.games.running, {
+        roomId,
+        sessionToken: elsewhere.tokens.Linus ?? '',
+      });
+
+      expect(seen?.state.answers).toEqual({ [grace]: HIDDEN_ANSWER });
+    });
+
+    it('keeps the answers to the questions off every client', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+      // Read as a seated player, which is the most any client is entitled to.
+      const seen = await t.query(api.games.running, {
+        roomId,
+        sessionToken: tokens.Ada ?? '',
+      });
+
+      // The whole game is dealt at `startGame`, so without this the first
+      // payload of the first question carries every answer to every question —
+      // a client that reads its own socket wins the game.
+      const correctIndexes = seen?.state.questions.map(
+        (question: { correctIndex: number }) => question.correctIndex,
+      );
+
+      expect(correctIndexes).not.toHaveLength(0);
+      expect(correctIndexes.every((index: number) => index < 0)).toBe(true);
+      // And the questions the room has not reached carry no text to read ahead.
+      expect(seen?.state.questions[1].text).toBe('');
+    });
+
+    it('keeps the rest of the game off the wire at the reveal too', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+      // Both answer, which ends the question and puts the room on its reveal —
+      // the beat a client would otherwise only have to wait five seconds for.
+      for (const nickname of ['Ada', 'Grace']) {
+        await t.mutation(api.games.sendEvent, {
+          sessionToken: tokens[nickname] ?? '',
+          event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+        });
+      }
+
+      const seen = await t.query(api.games.running, {
+        roomId,
+        sessionToken: tokens.Grace ?? '',
+      });
+
+      expect(seen?.state.phase).toBe('reveal');
+      // The question just revealed gives up its answer, because that is what a
+      // reveal is; the ones the room has not reached give up nothing.
+      expect(seen?.state.questions[0].correctIndex).toBeGreaterThanOrEqual(0);
+      expect(seen?.state.questions[1].text).toBe('');
+      expect(seen?.state.questions[1].correctIndex).toBeLessThan(0);
+    });
+
+    it('reveals every answer once the question is over', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const ada = await playerIdOf(t, roomId, 'Ada');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+
+      // Both phones answer, which is what ends the question: the reveal is the
+      // beat these options stop being private on.
+      for (const [nickname, optionIndex] of [
+        ['Ada', 1],
+        ['Grace', 2],
+      ] as const) {
+        await t.mutation(api.games.sendEvent, {
+          sessionToken: tokens[nickname] ?? '',
+          event: { kind: 'answer', questionIndex: 0, optionIndex },
+        });
+      }
+
+      // Read as the television, which is owed the least of any client.
+      const onTv = await t.query(api.games.running, { roomId });
+
+      expect(onTv?.state.phase).toBe('reveal');
+      expect(onTv?.state.answers).toEqual({ [ada]: 1, [grace]: 2 });
+    });
+
+    it('scores a hidden answer in full', async () => {
+      const t = convexTest(schema, modules);
+      const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+      const grace = await playerIdOf(t, roomId, 'Grace');
+      // The right answer to the question the room was actually dealt.
+      const { questions } = await stateOf(t, roomId);
+      const correctIndex = questions[0].correctIndex;
+
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Grace ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: correctIndex },
+      });
+      // Ada answers too, which is what ends the question — the last answer in
+      // reveals it, so this needs no clock.
+      await t.mutation(api.games.sendEvent, {
+        sessionToken: tokens.Ada ?? '',
+        event: { kind: 'answer', questionIndex: 0, optionIndex: correctIndex === 0 ? 1 : 0 },
+      });
+
+      // Redaction is a projection for reading and never reaches the rules: the
+      // reveal runs on the state the room stored, so an answer hidden from the
+      // room still scores.
+      const onTv = await t.query(api.games.running, { roomId });
+      const scored = onTv?.state.standings.find(
+        (standing: { playerId: string }) => standing.playerId === grace,
+      );
+
+      expect(scored.score).toBeGreaterThan(0);
+    });
   });
 
   it('takes a whole party answering at once', async () => {

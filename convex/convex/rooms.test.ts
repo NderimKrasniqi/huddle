@@ -444,3 +444,108 @@ describe('room expiry', () => {
     });
   });
 });
+
+/**
+ * The Host closing the room on purpose — the scope's "end the room", and the one
+ * way a party ends at the moment it is over rather than ten minutes later.
+ *
+ * The expiry clocks above are a room nobody is using being let go. This is a
+ * room somebody *is* using being closed, so what it has to get right is who is
+ * allowed to ask.
+ */
+describe('endRoom', () => {
+  /** A room with a Host and a guest, and the token each phone holds. */
+  async function roomWithParty(t: Backend): Promise<{
+    roomId: Id<'rooms'>;
+    host: string;
+    guest: string;
+  }> {
+    const room = await t.mutation(api.rooms.createRoom, {});
+    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+
+    return { roomId: room.roomId, host: host.sessionToken, guest: guest.sessionToken };
+  }
+
+  it('deletes the room and everyone in it', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host, guest } = await roomWithParty(t);
+
+    await t.mutation(api.rooms.endRoom, { sessionToken: host });
+
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+    // The seats are gone with it, which is what actually sends the phones home:
+    // a token that answers nothing puts its phone back on the Join Screen.
+    expect(await t.query(api.players.session, { sessionToken: host })).toBeNull();
+    expect(await t.query(api.players.session, { sessionToken: guest })).toBeNull();
+  });
+
+  it('frees the Room Code for the next room', async () => {
+    const t = convexTest(schema, modules);
+    const { host } = await roomWithParty(t);
+
+    await t.mutation(api.rooms.endRoom, { sessionToken: host });
+
+    // Nothing holds the code any more, so the pool `createRoom` draws from has
+    // it back — the same recycling expiry does, at the moment the Host asks.
+    const next = await t.mutation(api.rooms.createRoom, {});
+    expect(await t.query(api.rooms.stillOpen, { roomId: next.roomId })).toBe(true);
+  });
+
+  it('refuses a guest', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, guest } = await roomWithParty(t);
+
+    await expect(
+      t.mutation(api.rooms.endRoom, { sessionToken: guest }),
+    ).rejects.toThrow(ConvexError);
+    // And the room is still standing, which is the point of refusing.
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+
+  it('refuses a phone holding no seat', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomWithParty(t);
+
+    await expect(
+      t.mutation(api.rooms.endRoom, { sessionToken: 'not-a-token' }),
+    ).rejects.toThrow(ConvexError);
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+
+  it('ends a room mid-game, and cancels the game’s clock with it', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      const { roomId, host } = await roomWithParty(t);
+
+      await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+      await t.mutation(api.rooms.endRoom, { sessionToken: host });
+
+      expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+
+      // The question's own deadline, asserted as *cancelled* rather than merely
+      // harmless: `reachDeadline` already tolerates a room that has gone, so a
+      // test that only advanced the clock would pass with the cancel deleted.
+      // Only that one — the room's away checks and the unjoined-room check are
+      // pending against rows that no longer exist, which is the treatment every
+      // other teardown leaves them in (see `expireRoom`).
+      const deadlines = await t.run(async (ctx) =>
+        (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+          (job) => job.name === 'games:reachDeadline',
+        ),
+      );
+      expect(deadlines).toHaveLength(1);
+      expect(deadlines[0]?.state.kind).toBe('canceled');
+
+      // And nothing fails on its way past.
+      await vi.advanceTimersByTimeAsync(60_000);
+      await t.finishInProgressScheduledFunctions();
+
+      expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

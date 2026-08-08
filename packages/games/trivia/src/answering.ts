@@ -102,7 +102,15 @@ export function answerScreen(state: TriviaState, playerId: GamePlayerId): Answer
   // `Object.hasOwn` rather than a lookup against `undefined`, as in the
   // reducer: a player id is a key of the room's making, and every object
   // answers to `toString`.
-  const chosen = Object.hasOwn(state.answers, playerId) ? state.answers[playerId] : undefined;
+  const answered = Object.hasOwn(state.answers, playerId) ? state.answers[playerId] : undefined;
+  // An answer hidden from this phone is not this phone's answer to draw. The
+  // room replaces another player's option with a sentinel outside the real range
+  // while a question is up (`redactStateFor`), and a phone reads its *own* seat
+  // out of that map — so this is only ever reached in the moment before the room
+  // knows who is asking: the keystore has not answered yet, so this phone is
+  // nobody and is handed the television's view of its own row. Drawing it as
+  // locked in would light "LOCKED IN" over four buttons with nothing chosen.
+  const chosen = answered !== undefined && answered >= 0 ? answered : undefined;
 
   return {
     kind: 'question',

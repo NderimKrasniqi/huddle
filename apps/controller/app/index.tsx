@@ -58,6 +58,7 @@ import {
 import {
   backToLobbyLabel,
   browsedGameMeta,
+  END_ROOM,
   gameToStart,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
@@ -153,7 +154,11 @@ export default function JoinScreen() {
   }
 
   if (state.kind === 'seated') {
-    return <YoureInScreen session={state.session} />;
+    // A seat can end without this phone doing anything: the Host ends the room
+    // or removes this player, or the room expires under a party that went quiet.
+    // Forgetting the seat here is what sends the phone back to the form — the
+    // screen below watches the room for it.
+    return <YoureInScreen session={state.session} onSeatLost={() => setSession(null)} />;
   }
 
   // Keyed by the link so a second Join Link scanned while this screen is
@@ -415,7 +420,13 @@ function BlinkingCaret() {
  * become the host mid-party, which is why the standing is read from a live
  * query rather than from the answer that seated them.
  */
-function YoureInScreen({ session }: { readonly session: PlayerSession }) {
+function YoureInScreen({
+  session,
+  onSeatLost,
+}: {
+  readonly session: PlayerSession;
+  readonly onSeatLost: () => void;
+}) {
   const { code, nickname } = session;
   useHeartbeat();
   const roster = useRoomRoster(session);
@@ -433,7 +444,41 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
   // The room's own word on what it is playing. A separate subscription from the
   // roster because the two change on entirely different beats — this twice a
   // game, the roster on every join, claim and heartbeat.
-  const running = useQuery(api.games.running, { roomId: session.roomId });
+  //
+  // The token rides along so the room knows which player is asking: a running
+  // game's state is broadcast redacted, and this phone's own in-flight choices
+  // are the part only it may see (`redactStateFor`).
+  //
+  // Skipped until the keystore has answered, rather than asked once without the
+  // token and again with it. The arguments are what a subscription is keyed by,
+  // so asking twice means an `undefined` between the two answers — and an
+  // `undefined` here reads as the lobby (`runningGameScreen`). A phone that cold
+  // starts into a room mid-game would flash that lobby, which on the Host's
+  // phone is the one carrying End room. One subscription, with its final
+  // arguments, cannot.
+  const sessionToken = useSessionToken();
+  const running = useQuery(
+    api.games.running,
+    sessionToken === undefined ? 'skip' : { roomId: session.roomId, sessionToken },
+  );
+
+  // Whether this phone still holds the seat it is drawing. A subscription and
+  // not the one-shot that seated it (`resumeSession`): a seat ends for reasons
+  // nobody on this phone caused — the Host ends the room or removes this
+  // player, or a room everybody walked away from expires — and until this was
+  // watched, none of them took the phone off a lobby that no longer existed.
+  // `null` is the room's word that the seat is gone; `undefined` is the
+  // question still in flight, which is not an answer and moves nobody.
+  const seat = useQuery(
+    api.players.session,
+    sessionToken === undefined ? 'skip' : { sessionToken },
+  );
+
+  useEffect(() => {
+    if (seat === null) {
+      onSeatLost();
+    }
+  }, [seat, onSeatLost]);
   const screen = runningGameScreen(running);
 
   // The card the room is browsing. Held here rather than by the controls that
@@ -527,7 +572,148 @@ function YoureInScreen({ session }: { readonly session: PlayerSession }) {
         settingsChoice={settingsChoice}
         onChooseSetting={setSettingsChoice}
       />
+
+      {/* Last on the screen, and the Host's alone: it is the one control here
+          that cannot be undone, so it sits as far from "Start" as the lobby is
+          long. */}
+      {standing.youAreHost ? <EndRoomControl /> : null}
     </PhoneScreen>
+  );
+}
+
+/**
+ * The Host ends the party (the scope's "end the room").
+ *
+ * The room's counterpart to "Back to lobby": that one ends a game and leaves the
+ * room standing, this ends the room itself — every seat deleted, every phone
+ * back on the Join Screen, the Room Code returned to the pool. It is offered in
+ * the lobby rather than mid-game because a Host who wants out of a game has the
+ * other control, and the room outlives games by design.
+ *
+ * Behind the same confirm sheet the Manage Sheet uses, for the reason removal is:
+ * this deletes seats, and it deletes all of them at once. The failure is shown
+ * rather than swallowed — a Host who taps and sees nothing happen has no way to
+ * make sense of it — though the ordinary success of this control is the screen
+ * disappearing, since this phone's own seat goes with the room.
+ */
+function EndRoomControl() {
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <View style={styles.field}>
+      <Pressable
+        style={styles.stretch}
+        onPress={() => setConfirming(true)}
+        accessibilityRole="button"
+      >
+        {({ pressed }) => (
+          <StickerSurface
+            depth={shadowDepth.phoneCard}
+            style={[styles.button, styles.endRoomButton, pressed && styles.buttonPressed]}
+            wrapperStyle={styles.stretch}
+          >
+            <Text style={styles.buttonLabel}>{END_ROOM.label}</Text>
+          </StickerSurface>
+        )}
+      </Pressable>
+
+      {confirming ? <EndRoomSheet onDismiss={() => setConfirming(false)} /> : null}
+    </View>
+  );
+}
+
+/**
+ * The confirm sheet for ending the room: what is lost, and the two ways out.
+ *
+ * The Manage Sheet's surface — a centred Boardwalk card over an ink scrim,
+ * dismissed by the scrim or by Cancel — because this is the same kind of act it
+ * confirms, one step further: it takes every seat rather than one.
+ */
+function EndRoomSheet({ onDismiss }: { readonly onDismiss: () => void }) {
+  const endRoom = useMutation(api.rooms.endRoom);
+  const [ending, setEnding] = useState(false);
+  const [failure, setFailure] = useState<string>();
+
+  async function confirm() {
+    setEnding(true);
+    setFailure(undefined);
+
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+
+      if (sessionToken === null) {
+        setFailure(hostControlRejectionMessage({ kind: 'notInRoom' }));
+        return;
+      }
+
+      await endRoom({ sessionToken });
+      // Nothing to dismiss on success: this phone's seat went with the room, so
+      // the seat subscription on the screen behind this sheet reads `null` and
+      // takes the whole thing — this sheet included — back to the Join Screen.
+      // Every other phone in the room gets there the same way, which is what
+      // makes `END_ROOM.body` true rather than merely reassuring.
+    } catch (error) {
+      setFailure(hostControlFailureMessage(error));
+    } finally {
+      setEnding(false);
+    }
+  }
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
+      <View style={styles.sheetRoot}>
+        <Pressable
+          style={[StyleSheet.absoluteFill, styles.sheetScrim]}
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
+
+        <StickerSurface
+          depth={shadowDepth.phoneCard}
+          style={styles.sheet}
+          wrapperStyle={styles.sheetWrapper}
+        >
+          <Text style={styles.sheetTitle}>{END_ROOM.title}</Text>
+          <Text style={styles.sheetBody}>{END_ROOM.body}</Text>
+
+          <Pressable
+            style={styles.stretch}
+            disabled={ending}
+            onPress={() => void confirm()}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: ending }}
+          >
+            {({ pressed }) => (
+              <StickerSurface
+                depth={shadowDepth.phoneSmall}
+                style={[styles.button, styles.endRoomButton, pressed && styles.buttonPressed]}
+                wrapperStyle={styles.stretch}
+              >
+                <Text style={styles.buttonLabel}>
+                  {ending ? END_ROOM.busyLabel : END_ROOM.confirmLabel}
+                </Text>
+              </StickerSurface>
+            )}
+          </Pressable>
+
+          {failure === undefined ? null : (
+            <Text style={styles.failure} accessibilityLiveRegion="polite">
+              {failure}
+            </Text>
+          )}
+
+          <Pressable
+            style={styles.sheetCancel}
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text style={styles.sheetCancelLabel}>Cancel</Text>
+          </Pressable>
+        </StickerSurface>
+      </View>
+    </Modal>
   );
 }
 
@@ -1614,6 +1800,55 @@ function useRoomRoster(session: PlayerSession): readonly RosterSeat[] {
 }
 
 /**
+ * This phone's Session Token, once the keystore has answered.
+ *
+ * `undefined` until it has. Every other use of the token is inside an effect
+ * that reads it at the moment it acts (`keepPresent`, and the mutations' own
+ * handlers), which is what keeps a credential out of this screen's state — but a
+ * subscription cannot be written that way: `games.running` and `players.session`
+ * both send it as an argument, so it has to be a value the render already holds.
+ *
+ * What it buys is the phone seeing *its own* answer in a state the room hides
+ * the rest of (see `redactStateFor`), and knowing when its seat has ended. Both
+ * subscriptions wait for it rather than asking once without it and again with
+ * it, because a subscription is keyed by its arguments and the gap between two
+ * keyings reads as "no answer yet" — which on the game query is the lobby. So a
+ * screen still waiting on the keystore draws nothing of the room rather than
+ * briefly drawing the wrong thing about it.
+ *
+ * Where it can still show through: a keystore that never answers leaves this
+ * phone a viewer the room cannot name for the life of the screen — its own
+ * locked-in button included. That is the same device `alsoInMemory` is written
+ * for, and the same phone that would have failed to rejoin at launch.
+ */
+function useSessionToken(): string | undefined {
+  const [sessionToken, setSessionToken] = useState<string>();
+
+  useEffect(() => {
+    let listening = true;
+
+    phoneSessionTokenStore
+      .read()
+      .then((stored) => {
+        if (listening && stored !== null) {
+          setSessionToken(stored);
+        }
+      })
+      // A keystore that will not answer is the case `alsoInMemory` exists for,
+      // and it is already survivable: this phone is simply a viewer the room
+      // cannot name, which is the television's view. Swallowed rather than left
+      // to an unhandled rejection, which is noise nobody can act on.
+      .catch(() => undefined);
+
+    return () => {
+      listening = false;
+    };
+  }, []);
+
+  return sessionToken;
+}
+
+/**
  * Says this phone is still here, for as long as its owner is on a screen that
  * holds a seat — the green dot on the TV's roster is the room repeating it back.
  *
@@ -2037,6 +2272,23 @@ const styles = StyleSheet.create({
   sheetRemove: {
     backgroundColor: colors.punch,
   },
+  // The end-room sheet's own title: `sheetName` is a row item beside an avatar
+  // and stretches to fill it, which is not what a heading on its own line does.
+  sheetTitle: {
+    alignSelf: 'stretch',
+    color: colors.ink,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 20,
+  },
+  // What ending the room costs, said before it is done. Body text, so it is read
+  // at the phone floor rather than at the heading's size.
+  sheetBody: {
+    alignSelf: 'stretch',
+    color: colors.mutedText,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: minBodyFontSize.phone,
+    lineHeight: 20,
+  },
   sheetCancel: {
     alignSelf: 'center',
     paddingVertical: 10,
@@ -2168,6 +2420,11 @@ const styles = StyleSheet.create({
   // Boardwalk's "this ends something" surface, and the only punch button on a
   // phone screen — it is meant to be found, not stumbled into.
   backToLobbyButton: {
+    backgroundColor: colors.punch,
+  },
+  // The same punch every irreversible control in Huddle wears (see
+  // `sheetRemove`): ending the room deletes every seat in it.
+  endRoomButton: {
     backgroundColor: colors.punch,
   },
   waitingFor: {

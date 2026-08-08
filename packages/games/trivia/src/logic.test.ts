@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   answersIn,
+  HIDDEN_ANSWER,
+  HIDDEN_CORRECT_INDEX,
   playersCounted,
   QUESTION_SECONDS,
   questionTimer,
@@ -764,5 +766,142 @@ describe('the Scoring Mode a Host chose', () => {
 
     expect(scoreOf(revealed, ADA)).toBe(100);
     expect(scoreOf(revealed, GRACE)).toBe(0);
+  });
+});
+
+/**
+ * What a game of trivia looks like from outside the room's own row.
+ *
+ * The rules run on the state the room stored; this is the copy every client is
+ * handed instead (`GameLogic.redactStateFor`, applied in `games.running`). Two
+ * different things are held back while a question is up — one player's choice,
+ * which is theirs, and the answers to the questions, which nobody has earned yet
+ * — so both are asserted here rather than only through the hub.
+ */
+describe('the game as a client is shown it', () => {
+  const redact = (state: TriviaState, viewer: string | undefined) =>
+    triviaGameLogic.redactStateFor?.(state, viewer) ?? state;
+
+  it('hides another player’s answer while the question is up', () => {
+    const answered = answering(gameWith(ADA, GRACE), GRACE, 2);
+
+    // Ada is playing and has not answered; she may know that Grace is in, and
+    // not what Grace chose.
+    expect(redact(answered, ADA).answers).toEqual({ [GRACE]: HIDDEN_ANSWER });
+    // The television is nobody at all.
+    expect(redact(answered, undefined).answers).toEqual({ [GRACE]: HIDDEN_ANSWER });
+  });
+
+  it('shows a player their own answer', () => {
+    const answered = answering(gameWith(ADA, GRACE), GRACE, 2);
+
+    expect(redact(answered, GRACE).answers).toEqual({ [GRACE]: 2 });
+  });
+
+  it('keeps the count the television draws', () => {
+    const answered = answering(gameWith(ADA, GRACE), GRACE, 2);
+
+    // The chip is the keys of `answers` (`answersIn`), so hiding the values must
+    // not move it — this is the whole reason a sentinel is used rather than
+    // dropping the entry.
+    expect(answersIn(redact(answered, undefined))).toBe(answersIn(answered));
+    expect(answersIn(redact(answered, undefined))).toBe(1);
+  });
+
+  it('withholds the timings only the reveal reads', () => {
+    const answered = answering(gameWith(ADA, GRACE), GRACE, 2, 9_000);
+
+    expect(answered.answerSeconds).not.toEqual({});
+    expect(redact(answered, GRACE).answerSeconds).toBeUndefined();
+  });
+
+  it('withholds every question’s answer while one is being asked', () => {
+    const playing = gameWith(ADA, GRACE);
+
+    const shown = redact(playing, ADA);
+
+    // Not one of them, and not merely the one on screen: the whole game is dealt
+    // at the start, so the rest of it is sitting in the same row.
+    expect(shown.questions.every((q) => q.correctIndex === HIDDEN_CORRECT_INDEX)).toBe(true);
+    expect(shown.questions).toHaveLength(playing.questions.length);
+  });
+
+  it('withholds the questions the room has not reached', () => {
+    const playing = gameWith(ADA, GRACE);
+
+    const shown = redact(playing, ADA);
+
+    // The one being asked is readable, because the room is reading it.
+    expect(shown.questions[0]?.text).toBe(playing.questions[0]?.text);
+    expect(shown.questions[0]?.options).toEqual(playing.questions[0]?.options);
+    // What comes next is not.
+    expect(shown.questions[1]?.text).toBe('');
+    expect(shown.questions[1]?.options).toEqual(['', '', '', '']);
+  });
+
+  it('gives up the answer to the question it has just revealed', () => {
+    const playing = gameWith(ADA, GRACE);
+    const revealed = advancing(playing);
+
+    const shown = redact(revealed, undefined);
+
+    expect(revealed.phase).toBe('reveal');
+    // The reveal is what that one answer was being held back *for*, and the
+    // options and verdicts on screen are read off it.
+    expect(shown.questions[0]?.correctIndex).toBe(playing.questions[0]?.correctIndex);
+    // The answers themselves stop being private here too — the reveal is the
+    // screen that shows who picked what.
+    expect(shown.answers).toEqual(revealed.answers);
+  });
+
+  it('still withholds the rest of the game at the reveal', () => {
+    const revealed = advancing(gameWith(ADA, GRACE));
+
+    const shown = redact(revealed, undefined);
+
+    // The beat a client would wait for: five seconds of reveal stand between
+    // every pair of questions, so relaxing here would hand over the remaining
+    // answers to anybody willing to sit through question one.
+    expect(shown.questions[1]?.text).toBe('');
+    expect(shown.questions[1]?.correctIndex).toBe(HIDDEN_CORRECT_INDEX);
+  });
+
+  it('withholds nothing behind the room in a finished game', () => {
+    let state = shortGameWith(ADA, GRACE);
+
+    while (state.phase !== 'finished') {
+      state = advancing(state);
+    }
+
+    // A finished game has been asked every question it holds, so there is
+    // nothing left in front of the room to keep from it.
+    expect(redact(state, undefined)).toEqual(state);
+  });
+
+  it('is a view and never an input to the rules', () => {
+    const playing = gameWith(ADA, GRACE);
+    const right = rightAnswerTo(playing);
+
+    // The same correct answer, played out twice: once on the state the room
+    // stored, and once on the copy a client is shown.
+    const scoredOnStored = advancing(answering(playing, ADA, right));
+    const scoredOnShown = advancing(answering(redact(playing, ADA), ADA, right));
+
+    expect(scoreOf(scoredOnStored, ADA)).toBe(100);
+    // Reducing the projection gets it *wrong* — the answer key is not in it, so
+    // a right answer scores nothing. That is the whole reason `games.running`
+    // redacts on the way out and `playGameEvent` reduces the row: the two must
+    // never be swapped, and this is what that would cost.
+    expect(scoreOf(scoredOnShown, ADA)).toBe(0);
+  });
+
+  it('survives a state that carries no answers at all', () => {
+    // A room dealt by a deployment older than the field, or a shape nothing has
+    // written yet. This runs on the read path, so throwing here would take
+    // `running` down for every client in the room.
+    const playing = { ...gameWith(ADA, GRACE), answers: undefined } as unknown as TriviaState;
+
+    expect(() => redact(playing, ADA)).not.toThrow();
+    expect(redact(playing, ADA).answers).toEqual({});
   });
 });
