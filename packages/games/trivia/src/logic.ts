@@ -1,7 +1,16 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
 
+import { triviaMetadata } from './metadata';
 import { questionsFor, type TriviaQuestion } from './questions';
 import { triviaSettings, TRIVIA_SETTINGS_SCHEMA, type ScoringMode } from './settings';
+// The pure reads over the state live in `./state`, so the screens can import
+// them without pulling this file — and the Question Pack `./questions` deals
+// from — into the client bundle (docs/implementation-plan.md 5.9). They are
+// imported here for the rules' own use and re-exported, so the server and the
+// tests go on reading them off the module they always have.
+import { answersIn, beatOf, playersCounted, QUESTION_SECONDS } from './state';
+
+export { answersIn, playersCounted, QUESTION_SECONDS, REVEAL_SECONDS, revealBeat } from './state';
 
 /**
  * Trivia's rules, with no screens attached.
@@ -37,25 +46,6 @@ export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
  */
 export const SPEED_BONUS_PER_CORRECT_ANSWER = 100;
 
-/**
- * How long a question stays up before the room stops waiting for it — the
- * plan's pinned twenty seconds, counted down on the television.
- *
- * A rule of the game like `REVEAL_SECONDS`, and the same number twice over: the
- * room's clock runs on it (`questionTimer`) and the TV's countdown draws it, so
- * a countdown that reached zero while the question was still live would be two
- * numbers that had drifted rather than one rule.
- */
-export const QUESTION_SECONDS = 20;
-
-/**
- * How long the Reveal stays up before the room moves to the next question.
- *
- * A rule of the game rather than a fact about either screen, so it is here with
- * the rest of them: the phones count it down and the television draws for that
- * long, and the two cannot be counting different numbers.
- */
-export const REVEAL_SECONDS = 5;
 
 /**
  * Where a game of trivia is: a question on screen, its Reveal, or over.
@@ -177,19 +167,7 @@ export type TriviaEvent =
  * `GameDeadline<TriviaEvent>` would let either of them start returning an
  * answer, which is not a thing a clock can send.
  */
-type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;
-
-/**
- * The beat a state is on, named: which question, and which half of it.
- *
- * What a clock is set for. Both of trivia's — the room's Question Timer and the
- * phones' Reveal Beat — key off this one function, so "the same beat" means one
- * thing however it is being timed, and the hub can tell whether a state it has
- * just written started a new one (`GameDeadline`).
- */
-function beatOf(state: TriviaState): string {
-  return `${state.questionIndex}:${state.phase}`;
-}
+export type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;
 
 /** The scoreboard order: highest first, ties left in the order they had. */
 function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStanding[] {
@@ -200,45 +178,6 @@ function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStan
 
 function isPlaying(state: TriviaState, playerId: GamePlayerId): boolean {
   return state.standings.some((standing) => standing.playerId === playerId);
-}
-
-/**
- * How many players the current question is counted against — the "3/5 answered"
- * denominator: everyone the room is still hearing from, plus anyone already in.
- *
- * Away is subtracted because a room cannot be waiting for a phone it has
- * stopped hearing from (a game never waits for an away
- * player), and an answer already given is added back because it is already
- * given: a count that dropped a player the moment their phone went quiet would
- * be the television losing an answer the room has.
- *
- * Who is Away is the room's and arrives with the event (`TriviaEvent`), so a
- * room that said nothing is a room with nobody away — the whole scoreboard, and
- * what trivia waited for before it was ever told.
- *
- * It lives with the rules rather than on the screen because it *is* the rule
- * the reveal turns on: the question ends when this many answers are in
- * (`answersIn`), so the chip reading `n/n` and the reveal happening are one
- * fact and not two that agree. The television reads it off the roster it is
- * handed (`TvGameScreenProps`) and the reducer off the away list it is handed,
- * and neither can arrive at a different number from the same room.
- */
-export function playersCounted(
-  state: TriviaState,
-  awayPlayerIds: readonly GamePlayerId[] | undefined,
-): number {
-  const away = new Set(awayPlayerIds);
-
-  return state.standings.filter(
-    (standing) =>
-      !away.has(standing.playerId) || Object.hasOwn(state.answers, standing.playerId),
-  ).length;
-}
-
-/** How many of the current question's answers are in: the chip's numerator. */
-export function answersIn(state: TriviaState): number {
-  return state.standings.filter((standing) => Object.hasOwn(state.answers, standing.playerId))
-    .length;
 }
 
 /**
@@ -541,12 +480,15 @@ export function redactTriviaStateFor(
 }
 
 /**
- * Trivia's metadata, settings schema and rules.
+ * Trivia's rules: what a question is worth, when a question ends, and what a
+ * reveal does to the scoreboard.
  *
- * Its settings are declared in `./settings` and its questions drawn from the
- * Curated Pack in `./questions`, so what is left here is the game: what a
- * question is worth, when a question ends, and what a reveal does to the
- * scoreboard.
+ * Its metadata is declared in `./metadata`, its settings in `./settings`, and
+ * its questions drawn from the Curated Pack in `./questions` — the last of which
+ * is why this half is the server's alone (`@huddle/game-trivia/logic`): the pack
+ * carries every answer, and `createInitialState` deals from it. The metadata is
+ * the shared object the client module points at too, so the card and the game
+ * name one thing.
  *
  * `Settings` is `GameSettings` — the hub's strings — rather than trivia's own
  * three, because that is what the hub actually hands a module: it settles the
@@ -554,29 +496,7 @@ export function redactTriviaStateFor(
  * `triviaSettings` is where they stop being strings.
  */
 export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> = {
-  metadata: {
-    id: 'trivia',
-    title: 'Trivia',
-    /**
-     * Punch, because the accents are spoken for elsewhere and this one is
-     * spoken for least: cobalt is the focused card's own offset shadow
-     * (docs/design/design-handoff.md §6) and a block would sit on top of it,
-     * tangerine is the brand's, green is presence, yellow is the chip printed
-     * on the card itself. Its Bungee title sets in ink.
-     */
-    keyArt: { color: 'punch' },
-    /** The scope's "2–10 players", the second of which is a full room. */
-    playerRange: { min: 2, max: 10 },
-    /**
-     * Ten questions — Phase 4's default count — at a 20-second countdown and a
-     * five-second reveal apiece, plus the victory screen: about five minutes.
-     * The handoff's "~12 min" chip is mock filler; the chip draws whatever the
-     * module declares, and this is the number the scoped settings produce.
-     */
-    estimatedMinutes: 5,
-    /** The genre chip. Not one of a Question Pack's categories. */
-    category: 'Knowledge',
-  },
+  metadata: triviaMetadata,
   settingsSchema: TRIVIA_SETTINGS_SCHEMA,
   createInitialState: ({ players, settings }) => {
     const chosen = triviaSettings(settings);
@@ -613,44 +533,6 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
   // each client is entitled to, and this is trivia's projection of it.
   redactStateFor: redactTriviaStateFor,
 };
-
-/**
- * The beat that ends a Reveal, addressed and timed — or nothing, on a beat that
- * ends by itself.
- *
- * This is the room's clock, and it is here rather than in the screen that runs
- * it for one reason: it is the only thing in trivia that moves the room from
- * one question to the next, and a mistake in it does not fail loudly. An
- * `advance` addressed to the wrong beat is *inert by design* — the reducer
- * returns the state untouched and the hub skips the write — so getting this
- * wrong does not throw, does not log, and does not fail a renderer test. It
- * hangs the reveal forever. Deciding it here is what lets it be asserted.
- *
- * Who sends it is the screen's business (`./controller-screen`), and the answer
- * is "every playing phone": the event is addressed to the beat it ends, so the
- * first to arrive moves the room and the rest do nothing at all.
- */
-export function revealBeat(
-  state: TriviaState,
-  playerId: GamePlayerId,
-): GameDeadline<TriviaAdvance> | undefined {
-  if (state.phase !== 'reveal') {
-    return undefined;
-  }
-
-  return {
-    beat: beatOf(state),
-    afterMs: REVEAL_SECONDS * 1000,
-    event: {
-      kind: 'advance',
-      playerId,
-      // The beat on screen now — not the one that will be up when the timer
-      // fires, which is exactly what makes a late send harmless.
-      questionIndex: state.questionIndex,
-      phase: 'reveal',
-    },
-  };
-}
 
 /**
  * The Question Timer: the twenty seconds a question runs, and the `advance`

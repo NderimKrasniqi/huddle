@@ -2,57 +2,62 @@
 
 ## Current task
 
-The three smaller residuals recorded by 5.6 are **complete** on branch
-`fix/5.6-residuals`, [PR #22](https://github.com/NderimKrasniqi/huddle/pull/22),
-left for the user to review and merge. Tests, typecheck, and lint are green.
-Independent code review and security review both **PASS**. The only finding
-worth acting on — a LOW nit where a stale seat-loss notice could ride onto a
-newly-scanned room's form — has been fixed (the notice resets when `linkedCode`
-changes). The other LOW (a theoretical loading-roster mislabel) both reviewers
-rated unreachable, so it is left as-is.
+**5.9 — keep the Question Pack out of the Controller bundle** is **implemented and
+verified** on branch `fix/5.9-pack-out-of-client-bundle`. Tests, typecheck, and
+lint are green. Independent security review **still to run** (trust-boundary
+change — this is anti-cheat). PR: opened, left for the user to review/merge.
 
 ## Where the plan stands
 
-Every required MVP task is checked, plus optional 5.8. Remaining:
+Every required MVP task is checked, plus optional 5.8 and now 5.9. 5.6's three
+smaller residuals shipped earlier on `fix/5.6-residuals` (PR #22). Nothing
+substantive remains in the plan.
 
-- **5.9** — (follow-up) keep `@huddle/packs` out of the Controller bundle. Not
-  started; the only substantive item left.
+## What this change did (5.9)
 
-## What this change did (the 5.6 residuals)
+The leak: `@huddle/packs` (`CURATED_PACK` — every question and its answer) was
+reachable from the Controller because the trivia module carried the rules and
+the deal, and `questionsFor` is deterministic. The real graph was worse than the
+plan's one-liner — the client *screens* pulled `./logic` (and the pack) through
+pure helpers, and the barrel re-exported the logic value.
 
-1. **`expireRoom` cancels a pending game deadline** — `convex/convex/rooms.ts`.
-   It now mirrors `endRoom`: `room.game?.deadline` is cancelled before the room
-   and its players are deleted, so a deserted room ending mid-game leaves no
-   orphaned `reachDeadline` scheduled against a room that is gone. New Vitest
-   test drives it deterministically (age the roster past the window, call
-   `internal.rooms.expireRoom` directly so the deadline is still pending, assert
-   the `reachDeadline` job is `canceled`).
+1. **`GameModule` no longer `extends GameLogic`** (`packages/game-core/src/game-module.ts`).
+   The client type is now metadata + settingsSchema + screens, no rules. The
+   type is the seam; `registry.test.ts` asserts the module carries no
+   `createInitialState`/`reduce`.
+2. **Pack-free selectors moved to `trivia/src/state.ts`** — `revealBeat`,
+   `answersIn`, `playersCounted`, `beatOf`, `QUESTION_SECONDS`, `REVEAL_SECONDS`.
+   `logic.ts` imports them back and re-exports them (server/tests unchanged); the
+   screens (`controller-screen.tsx`, `watching.ts`) now import them from
+   `./state`, so no client file value-imports `./logic`.
+3. **Client-safe category names** — new `@huddle/packs/categories`
+   (`curated-categories.ts`, `CURATED_CATEGORIES`), drift-guarded by
+   `curated-categories.test.ts`. `trivia/src/settings.ts` imports names from
+   there instead of `./questions`.
+4. **Barrel carries no rules** — `trivia/src/index.ts` re-exports the module and
+   types only, using `export type { … }` (the `export { type … }` value-block
+   form keeps a runtime edge and re-leaks the pack).
+5. **Modules assembled field-by-field, not `...spread`** — `trivia.ts`,
+   `voting.ts`. Voting got the same shape (its prompts are opinion, not answers,
+   so not a security case, but the pattern is uniform).
 
-2. **A lost seat now explains itself** — new `apps/controller/src/seat-loss.ts`
-   (`seatLossNotice`, pure + tested) and wiring in `app/index.tsx`. When the
-   seated screen's seat subscription goes `null`, the roster read on the same
-   Convex snapshot tells removal from room-close apart: still peopled → "The
-   host removed you from the room."; empty → "This room has closed." The notice
-   is carried to the join form and dismissed on the first field edit or Join.
+## Guards added
 
-3. **One shared confirm-sheet shell** — new `ConfirmSheet` in `app/index.tsx`.
-   `EndRoomSheet` and the manage sheet now supply only their bodies; the Modal,
-   scrim, Boardwalk surface, and Cancel live once in `ConfirmSheet`. Pure
-   refactor, no behaviour change.
+- eslint `no-restricted-imports` bans `@huddle/packs` in `apps/**` and
+  `packages/games/*/src/**` except the server-only `questions.ts` and tests.
+- `trivia/src/client-seam.test.ts` — source tripwire: the client entry/module
+  must reach `./logic`/`./questions` through type-only imports.
 
 ## Checks
 
-`pnpm typecheck` clean (all workspaces); `pnpm lint` clean; `pnpm test` green —
-**790 passed, 66 files** (787 before: +1 expireRoom test, +2 seat-loss tests).
-
-## Not verified on hardware
-
-The seat-loss notice and the refactored sheets have not been run on a
-device/simulator. The `expireRoom` fix is covered by a backend test. Worth an
-on-device pass of: being removed by the Host and reading the notice on the join
-form; the manage and end-room sheets still opening, dismissing, and acting.
+`tsc -b` clean; `eslint` clean; `vitest` green — **797 passed, 68 files**.
+**Bundle-verified**: bundling the client registry entry with esbuild shows
+`huddle-classics.json`, `curated-pack.ts`, `questions.ts`, `logic.ts` absent from
+the client module graph and no question text in the output; the server's
+`games.test.ts` still deals a game unchanged.
 
 ## Next action
 
-Relay the code-review and security-review findings; resolve any blocking one;
-then the PR is ready for the user to merge. After that, 5.9 is the last item.
+Run the independent **security review** (workflow-security-reviewer) on the
+branch diff — the mandated gate for a trust-boundary change. Resolve any blocking
+finding, then the PR is ready for the user to merge.

@@ -1,11 +1,7 @@
-import { ROOM_PLAYER_CAP, type GamePlayer } from '@huddle/game-core';
+import { ROOM_PLAYER_CAP } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
 import { triviaGameModule } from './trivia';
-
-function player(playerId: string, nickname: string): GamePlayer {
-  return { playerId, nickname, away: false };
-}
 
 describe('the trivia Game Module', () => {
   it('is named the way a room stores it and the carousel draws it', () => {
@@ -26,20 +22,18 @@ describe('the trivia Game Module', () => {
     expect(triviaGameModule.metadata.estimatedMinutes).toBeGreaterThan(0);
   });
 
-  it('starts with the players it was given on the scoreboard', () => {
-    // The module is the rules plus its screens, so this is `./logic`'s factory
-    // reached through what the clients actually mount. What that state *is* is
-    // logic.test.ts's business; that it carries the room's players is the part
-    // the hub depends on, since the hub hands the players over and never looks
-    // at the state again.
-    const state = triviaGameModule.createInitialState({
-      players: [player('p1', 'Ada'), player('p2', 'Grace')],
-      settings: undefined,
-    });
-
-    expect(state.standings).toEqual([
-      { playerId: 'p1', score: 0 },
-      { playerId: 'p2', score: 0 },
-    ]);
+  it('is a client view — screens and settings, and none of the rules', () => {
+    // The module a client mounts is metadata, the Host's settings schema, and
+    // the two screens. It carries no `createInitialState` and no `reduce` on
+    // purpose: those deal from and read the Question Pack, and a module holding
+    // them would ship every answer to the phone (docs/implementation-plan.md
+    // 5.9). What the factory *does* — the players it seats on the scoreboard — is
+    // `logic.test.ts`'s business, reached through `triviaGameLogic`, which is the
+    // only place the rules live.
+    expect(triviaGameModule.settingsSchema.length).toBeGreaterThan(0);
+    expect(typeof triviaGameModule.screens.tv).toBe('function');
+    expect(typeof triviaGameModule.screens.controller).toBe('function');
+    expect(triviaGameModule).not.toHaveProperty('createInitialState');
+    expect(triviaGameModule).not.toHaveProperty('reduce');
   });
 });
