@@ -1,4 +1,11 @@
 /** Session lifecycle seam for the controller platform. */
-export * from '../../session';
-export * from '../../session-store';
-
+export {
+  alsoInMemory,
+  joinScreenState,
+  type PlayerSession,
+  rememberSession,
+  resumeSession,
+  type SessionTokenStore,
+} from './session';
+export { phoneSessionTokenStore } from './session-store';
+export { useSessionToken } from './use-session-token';

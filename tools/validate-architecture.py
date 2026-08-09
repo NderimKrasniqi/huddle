@@ -45,8 +45,10 @@ def validate_public_entrypoints(app: Path) -> None:
         source = screen.read_text(encoding="utf-8")
         for match in IMPORT.finditer(source):
             imported = match.group("path")
-            if imported.startswith("../features/") and imported.count("/") != 2:
-                fail(f"screen deep-imports a feature: {screen.relative_to(ROOT)} -> {imported}")
+            if imported.startswith("../features/"):
+                parts = imported.split("/")
+                if len(parts) not in (3, 4) or (len(parts) == 4 and parts[-1] != "native"):
+                    fail(f"screen deep-imports a feature: {screen.relative_to(ROOT)} -> {imported}")
             if imported.startswith("../platform/") and imported.count("/") != 2:
                 fail(f"screen deep-imports platform code: {screen.relative_to(ROOT)} -> {imported}")
             if imported.startswith("../ui/"):

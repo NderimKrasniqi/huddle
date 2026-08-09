@@ -248,9 +248,9 @@ the existing public room/game contracts except for the intentional TV APIs and
 `createRoom` → `openRoom` replacement.
 
 **Current feature:** F-007 Full-Codebase Behavior-Preserving Refactor
-**Current phase:** 7.2 Controller decomposition
-**Current task:** 7.2.1 Split Controller composition into owned features
-**Last completed task:** 7.1.1 Establish refactor guardrails and repository truth
+**Current phase:** 7.3 TV decomposition
+**Current task:** 7.3.1 Split TV composition into owned features
+**Last completed task:** 7.2.1 Split Controller composition into owned features
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -382,9 +382,17 @@ approved Soft Minimal visuals/assets.
 
 ## Phase 7.2 — Controller decomposition
 
-- [ ] **7.2.1 — Split Controller composition into owned features**
+- [x] **7.2.1 — Split Controller composition into owned features**
   - Move join, room, picker, game-session, UI, and platform implementation into
     their declared boundaries while preserving session and screen transitions.
+  - Evidence: the root screen is 100 lines and owns only deep-link/session
+    composition; join, room/roster/host, picker, game-session, credential,
+    presence, storage, and Convex code now live behind explicit feature or
+    platform entrypoints. The pure seated-surface model covers game,
+    paused/unavailable, player waiting, picker, stranded recovery, and empty
+    registry states. Typecheck, lint, 70 files / 789 tests, pack/workflow
+    validation, both iOS Expo exports, native Controller build/run, and approved
+    Join-screen simulator comparison pass with no visual delta.
   - **Depends on:** 7.1.1
 
 ## Phase 7.3 — TV decomposition
