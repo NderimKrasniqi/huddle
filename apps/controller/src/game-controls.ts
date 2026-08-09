@@ -16,27 +16,10 @@ export function gameToStart(browsingAt: number): GameMetadata | undefined {
   return carouselWindow(browsingAt)?.focused.metadata;
 }
 
-/**
- * The meta under a browsed game's title on the Host's picker
- * (docs/design/design-handoff.md §7, "Selected-game card (mini key art + title
- * + meta)").
- *
- * It is the same three facts the §6 carousel draws as chips, read off
- * `GameMetadata` rather than written down here, so the phone and the television
- * describe one game and a new game teaches both at once by declaring its own
- * metadata. Only the *facts* are shared, though: the phrasing around them
- * (`<min>–<max> players`, `~<n> min`) is spelled out here and again in the TV's
- * chips, so rewording the summary is still two edits.
- */
-export function browsedGameMeta(metadata: GameMetadata): string {
-  const { playerRange, estimatedMinutes, category } = metadata;
-
-  return [
-    `${playerRange.min}–${playerRange.max} players`,
-    `~${estimatedMinutes} min`,
-    category,
-  ].join(' · ');
-}
+// `browsedGameMeta` was here: the same three facts joined into one line with
+// middots, because the old picker drew them as a caption under a title. The
+// approved board draws them as three chips on the card's own art, each with its
+// own icon, so the card composes them itself and there is nothing left to join.
 
 /**
  * The caption under §8's status card — the handoff's own copy, and the whole
@@ -44,8 +27,21 @@ export function browsedGameMeta(metadata: GameMetadata): string {
  * like. It says nothing about which game is up, so it is the same sentence on
  * every card and lives here rather than behind a game.
  */
-export const NOW_VIEWING_CAPTION =
-  'Your phone becomes the controller the moment the game starts';
+export const NOW_VIEWING_CAPTION = 'Your phone becomes the controller for the game on the TV.';
+
+/**
+ * The Host's way from their room to the picker (the approved board's "Choose a
+ * game →").
+ *
+ * It navigates rather than starting anything, which is why it is the one
+ * primary control in the product that carries an arrow: the room's other orange
+ * buttons all commit something, and this one only changes what the Host is
+ * looking at.
+ */
+export const CHOOSE_A_GAME = 'Choose a game';
+
+/** The way back from the picker to the room, for the Host who changed their mind. */
+export const BACK_TO_ROOM = 'Your room';
 
 /**
  * Which card a phone that is not running the room is watching
@@ -54,6 +50,22 @@ export const NOW_VIEWING_CAPTION =
  */
 export function nowViewingLine(metadata: GameMetadata): string {
   return `Now viewing ${metadata.title}`;
+}
+
+/**
+ * What a phone that is not running the room is waiting for (the approved
+ * board's "Sam is choosing…").
+ *
+ * The Host's name and nothing about the game: the card they are on is already
+ * on the chip below this line, and the television is showing it at the size the
+ * room is actually reading it at.
+ *
+ * Falls back to naming nobody while the roster is in flight, rather than to a
+ * blank or a placeholder name — the sentence is still true, and it is the same
+ * shape, so nothing on the screen moves when the name lands.
+ */
+export function hostChoosingLine(hostNickname: string | undefined): string {
+  return hostNickname === undefined ? 'Choosing a game…' : `${hostNickname} is choosing…`;
 }
 
 /** What the Host's start control says and whether it can be pressed. */
@@ -87,9 +99,13 @@ export function startControl(
 
   const short = game.playerRange.min - seats.length;
 
+  // "Select <game>", not "Start <game>": the approved board's word, and the
+  // right one now that this button lives on a picker the Host navigated to
+  // rather than at the foot of the lobby. Choosing the card and committing the
+  // room to it are the same tap either way — there is no screen between them.
   if (short > 0) {
     return {
-      label: `Start ${game.title}`,
+      label: `Select ${game.title}`,
       enabled: false,
       blockedBecause:
         short === 1
@@ -98,7 +114,7 @@ export function startControl(
     };
   }
 
-  return { label: `Start ${game.title}`, enabled: true, blockedBecause: undefined };
+  return { label: `Select ${game.title}`, enabled: true, blockedBecause: undefined };
 }
 
 /**

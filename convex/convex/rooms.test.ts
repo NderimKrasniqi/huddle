@@ -1,4 +1,5 @@
 import {
+  AVATAR_IDS,
   HEARTBEAT_INTERVAL_MS,
   ROOM_CODE_LENGTH,
   ROOM_CODE_MINT_ALPHABET,
@@ -183,9 +184,36 @@ describe('room expiry', () => {
     }
   }
 
+  /** A distinct avatar per nickname — one avatar per room is a join rule now. */
+  function avatarFor(nickname: string): string {
+    const seat = /^Player (\d+)$/u.exec(nickname)?.[1];
+
+    if (seat !== undefined) {
+      return AVATAR_IDS[(Number(seat) - 1) % AVATAR_IDS.length]!;
+    }
+
+    // A table, not a hash: two nicknames of the same length would collide, and
+    // a collision here fails a test about room expiry with a message about
+    // avatars.
+    const named: Readonly<Record<string, string>> = {
+      Ada: 'fox',
+      Grace: 'green-alien',
+      Linus: 'pink-bunny',
+      Nderim: 'blue-robot',
+    };
+
+    return named[nickname] ?? 'teal-bear';
+  }
+
   /** Seats a player, and hands back what their phone would be holding. */
-  function seatPlayer(t: Backend, code: string, nickname: string) {
-    return t.mutation(api.players.joinRoom, { code, nickname });
+  function seatPlayer(t: Backend, code: string, nickname: string, avatar?: string) {
+    return t.mutation(api.players.joinRoom, {
+      code,
+      nickname,
+      // Distinct per nickname, because within a room nicknames already are —
+      // and one avatar per room is now a rule the join enforces.
+      avatar: avatar ?? avatarFor(nickname),
+    });
   }
 
   /**
@@ -499,8 +527,8 @@ describe('endRoom', () => {
     guest: string;
   }> {
     const room = await t.mutation(api.rooms.createRoom, {});
-    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
     return { roomId: room.roomId, host: host.sessionToken, guest: guest.sessionToken };
   }

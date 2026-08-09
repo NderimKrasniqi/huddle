@@ -7,9 +7,9 @@ import {
   letterSpacing,
   opacity,
   radius,
-  shadowDepth,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -59,14 +59,12 @@ function AnswerButton({
   const face = accentFace(option.optionIndex);
 
   return (
-    <StickerSurface
-      depth={shadowDepth.phoneCard}
-      style={[styles.answer, { backgroundColor: face.fill }]}
+    <Surface
+      elevation={elevation.phoneCard}
       // Dimmed rather than hidden or greyed, which is how Boardwalk says
       // "present, but not yours to take" everywhere else — the claimed color
       // swatches on "You're in" are the same 30%.
-      wrapperStyle={[styles.answerBlock, option.state === 'closed' && styles.answerClosed]}
-    >
+      style={[[styles.answerBlock, option.state === 'closed' && styles.answerClosed], [styles.answer, { backgroundColor: face.fill }]]}>
       <Pressable
         accessibilityRole="button"
         // The one place the screen refuses a tap, and it refuses it by not
@@ -78,16 +76,16 @@ function AnswerButton({
       >
         <Text style={[styles.answerText, { color: face.label }]}>{option.text}</Text>
       </Pressable>
-    </StickerSurface>
+    </Surface>
   );
 }
 
 /** The pill that tells a player their answer is in and the waiting has started. */
 function LockedInPill() {
   return (
-    <StickerSurface depth={shadowDepth.phoneSmall} style={styles.lockedIn}>
+    <Surface elevation={elevation.phoneSmall} style={styles.lockedIn}>
       <Text style={styles.lockedInText}>LOCKED IN</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -208,7 +206,7 @@ const styles = StyleSheet.create({
   },
   question: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 22,
     textAlign: 'center',
   },
@@ -221,7 +219,7 @@ const styles = StyleSheet.create({
   answer: {
     borderColor: colors.ink,
     borderRadius: radius.button,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
   },
   // The tap target is the whole block, so the padding lives on the pressable
   // rather than on the surface around it.
@@ -233,28 +231,28 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   answerText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
     textAlign: 'center',
   },
   lockedIn: {
     alignSelf: 'center',
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   lockedInText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 14,
     letterSpacing: letterSpacing.badge,
   },
   eyesUp: {
     color: colors.ink,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.regular,
     fontSize: 18,
     textAlign: 'center',
   },

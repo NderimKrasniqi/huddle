@@ -257,6 +257,16 @@ task in `docs/implementation-plan.md`.
 
 ## The TV's remote surface
 
+**The panel these four frames measure no longer exists.** The approved Soft
+Minimal design draws no About Panel, so `apps/tv/src/tv-about.tsx` and the
+`remoteOwner` exemption in `huddle/tv-remote-surface` were both deleted. The
+television now has no remote surface at all — `21` was rejected for proposing to
+give it one, and the panel that survived that rejection is gone in its turn. The
+captures and their numbers are left as they were taken: they are
+an evidence record of a device session, not a description of the current tree,
+and rewriting a measurement after the fact would make it worth nothing. Read
+everything below in the past tense.
+
 Apple TV 4K (3rd generation), tvOS 26.5, Debug build at 3840×2160 (×3 of the
 1280×720 design stage), Metro serving the working tree, taken on 2026-08-02
 against the same cloud dev deployment. Room `JUKL`.

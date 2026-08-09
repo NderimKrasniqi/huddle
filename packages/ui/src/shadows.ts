@@ -1,74 +1,37 @@
+import { colors } from './colors';
+
 /**
- * Where Boardwalk's signature shadow sits: `N` down and `N` right of the
- * surface it falls from, hard-edged and never blurred — ink by default, but
- * sometimes an accent (pink on the "JUST JOINED!" card, cobalt on the focused
- * carousel card).
+ * Soft Minimal's shadows: soft, blurred, and cast straight down.
  *
- * This used to return a React Native `boxShadow` value. It was replaced while
- * chasing the pale hairline that shows where a card's ink border meets its ink
- * shadow, on the theory that an outset `box-shadow` gets clipped to the
- * surface's rounded rect and that the clip edge and the border's own edge, both
- * antialiased on the same curve, sum to less than opaque. **That theory was
- * wrong**: drawing the shadow as an opaque sibling rect instead left the seam
- * byte-identical. The real cause is on the surface itself and is fixed in
- * `StickerSurface` (`@huddle/ui/native`), which documents it.
+ * Boardwalk's were the opposite — hard-edged, never blurred, displaced equally
+ * down *and right* so a card read as a sticker lifted off the page. That is the
+ * single loudest thing the old system did, and the handoff's "subtle shadows"
+ * is a direct answer to it. Nothing here is offset sideways, nothing has a hard
+ * edge, and the strongest shadow in the system is fainter than the weakest one
+ * Boardwalk drew.
  *
- * The rect form is kept anyway, because it is what `StickerSurface` needs to
- * paint the shadow as a plain sibling view — and describing the shadow as data
- * rather than as a style value keeps this module runnable under Node, with the
- * component that consumes it the only part that needs React.
+ * Values are `boxShadow` strings rather than the rectangle data Boardwalk
+ * needed. That machinery existed because the old shadow was painted as a
+ * sibling `View` — a workaround inherited from a wrong theory about a seam,
+ * kept only because it was equivalent. With a real blurred shadow there is
+ * nothing to paint by hand, so it goes, and this module stays plain data that
+ * runs under Node.
  */
-
-/**
- * The shadow rectangle's insets, ready to spread into an absolutely positioned
- * style. Negative `right`/`bottom` are what make it the same size as the
- * surface rather than a smaller rect inside it.
- */
-export type ShadowRect = {
-  readonly top: number;
-  readonly left: number;
-  readonly right: number;
-  readonly bottom: number;
-};
-
-/**
- * A shadow rect displaced `distance` down and right, identical in size to the
- * surface it falls from.
- *
- * Callers pass a `shadowDepth` preset. A distance of 0 is legal and puts the
- * shadow exactly behind the surface, which hides it — that is how a pressed
- * button with no travel left would read, rather than an error.
- */
-export function stickerShadowRect(distance: number): ShadowRect {
-  if (!Number.isFinite(distance) || distance < 0) {
-    throw new RangeError(`shadow distance must be a non-negative number, got ${distance}`);
-  }
-
-  // Negating 0 gives -0, which is harmless in a style but leaks a value that
-  // compares unequal to 0 under `Object.is`, so flatten it here rather than
-  // making every consumer wonder.
-  const far = distance === 0 ? 0 : -distance;
-
-  return { top: distance, left: distance, right: far, bottom: far };
-}
-
-/**
- * Every shadow distance the handoff gives a number for, named by the surface
- * it belongs to. Where the handoff asks for a shadow without naming a distance
- * (the room-code chip, the color swatches, the game picker's round buttons),
- * use the preset for that surface.
- */
-export const shadowDepth = {
-  /** 3px — small phone elements: inputs, roster rows, chips. */
-  phoneSmall: 3,
-  /** 4px — phone cards and primary buttons. */
-  phoneCard: 4,
-  /** 5px — the phone's hero avatar circle on "You're in". */
-  phoneHero: 5,
-  /** 6px — TV cards: code tiles, player cards, the QR card. */
-  tvCard: 6,
-  /** 8px — a highlighted TV card, in its accent color (the "JUST JOINED!" card). */
-  tvCardHighlight: 8,
-  /** 10px — the TV hero card (the focused carousel card). */
-  tvHero: 10,
+export const elevation = {
+  /** Resting surfaces: inputs, roster rows, chips, code tiles. */
+  phoneSmall: `0px 1px 2px ${colors.shadowSoft}`,
+  /** Phone cards and primary buttons. */
+  phoneCard: `0px 2px 6px ${colors.shadowSoft}`,
+  /** The phone's hero avatar. */
+  phoneHero: `0px 4px 12px ${colors.shadowMedium}`,
+  /** TV cards, which are read from across a room and carry a little more. */
+  tvCard: `0px 3px 10px ${colors.shadowSoft}`,
+  /** A TV card being called out. */
+  tvCardHighlight: `0px 6px 18px ${colors.shadowMedium}`,
+  /** The focused carousel card — the one thing on a TV screen that lifts. */
+  tvHero: `0px 10px 30px ${colors.shadowStrong}`,
+  /** A sheet over a scrim. */
+  sheet: `0px 12px 32px ${colors.shadowStrong}`,
 } as const;
+
+export type ElevationToken = keyof typeof elevation;

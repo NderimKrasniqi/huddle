@@ -3,10 +3,12 @@ import { GAME_REGISTRY } from '@huddle/game-registry';
 import { describe, expect, it } from 'vitest';
 
 import {
+  BACK_TO_ROOM,
   backToLobbyLabel,
-  browsedGameMeta,
+  CHOOSE_A_GAME,
   END_ROOM,
   gameToStart,
+  hostChoosingLine,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
   startControl,
@@ -21,6 +23,7 @@ function party(size: number): RosterSeatForGame[] {
     nickname: `Player ${index}`,
     away: false,
     host: index === 0,
+    avatar: 'fox' as const,
   }));
 }
 
@@ -36,7 +39,7 @@ describe('the Host’s start control', () => {
   it('offers the installed game by name', () => {
     const control = startControl(party(2), 0);
 
-    expect(control.label).toBe(`Start ${GAME_REGISTRY[0]?.metadata.title}`);
+    expect(control.label).toBe(`Select ${GAME_REGISTRY[0]?.metadata.title}`);
     expect(control.enabled).toBe(true);
     expect(control.blockedBecause).toBeUndefined();
   });
@@ -64,38 +67,18 @@ describe('the Host’s start control', () => {
   it('still names the game it is waiting to start', () => {
     // The label does not become "Waiting…": the Host should see what the button
     // will do once the room fills, not lose it while the room is short.
-    expect(startControl(party(1), 0).label).toBe(`Start ${GAME_REGISTRY[0]?.metadata.title}`);
+    expect(startControl(party(1), 0).label).toBe(`Select ${GAME_REGISTRY[0]?.metadata.title}`);
   });
 
   it('counts an away player, since the room still seats them', () => {
     const withOneAway: RosterSeatForGame[] = [
-      { playerId: 'p0', nickname: 'Ada', away: false, host: true },
-      { playerId: 'p1', nickname: 'Grace', away: true, host: false },
+      { playerId: 'p0', nickname: 'Ada', away: false, host: true, avatar: 'fox'  },
+      { playerId: 'p1', nickname: 'Grace', away: true, host: false, avatar: 'fox'  },
     ];
 
     // The same count `startGame` uses — excluding away players is Phase 4's
     // "Away players in-game", and the two must not disagree before then.
     expect(startControl(withOneAway, 0).enabled).toBe(true);
-  });
-});
-
-describe('the meta beside a browsed game’s title', () => {
-  it('is the three facts the TV draws as chips, in the TV’s own wording', () => {
-    // The handoff gives the §6 chips and the §7 card the same three facts, so
-    // the phone and the television describe one game the same way. Read off
-    // `GameMetadata` rather than written down here, for the reason the start
-    // control is: naming a game on a phone is what the interface exists to
-    // avoid.
-    expect(browsedGameMeta(installed)).toBe(
-      `${installed.playerRange.min}–${installed.playerRange.max} players · ` +
-        `~${installed.estimatedMinutes} min · ${installed.category}`,
-    );
-  });
-
-  it('separates the three with the same middle dot every time', () => {
-    // One separator, so a game with a longer category never reads as a
-    // different list from the one above it.
-    expect(browsedGameMeta(installed).split(' · ')).toHaveLength(3);
   });
 });
 
@@ -108,7 +91,7 @@ describe('what a player who is not running the room is told', () => {
     // The handoff's own caption, word for word: it is the whole answer to
     // "there is nothing to press here", which is what this screen looks like.
     expect(NOW_VIEWING_CAPTION).toBe(
-      'Your phone becomes the controller the moment the game starts',
+      'Your phone becomes the controller for the game on the TV.',
     );
   });
 });
@@ -142,5 +125,32 @@ describe('the Host’s way out of the room', () => {
     // and ends the game, the other ends the room. Labels that read alike would
     // be the more destructive of the two being tapped by mistake.
     expect(END_ROOM.label).not.toBe(backToLobbyLabel(false));
+  });
+});
+
+describe('what the Host is waiting on, told to everybody else', () => {
+  it('names the Host, because the screen is about them', () => {
+    expect(hostChoosingLine('Sam')).toBe('Sam is choosing…');
+  });
+
+  it('says something true while there is no name to say', () => {
+    // The roster has not landed. Naming a host this phone has not been told
+    // about is the one thing this line must not do, and a blank where a name
+    // goes would move the rest of the screen when it arrived.
+    expect(hostChoosingLine(undefined)).toBe('Choosing a game…');
+  });
+});
+
+describe('the Host’s two ways between their room and the picker', () => {
+  it('offers the picker without committing anything', () => {
+    // The arrow on this one is drawn by the button, not written here: every
+    // other primary in the product commits something and carries no arrow.
+    expect(CHOOSE_A_GAME).toBe('Choose a game');
+  });
+
+  it('names where the way back goes, rather than calling itself a cancel', () => {
+    // Browsing is already shared with the room and the television, so backing
+    // out of the picker discards nothing there is a word for.
+    expect(BACK_TO_ROOM).toBe('Your room');
   });
 });

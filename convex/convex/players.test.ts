@@ -1,10 +1,9 @@
 import {
+  AVATAR_IDS,
   AWAY_AFTER_MS,
-  type ColorRejection,
   HEARTBEAT_INTERVAL_MS,
   type HostControlRejection,
   type JoinRejection,
-  PLAYER_COLOR_NAMES,
 } from '@huddle/game-core';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
@@ -25,8 +24,52 @@ async function openRoom(t: Backend) {
   return await t.mutation(api.rooms.createRoom, {});
 }
 
-function join(t: Backend, code: string, nickname: string): Promise<unknown> {
-  return t.mutation(api.players.joinRoom, { code, nickname });
+/**
+ * A join, with an avatar picked for it.
+ *
+ * Avatars are claimed on the join form now, so every join carries one and one
+ * player per room may hold it — the rule the colour picker used to enforce on
+ * its own mutation. Tests that do not care which avatar get a distinct one per
+ * nickname, because within a room nicknames are already unique.
+ *
+ * The pool is exactly as deep as the room is wide: ten avatars, ten seats. That
+ * is not a comfortable margin, it is none at all — see `avatarFor`.
+ */
+function join(t: Backend, code: string, nickname: string, avatar?: string): Promise<unknown> {
+  return t.mutation(api.players.joinRoom, { code, nickname, avatar: avatar ?? avatarFor(nickname) });
+}
+
+/**
+ * A stable avatar for a nickname.
+ *
+ * Distinct nicknames need distinct avatars, because one avatar per room is now
+ * a rule the join enforces — so this is a table and not a hash. A hash over ten
+ * slots collides at four names, and a collision here would fail a test about
+ * host succession with a message about avatars.
+ *
+ * `Player N` is indexed off N, which is what the cap tests use. Those overfill
+ * a room on purpose, and past the tenth the pool wraps — there being exactly as
+ * many avatars as seats, the eleventh join is both "room full" and "avatar
+ * taken" and is told whichever its transaction reached first.
+ */
+const AVATARS_BY_NICKNAME: Readonly<Record<string, string>> = {
+  Ada: 'fox',
+  Grace: 'green-alien',
+  'Grace II': 'pink-bunny',
+  Nderim: 'blue-robot',
+  Zoe: 'purple-owl',
+  Sam: 'yellow-robot',
+  Linus: 'red-robot',
+};
+
+function avatarFor(nickname: string): string {
+  const seat = /^Player (\d+)$/u.exec(nickname)?.[1];
+
+  if (seat !== undefined) {
+    return AVATAR_IDS[(Number(seat) - 1) % AVATAR_IDS.length]!;
+  }
+
+  return AVATARS_BY_NICKNAME[nickname] ?? 'teal-bear';
 }
 
 /**
@@ -72,6 +115,7 @@ describe('joinRoom', () => {
     const joined = await t.mutation(api.players.joinRoom, {
       code: room.code,
       nickname: 'Nderim',
+      avatar: 'fox',
     });
 
     expect(joined.roomId).toBe(room.roomId);
@@ -313,8 +357,8 @@ describe('session', () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
 
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
     expect(ada.sessionToken).toMatch(/^[a-z0-9]{24}$/);
     expect(grace.sessionToken).not.toBe(ada.sessionToken);
@@ -323,7 +367,7 @@ describe('session', () => {
   it('puts a returning phone back on the same player row, under the same nickname', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     // The app was force-quit here: everything the Controller held is gone but
     // the token it wrote to the phone.
@@ -334,13 +378,14 @@ describe('session', () => {
       roomId: room.roomId,
       code: room.code,
       nickname: 'Ada',
+      avatar: 'fox',
     });
   });
 
   it('leaves the roster exactly as it was — a rejoin is not a second player', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     // Ada's phone dies and comes back, the party carries on around her, and it
     // dies again: the same seat both times, and a roster that grew only by the
@@ -369,7 +414,7 @@ describe('session', () => {
   it('is over once the room is gone, even if the player row outlives it', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     // Room expiry (Phase 2) deletes both, but the order is its business: a
     // session that named a room the client cannot find is a seat in nothing.
@@ -383,7 +428,7 @@ describe('session', () => {
   it('keeps the Session Token off the roster the whole room can see', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     // The token is on the row — and the TV, which draws its seats on a screen
     // everybody in the room is looking at, is not told it.
@@ -411,238 +456,116 @@ describe('roster', () => {
     const joined = await t.mutation(api.players.joinRoom, {
       code: room.code,
       nickname: 'Ada',
+      avatar: 'fox',
     });
 
     // The TV is a renderer: it gets what it draws. Player rows grow private
     // fields in Phase 2 (the Session Token), and this projection is what keeps
     // them off a screen the whole room is looking at.
     expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([
-      { playerId: joined.playerId, nickname: 'Ada', away: false, host: true },
+      { playerId: joined.playerId, nickname: 'Ada', away: false, host: true, avatar: 'fox' },
     ]);
   });
 });
 
 /**
- * Color Claim: a player's server-validated pick of one of the ten swatches.
+ * The avatar claim: a player's server-validated pick of one of the ten avatars,
+ * made on the join form rather than after being seated.
  *
  * The rule is the nickname rule in another dress — unique within a room, first
  * to ask wins — and it is enforced server-side for the same reason: the picker
  * dims what is taken as a courtesy to whoever is looking at it, not as a
  * promise about what arrives.
  */
-describe('claimColor', () => {
-  /** Ada's phone, tapping a swatch. */
-  function claim(t: Backend, sessionToken: string, color: string): Promise<unknown> {
-    return t.mutation(api.players.claimColor, { sessionToken, color });
-  }
-
-  /** Why a claim was refused, or `undefined` if it was not. */
-  async function refusalOf(attempt: Promise<unknown>): Promise<ColorRejection | undefined> {
-    try {
-      await attempt;
-      return undefined;
-    } catch (error) {
-      expect(error).toBeInstanceOf(ConvexError);
-      return (error as ConvexError<ColorRejection>).data;
-    }
-  }
-
-  /** The color the room is drawing this player in. */
-  async function colorOf(
-    t: Backend,
-    roomId: Id<'rooms'>,
-    nickname: string,
-  ): Promise<string | undefined> {
+describe('the avatar a join claims', () => {
+  /** The avatar the room is drawing this player in. */
+  async function avatarOf(t: Backend, roomId: Id<'rooms'>, nickname: string) {
     const roster = await t.query(api.players.roster, { roomId });
-    return roster.find((seat) => seat.nickname === nickname)?.color;
+
+    return roster.find((seat) => seat.nickname === nickname)?.avatar;
   }
 
-  it('records the color a player taps', async () => {
+  it('records the avatar a player picked on the form', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
 
-    await claim(t, ada.sessionToken, 'lagoon');
+    await join(t, room.code, 'Ada', 'teal-bear');
 
-    expect(await colorOf(t, room.roomId, 'Ada')).toBe('lagoon');
+    expect(await avatarOf(t, room.roomId, 'Ada')).toBe('teal-bear');
   });
 
-  it('seats a player with no color at all until they pick one', async () => {
+  it('seats every player with one, because there is no unclaimed state', async () => {
+    // The colour this replaced was claimed after joining, so a seat had to be
+    // drawable before the choice existed. An avatar arrives with the join.
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
+
     await join(t, room.code, 'Ada');
 
-    // The picker is the screen they land on, so every seat has to be drawable
-    // before anybody has claimed anything.
-    expect(await colorOf(t, room.roomId, 'Ada')).toBeUndefined();
+    expect(await avatarOf(t, room.roomId, 'Ada')).toBeDefined();
   });
 
-  it('stores every color game-core says a player may claim', async () => {
+  it('stores every avatar game-core says a player may claim', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
 
-    // The schema writes the ten names out; this is what holds that list to
-    // game-core's, which is the one the picker and the server both read.
-    for (const [index, color] of PLAYER_COLOR_NAMES.entries()) {
-      const player = await t.mutation(api.players.joinRoom, {
-        code: room.code,
-        nickname: `Player ${index + 1}`,
-      });
-      expect(await refusalOf(claim(t, player.sessionToken, color))).toBeUndefined();
+    for (const [at, avatar] of AVATAR_IDS.entries()) {
+      expect(await rejectionOf(join(t, room.code, `Player ${at + 1}`, avatar))).toBeUndefined();
     }
 
     const roster = await t.query(api.players.roster, { roomId: room.roomId });
-    expect(roster.map((seat) => seat.color)).toEqual([...PLAYER_COLOR_NAMES]);
+    expect(roster.map((seat) => seat.avatar)).toEqual([...AVATAR_IDS]);
   });
 
-  it('refuses a color another player in the room is holding', async () => {
+  it('refuses an avatar another player in the room is holding', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    await join(t, room.code, 'Ada', 'puppy');
 
-    await claim(t, ada.sessionToken, 'punch');
-
-    expect(await refusalOf(claim(t, grace.sessionToken, 'punch'))).toEqual({
-      kind: 'colorTaken',
-      color: 'punch',
+    expect(await rejectionOf(join(t, room.code, 'Grace', 'puppy'))).toEqual({
+      kind: 'avatarTaken',
+      avatar: 'puppy',
     });
-    expect(await colorOf(t, room.roomId, 'Ada')).toBe('punch');
-    expect(await colorOf(t, room.roomId, 'Grace')).toBeUndefined();
+    expect(await avatarOf(t, room.roomId, 'Grace')).toBeUndefined();
   });
 
-  it('lets the same color be held in two different rooms', async () => {
+  it('lets the same avatar be held in two different rooms', async () => {
     const t = convexTest(schema, modules);
     const first = await openRoom(t);
     const second = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: first.code, nickname: 'Ada' });
-    const grace = await t.mutation(api.players.joinRoom, { code: second.code, nickname: 'Grace' });
+    await join(t, first.code, 'Ada', 'mint-cat');
 
-    await claim(t, ada.sessionToken, 'sky');
-
-    // Colors are unique within a room, like nicknames — two parties in one
+    // Avatars are unique within a room, like nicknames — two parties in one
     // house do not have to negotiate.
-    expect(await refusalOf(claim(t, grace.sessionToken, 'sky'))).toBeUndefined();
+    expect(await rejectionOf(join(t, second.code, 'Grace', 'mint-cat'))).toBeUndefined();
   });
 
-  it('moves a player who taps a second swatch, and frees the first', async () => {
+  it('refuses an avatar this build does not offer', async () => {
+    // `joinRoom` is public and unauthenticated by design, so the picker's grid
+    // is what the player sees, not a promise about what arrives.
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
-    await claim(t, ada.sessionToken, 'yellow');
 
-    await claim(t, ada.sessionToken, 'grape');
-
-    // She holds one color, not two, and the one she left is somebody else's to
-    // take.
-    expect(await colorOf(t, room.roomId, 'Ada')).toBe('grape');
-    expect(await refusalOf(claim(t, grace.sessionToken, 'yellow'))).toBeUndefined();
-  });
-
-  it('lets a player re-tap the color they already hold', async () => {
-    const t = convexTest(schema, modules);
-    const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    await claim(t, ada.sessionToken, 'lime');
-
-    // Their own color is not "taken" to them: a double tap confirms what the
-    // screen already shows rather than refusing it.
-    expect(await refusalOf(claim(t, ada.sessionToken, 'lime'))).toBeUndefined();
-    expect(await colorOf(t, room.roomId, 'Ada')).toBe('lime');
-  });
-
-  it('refuses a color that is not one of the ten', async () => {
-    const t = convexTest(schema, modules);
-    const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-
-    // No picker sends this. `claimColor` is public and Huddle has no auth by
-    // design, so the server does not get to assume one asked.
-    expect(await refusalOf(claim(t, ada.sessionToken, 'chartreuse'))).toEqual({
-      kind: 'colorUnknown',
-      color: 'chartreuse',
-    });
-    expect(await colorOf(t, room.roomId, 'Ada')).toBeUndefined();
-  });
-
-  it('refuses a claim from a token no seat answers to', async () => {
-    const t = convexTest(schema, modules);
-    await openRoom(t);
-
-    // Refused rather than ignored, unlike a heartbeat: a phone whose seat has
-    // gone would otherwise be left showing a swatch it does not hold.
-    expect(await refusalOf(claim(t, 'nobodysessiontoken000000', 'green'))).toEqual({
-      kind: 'notInRoom',
+    expect(await rejectionOf(join(t, room.code, 'Ada', 'cobalt'))).toEqual({
+      kind: 'avatarUnknown',
+      avatar: 'cobalt',
     });
   });
 
-  it('gives one of five players who claim the same color at once that color', async () => {
+  it('seats one of five players who all claim the same avatar at once', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const players = [];
-    for (const name of ['Ada', 'Grace', 'Linus', 'Ken', 'Barbara']) {
-      players.push(await t.mutation(api.players.joinRoom, { code: room.code, nickname: name }));
-    }
 
-    // Every claim is in flight before any of them commits, so each has to
-    // decide from the database as it stands when it runs — see the note above
-    // `joinRoom under simultaneous joins` for what this does and does not
-    // exercise.
-    const outcomes = await Promise.all(
-      players.map((player) => refusalOf(claim(t, player.sessionToken, 'cobalt'))),
+    const attempts = Array.from({ length: 5 }, (_unused, index) =>
+      join(t, room.code, `Player ${index + 1}`, 'red-robot'),
     );
+    const outcomes = await Promise.all(attempts.map(rejectionOf));
 
     expect(outcomes.filter((outcome) => outcome === undefined)).toHaveLength(1);
-    expect(outcomes.filter((outcome) => outcome?.kind === 'colorTaken')).toHaveLength(4);
-
-    const roster = await t.query(api.players.roster, { roomId: room.roomId });
-    expect(roster.filter((seat) => seat.color === 'cobalt')).toHaveLength(1);
-  });
-
-  it('leaves a room free of duplicate colors when every swatch is contested', async () => {
-    const t = convexTest(schema, modules);
-    const room = await openRoom(t);
-    const players = [];
-    for (let seat = 1; seat <= 10; seat += 1) {
-      players.push(
-        await t.mutation(api.players.joinRoom, { code: room.code, nickname: `Player ${seat}` }),
-      );
-    }
-
-    // Ten players and ten colors, each player working down the list from a
-    // different place: every color is claimed by several phones at once, and
-    // the room must still end with no two players sharing one.
-    await Promise.all(
-      players.flatMap((player, at) =>
-        PLAYER_COLOR_NAMES.map((_unused, step) => {
-          const color = PLAYER_COLOR_NAMES[(at + step) % PLAYER_COLOR_NAMES.length];
-          if (color === undefined) {
-            throw new Error('the palette is shorter than it says it is');
-          }
-          return refusalOf(claim(t, player.sessionToken, color));
-        }),
-      ),
-    );
-
-    const claimed = (await t.query(api.players.roster, { roomId: room.roomId }))
-      .map((seat) => seat.color)
-      .filter((color) => color !== undefined);
-    expect(new Set(claimed).size).toBe(claimed.length);
+    expect(outcomes.filter((outcome) => outcome?.kind === 'avatarTaken')).toHaveLength(4);
   });
 });
 
-/**
- * Presence: the phone that is still in somebody's hand, and the one that went
- * into a pocket. The room hears a heartbeat every few seconds from every phone
- * that is awake, and a scheduled check turns a player Away when it stops.
- *
- * The clock is the subject here, so these run on fake timers: the promise is
- * about seconds, and a suite that waited for them would take minutes to say so.
- * The seconds asserted below are the scope's own — backgrounded ≥10s, away
- * within a further 5 — rather than the constants the implementation uses, which
- * `packages/game-core/src/presence.test.ts` pins to those same sentences.
- */
 describe('presence', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -666,7 +589,7 @@ describe('presence', () => {
   /** A room with Ada in it, holding the token her phone would beat with. */
   async function roomWithAda(t: Backend) {
     const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     return { ...room, playerId: ada.playerId, sessionToken: ada.sessionToken };
   }
 
@@ -817,7 +740,7 @@ describe('presence', () => {
   it('stops watching a player whose row has gone', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     // Room expiry deletes players out from under a pending check. The check
     // still runs, and has to find nothing rather than throw.
@@ -947,8 +870,14 @@ describe('host transfer', () => {
   }
 
   /** Seats a player, and hands back what their phone would be holding. */
-  function seatPlayer(t: Backend, code: string, nickname: string) {
-    return t.mutation(api.players.joinRoom, { code, nickname });
+  function seatPlayer(t: Backend, code: string, nickname: string, avatar?: string) {
+    return t.mutation(api.players.joinRoom, {
+      code,
+      nickname,
+      // Distinct per nickname, because within a room nicknames already are —
+      // and one avatar per room is now a rule the join enforces.
+      avatar: avatar ?? avatarFor(nickname),
+    });
   }
 
   it('hands the room to the longest-connected active player', async () => {
@@ -1149,8 +1078,8 @@ describe('host controls', () => {
     it('hands the room to the named player', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
       expect(await hostName(t, room.roomId)).toBe('Ada');
 
@@ -1167,8 +1096,8 @@ describe('host controls', () => {
     it('refuses a phone that is not the Host', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
       // A phone that does not run the room cannot hand it to anybody, itself
       // included — the whole of "manage the room" is the Host's.
@@ -1186,7 +1115,7 @@ describe('host controls', () => {
     it('refuses a token no seat answers to', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
       expect(
         await refusalOf(
@@ -1201,11 +1130,12 @@ describe('host controls', () => {
     it('refuses a target in another room', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
       const elsewhere = await openRoom(t);
       const outsider = await t.mutation(api.players.joinRoom, {
         code: elsewhere.code,
         nickname: 'Zoe',
+        avatar: 'fox',
       });
 
       // The id is real and names a real seat — just not one of this room's — so
@@ -1224,7 +1154,7 @@ describe('host controls', () => {
     it('refuses the Host handing the room to themselves', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
       expect(
         await refusalOf(
@@ -1240,8 +1170,8 @@ describe('host controls', () => {
     it('refuses handing the room to a phone it has stopped hearing from', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
       // Grace's phone last spoke long enough ago that the room counts her gone —
       // the same `lastSeenAt` reading the automatic handover uses to pick a
@@ -1266,8 +1196,8 @@ describe('host controls', () => {
     it('deletes the seat and invalidates its token', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
       await t.mutation(api.players.removePlayer, {
         sessionToken: ada.sessionToken,
@@ -1285,8 +1215,8 @@ describe('host controls', () => {
     it('lets a removed person rejoin as a fresh seat', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
       await t.mutation(api.players.removePlayer, {
         sessionToken: ada.sessionToken,
@@ -1299,6 +1229,8 @@ describe('host controls', () => {
       const rejoined = await t.mutation(api.players.joinRoom, {
         code: room.code,
         nickname: 'Grace',
+        // The avatar she was removed with, free again along with her name.
+        avatar: 'green-alien',
       });
 
       expect(rejoined.sessionToken).not.toBe(grace.sessionToken);
@@ -1313,8 +1245,8 @@ describe('host controls', () => {
     it('refuses a phone that is not the Host', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
       // A player cannot remove the Host, or anybody else: removal is a host
       // power, not a vote.
@@ -1332,7 +1264,7 @@ describe('host controls', () => {
     it('refuses a token no seat answers to', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
       expect(
         await refusalOf(
@@ -1347,11 +1279,12 @@ describe('host controls', () => {
     it('refuses a target in another room', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
       const elsewhere = await openRoom(t);
       const outsider = await t.mutation(api.players.joinRoom, {
         code: elsewhere.code,
         nickname: 'Zoe',
+        avatar: 'fox',
       });
 
       expect(
@@ -1369,7 +1302,7 @@ describe('host controls', () => {
     it('refuses the Host removing themselves', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
       // A host leaves by ending the room, not by removing their own seat — which
       // would drop the room's host and leave nobody named to run it.
@@ -1387,8 +1320,8 @@ describe('host controls', () => {
     it('removes a player mid-game, and the room stays in its game', async () => {
       const t = convexTest(schema, modules);
       const room = await openRoom(t);
-      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+      const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+      const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
       await t.mutation(api.games.startGame, { sessionToken: ada.sessionToken, gameId: 'trivia' });
 
       // A phone that went quiet mid-game and will not be back. Removing it is

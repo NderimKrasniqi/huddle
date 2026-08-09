@@ -20,19 +20,18 @@ const boardwalk = {
 
 // A second plugin rather than a third Boardwalk rule. Boardwalk is the design
 // system — what a screen is drawn with — and `huddle` is the product: Eyes up is
-// a line in docs/project-scope.md, not in the handoff, and a television with a
-// focusable button on it would be in perfect Boardwalk style.
+// this repo's name for a line in docs/project-scope.md, not anything in the
+// handoff, and a television with a focusable button on it would be in perfect
+// Boardwalk style.
 const huddle = { rules: { 'tv-remote-surface': tvRemoteSurface } };
 
-// The one file allowed to hold the remote's key listener — see the rule.
-// Repo-relative, like every other path here.
-const THE_REMOTE_OWNER = 'apps/tv/src/tv-about.tsx';
-
-// Boardwalk's floors, as `packages/ui` holds them (`minBodyFontSize`). Written
+// Soft Minimal's floors, as `packages/ui` holds them (`minBodyFontSize`) — the
+// smallest sizes on the handoff's own scale, phone caption 12 and TV caption
+// 16. Written
 // out here because nothing in this repo compiles a config, so a CommonJS file
 // cannot import the TypeScript token — `eslint-rules/boardwalk-body-text-floor.test.ts`
 // reads this config and the token and fails if the two ever disagree.
-const MIN_BODY_FONT_SIZE = { tv: 18, phone: 14 };
+const MIN_BODY_FONT_SIZE = { tv: 16, phone: 12 };
 
 module.exports = defineConfig([
   globalIgnores([
@@ -43,6 +42,12 @@ module.exports = defineConfig([
     '**/.expo/**',
     '**/expo-env.d.ts',
     'convex/convex/_generated/**',
+    // The incoming Soft Minimal handoff, vendored verbatim so the swap has
+    // something to be checked against. It is a specification, not source: it
+    // carries its own palette and its own token names, so every Boardwalk rule
+    // fires on it by design. Lint it and the only way to pass is to edit the
+    // handoff, which would make it useless as a reference.
+    'docs/design/soft-minimal/**',
     // Linked git worktrees the agent harness checks out under here for
     // background tasks: a whole second copy of the repo (with its own generated
     // files), gitignored and transient. `eslint .` walks the filesystem, not
@@ -70,9 +75,9 @@ module.exports = defineConfig([
   // Boardwalk's other rule, and the half of it that is config: body text is
   // floored at the smallest size the surface it is read from allows, and this
   // is where the repo says which surface a file stands on. Two blocks and not
-  // one, because 14 and 18 are two floors rather than a lax one and a strict
-  // one — a repo-wide 18 would be the television's answer written over the
-  // phone's, and a repo-wide 14 would un-ban on the TV everything the TV block
+  // one, because 12 and 16 are two floors rather than a lax one and a strict
+  // one — a repo-wide 16 would be the television's answer written over the
+  // phone's, and a repo-wide 12 would un-ban on the TV everything the TV block
   // exists to catch. The rule is handed the whole `MIN_BODY_FONT_SIZE` table
   // either way, so each surface can read the *other's* floor as a number when
   // it is written where it does not belong.
@@ -97,11 +102,16 @@ module.exports = defineConfig([
   // globs, because "the TV surface" is one answer and having it written twice
   // differently is how one of them ends up wrong. The Controller is pointedly
   // not among them: its screens are made of controls.
+  //
+  // The rule takes no options. It used to be handed the one file allowed to
+  // hold the remote's key listener, which was the About Panel; the approved
+  // design does not draw an About Panel, so that file is gone and with it the
+  // only exemption the TV surface had.
   {
     files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
     plugins: { huddle },
     rules: {
-      'huddle/tv-remote-surface': ['error', { remoteOwner: THE_REMOTE_OWNER }],
+      'huddle/tv-remote-surface': 'error',
     },
   },
 

@@ -7,9 +7,9 @@ import {
   letterSpacing,
   opacity,
   radius,
-  shadowDepth,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { VotingEvent, VotingState } from './logic';
@@ -49,13 +49,11 @@ function OptionButton({
   const face = accentFace(option.optionIndex);
 
   return (
-    <StickerSurface
-      depth={shadowDepth.phoneCard}
-      style={[styles.option, { backgroundColor: face.fill }]}
+    <Surface
+      elevation={elevation.phoneCard}
       // Dimmed once the ballot is in, which is how Boardwalk says "present, but
       // not yours to take" everywhere else.
-      wrapperStyle={[styles.optionBlock, option.state === 'closed' && styles.optionClosed]}
-    >
+      style={[[styles.optionBlock, option.state === 'closed' && styles.optionClosed], [styles.option, { backgroundColor: face.fill }]]}>
       <Pressable
         accessibilityRole="button"
         // Refused by not being pressable rather than by swallowing the tap: a
@@ -66,16 +64,16 @@ function OptionButton({
       >
         <Text style={[styles.optionText, { color: face.label }]}>{option.text}</Text>
       </Pressable>
-    </StickerSurface>
+    </Surface>
   );
 }
 
 /** The pill that tells a player their ballot is in and the waiting has started. */
 function VoteInPill() {
   return (
-    <StickerSurface depth={shadowDepth.phoneSmall} style={styles.voteIn}>
+    <Surface elevation={elevation.phoneSmall} style={styles.voteIn}>
       <Text style={styles.voteInText}>VOTE IN</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -130,7 +128,7 @@ const styles = StyleSheet.create({
   },
   prompt: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 22,
     textAlign: 'center',
   },
@@ -143,7 +141,7 @@ const styles = StyleSheet.create({
   option: {
     borderColor: colors.ink,
     borderRadius: radius.button,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
   },
   optionPress: {
     alignItems: 'center',
@@ -153,28 +151,28 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   optionText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
     textAlign: 'center',
   },
   voteIn: {
     alignSelf: 'center',
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   voteInText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 14,
     letterSpacing: letterSpacing.badge,
   },
   eyesUp: {
     color: colors.ink,
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.regular,
     fontSize: 18,
     textAlign: 'center',
   },

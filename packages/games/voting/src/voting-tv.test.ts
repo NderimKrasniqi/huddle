@@ -12,7 +12,7 @@ import { watchedVoteScreen } from './voting-tv';
  */
 
 function player(id: string, away = false): GamePlayer {
-  return { playerId: id, nickname: id.toUpperCase(), away };
+  return { playerId: id, nickname: id.toUpperCase(), away, avatar: 'fox' };
 }
 
 function started(playerIds: string[]): VotingState {

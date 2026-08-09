@@ -1,61 +1,203 @@
 import { ROOM_PLAYER_CAP } from '@huddle/game-core';
 import { describe, expect, it } from 'vitest';
 
-import { footerSeatCount, footerSeatsWidth, rosterFooterText, seat } from './roster';
+import {
+  roomCountLine,
+  roomGridHeight,
+  roomGridWidth,
+  roomLayout,
+  roomScreenHeight,
+  roomSeats,
+  type RosterSeat,
+  seat,
+  SEAT_HEIGHT,
+  seatSlot,
+  seatSpokenAs,
+  SEATS_PER_ROW,
+} from './roster';
 
 /**
- * `tvDesignSize.width` from @huddle/ui, written out: that package's entry point
- * also exports the Boardwalk font assets, which a Node test runner cannot load.
+ * `tvDesignSize` from @huddle/ui, written out: that package's entry point also
+ * exports the font assets, which a Node test runner cannot load.
  */
-const STAGE_WIDTH = 1280;
+const STAGE = { width: 1280, height: 720 } as const;
 
-/** The screen gutter the pairing screen pads its header and footer with (handoff §1). */
-const SCREEN_GUTTER = 56;
+/** The handoff's TV safe margin, which nothing on the grid may cross. */
+const SAFE_MARGIN = 64;
 
-/** The gap between the seats and the count beside them, as the footer lays them out. */
-const FOOTER_GAP = 24;
+/** A seated player, as `players.roster` serves one. */
+const seatOf = (
+  nickname: string,
+  extra: Partial<RosterSeat> = {},
+): RosterSeat => ({
+  playerId: `player-${nickname}` as RosterSeat['playerId'],
+  nickname,
+  away: false,
+  host: false,
+  avatar: 'fox',
+  ...extra,
+});
 
-describe('footerSeatCount', () => {
-  it('draws the handoff\'s four dashed seats while the room is nearly empty', () => {
-    expect([0, 1, 2, 3, 4].map(footerSeatCount)).toEqual([4, 4, 4, 4, 4]);
+const ada = seatOf('Ada', { host: true });
+const grace = seatOf('Grace');
+const alan = seatOf('Alan', { away: true });
+
+describe('roomSeats', () => {
+  it('draws a place for every seat in the room, however empty', () => {
+    expect(roomSeats([])).toHaveLength(ROOM_PLAYER_CAP);
+    expect(roomSeats([ada, grace])).toHaveLength(ROOM_PLAYER_CAP);
   });
 
-  it('draws a seat per player once the room is past four', () => {
-    expect(footerSeatCount(5)).toBe(5);
-    expect(footerSeatCount(ROOM_PLAYER_CAP)).toBe(ROOM_PLAYER_CAP);
+  it('seats the party in join order, then the places still going spare', () => {
+    const places = roomSeats([ada, grace]);
+
+    expect(places[0]).toEqual({ kind: 'taken', seat: ada });
+    expect(places[1]).toEqual({ kind: 'taken', seat: grace });
+    expect(places[2]).toEqual({ kind: 'empty', number: 3 });
+  });
+
+  it('numbers an empty place by where it sits in the room', () => {
+    const empties = roomSeats([ada])
+      .filter((place) => place.kind === 'empty')
+      .map((place) => place.number);
+
+    expect(empties).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it('leaves no dashed circle in a full room', () => {
+    const full = Array.from({ length: ROOM_PLAYER_CAP }, (_unused, at) => seatOf(`P${at}`));
+
+    expect(roomSeats(full).every((place) => place.kind === 'taken')).toBe(true);
+  });
+
+  it('draws an over-full roster whole rather than dropping a player', () => {
+    // The cap is enforced inside a serializable transaction, so this cannot
+    // happen — but a television that silently lost somebody would be a worse
+    // bug than one that ran a third row off the bottom of the stage.
+    const eleven = Array.from({ length: ROOM_PLAYER_CAP + 1 }, (_unused, at) => seatOf(`P${at}`));
+
+    expect(roomSeats(eleven)).toHaveLength(ROOM_PLAYER_CAP + 1);
   });
 });
 
-describe('the footer seat row', () => {
-  it('fits a full room beside its count on the TV stage', () => {
-    // No simulator exists on this machine, so the fit is checked as arithmetic
-    // rather than seen. The budget for the count is an estimate, not a
-    // measurement: "10 of 10 joined" is 15 characters of Space Grotesk at 22px,
-    // whose advance averages well under 0.6em — call it 220px and leave room.
-    const countBudget = 220;
-    const available = STAGE_WIDTH - 2 * SCREEN_GUTTER;
-    const full = footerSeatsWidth(footerSeatCount(ROOM_PLAYER_CAP));
-
-    expect(full + FOOTER_GAP + countBudget).toBeLessThanOrEqual(available);
+describe('the grid', () => {
+  it('fits the stage inside the handoff’s TV safe margin', () => {
+    // No television is attached to this machine, so the fit is checked as
+    // arithmetic rather than seen.
+    expect(roomGridWidth()).toBeLessThanOrEqual(STAGE.width - 2 * SAFE_MARGIN);
   });
 
-  it('measures a row of seats as seats plus the gaps between them', () => {
-    expect(footerSeatsWidth(1)).toBe(seat.size);
-    expect(footerSeatsWidth(4)).toBe(4 * seat.size + 3 * seat.gap);
+  it('lays the room out over two rows', () => {
+    expect(SEATS_PER_ROW * 2).toBe(ROOM_PLAYER_CAP);
+    expect(roomGridHeight()).toBe(2 * SEAT_HEIGHT + seat.rowGap);
+  });
+
+  it('leaves the rest of the screen room for the code, the QR and the count', () => {
+    // The hero above the grid is the reason this screen exists; a grid that ate
+    // it would be a Room nobody could join.
+    expect(roomGridHeight()).toBeLessThan(STAGE.height / 2);
   });
 });
 
-describe('rosterFooterText', () => {
-  it('reads as the handoff writes it while the room is empty', () => {
-    expect(rosterFooterText(0)).toBe('0 of 10 joined — waiting for players…');
+describe('roomScreenHeight', () => {
+  it('fits the stage at a full room', () => {
+    // The bound is the stage itself, not the handoff's 64pt TV safe margin.
+    // `TvStage` scales the whole 1280×720 composition into the title-safe inner
+    // 90% (`tvSafeStageScale`), so every point of the design surface is already
+    // clear of the bezel and a second inset inside it would be belt *and*
+    // braces — which here cost real fidelity: the board's own element sizes do
+    // not fit a 16:9 stage inside a further 64pt, and the board is the design.
+    //
+    // What still has to hold is that the column fits the surface at all, since
+    // nothing about this screen scrolls or flexes.
+    expect(roomScreenHeight()).toBeLessThanOrEqual(STAGE.height);
   });
 
-  it('counts the players who have joined', () => {
-    expect(rosterFooterText(1)).toBe('1 of 10 joined');
-    expect(rosterFooterText(7)).toBe('7 of 10 joined');
+  it('leaves the bottom of the stage clear rather than filling it exactly', () => {
+    // The board's own layout runs to 725 on a 768-tall frame; ours has 720, so
+    // the five points come out of `gridGap` and this holds the rest of the
+    // margin that difference leaves.
+    expect(STAGE.height - roomScreenHeight()).toBeGreaterThanOrEqual(8);
   });
 
-  it('stops waiting for players once the room is full', () => {
-    expect(rosterFooterText(ROOM_PLAYER_CAP)).toBe('10 of 10 joined');
+  it('spends every term in `roomLayout` except the wordmark’s, and the grid', () => {
+    // The stack is the whole of `roomLayout` plus the grid, less the two terms
+    // that place the wordmark: it sits in the left gutter *behind* the title's
+    // band rather than above it, so it adds no height and `titleTop` already
+    // clears it. Everything else is a term. A number added to `roomLayout` and
+    // not wired into the sum fails here, which is what stops this being a total
+    // somebody has to remember to update by hand.
+    const { headerTop, wordmark, ...inFlow } = roomLayout;
+    const stacked = Object.values(inFlow).reduce((total, term) => total + term, 0);
+
+    expect(roomScreenHeight()).toBe(stacked + roomGridHeight());
+    expect(headerTop + wordmark).toBeLessThanOrEqual(roomLayout.titleTop + roomLayout.titleLine);
+  });
+});
+
+describe('seatSlot', () => {
+  it('gives an arrival their four seconds ahead of anything else', () => {
+    // Including the Host's own: the room's first player is both at once, and
+    // for those four seconds the news is that somebody is here at all.
+    expect(seatSlot(ada, true)).toBe('justJoined');
+    expect(seatSlot(alan, true)).toBe('justJoined');
+  });
+
+  it('says who the Host is, over their own away-ness', () => {
+    expect(seatSlot(ada, false)).toBe('host');
+    expect(seatSlot(seatOf('Ada', { host: true, away: true }), false)).toBe('host');
+  });
+
+  it('says a player has gone quiet', () => {
+    expect(seatSlot(alan, false)).toBe('away');
+  });
+
+  it('says nothing but present for everybody else', () => {
+    expect(seatSlot(grace, false)).toBe('present');
+  });
+});
+
+describe('seatSpokenAs', () => {
+  it('says what a slot shows in a hue alone', () => {
+    expect(seatSpokenAs(ada, false)).toBe('Ada, host');
+    expect(seatSpokenAs(grace, false)).toBe('Grace, online');
+    expect(seatSpokenAs(alan, false)).toBe('Alan, away');
+    expect(seatSpokenAs(grace, true)).toBe('Grace, just joined');
+  });
+});
+
+describe('roomCountLine', () => {
+  it('waits for players while the room is empty', () => {
+    expect(roomCountLine(0, undefined)).toEqual({
+      joined: 0,
+      total: ROOM_PLAYER_CAP,
+      note: 'waiting for players…',
+    });
+  });
+
+  it('tells the room who can start it', () => {
+    expect(roomCountLine(6, 'Sam')).toEqual({
+      joined: 6,
+      total: ROOM_PLAYER_CAP,
+      note: 'Sam can start whenever',
+    });
+  });
+
+  it('counts a full room', () => {
+    expect(roomCountLine(ROOM_PLAYER_CAP, 'Sam')).toEqual({
+      joined: ROOM_PLAYER_CAP,
+      total: ROOM_PLAYER_CAP,
+      note: 'Sam can start whenever',
+    });
+  });
+
+  it('says only the count when there is no Host to name', () => {
+    // The backend does not serve a peopled room without a Host; a screen that
+    // invented one would be saying something it had not been told.
+    expect(roomCountLine(2, undefined).note).toBeUndefined();
+  });
+
+  it('waits for players even if a Host is somehow named in an empty room', () => {
+    expect(roomCountLine(0, 'Sam').note).toBe('waiting for players…');
   });
 });

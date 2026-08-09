@@ -1,4 +1,4 @@
-import { type GameSettings, type GameLifecycleRejection } from '@huddle/game-core';
+import { AVATAR_IDS, type GameSettings, type GameLifecycleRejection } from '@huddle/game-core';
 import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
@@ -54,8 +54,12 @@ async function roomVotingOn(
   const room = await t.mutation(api.rooms.createRoom, {});
   const tokens: Record<string, string> = {};
 
-  for (const nickname of nicknames) {
-    const seated = await t.mutation(api.players.joinRoom, { code: room.code, nickname });
+  for (const [at, nickname] of nicknames.entries()) {
+    const seated = await t.mutation(api.players.joinRoom, {
+      code: room.code,
+      nickname,
+      avatar: AVATAR_IDS[at % AVATAR_IDS.length]!,
+    });
     tokens[nickname] = seated.sessionToken;
   }
 
@@ -153,7 +157,7 @@ describe('the Host starting Voting', () => {
     // One phone in the room, and the hub gates the start on the range Voting's
     // own metadata declares (2–10) — read from the module, not written in the
     // hub, which is the whole of the hub naming no game.
-    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
+    const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     expect(
       await rejectionFrom(
@@ -166,8 +170,8 @@ describe('the Host starting Voting', () => {
   it('refuses a phone that is not the Host', async () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
-    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
     expect(
       await rejectionFrom(
@@ -195,8 +199,8 @@ describe('the Host starting Voting', () => {
   it('refuses a value Voting’s schema does not offer', async () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
-    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
     // Four is not one of the counts the prompt list can deal, so the schema
     // does not offer it and the hub refuses it — the same gate trivia's odd
@@ -216,8 +220,8 @@ describe('the Host starting Voting', () => {
   it('refuses a setting Voting does not declare', async () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
-    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
     // Trivia's own "category" means nothing to Voting: a setting the game does
     // not declare is refused, so the two games' schemas cannot bleed together.
@@ -351,13 +355,13 @@ describe('a vote in the running game', () => {
   it('leaves a mid-game joiner in the room but out of the game', async () => {
     const t = convexTest(schema, modules);
     const room = await t.mutation(api.rooms.createRoom, {});
-    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada' });
-    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace' });
+    const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
+    await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
     await t.mutation(api.games.startGame, { sessionToken: ada.sessionToken, gameId: 'voting' });
 
     // Voting does not seat late joiners (its `players` are fixed at the start),
     // so a phone that joins now is in the room and watching, not in the game.
-    const linus = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace II' });
+    const linus = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace II', avatar: 'pink-bunny' });
     const roster = await t.query(api.players.roster, { roomId: room.roomId });
     const before = await t.query(api.games.running, { roomId: room.roomId });
 

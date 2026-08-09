@@ -18,7 +18,7 @@ const ADA = 'p1';
 const GRACE = 'p2';
 
 function player(playerId: string): GamePlayer {
-  return { playerId, nickname: playerId, away: false };
+  return { playerId, nickname: playerId, away: false, avatar: 'fox' };
 }
 
 function gameWith(...playerIds: readonly string[]): TriviaState {

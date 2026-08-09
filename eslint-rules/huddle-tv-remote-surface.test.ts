@@ -10,8 +10,12 @@ import { beforeAll, describe, expect, it } from 'vitest';
  * repo's real `eslint.config.js`, rather than through `RuleTester` — the same
  * choice Boardwalk's two rules made, for the same reason. The acceptance
  * criterion is about the *app*, so what has to be pinned is the whole gate: the
- * rule, the paths it is switched on for, and the one file it lets hold a remote
- * listener.
+ * rule and the paths it is switched on for.
+ *
+ * There is no longer an exempt file. `tv-about.tsx` used to be allowed to hold
+ * a remote listener; the About Panel is not in the approved design, so the file
+ * and the exemption went with it, and every case below now expects the strict
+ * answer everywhere.
  *
  * The first block below is the acceptance criterion itself rather than a test
  * of the rule: every TV screen this app can show, linted, with nothing
@@ -25,9 +29,7 @@ const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
 }).trim();
 
-/** The file the config lets own the remote — see the rule's `remoteOwner`. */
-const THE_REMOTE_OWNER = path.join(repoRoot, 'apps/tv/src/tv-about.tsx');
-/** Any other TV screen. `lintText` never touches the disk, so this is not a file. */
+/** Any TV screen. `lintText` never touches the disk, so this is not a file. */
 const A_TV_SCREEN = path.join(repoRoot, 'apps/tv/app/remote-surface-probe.tsx');
 /** A game module's TV screen, which stands on the same surface. */
 const A_MODULE_TV_SCREEN = path.join(
@@ -181,15 +183,15 @@ describe('a focusable control put on a TV screen', () => {
     ).toHaveLength(1);
   });
 
-  it('names the one control a remote is allowed to reach', async () => {
+  it('sends the author to the Controller, which is where a control belongs', async () => {
     const [message] = await complaints(screen('export const A = () => <Pressable />;'));
 
-    expect(message).toContain('About');
+    expect(message).toContain('Controller');
   });
 });
 
 describe('the remote listener', () => {
-  it('is caught anywhere but the file that owns the remote', async () => {
+  it('is caught on a TV screen', async () => {
     expect(
       await complaints(
         [
@@ -215,7 +217,8 @@ describe('the remote listener', () => {
   // The form the About Panel itself had to take, because `react-native-tvos`
   // types the hook onto a module pnpm puts out of the app's reach. A gate that
   // watched imports alone would wave this through — which is to say it would
-  // wave through the one route that is actually open.
+  // wave through the one route that is actually open. The panel is gone; the
+  // route it had to use is still there for the next author to find.
   it('is caught when it is reached off the namespace rather than imported', async () => {
     expect(
       await complaints(
@@ -236,38 +239,19 @@ describe('the remote listener', () => {
     ).toHaveLength(2);
   });
 
-  it('is allowed in the file that owns it, which is the About panel', async () => {
+  // The exemption is gone rather than dormant. This is the file that held it,
+  // and the point of the case is that its name buys it nothing now — a listener
+  // put back at this path is caught like a listener anywhere else.
+  it('is caught in the file that used to be allowed to hold it', async () => {
     expect(
       await complaints(
         [
           "import { useTVEventHandler } from 'react-native';",
           'export const useIt = () => useTVEventHandler(() => {});',
         ].join('\n'),
-        THE_REMOTE_OWNER,
-      ),
-    ).toEqual([]);
-  });
-
-  // The owner is one file, not any file whose path happens to end that way.
-  it('is not allowed in a file that merely ends like the owner', async () => {
-    expect(
-      await complaints(
-        [
-          "import { useTVEventHandler } from 'react-native';",
-          'export const useIt = () => useTVEventHandler(() => {});',
-        ].join('\n'),
-        path.join(repoRoot, 'apps/tv/src/evil-apps/tv/src/tv-about.tsx'),
+        path.join(repoRoot, 'apps/tv/src/tv-about.tsx'),
       ),
     ).toHaveLength(2);
-  });
-
-  // The About panel is the exception for the *listener* and for nothing else:
-  // a focusable control in it would be a control on every TV screen, since the
-  // Stage draws it over all of them.
-  it('does not carry an exemption for a control with it', async () => {
-    expect(
-      await complaints(screen('export const A = () => <Pressable />;'), THE_REMOTE_OWNER),
-    ).toHaveLength(1);
   });
 });
 

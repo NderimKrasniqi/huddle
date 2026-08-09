@@ -15,13 +15,14 @@ export const triviaMetadata: GameMetadata = {
   id: 'trivia',
   title: 'Trivia',
   /**
-   * Punch, because the accents are spoken for elsewhere and this one is spoken
-   * for least: cobalt is the focused card's own offset shadow
-   * (docs/design/design-handoff.md §6) and a block would sit on top of it,
-   * tangerine is the brand's, green is presence, yellow is the chip printed on
-   * the card itself. Its Bungee title sets in ink.
+   * Ink. Boardwalk picked from four accents and chose `punch` as the one least
+   * spoken for; Soft Minimal has one accent and it is the brand's, spent on
+   * actions and never on a decorative fill. So a card's art is the deep navy,
+   * with its title set in the inverse — which is also the only pairing on the
+   * palette that clears contrast at the size a card title is read from across a
+   * room.
    */
-  keyArt: { color: 'punch' },
+  keyArt: { color: 'ink' },
   /** The scope's "2–10 players", the second of which is a full room. */
   playerRange: { min: 2, max: 10 },
   /**

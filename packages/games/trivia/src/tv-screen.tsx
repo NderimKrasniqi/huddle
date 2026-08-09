@@ -6,12 +6,11 @@ import {
   fontFamily,
   letterSpacing,
   opacity,
-  playerFace,
+  avatarFace,
   radius,
-  shadowDepth,
-  stickerTilt,
+  elevation,
 } from '@huddle/ui';
-import { StickerSurface } from '@huddle/ui/native';
+import { Surface } from '@huddle/ui/native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -42,14 +41,12 @@ function Option({ option }: { readonly option: WatchedOption }) {
   const revealed = option.correct !== undefined;
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
-      style={[styles.option, { backgroundColor: face.fill }]}
-      wrapperStyle={[styles.optionBlock, revealed && !option.correct && styles.optionWrong]}
-    >
+    <Surface
+      elevation={elevation.tvCard}
+      style={[[styles.optionBlock, revealed && !option.correct && styles.optionWrong], [styles.option, { backgroundColor: face.fill }]]}>
       <Text style={[styles.optionText, { color: face.label }]}>{option.text}</Text>
       {option.correct === true ? <Text style={styles.optionTick}>✓</Text> : null}
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -61,12 +58,18 @@ function Option({ option }: { readonly option: WatchedOption }) {
  * a scoreboard row, and reusing that word for it would put two things behind
  * one term.
  */
-function NamePill({ nickname, color }: { readonly nickname: string; readonly color: ScoreRow['color'] }) {
-  const face = playerFace(color);
+function NamePill({
+  nickname,
+  avatar,
+}: {
+  readonly nickname: string;
+  readonly avatar: ScoreRow['avatar'];
+}) {
+  const face = avatarFace(avatar);
 
   return (
     <View style={[styles.namePill, { backgroundColor: face.fill }]}>
-      <Text style={[styles.namePillText, { color: face.monogram }]}>{nickname}</Text>
+      <Text style={[styles.namePillText, { color: face.ink }]}>{nickname}</Text>
     </View>
   );
 }
@@ -74,7 +77,7 @@ function NamePill({ nickname, color }: { readonly nickname: string; readonly col
 function VerdictRow({ verdict }: { readonly verdict: PlayerVerdict }) {
   return (
     <View style={styles.verdict}>
-      <NamePill nickname={verdict.nickname} color={verdict.color} />
+      <NamePill nickname={verdict.nickname} avatar={verdict.avatar} />
       <Text style={styles.verdictMark}>{verdict.correct ? '✓' : '✗'}</Text>
     </View>
   );
@@ -109,7 +112,7 @@ function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
         <View key={row.playerId} style={styles.scoreRow}>
           <View style={styles.scoreName}>
             <StatusDot away={row.away} />
-            <NamePill nickname={row.nickname} color={row.color} />
+            <NamePill nickname={row.nickname} avatar={row.avatar} />
           </View>
           <Text style={styles.score}>{row.score}</Text>
         </View>
@@ -131,18 +134,15 @@ function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
  */
 function Placing({ standing }: { readonly standing: FinalStanding }) {
   return (
-    <StickerSurface
-      depth={standing.winner ? shadowDepth.tvCardHighlight : shadowDepth.tvCard}
-      shadowColor={standing.winner ? colors.punch : colors.ink}
-      style={styles.placing}
-      wrapperStyle={styles.placingBlock}
-    >
+    <Surface
+      elevation={standing.winner ? elevation.tvCardHighlight : elevation.tvCard}
+      style={[styles.placingBlock, styles.placing]}>
       <View style={[styles.rank, standing.winner ? styles.rankWinner : null]}>
         <Text style={styles.rankText}>{standing.rank}</Text>
       </View>
-      <NamePill nickname={standing.nickname} color={standing.color} />
+      <NamePill nickname={standing.nickname} avatar={standing.avatar} />
       <Text style={[styles.score, styles.placingScore]}>{standing.score}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -164,13 +164,11 @@ function Victory({
 }) {
   return (
     <View style={styles.stage}>
-      <StickerSurface
-        depth={shadowDepth.tvCard}
-        style={styles.finalBadge}
-        wrapperStyle={styles.finalBadgeBlock}
-      >
+      <Surface
+        elevation={elevation.tvCard}
+        style={[styles.finalBadgeBlock, styles.finalBadge]}>
         <Text style={styles.finalBadgeText}>FINAL SCORES</Text>
-      </StickerSurface>
+      </Surface>
 
       <Text style={styles.headline}>{headline}</Text>
 
@@ -186,11 +184,11 @@ function Victory({
 /** "Question 2 of 3" — where the room is in the set. */
 function QuestionCount({ at, of }: { readonly at: number; readonly of: number }) {
   return (
-    <StickerSurface depth={shadowDepth.phoneSmall} style={styles.chip}>
+    <Surface elevation={elevation.phoneSmall} style={styles.chip}>
       <Text style={styles.chipText}>
         QUESTION {at} OF {of}
       </Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -229,13 +227,11 @@ function Countdown({ seconds }: { readonly seconds: number }) {
   }, []);
 
   return (
-    <StickerSurface
-      depth={shadowDepth.tvCard}
-      style={styles.countdown}
-      wrapperStyle={styles.countdownBlock}
-    >
+    <Surface
+      elevation={elevation.tvCard}
+      style={[styles.countdownBlock, styles.countdown]}>
       <Text style={styles.countdownText}>{secondsLeft}</Text>
-    </StickerSurface>
+    </Surface>
   );
 }
 
@@ -252,11 +248,11 @@ export function TriviaTvScreen({ state, players }: TvGameScreenProps<TriviaState
         <QuestionCount at={screen.questionNumber} of={screen.questionCount} />
         {screen.kind === 'question' ? (
           <>
-            <StickerSurface depth={shadowDepth.phoneSmall} style={styles.answeredChip}>
+            <Surface elevation={elevation.phoneSmall} style={styles.answeredChip}>
               <Text style={styles.chipText}>
                 {screen.answered}/{screen.playerCount} ANSWERED
               </Text>
-            </StickerSurface>
+            </Surface>
             <Countdown key={screen.questionNumber} seconds={screen.countdownSeconds} />
           </>
         ) : null}
@@ -299,21 +295,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
   answeredChip: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.soft,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thin,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 18,
     paddingVertical: 8,
   },
   chipText: {
     color: colors.ink,
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 20,
     letterSpacing: letterSpacing.badge,
   },
@@ -323,14 +319,13 @@ const styles = StyleSheet.create({
   // there is nothing here for the handoff's alternating siblings to alternate
   // against.
   countdownBlock: {
-    transform: [{ rotate: stickerTilt.countdownTile }],
   },
   countdown: {
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.card,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     justifyContent: 'center',
     // Wide enough for two digits, so the tile does not shrink under the number
     // as the seconds run out.
@@ -339,13 +334,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   countdownText: {
-    color: colors.cobalt,
-    fontFamily: fontFamily.display,
+    color: colors.accent,
+    fontFamily: fontFamily.bold,
     fontSize: 36,
   },
   question: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 44,
     textAlign: 'center',
   },
@@ -368,7 +363,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderColor: colors.ink,
     borderRadius: radius.cardLarge,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'center',
@@ -377,13 +372,13 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   optionText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.semibold,
     fontSize: 30,
     textAlign: 'center',
   },
   optionTick: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 30,
   },
   revealFoot: {
@@ -402,7 +397,7 @@ const styles = StyleSheet.create({
   },
   verdictMark: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 24,
   },
   scoreboard: {
@@ -426,13 +421,13 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 18,
     height: 18,
-    backgroundColor: colors.green,
+    backgroundColor: colors.online,
     borderColor: colors.ink,
-    borderWidth: borderWidth.medium,
+    borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
   },
   statusDotAway: {
-    backgroundColor: colors.mutedBorder,
+    backgroundColor: colors.away,
   },
   namePill: {
     borderRadius: radius.pill,
@@ -440,12 +435,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   namePillText: {
-    fontFamily: fontFamily.bodyBold,
+    fontFamily: fontFamily.medium,
     fontSize: 22,
   },
   score: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 26,
     minWidth: 72,
     textAlign: 'right',
@@ -454,25 +449,24 @@ const styles = StyleSheet.create({
   // The Victory Screen. Boardwalk's badge tilt on the label, the winner's name
   // in the largest display type on the television, and the placings under it.
   finalBadgeBlock: {
-    transform: [{ rotate: stickerTilt.badge }],
   },
   finalBadge: {
-    backgroundColor: colors.tangerine,
+    backgroundColor: colors.accent,
     borderColor: colors.ink,
     borderRadius: radius.pill,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: 26,
     paddingVertical: 10,
   },
   finalBadgeText: {
     color: colors.surface,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.semibold,
     fontSize: 24,
     letterSpacing: letterSpacing.badge,
   },
   headline: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 52,
     textAlign: 'center',
   },
@@ -496,7 +490,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderRadius: radius.row,
-    borderWidth: borderWidth.thick,
+    borderWidth: borderWidth.hairline,
     flexDirection: 'row',
     gap: 16,
     paddingHorizontal: 20,
@@ -511,11 +505,11 @@ const styles = StyleSheet.create({
     width: 44,
   },
   rankWinner: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.accent,
   },
   rankText: {
     color: colors.ink,
-    fontFamily: fontFamily.display,
+    fontFamily: fontFamily.bold,
     fontSize: 22,
   },
   // Pushed to the far end of the row, so every score on the screen lines up

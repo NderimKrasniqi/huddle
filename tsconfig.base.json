@@ -1,5 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  // Ambient declarations every package needs. Paths in an extended config are
+  // resolved relative to the file they are written in, so this reaches the same
+  // file from every workspace package regardless of where that package sits.
+  //
+  // It is `files` rather than `include` on purpose: a package that declares its
+  // own `include` replaces an inherited one, and every package here does. The
+  // two lists are merged separately, so this survives.
+  "files": ["types/assets.d.ts"],
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],

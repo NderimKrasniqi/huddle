@@ -44,7 +44,10 @@ type CoinTossSettings = {
 const coinTossMetadata: GameMetadata = {
   id: 'coin-toss',
   title: 'Coin Toss',
-  keyArt: { color: 'yellow' },
+  // Soft Minimal deleted Boardwalk's four accents; this fixture wore `yellow`.
+  // `accent` is the one the system now has, and what a fixture needs of a key
+  // art colour is only that it be a real `KeyArtColorName`.
+  keyArt: { color: 'accent' },
   playerRange: { min: 2, max: 10 },
   estimatedMinutes: 1,
   category: 'Chance',
@@ -95,7 +98,7 @@ const eggTimer: GameLogic<{ readonly rung: number }, EggTimerEvent> = {
   metadata: {
     id: 'egg-timer',
     title: 'Egg Timer',
-    keyArt: { color: 'green' },
+    keyArt: { color: 'online' },
     playerRange: { min: 1, max: 10 },
     estimatedMinutes: 1,
     category: 'Chance',
@@ -113,7 +116,7 @@ const eggTimer: GameLogic<{ readonly rung: number }, EggTimerEvent> = {
 };
 
 function player(playerId: string, nickname: string): GamePlayer {
-  return { playerId, nickname, away: false };
+  return { playerId, nickname, away: false, avatar: 'fox' };
 }
 
 describe('the Game Module interface', () => {
@@ -159,7 +162,7 @@ describe('the Game Module interface', () => {
     const metadata: GameMetadata = {
       id: 'coin-toss',
       title: 'Coin Toss',
-      keyArt: { color: 'yellow' },
+      keyArt: { color: 'accent' },
       playerRange: { min: 2, max: 10 },
       category: 'Chance',
     };

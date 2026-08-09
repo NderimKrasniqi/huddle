@@ -14,7 +14,7 @@ const ADAS_SEAT: PlayerSession = {
   playerId: 'player_ada' as PlayerSession['playerId'],
   roomId: 'room_kwrd' as PlayerSession['roomId'],
   code: 'KWRD',
-  nickname: 'Ada',
+  nickname: 'Ada', avatar: 'fox' as const,
 };
 
 /**

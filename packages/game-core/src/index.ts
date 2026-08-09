@@ -1,4 +1,3 @@
-export type { ColorRejection } from './color-rejection';
 export type { HostControlRejection } from './host-control-rejection';
 // The Game Module interface: the whole of what the hub knows about a game, and
 // the reason a second game is an entry in the Registry rather than a change to
@@ -28,18 +27,20 @@ export type {
 // and refused generically against whatever schema the game declares.
 export { type GameSettings, settingsFrom, settingsRefusal } from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
+// Which seats a screen watched arrive, so both clients can greet an arrival the
+// same way. Here rather than in an app because both draw a roster now.
+// `isArrival` is deliberately not among them: it answers "did this screen ever
+// watch them arrive", which is permanent, and a client that asked it instead of
+// `isGreeting` would draw the chip for the life of the room.
+export { type Arrivals, isGreeting, JUST_JOINED_MS, noteArrivals } from './just-joined';
 export type { JoinRejection } from './join-rejection';
-// The names only, as with the player colors below: a module declares the color
-// its Key Art wears, and `packages/ui` says what that color is.
+// The names only: a module declares the colour its Key Art wears, and
+// `packages/ui` says what that colour is.
+export { AVATAR_IDS, type AvatarId, isAvatarId } from './avatar';
 export { KEY_ART_COLOR_NAMES, type KeyArtColorName } from './key-art';
 export { NICKNAME_MAX_LENGTH } from './nickname';
 // The names only: what a swatch looks like is Boardwalk's business, and lives
 // in `packages/ui`, which keys its palette off this list.
-export {
-  isPlayerColorName,
-  PLAYER_COLOR_NAMES,
-  type PlayerColorName,
-} from './player-color';
 // Presence is a two-sided rule: the Controller keeps the beat, the room keeps
 // the deadline, and neither number means anything alone.
 export { AWAY_AFTER_MS, HEARTBEAT_INTERVAL_MS } from './presence';

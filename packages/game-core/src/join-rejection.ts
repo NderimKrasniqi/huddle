@@ -15,4 +15,17 @@ export type JoinRejection =
   | { readonly kind: 'roomNotFound'; readonly code: string }
   | { readonly kind: 'roomFull'; readonly cap: number }
   | { readonly kind: 'nameTaken'; readonly nickname: string }
-  | { readonly kind: 'nameUnusable'; readonly maxLength: number };
+  | { readonly kind: 'nameUnusable'; readonly maxLength: number }
+  /**
+   * Somebody in the room already has that avatar. The picker dims every avatar
+   * the room holds, so reaching this means two phones tapped the same one
+   * inside a round trip of each other — the same race the colour picker used to
+   * lose, moved to the join form along with the choice itself.
+   */
+  | { readonly kind: 'avatarTaken'; readonly avatar: string }
+  /**
+   * Not an avatar this build offers. The server refusing to trust its callers:
+   * `joinRoom` is public and unauthenticated by design, so no correct
+   * Controller produces this.
+   */
+  | { readonly kind: 'avatarUnknown'; readonly avatar: string };

@@ -18,7 +18,7 @@ function seatOf({
     nickname: name,
     away,
     host,
-    color: undefined,
+    avatar: 'fox' as const,
   };
 }
 
@@ -41,6 +41,27 @@ describe('rosterRowSlot', () => {
     // this screen in front of its owner is beating. See `rosterRowSlot`.
     expect(rosterRowSlot(seatOf({ name: 'Ada', host: true, away: true }))).toBe('host');
   });
+
+  it('greets an arrival over the dot it would otherwise wear', () => {
+    expect(rosterRowSlot(seatOf({ name: 'Grace' }), true)).toBe('just-joined');
+  });
+
+  it('greets an arrival the room has already stopped hearing from', () => {
+    // Four seconds is short enough that this needs a phone to land and go
+    // straight into a pocket, and long enough that it happens. The greeting is
+    // still the news; the dot it is covering is the state it settles into.
+    expect(rosterRowSlot(seatOf({ name: 'Milo', away: true }), true)).toBe('just-joined');
+  });
+
+  it('does not greet over the Host pill, which is not a state that settles', () => {
+    expect(rosterRowSlot(seatOf({ name: 'Ada', host: true }), true)).toBe('host');
+  });
+
+  it('greets nobody when the caller has no arrival history to go on', () => {
+    // The default, and the reason it is the default: a row asked about in
+    // isolation is whatever it steadily is, never silently new.
+    expect(rosterRowSlot(seatOf({ name: 'Grace' }))).toBe('present');
+  });
 });
 
 describe('rosterRowSpokenAs', () => {
@@ -54,6 +75,10 @@ describe('rosterRowSpokenAs', () => {
 
   it('speaks the Host', () => {
     expect(rosterRowSpokenAs(seatOf({ name: 'Ada', host: true }))).toBe('Ada, host');
+  });
+
+  it('speaks the greeting the chip shows, so both readers get the same row', () => {
+    expect(rosterRowSpokenAs(seatOf({ name: 'Grace' }), true)).toBe('Grace, just joined');
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { lobbyStanding, lobbyStatusText, type RosterSeat } from './host';
+import { lobbyStanding, type RosterSeat } from './host';
 
 /**
  * A roster the way the room serves one. The ids are the room's, so they are
@@ -13,7 +13,7 @@ function seatsOf(...seats: readonly { name: string; host?: boolean }[]): RosterS
     nickname: name,
     away: false,
     host,
-    color: undefined,
+    avatar: 'fox' as const,
   }));
 }
 
@@ -29,6 +29,7 @@ describe('lobbyStanding', () => {
     expect(lobbyStanding(roster, idOf('Ada'))).toEqual({
       youAreHost: true,
       hostNickname: 'Ada',
+      hostAvatar: 'fox',
     });
   });
 
@@ -38,6 +39,7 @@ describe('lobbyStanding', () => {
     expect(lobbyStanding(roster, idOf('Grace'))).toEqual({
       youAreHost: false,
       hostNickname: 'Ada',
+      hostAvatar: 'fox',
     });
   });
 
@@ -55,6 +57,7 @@ describe('lobbyStanding', () => {
     expect(lobbyStanding(after, idOf('Ada'))).toEqual({
       youAreHost: false,
       hostNickname: 'Grace',
+      hostAvatar: 'fox',
     });
   });
 
@@ -62,26 +65,7 @@ describe('lobbyStanding', () => {
     expect(lobbyStanding([], idOf('Ada'))).toEqual({
       youAreHost: false,
       hostNickname: undefined,
+      hostAvatar: undefined,
     });
-  });
-});
-
-describe('lobbyStatusText', () => {
-  it('tells the host the room is theirs', () => {
-    expect(lobbyStatusText({ youAreHost: true, hostNickname: 'Ada' })).toContain('running this room');
-  });
-
-  it('tells a player who they are waiting on, by name', () => {
-    expect(lobbyStatusText({ youAreHost: false, hostNickname: 'Ada' })).toBe(
-      'Eyes on the TV — Ada is about to pick a game.',
-    );
-  });
-
-  it('says something true while there is no host to name', () => {
-    // The roster has not landed yet. Naming a host the phone has not been told
-    // about is the one thing this line must not do.
-    const waiting = lobbyStatusText({ youAreHost: false, hostNickname: undefined });
-
-    expect(waiting).toBe('Eyes on the TV — your name is up there now.');
   });
 });

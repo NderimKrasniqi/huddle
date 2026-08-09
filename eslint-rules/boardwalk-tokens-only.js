@@ -308,7 +308,7 @@ module.exports = {
       imported:
         '{{property}} is Boardwalk\'s to decide: `{{name}}` comes from {{source}} rather than from the theme, so take it from `{{token}}` in @huddle/ui instead.',
       fontWeight:
-        'Boardwalk picks a font face by family, not by weight — React Native ignores `fontWeight` on a custom family on Android. Use `fontFamily.bodyMedium` or `fontFamily.bodyBold` from @huddle/ui.',
+        'Soft Minimal picks a font face by family, not by weight — React Native ignores `fontWeight` on a custom family on Android. Use `fontFamily.medium`, `fontFamily.semibold` or `fontFamily.bold` from @huddle/ui.',
     },
   },
 

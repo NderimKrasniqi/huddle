@@ -158,7 +158,7 @@ describe('what the phone already renders', () => {
 
 describe('body text under the floor', () => {
   it('is caught in a style sheet, and named with the size it is', async () => {
-    const [message] = await complaints(styles('fontSize: 16,'));
+    const [message] = await complaints(styles('fontSize: 14,'));
 
     expect(message).toContain('16');
     expect(message).toContain(String(minBodyFontSize.tv));
@@ -193,7 +193,7 @@ describe('body text under the floor', () => {
   // being respected, and the number it produces is under the floor.
   it('is caught through arithmetic, token-flavoured or not', async () => {
     expect(await complaints(styles('fontSize: minBodyFontSize.tv - 2,'))).toHaveLength(1);
-    expect(await complaints(styles('fontSize: 8 * 2,'))).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 7 * 2,'))).toHaveLength(1);
   });
 
   // A name consulted twice in one expression is not a cycle. The guard against
@@ -204,7 +204,7 @@ describe('body text under the floor', () => {
     expect(
       await complaints(
         screen(
-          'const HALF = 8;\nexport const styles = StyleSheet.create({ probe: { fontSize: HALF + HALF } });',
+          'const HALF = 7;\nexport const styles = StyleSheet.create({ probe: { fontSize: HALF + HALF } });',
         ),
       ),
     ).toHaveLength(1);
@@ -222,16 +222,16 @@ describe('body text under the floor', () => {
   });
 
   it('is caught on the trivia module\'s television screen, not only in the TV app', async () => {
-    expect(await complaints(styles('fontSize: 16,'), A_TRIVIA_TV_SCREEN)).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 14,'), A_TRIVIA_TV_SCREEN)).toHaveLength(1);
   });
 
   // The size the Controller drew its field labels at until this floor was
   // switched on there, and the whole reason the phone block exists.
-  it('is caught on the phone at the size the handoff pins §2\'s label to', async () => {
+  it('is caught on the phone under the handoff\'s smallest caption', async () => {
     for (const filePath of [A_CONTROLLER_SCREEN, A_TRIVIA_CONTROLLER_SCREEN]) {
-      const [message] = await complaints(styles('fontSize: 13,'), filePath);
+      const [message] = await complaints(styles('fontSize: 11,'), filePath);
 
-      expect(message).toContain('13');
+      expect(message).toContain('11');
       expect(message).toContain(String(minBodyFontSize.phone));
       expect(message).toContain('minBodyFontSize.phone');
     }
@@ -267,49 +267,17 @@ describe('body text on the floor or above it', () => {
 });
 
 describe('what the floor does not reach', () => {
-  // The handoff floors *body* text. Bungee is Boardwalk's display face and is
-  // never asked to carry a sentence, so a size on it is a drawing decision.
-  it('says nothing about display type, which is the face and not the size', async () => {
+  // Boardwalk exempted anything set in its display face, because its floors sat
+  // above sizes the handoff genuinely asked for. Soft Minimal's floors *are* the
+  // smallest sizes on its scale, so there is nothing to exempt and no face left
+  // to claim an exemption with — a family on a style object is now just a family.
+  it('no longer spares a style for the face it is set in', async () => {
+    expect(await complaints(styles('fontFamily: fontFamily.bold,\nfontSize: 11,'))).toHaveLength(
+      1,
+    );
     expect(
-      await complaints(styles('fontFamily: fontFamily.display,\nfontSize: 12,')),
-    ).toEqual([]);
-    // …and the same object without the display face is body text again.
-    expect(await complaints(styles('fontFamily: fontFamily.body,\nfontSize: 12,'))).toHaveLength(1);
-  });
-
-  // The exemption is granted on the theme's own face, proved the way the floor
-  // table is, rather than on any name that happens to end in `.display`. Both
-  // samples below are caught by `boardwalk/tokens-only` on the same line too,
-  // but a value rule that took a family on trust would be the weaker of the two
-  // standards in this file, and the one that got copied.
-  it('grants the exemption only to the theme, not to anything shaped like it', async () => {
-    expect(
-      await complaints(
-        screen(
-          "const faces = { display: 'Comic Sans' };\n" +
-            'export const styles = StyleSheet.create({ probe: { fontFamily: faces.display, fontSize: 12 } });',
-        ),
-      ),
+      await complaints(styles('fontFamily: fontFamily.regular,\nfontSize: 11,')),
     ).toHaveLength(1);
-    expect(
-      await complaints(
-        screen(
-          "import { faces } from './faces';\n" +
-            'export const styles = StyleSheet.create({ probe: { fontFamily: faces.display, fontSize: 12 } });',
-        ),
-      ),
-    ).toHaveLength(1);
-  });
-
-  it('grants it through an alias, because the import is what it reads', async () => {
-    expect(
-      await complaints(
-        screen(
-          "import { fontFamily as boardwalkFaces } from '@huddle/ui';\n" +
-            'export const styles = StyleSheet.create({ probe: { fontFamily: boardwalkFaces.display, fontSize: 12 } });',
-        ),
-      ),
-    ).toEqual([]);
   });
 
   it('says nothing about the other measurements a text style carries', async () => {
@@ -342,22 +310,19 @@ describe('the two surfaces judge the same size differently', () => {
   });
 
   it('refuses on both what is under both', async () => {
-    expect(await complaints(styles('fontSize: 12,'))).toHaveLength(1);
-    expect(await complaints(styles('fontSize: 12,'), A_CONTROLLER_SCREEN)).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 11,'))).toHaveLength(1);
+    expect(await complaints(styles('fontSize: 11,'), A_CONTROLLER_SCREEN)).toHaveLength(1);
   });
 
   // The exemption stops being forward-looking here: on the television the
   // smallest display size is 20 and nothing sits in it, but the phone draws its
   // HOST pill in Bungee at 13, under its own floor and outside it.
-  it('exempts display type on the phone too, which is where that matters', async () => {
+  it('judges the phone by the phone floor, whatever face carries the size', async () => {
     expect(
-      await complaints(
-        styles('fontFamily: fontFamily.display,\nfontSize: 13,'),
-        A_CONTROLLER_SCREEN,
-      ),
-    ).toEqual([]);
-    expect(
-      await complaints(styles('fontFamily: fontFamily.bodyBold,\nfontSize: 13,'), A_CONTROLLER_SCREEN),
+      await complaints(styles('fontFamily: fontFamily.bold,\nfontSize: 11,'), A_CONTROLLER_SCREEN),
     ).toHaveLength(1);
+    expect(
+      await complaints(styles('fontFamily: fontFamily.bold,\nfontSize: 13,'), A_CONTROLLER_SCREEN),
+    ).toEqual([]);
   });
 });

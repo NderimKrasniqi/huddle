@@ -49,5 +49,11 @@ Use AI Project Workflow Core.
 Beyond the project-truth files above, this repo keeps one Huddle-specific
 source of truth in `docs/`:
 
-- `docs/design/design-handoff.md` — the Boardwalk design system, the visual
-  source of truth.
+- `docs/design/soft-minimal-handoff.md` — the Soft Minimal design system, the
+  visual source of truth. It reconciles the approved design package against the
+  platform as built, and records where the two disagree.
+- `docs/design/design-handoff.md` — Boardwalk, superseded. Still what the code
+  implements and what ~200 code comments cite by `§`, so it stays until the
+  token swap retires the last reference.
+- `packages/ui/assets/` — runtime artwork. Design references that must never
+  reach a bundle live in `docs/design/reference/`.

@@ -35,13 +35,11 @@ describe('what a client draws for the room’s running game', () => {
     expect(screen.kind === 'game' && screen.state).toBe(opaque);
   });
 
-  it('says so when the room is playing something this build lacks', () => {
-    // An un-updated phone walking into a room whose TV has been updated. Not
-    // the lobby: a lobby would invite the player to act on a room mid-game.
-    expect(runningGameScreen({ gameId: 'charades', state: {} })).toEqual({
-      kind: 'unknownGame',
-      gameId: 'charades',
-    });
+  it('falls back to the lobby when the room is playing something this build lacks', () => {
+    // An un-updated phone walking into a room whose TV has been updated. It
+    // waits on the lobby with everyone else rather than being told to update:
+    // there is no screen for the news any more, and the wait is the same wait.
+    expect(runningGameScreen({ gameId: 'charades', state: {} })).toEqual({ kind: 'lobby' });
   });
 });
 

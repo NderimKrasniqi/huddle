@@ -14,12 +14,14 @@ export const votingMetadata: GameMetadata = {
   id: 'voting',
   title: 'Hot Takes',
   /**
-   * Tangerine — the second poster on the carousel, set apart from trivia's
-   * punch. The colors are all Boardwalk accents (`KEY_ART_COLOR_NAMES`); which
-   * of the five each card wears is a design-fidelity call (task 5.2), and this
-   * gives the party game a face of its own until that pass settles it.
+   * The accent — the second poster on the carousel, set apart from trivia's
+   * ink. Boardwalk had five accents to spread across the cards and Soft Minimal
+   * has one, so the two installed games take the only two fills the palette
+   * offers a card: navy and orange. A third game is the point at which that
+   * stops working, and the answer then is the real key art the design package
+   * calls for rather than a sixth colour invented here.
    */
-  keyArt: { color: 'tangerine' },
+  keyArt: { color: 'accent' },
   /** 2 up to the room's whole capacity (`ROOM_PLAYER_CAP`): a poll wants everyone at the table in it. */
   playerRange: { min: 2, max: 10 },
   /** Three prompts by default at 20 seconds and a short reveal apiece: about two minutes. */

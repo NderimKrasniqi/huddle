@@ -104,7 +104,7 @@ async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePl
     playerId: player._id,
     nickname: player.nickname,
     away: player.away,
-    color: player.color,
+    avatar: player.avatar,
   }));
 }
 
@@ -495,19 +495,32 @@ export const reachDeadline = internalMutation({
 
 /**
  * Which card the room is browsing — the subscription the TV's carousel and the
- * non-Host phones follow.
+ * non-Host phones follow — or `null` if nobody has browsed in it yet.
  *
- * Always a number this build can use, so no client has to decide what an absent
- * or out-of-range index means; they would each have to decide it the same way,
- * and one of them eventually would not.
+ * An index this build can use whenever there is one, so no client has to decide
+ * what an *out-of-range* index means; they would each have to decide it the
+ * same way, and one of them eventually would not.
+ *
+ * "Nobody has browsed yet" is the one thing this does not flatten, because it
+ * is not the same question. It used to: an unbrowsed room reported card zero,
+ * which is the right card to draw and the wrong answer to "has the Host started
+ * picking a game", and the television now asks the second one. Its Room screen
+ * — code, QR and roster together — stands until the Host takes over the
+ * carousel, so a room reporting a card it had never been browsed to would put
+ * the game cards up over a room code nobody had finished reading.
+ *
+ * Every client that only wants a card still writes `?? 0` and is exactly where
+ * it was.
  */
 export const browsing = query({
   args: { roomId: v.id('rooms') },
-  returns: v.number(),
+  returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
 
-    return browsingIndex(room?.browsingGameIndex);
+    return room?.browsingGameIndex === undefined
+      ? null
+      : browsingIndex(room.browsingGameIndex);
   },
 });
 

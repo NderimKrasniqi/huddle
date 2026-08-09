@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { KeyArtColorName } from './key-art';
-import type { PlayerColorName } from './player-color';
+import type { AvatarId } from './avatar';
 
 /**
  * The Game Module interface: everything the hub knows about a game, and the
@@ -28,7 +28,7 @@ export type GamePlayerId = string;
  * A player as a game sees them: the `roster` projection, minus `host`.
  *
  * A game is handed the same players the TV's seats draw, because it draws them
- * too — a scoreboard is nicknames and claimed colors. `host` is not among them
+ * too — a scoreboard is nicknames and avatars. `host` is not among them
  * on purpose: the Host plays like everybody else, and a game
  * that could tell would eventually treat them differently. `away` *is*, because
  * a game must never wait for a phone that has gone quiet.
@@ -37,8 +37,12 @@ export type GamePlayer = {
   readonly playerId: GamePlayerId;
   readonly nickname: string;
   readonly away: boolean;
-  /** Absent until they have made their Color Claim. */
-  readonly color?: PlayerColorName;
+  /**
+   * The avatar they claimed on the join form. Not optional, unlike the colour
+   * it replaced: a colour was claimed after joining, so a seat had to be
+   * drawable without one, and an avatar is chosen before the seat exists.
+   */
+  readonly avatar: AvatarId;
 };
 
 /**
@@ -59,11 +63,11 @@ export type RosterSeatForGame = GamePlayer & { readonly host: boolean };
 export function gamePlayersFrom(
   seats: readonly RosterSeatForGame[],
 ): readonly GamePlayer[] {
-  return seats.map(({ playerId, nickname, away, color }) => ({
+  return seats.map(({ playerId, nickname, away, avatar }) => ({
     playerId,
     nickname,
     away,
-    color,
+    avatar,
   }));
 }
 

@@ -4,7 +4,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { hostSeatAndRoom } from './host-control';
+import { hostSeatAndRoom } from './hostControl';
 
 /**
  * What `createRoom` rejects with when it cannot find a free Room Code. A

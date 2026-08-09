@@ -121,10 +121,15 @@ describe('a design value written at a call site', () => {
     expect(
       await complaints(screen('export const Card = () => <StickerSurface depth={6} />;')),
     ).toHaveLength(1);
+    // The colour is a real palette value on purpose: what the rule judges is
+    // that a hex was *written at a call site*, not whether the value is one the
+    // theme happens to hold. It was Boardwalk's `punch` until the Soft Minimal
+    // swap deleted that token; `accent` is the one accent the system now has,
+    // and any palette entry would do the same job here.
     expect(
       await complaints(
         screen(
-          `export const Card = () => <StickerSurface depth={shadowDepth.tvCard} shadowColor='${colors.punch}' />;`,
+          `export const Card = () => <StickerSurface depth={shadowDepth.tvCard} shadowColor='${colors.accent}' />;`,
         ),
       ),
     ).toHaveLength(1);
@@ -191,7 +196,7 @@ describe('a design value written at a call site', () => {
   it('is caught as a font weight, because a weight is how a face gets chosen by hand', async () => {
     const [message] = await complaints(styles("fontFamily: fontFamily.body,\nfontWeight: '700',"));
 
-    expect(message).toContain('fontFamily.bodyBold');
+    expect(message).toContain('fontFamily.bold');
   });
 });
 

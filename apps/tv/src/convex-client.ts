@@ -20,10 +20,12 @@ import { ConvexReactClient } from 'convex/react';
  * `roomOpeningCaption`), and the log below for whoever installed the app.
  */
 /**
- * Exported as well as used, because "which deployment is that television on?"
- * is a question a party asks out loud and the About Panel is where it answers.
+ * Local, like the Controller's. It used to be exported: "which deployment is
+ * that television on?" is a question a party asks out loud, and the About Panel
+ * was where it answered. The panel is gone, so the only reader left is the
+ * connection below and the log it writes when there is nothing to connect to.
  */
-export const deploymentUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const deploymentUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
 export const convexClient = openConnection(deploymentUrl);
 

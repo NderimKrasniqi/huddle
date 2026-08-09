@@ -4,11 +4,13 @@
  * `huddle/tv-remote-surface` — nothing on a TV screen is reachable with the
  * remote, and the app listens for exactly one thing it is pressed for.
  *
- * The scope's core principle is Eyes up: the television is the stage and the
- * phones are the controllers. A television that has to be *driven* is a
- * television somebody is looking down at a remote to operate, and the plan's
- * criterion says so as a number — zero remote interaction after launch, with
- * one exception, the About Panel.
+ * The principle is the scope's own — "The TV is not the primary controller"
+ * (`docs/project-scope.md`) — read the strict way: the television is the stage
+ * and the phones are the controllers, so it is not a controller at all. A
+ * television that has to be *driven* is a television somebody is looking down
+ * at a remote to operate. This rule is where that becomes a number, zero, with
+ * no exception; the scope states the principle and nothing else states the
+ * number, so do not go looking for a criterion elsewhere to cite.
  *
  * ## Why this is a lint rule and not a code review
  *
@@ -34,19 +36,19 @@
  * Controller screen is a screen made entirely of controls, and this rule must
  * never reach one.
  *
- * ## The one exception, and why it is not a hole
+ * ## The key listener, and the exception that used to be here
  *
- * The About Panel is a control a remote can reach, which sounds like it
- * contradicts the criterion above it. It does not, because it is reached
- * *without focus*: nothing on any TV screen is focusable, so the remote's
- * directions and its OK button have nothing to land on, and the panel is
- * summoned by a key event the app listens for at the root
- * (`useTVEventHandler`). That listener is therefore the second thing this rule
- * governs — a TV file other than the one that owns the remote must not register
- * one, or "the only remote-reachable control" would be one edit away from being
- * false in a way no reviewer could see. The owner is named by the config
- * (`remoteOwner`), so that which file it is stays a repo decision rather than a
- * fact hidden in here.
+ * Focus is not the only way to reach a television: an app can listen for the
+ * remote's key events at the root (`useTVEventHandler`) and answer a press
+ * nothing on screen is focused for. So the listener is the second thing this
+ * rule governs, and it governs it on every TV file — a listener anywhere would
+ * make "nothing here answers the remote" false in a way no reviewer could see.
+ *
+ * There used to be one exemption, named by the config: `tv-about.tsx`, which
+ * summoned the About Panel on a play/pause press. The approved Soft Minimal
+ * design draws no About Panel, so the file is gone and the rule now takes no
+ * options. Re-introducing an exemption is a repo decision, and it should look
+ * like one — a config option coming back, not a filename appearing in here.
  *
  * ## What it does not catch
  *
@@ -126,9 +128,9 @@ const FOCUS_PROPS = new Set([
  * Judged wherever they are *written* rather than only where they are imported,
  * because importing is not the only way to reach one: `react-native-tvos` types
  * `useTVEventHandler` onto a module pnpm puts out of this app's reach, so the
- * About Panel reads it off the namespace instead (the whole story is in
- * `apps/tv/src/tv-about.tsx`) — and a gate that only watched import specifiers
- * would have been walked straight past by the very code it exists to permit.
+ * About Panel used to read it off the namespace instead — and a gate that only
+ * watched import specifiers would have been walked straight past by the very
+ * code it existed to permit. The panel is gone; that route is not.
  */
 const REMOTE_LISTENERS = new Set(['TVEventHandler', 'useTVEventHandler']);
 
@@ -167,36 +169,20 @@ module.exports = {
     type: 'problem',
     docs: {
       description:
-        'A TV screen holds nothing a remote can focus, and only the About Panel listens for the remote at all (docs/project-scope.md: Eyes up).',
+        'A TV screen holds nothing a remote can focus, and nothing on the television listens for the remote at all (docs/project-scope.md: the TV is not the primary controller).',
     },
-    schema: [
-      {
-        type: 'object',
-        properties: { remoteOwner: { type: 'string' } },
-        required: ['remoteOwner'],
-        additionalProperties: false,
-      },
-    ],
+    schema: [],
     messages: {
       focusableComponent:
-        '`{{name}}` is a focus target on a television, and the TV app requires zero remote interaction after launch — the only remote-reachable control is the About Panel. Draw this with `View`/`Text` and drive it from the Controller.',
+        '`{{name}}` is a focus target on a television, and the TV app requires zero remote interaction — nothing on a TV screen is remote-reachable. Draw this with `View`/`Text` and drive it from the Controller.',
       focusProp:
-        '`{{name}}` makes this reachable with the remote, and the TV app requires zero remote interaction after launch — the only remote-reachable control is the About Panel. Drive it from the Controller instead.',
+        '`{{name}}` makes this reachable with the remote, and the TV app requires zero remote interaction — nothing on a TV screen is remote-reachable. Drive it from the Controller instead.',
       remoteListener:
-        '`{{name}}` is the remote, and {{owner}} is the one file allowed to hold it — everything else on the television is phone-driven. Put the behaviour in the About Panel or on the Controller.',
+        '`{{name}}` is the remote, and no file on the television may hold it — the television is phone-driven, all of it. Put the behaviour on the Controller.',
     },
   },
 
   create(context) {
-    const [options] = context.options;
-    const { remoteOwner } = options;
-    // Compared as a path suffix rather than resolved, so the config names the
-    // owner the way the rest of the config names files: repo-relative. The
-    // leading separator is what keeps that from being a bare suffix match — an
-    // exemption for `apps/tv/src/tv-about.tsx` should not also be an exemption
-    // for `somewhere-else/apps/tv/src/tv-about.tsx`.
-    const ownsTheRemote = context.filename.endsWith(`/${remoteOwner}`);
-
     return {
       JSXOpeningElement(node) {
         const name = elementName(node.name);
@@ -221,7 +207,7 @@ module.exports = {
       },
 
       Identifier(node) {
-        if (ownsTheRemote || !REMOTE_LISTENERS.has(node.name)) {
+        if (!REMOTE_LISTENERS.has(node.name)) {
           return;
         }
 
@@ -235,7 +221,7 @@ module.exports = {
         context.report({
           node,
           messageId: 'remoteListener',
-          data: { name: node.name, owner: remoteOwner },
+          data: { name: node.name },
         });
       },
     };
