@@ -34,7 +34,10 @@
       [
         "@react-native-tvos/config-tv",
         {
-          "isTV": true
+          "isTV": true,
+          "androidTVRequired": true,
+          "androidTVIcon": "../../packages/ui/assets/app-icons/huddle-android-tv-icon.png",
+          "androidTVBanner": "../../packages/ui/assets/app-icons/huddle-android-tv-banner.png"
         }
       ]
     ],

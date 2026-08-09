@@ -19,16 +19,14 @@ import { ImageBackground, StyleSheet, useWindowDimensions, View } from 'react-na
  *
  * The background image is the canvas rather than decoration laid over one: the
  * handoff is explicit that `tv-backgrounds/` *is* what a TV screen is drawn on,
- * so nothing paints a flat colour behind it. It sits inside the stage so it
- * scales with everything else, which is what keeps the plants at the edges of
- * the picture on a 720p panel and a 4K one alike — and, since the title-safe
- * inset scales the stage rather than cropping it, the artwork is inset with the
- * content and its edges stay where the composition puts them.
+ * so it fills the whole viewport. The title-safe transform belongs only to the
+ * content stage nested inside it. That keeps the plants at the screen edges
+ * while the 1280×720 composition remains clear of overscan.
  *
- * The letterbox bars stay a solid warm off-white, and so does the title-safe
- * margin. Both are what the artwork does not cover, and it is a 16:9
- * composition — stretching it out there would draw a second pair of plants
- * beside the first.
+ * The image uses `cover` at the viewport boundary, so a non-16:9 panel crops
+ * the decorative artwork rather than introducing a second pair of plants in
+ * letterbox bars. The content stage still fits and centres using the smaller
+ * window ratio before the title-safe inset.
  *
  * Nothing is drawn over the screen here. The About Panel used to be, and it was
  * the one thing on this television a remote could reach; the approved design
@@ -40,26 +38,25 @@ export function TvStage({ children }: { readonly children: ReactNode }) {
   const window = useWindowDimensions();
 
   return (
-    <View style={styles.letterbox}>
-      <ImageBackground
-        source={background}
-        // The artwork's own ratio is the stage's, so it lands exactly; `cover`
-        // is what keeps that true if either number is ever nudged.
-        resizeMode="cover"
-        style={[styles.stage, { transform: [{ scale: tvSafeStageScale(window) }] }]}
-      >
+    <ImageBackground
+      source={background}
+      // The artwork reaches the screen edges at every panel size. `cover`
+      // preserves its ratio while allowing a non-16:9 viewport to crop the
+      // decorative edges instead of scaling the content with the image.
+      resizeMode="cover"
+      style={styles.background}
+    >
+      <View style={[styles.stage, { transform: [{ scale: tvSafeStageScale(window) }] }]}>
         {children}
-      </ImageBackground>
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  // What a non-16:9 window and the title-safe inset leave over, in the screen
-  // colour, so a letterboxed TV reads as one surface rather than a picture
-  // pasted onto a black backing. This is also the only place `colors.screen` is
-  // painted: everywhere else the background image is the canvas.
-  letterbox: {
+  // The artwork is deliberately full-viewport. The warm fill prevents a flash
+  // before the image has decoded and remains the fallback if the asset fails.
+  background: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
