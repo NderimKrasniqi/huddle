@@ -60,8 +60,14 @@ export const seat = {
 /** How many seats stand side by side; `ROOM_PLAYER_CAP` over two rows. */
 export const SEATS_PER_ROW = 5;
 
-/** The QR bitmap's 87pt edge on the approved Room board. */
-export const ROOM_QR_SIZE = 87;
+/**
+ * The QR bitmap's edge on the approved Room board.
+ *
+ * The board's dark modules span 115–116 board pixels, so ÷1.30625 is 88–89. The
+ * card around it is 152 × 145 board pixels — 116 × 111 here — which is wider
+ * than it is tall; `qrCard`'s padding carries that difference.
+ */
+export const ROOM_QR_SIZE = 89;
 
 /** The height of one seat: circle, nickname and status slot with their gaps. */
 export const SEAT_HEIGHT =
@@ -86,15 +92,48 @@ export function roomGridHeight(): number {
 export const roomLayout = {
   /** The wordmark's top band. */
   headerTop: 32,
-  wordmark: 47,
+  /**
+   * The wordmark's height — the mark and the word together, since `Wordmark`
+   * scales as one piece.
+   *
+   * Deliberately larger than the board, decided 2026-08-09. The board's mark is
+   * 185.3 × 43.6 in these units and this was 47, so the app already stood very
+   * slightly taller; it now stands about a third taller again because the mark
+   * reads small on a television across a room, which a board viewed at desk
+   * distance does not show. `roomWordmark` keeps it out of the flow in the left
+   * gutter, so growing it moves nothing else — the only bound is the assertion
+   * that `headerTop + wordmark` stays inside the title's band.
+   */
+  wordmark: 61,
   /** Top of the title line, clear of the wordmark. */
   titleTop: 78,
-  titleLine: 48,
+  /**
+   * The title's line box. 58 rather than 48 as of 2026-08-09, because the title
+   * itself went from 40px to 48px and Inter's descenders — "your phone" has two
+   * — need more than a 48pt box at that size.
+   *
+   * This is a term in `roomScreenHeight()`, so the ten points come off the
+   * bottom margin: the column now stands at 697 of the stage's 720 rather than
+   * 687. Still clear, and the test that bounds it says so.
+   */
+  titleLine: 58,
   /** Down to the code tiles and the QR beside them. */
   heroGap: 21,
-  /** The approved board's code tile is wider than it is tall. */
-  tileWidth: 105,
-  tileHeight: 89,
+  /**
+   * The approved board's code tile is **square**, and these are measured off it
+   * rather than estimated: on `01-room.png` a tile is 128–130 × 130 board pixels,
+   * and the board is a 1672-wide render of this 1280-wide composition, so
+   * ÷1.30625 gives 98–99.5 × 99.5.
+   *
+   * These read 105 × 89 until 2026-08-09, described as "wider than it is tall",
+   * which the board does not support — the tiles rendered visibly squat beside
+   * it. Measure in *design units* when checking this: comparing board pixels to
+   * a screenshot's pixels makes every element look ~10% small, because
+   * `tvSafeStageScale` insets the whole stage to 90% and the board has no such
+   * inset. That artifact is what hid this one.
+   */
+  tileWidth: 99,
+  tileHeight: 99,
   tileCaptionGap: 24,
   captionLine: 22,
   /** Down to the `PLAYERS IN THE ROOM` rule. */

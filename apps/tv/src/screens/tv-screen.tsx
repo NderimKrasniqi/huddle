@@ -64,6 +64,27 @@ import { TvStage } from '../features/game-session';
 const FOOTER_TEXT_LINE = 28;
 
 /**
+ * The Room hero's horizontal arithmetic: the QR card's size, and what it costs
+ * the code tiles beside it.
+ *
+ * The tiles have to line up with the title above them and the caption below —
+ * all three centred on the stage — while the QR sits off to their right. Those
+ * two wants fight, because the QR is inside the row that gets centred: a row of
+ * `tiles + gap + card` centred on the stage puts the *tiles* left of it by half
+ * of `gap + card`. Measured on the simulator, that was 71.4pt of drift.
+ *
+ * `CODE_ROW_OFFSET` cancels it. A margin shifts a centred row by half its value,
+ * so the margin wanted is the whole of `gap + card` — and it is written as that
+ * sum rather than as the 144 it currently comes to, so changing the QR's size or
+ * the gap keeps the tiles centred instead of quietly pulling them off again.
+ */
+const QR_CARD_PADDING_X = 14;
+const QR_CARD_PADDING_Y = 11;
+const QR_CARD_WIDTH = ROOM_QR_SIZE + QR_CARD_PADDING_X * 2;
+const CODE_QR_GAP = 27;
+const CODE_ROW_OFFSET = CODE_QR_GAP + QR_CARD_WIDTH;
+
+/**
  * The TV — Room (`docs/design/reference/screens/01-room.png`): the Room Code in
  * four tiles, the QR that deep-links a phone straight into the room, and the
  * roster filling up underneath.
@@ -1157,48 +1178,67 @@ const styles = StyleSheet.create({
   // The board sets this as a plain heading rather than the pill Soft Minimal used:
   // Soft Minimal has one accent and it is spent on things you act on.
   // The wordmark's gutter position, out of the column's flow.
+  // Hard into the top-left corner as of 2026-08-09 — 10pt from each edge, where
+  // this sat at `headerTop` (32) from the top and 56 from the left. The shared
+  // `headerTop` is deliberately left alone: every other TV screen puts its mark in
+  // a header row that wants that band, and only the Room floats the mark out of
+  // the flow. 10pt is safe this close to the edge because the whole stage is
+  // already inset to the title-safe inner 90% (`tvSafeStageScale`), so the bezel
+  // cannot reach it.
   roomWordmark: {
     position: 'absolute',
-    top: roomLayout.headerTop,
-    left: 56,
+    top: 10,
+    left: 10,
   },
-  // 40/48, which is the handoff's TV Title step. The board draws this nearer
-  // 33, and the scale wins: a one-off size on one screen is how a type scale
-  // stops being one. The disagreement is recorded in the handoff.
+  // 48/58 as of 2026-08-09, up from 40/48. The board's own title ink
+  // measures 356 × 45 in design units against this screen's 334 × 42, so 40 was
+  // already a little under it, and a television is read from across a room where
+  // a board is read at desk distance. `roomLayout.titleLine` grew with it: at
+  // 48px the descenders in "your phone" need more than a 48pt box.
   roomTitle: {
     color: colors.ink,
     fontFamily: fontFamily.bold,
-    fontSize: 40,
+    fontSize: 48,
     lineHeight: roomLayout.titleLine,
     marginTop: roomLayout.titleTop,
     textAlign: 'center',
   },
-  // The code column and the QR beside it, centred on each other's middle.
+  // The code column and the QR beside it.
   //
-  // `marginLeft` is the board's own asymmetry, measured rather than invented.
-  // The board centres the *title* on the stage (ink centre 642 of 1280) but not
-  // this row: the tiles sit at 390–797 and the QR at 840–967, putting the pair's
-  // centre 38pt right of the stage's. So the group is nudged by twice that
-  // through the padding, and the tiles land under the heading where the board
-  // has them instead of dragged left by the QR's weight.
+  // The tiles are centred on the stage, with the title above them and the caption
+  // below on the same centre, and the QR sits off to their right without dragging
+  // them — `CODE_ROW_OFFSET` carries that arithmetic and the reasoning.
+  //
+  // This is a deliberate departure from the board, decided 2026-08-09. The board's
+  // own hero is asymmetric: its tiles centre on 605 of 1280 while its title
+  // centres on 640, so reproducing it leaves the code out of line with its own
+  // heading. Aligning the three won instead. Do not add an offset here to chase
+  // the board's placement.
+  //
+  // The 27pt gap and the tiles' own 26pt spacing *are* the board's, measured off
+  // `01-room.png` in design units (board pixels ÷ 1.30625). They read 43 and 23
+  // until 2026-08-09, from the board export that #27 replaced; the geometry moved
+  // and the tokens were never re-measured against the second export.
   codeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 43,
+    gap: CODE_QR_GAP,
     marginTop: roomLayout.heroGap,
-    marginLeft: 76,
+    marginLeft: CODE_ROW_OFFSET,
   },
   codeGroup: {
     alignItems: 'center',
     gap: roomLayout.tileCaptionGap,
   },
+  // 474pt of tiles across: four at `tileWidth` with the board's 26pt between.
   tiles: {
     flexDirection: 'row',
-    gap: 23,
+    gap: 26,
   },
-  // The approved board uses a warm 105×89 tile; the letter stays large enough
-  // to read across the room without changing the line box.
+  // The approved board uses a warm square tile (`roomLayout.tileWidth/Height`,
+  // measured off the board at 99×99); the letter stays large enough to read
+  // across the room without changing the line box.
   tile: {
     width: roomLayout.tileWidth,
     height: roomLayout.tileHeight,
@@ -1207,7 +1247,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.roomSurface,
     borderColor: colors.border,
     borderWidth: borderWidth.hairline,
-    borderRadius: radius.card,
+    // `chip` (10) rather than `card` (20). Measured off the board: at a tile's
+    // top row the white span is inset by exactly the corner radius, which puts
+    // the board's at 12 board pixels — 9.2 in these units. `card` was double it,
+    // and at this size a doubled radius reads as a different shape rather than a
+    // softer one.
+    borderRadius: radius.chip,
   },
   tileLetter: {
     // The letter fills its tile and is centred in it, rather than sizing itself
@@ -1221,8 +1266,13 @@ const styles = StyleSheet.create({
     // optically centred in the tile instead of riding low.
     lineHeight: 58,
   },
+  // The board draws this line in the same deep navy as everything else on the
+  // screen and leans on weight, not colour, for the product name. It was
+  // `colors.roomCaption` grey until 2026-08-09 — the clearest colour delta in the
+  // whole comparison, and the wrong end of it: this is the line that tells the
+  // room what to do with the code above it.
   caption: {
-    color: colors.roomCaption,
+    color: colors.ink,
     fontFamily: fontFamily.regular,
     fontSize: 22,
     lineHeight: roomLayout.captionLine,
@@ -1251,15 +1301,20 @@ const styles = StyleSheet.create({
     // read and acted on.
     fontSize: 22,
   },
-  // The QR uses its own 87pt bitmap inside a warm Room card.
+  // The QR uses its own bitmap inside a warm Room card. The padding is split
+  // because the board's card is wider than it is tall — 152 × 145 board pixels,
+  // so 116 × 111 here around an 89pt bitmap.
   qrCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 15,
+    paddingHorizontal: QR_CARD_PADDING_X,
+    paddingVertical: QR_CARD_PADDING_Y,
     backgroundColor: colors.roomSurface,
     borderColor: colors.border,
     borderWidth: borderWidth.hairline,
-    borderRadius: radius.card,
+    // The board's QR card corner measures 11 board pixels — 8.4 here — so it
+    // takes the same `chip` as the tiles beside it rather than `card`.
+    borderRadius: radius.chip,
   },
   qr: {
     width: ROOM_QR_SIZE,
@@ -1407,8 +1462,13 @@ const styles = StyleSheet.create({
     minHeight: roomLayout.countLine,
     marginTop: roomLayout.countGap,
   },
+  // Deep navy rather than muted grey as of 2026-08-09, the same call as the
+  // caption above the roster: this line carries the room's state — how full it is
+  // and whether the Host can start — and a television is read from the sofa,
+  // where grey-on-warm is the first thing to go. The count itself stays in the
+  // accent (`countJoined`), so the number still leads the line.
   countText: {
-    color: colors.mutedText,
+    color: colors.ink,
     fontFamily: fontFamily.regular,
     fontSize: 22,
     lineHeight: roomLayout.countLine,

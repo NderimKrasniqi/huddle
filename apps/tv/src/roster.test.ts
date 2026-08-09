@@ -108,16 +108,29 @@ describe('the grid', () => {
 
 describe('roomScreenHeight', () => {
   it('keeps the approved Room landmarks', () => {
+    // Measured off `docs/design/reference/screens/01-room.png` in design units —
+    // board pixels ÷ 1.30625, since the board is a 1672-wide render of this
+    // 1280-wide composition. The tile was 105 × 89 here until 2026-08-09, from
+    // the board export that #27 replaced; the current export's tile is square.
     expect(roomLayout).toMatchObject({
       headerTop: 32,
-      wordmark: 47,
+      wordmark: 61,
       titleTop: 78,
-      titleLine: 48,
-      tileWidth: 105,
-      tileHeight: 89,
+      titleLine: 58,
+      tileWidth: 99,
+      tileHeight: 99,
       captionLine: 22,
       dividerGap: 21,
     });
+  });
+
+  it('draws the code tile square, as the board does', () => {
+    // The regression this guards is a *comparison* error, not a typo: measuring
+    // board pixels against screenshot pixels makes everything look ~10% small,
+    // because `tvSafeStageScale` insets the stage to 90% and the board has no
+    // such inset. A tile that is merely the wrong shape survives that noise,
+    // which is how 105 × 89 lasted. Aspect is the assertion that does not.
+    expect(roomLayout.tileWidth).toBe(roomLayout.tileHeight);
   });
 
   it('fits the stage at a full room', () => {
@@ -137,7 +150,13 @@ describe('roomScreenHeight', () => {
     // The board's own layout runs to 725 on a 768-tall frame; ours has 720, so
     // the five points come out of `gridGap` and this holds the rest of the
     // margin that difference leaves.
-    expect(roomScreenHeight()).toBeLessThanOrEqual(689);
+    //
+    // The bound was 689 until 2026-08-09, when the title grew from 40px to 48px
+    // and took `titleLine` from 48 to 58 with it. Those ten points come off this
+    // margin rather than out of the grid or the hero, which is a deliberate trade
+    // — 23pt of the stage still stands clear below the count, and the assertion
+    // that actually protects the screen is the one above, against the stage.
+    expect(roomScreenHeight()).toBeLessThanOrEqual(700);
   });
 
   it('spends every term in `roomLayout` except the wordmark’s, and the grid', () => {
