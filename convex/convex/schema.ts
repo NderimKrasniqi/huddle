@@ -64,8 +64,19 @@ export default defineSchema({
       v.object({
         /** Which installed module — `GameMetadata.id`, as the Registry knows it. */
         gameId: v.string(),
-        /** Decoder version for the opaque state stored below. */
-        stateVersion: v.number(),
+        /**
+         * Decoder version for the opaque state stored below.
+         *
+         * Optional so this schema can land on a deployment that already holds
+         * rooms. Convex validates a new schema against every existing document,
+         * and a game stored before versioning existed has no version to offer —
+         * requiring one here would block the deploy on exactly the data the
+         * field was invented to cope with. Absent means "written before there
+         * were versions", which every reader already treats as undecodable:
+         * `running.stateVersion !== game.stateVersion` fails the runtime rather
+         * than guessing at a format (`games.ts`, `lib/gameRuntime.ts`).
+         */
+        stateVersion: v.optional(v.number()),
         state: v.any(),
         /**
          * The room's clock for the beat it is on: the scheduled function that
@@ -103,8 +114,18 @@ export default defineSchema({
         pausedRemainingMs: v.optional(v.number()),
       }),
     ),
-    /** Stable lifecycle projection of the TV connection. */
-    tvAway: v.boolean(),
+    /**
+     * Stable lifecycle projection of the TV connection.
+     *
+     * Optional for the same reason as `stateVersion` above: Convex validates a
+     * new schema against every room already stored, and rooms opened before this
+     * field existed cannot grow one. Absent means **not away**, which is what
+     * every reader already asks for — the checks are written `tvAway === true`
+     * and `tvAway !== true` rather than as a bare boolean, so a room from an
+     * older deployment reads as a television that is present. Both `openRoom`
+     * paths write it explicitly, so only historical rooms are ever without it.
+     */
+    tvAway: v.optional(v.boolean()),
     /**
      * Which card the Host is browsing in the lobby: a position in the Registry's
      * ordered list, which the TV's carousel follows.
