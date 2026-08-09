@@ -23,7 +23,7 @@ import {
   type QueryCtx,
 } from './_generated/server';
 import { playerForSession, requireRoomHost } from './lib/authorization';
-import { projectRuntime } from './lib/game-runtime';
+import { projectRuntime } from './lib/gameRuntime';
 import { awayPlayerIds, playersInRoom } from './lib/presence';
 
 /**

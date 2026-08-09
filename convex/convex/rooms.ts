@@ -10,9 +10,9 @@ import { ConvexError, v } from 'convex/values';
 import { components, internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { deleteRoomChildren } from './lib/room-lifecycle';
-import { isValidDeadline } from './lib/game-clock';
-import { decodeStoredRuntime } from './lib/game-runtime';
+import { deleteRoomChildren } from './lib/roomLifecycle';
+import { isValidDeadline } from './lib/gameClock';
+import { decodeStoredRuntime } from './lib/gameRuntime';
 import { playersInRoom, roomSilenceMs } from './lib/presence';
 
 /**
