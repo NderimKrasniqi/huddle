@@ -248,9 +248,9 @@ the existing public room/game contracts except for the intentional TV APIs and
 `createRoom` → `openRoom` replacement.
 
 **Current feature:** F-007 Full-Codebase Behavior-Preserving Refactor
-**Current phase:** 7.3 TV decomposition
-**Current task:** 7.3.1 Split TV composition into owned features
-**Last completed task:** 7.2.1 Split Controller composition into owned features
+**Current phase:** 7.4 Convex consolidation
+**Current task:** 7.4.1 Finish private helper extraction and retire `createRoom`
+**Last completed task:** 7.3.1 Split TV composition into owned features
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -397,9 +397,20 @@ approved Soft Minimal visuals/assets.
 
 ## Phase 7.3 — TV decomposition
 
-- [ ] **7.3.1 — Split TV composition into owned features**
+- [x] **7.3.1 — Split TV composition into owned features**
   - Move Room, carousel, game-session, shared TV UI, and room-session lifecycle
     into their declared boundaries without changing rendering or recovery.
+  - Evidence: the TV root screen is 84 lines and owns only room opening, live
+    subscriptions, and surface selection. Room, carousel, and game-session own
+    their renderers and styles; room-session owns credentials, heartbeat, retry,
+    expiry, and lifecycle hooks; `TvStage` is TV UI. A pure surface selector
+    covers room, carousel, game, paused, and unavailable states, and architecture
+    validation rejects cross-feature deep imports. Typecheck, lint, 71 files /
+    794 tests, pack/workflow validation, both iOS Expo exports, and the native TV
+    build pass. A regenerated tvOS project links `ExpoCrypto` and
+    `ExpoSecureStore`, clearing the stale-native-module runtime error; the live
+    Room simulator comparison has no visual delta from the approved Soft Minimal
+    capture except its generated room code.
   - **Depends on:** 7.2.1
 
 ## Phase 7.4 — Convex consolidation
