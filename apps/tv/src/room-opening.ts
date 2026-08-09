@@ -217,14 +217,19 @@ export function keepOpeningRoom(
   };
 }
 
-/** The line under the code tiles, and whether it is trouble the room should see. */
+/** Structured invitation copy or a failure line for the Room caption. */
 export type RoomOpeningCaption = {
+  readonly kind: 'invitation';
+  /** Text before the bold product name. */
+  readonly before: string;
+  /** The product name, rendered bold on the Room. */
+  readonly emphasis: string;
+  /** Text after the bold product name. */
+  readonly after: string;
+} | {
+  readonly kind: 'trouble';
+  /** Failure copy rendered in the Room's status chip. */
   readonly text: string;
-  /**
-   * Trouble is drawn as a Boardwalk status chip rather than as the caption's
-   * quiet muted line — see `PairingCaption` in `app/index.tsx`.
-   */
-  readonly trouble: boolean;
 };
 
 /**
@@ -248,10 +253,18 @@ export function roomOpeningCaption(opening: RoomOpening): RoomOpeningCaption {
   switch (opening.kind) {
     case 'opening':
     case 'open':
-      return { text: 'Open Huddle on your phone and enter this code', trouble: false };
+      return {
+        kind: 'invitation',
+        before: 'Open ',
+        emphasis: 'Huddle',
+        after: ' on your phone and enter the code',
+      };
     case 'reconnecting':
-      return { text: 'Can’t reach Huddle — reconnecting…', trouble: true };
+      return { kind: 'trouble', text: 'Can’t reach Huddle — reconnecting…' };
     case 'misconfigured':
-      return { text: 'No Huddle backend — set EXPO_PUBLIC_CONVEX_URL and rebuild', trouble: true };
+      return {
+        kind: 'trouble',
+        text: 'No Huddle backend — set EXPO_PUBLIC_CONVEX_URL and rebuild',
+      };
   }
 }

@@ -29,31 +29,24 @@ export type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
 /**
  * Seat measurements at the TV's 1280×720 design size.
  *
- * The board draws a 6×2 grid of twelve; `ROOM_PLAYER_CAP` is ten, so the grid
- * is 5×2 — a rectangle rather than a row of six with four stragglers under it.
- * The column is wider than the circle it holds because the thing under the
- * circle is a nickname, and a name that wraps is a row of seats at two
- * different heights.
+ * `ROOM_PLAYER_CAP` is ten, so the Room uses a stable 5×2 grid. The column is
+ * wider than the avatar to leave room for a nickname and status slot.
  */
 export const seat = {
-  /** The avatar circle's diameter — the board's disc measures 88–90. */
-  avatar: 88,
+  /** The avatar circle's diameter on the approved Room board. */
+  avatar: 70,
   /**
-   * The column a seat occupies. Sized by the widest thing that goes in it,
-   * which is not the nickname — it is the `JUST JOINED!` chip. At 140 that chip
-   * wrapped to two lines and pushed its own seat out of the row; a status slot
-   * is one line by construction, so the column is what gives.
+   * The column a seat occupies. Five columns at 118pt with a 6pt gap make the
+   * approved 124pt centre-to-centre pitch while leaving room for a nickname.
    */
-  width: 152,
+  width: 118,
   /**
-   * Space between columns. 6 rather than a round number because the *pitch* is
-   * what the board fixes, at 158 — and 152 + 6 is that, which puts 70pt between
-   * one disc and the next exactly as the board does. The column being wider
-   * than the disc is the chip's doing, not a change of spacing.
+   * Space between columns. Together with the 118pt column this is the board's
+   * 124pt centre-to-centre pitch.
    */
   columnGap: 6,
-  /** Space between the two rows; the board's row pitch is 177. */
-  rowGap: 18,
+  /** Space between the two rows; the board's row pitch is 145. */
+  rowGap: 4,
   /** Space between the circle and the nickname. */
   nameGap: 13,
   /** The nickname's line. */
@@ -66,6 +59,9 @@ export const seat = {
 
 /** How many seats stand side by side; `ROOM_PLAYER_CAP` over two rows. */
 export const SEATS_PER_ROW = 5;
+
+/** The QR bitmap's 87pt edge on the approved Room board. */
+export const ROOM_QR_SIZE = 87;
 
 /** The height of one seat: circle, nickname and status slot with their gaps. */
 export const SEAT_HEIGHT =
@@ -84,60 +80,27 @@ export function roomGridHeight(): number {
 }
 
 /**
- * The Room screen's vertical stack, top to bottom.
- *
- * Every number was measured off `docs/design/reference/screens/01-room.png` as
- * that file stood before 2026-08-09, and used as drawn. That was possible
- * because the board's pixels were square — its QR bitmap measured 95×93, and a
- * QR is square by construction — so a board pixel was a design point and
- * nothing needed rescaling. What did *not* carry over was the frame: the
- * mockup's screen was 1272×768, an aspect of 1.656, while the stage is 16:9.
- * That board's layout ran to y 725 and the stage is 720, so the whole
- * difference was five points, taken out of `gridGap` — the largest gap on the
- * screen and the least missed.
- *
- * **That file is no longer that board.** It was replaced with a 1672×941
- * re-export — the screen alone, at the stage's own 16:9 — and the replacement
- * is a recomposition rather than a rescale: it gives the hero more room and the
- * roster less. Measured against it (÷1.30625 for board px to design point) the
- * numbers below are wrong by more than rounding — disc 70 against 88, column
- * pitch 124 against 158, row pitch 145 against 177, tile 105 against 84 — and
- * the wordmark no longer sits behind the title. Four numbers do agree exactly:
- * the wordmark's top at 32, the title's 48-point line, and the 22 and 20 of a
- * seat's two text lines. The full table is in
- * `docs/design/soft-minimal-handoff.md`.
- *
- * Nothing here was changed to match, because adopting that geometry redraws the
- * Room screen and no one has yet seen it drawn. What is below is what the
- * television has been shipping; treat it as the current design, and the board as
- * the open question.
- *
- * It lives here rather than in the screen's `StyleSheet` so the total is
- * testable. The first draft carried the sum in a comment instead, and the
- * comment was 18pt wrong.
+ * The approved Soft Minimal board's 1280×720 vertical landmarks live here so
+ * `roomScreenHeight()` can be checked arithmetically rather than by eye.
  */
 export const roomLayout = {
-  /** The wordmark's own band. It is *behind* the title rather than above it. */
+  /** The wordmark's top band. */
   headerTop: 32,
-  wordmark: 39,
-  /**
-   * Where the content column starts — above the wordmark's baseline, because
-   * the board overlaps the two. `Grab your phone!` is centred on the stage and
-   * the wordmark sits in the left gutter beside it, so stacking them (which is
-   * what a plain header row does) pushes the whole screen 30pt down.
-   */
-  titleTop: 55,
+  wordmark: 47,
+  /** Top of the title line, clear of the wordmark. */
+  titleTop: 78,
   titleLine: 48,
   /** Down to the code tiles and the QR beside them. */
   heroGap: 21,
-  /** A code tile: 86 wide on the board and very nearly square. */
-  tile: 84,
+  /** The approved board's code tile is wider than it is tall. */
+  tileWidth: 105,
+  tileHeight: 89,
   tileCaptionGap: 24,
-  captionLine: 30,
+  captionLine: 22,
   /** Down to the `PLAYERS IN THE ROOM` rule. */
-  dividerGap: 24,
+  dividerGap: 21,
   dividerLine: 20,
-  /** Down to the grid. The board's 41, less the five the 16:9 frame costs. */
+  /** Down to the grid. */
   gridGap: 26,
   /** Down to the count. */
   countGap: 12,
@@ -147,18 +110,11 @@ export const roomLayout = {
 /**
  * The hero's height: the code tiles over their caption.
  *
- * The QR stands beside it and is deliberately the shorter of the two, so this
- * one column decides the row — a QR that grew past the code it accompanies
- * would be a QR that had become the hero.
- *
- * The 2026-08-09 board keeps that true — 87 against the tile column's 89 — but
- * only just, and an export earlier the same day had it the other way round at
- * 108.7 against 93.4, which would have returned a hero 15pt short. Two points of
- * margin is the whole of the guarantee, so a board that grows the QR again is
- * worth measuring rather than eyeballing.
+ * The QR sits beside this column and remains shorter (87pt) than the tile's
+ * 89pt height, so this code column determines the hero row's height.
  */
 export function roomHeroHeight(): number {
-  return roomLayout.tile + roomLayout.tileCaptionGap + roomLayout.captionLine;
+  return roomLayout.tileHeight + roomLayout.tileCaptionGap + roomLayout.captionLine;
 }
 
 /**

@@ -24,7 +24,7 @@ import {
   elevation,
   springOf,
 } from '@huddle/ui';
-import { Avatar, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Icon, Surface, Wordmark } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -45,6 +45,7 @@ import {
   type RoomSeat,
   roomCountLine,
   roomLayout,
+  ROOM_QR_SIZE,
   roomSeats,
   type RosterSeat,
   seat,
@@ -54,9 +55,6 @@ import {
   SEATS_PER_ROW,
 } from '../src/roster';
 import { TvStage } from '../src/tv-stage';
-
-/** The QR bitmap's edge; the board's measures 95 inside a 128pt card. */
-const QR_SIZE = 96;
 
 /**
  * A TV footer's line box at 22px, pinned rather than left to React Native's
@@ -344,13 +342,20 @@ function TakenSeat({
 
   return (
     <View style={styles.seat}>
-      <Animated.View style={pop}>
-        <Avatar
-          avatar={seated.avatar}
-          size={seat.avatar}
-          label={seatSpokenAs(seated, greeting)}
-        />
-      </Animated.View>
+      <View style={styles.avatarWrap}>
+        {seated.host ? (
+          <View style={styles.hostCrown}>
+            <Icon name="crown" size={28} color={colors.hostCrown} />
+          </View>
+        ) : null}
+        <Animated.View style={pop}>
+          <Avatar
+            avatar={seated.avatar}
+            size={seat.avatar}
+            label={seatSpokenAs(seated, greeting)}
+          />
+        </Animated.View>
+      </View>
       <Text style={styles.seatName} numberOfLines={1}>
         {seated.nickname}
       </Text>
@@ -362,12 +367,8 @@ function TakenSeat({
 /**
  * The slot under a nickname: `HOST`, a presence dot, or a chip.
  *
- * The board draws its `AWAY` chip in blue, and this one is grey. Blue is the
- * system's one informational colour and it is already spoken for — `JUST
- * JOINED!` is what it means — and these two states share a slot, so drawing
- * both of them blue would make the loudest thing on the grid ambiguous. Grey is
- * also what `colors.away` is for, and what the Host's own roster already uses
- * to say the same thing about the same player.
+ * The board draws its `AWAY` chip in blue so a quiet player is distinguishable
+ * from an online dot at sofa distance.
  */
 function SeatStatus({
   seated,
@@ -427,11 +428,14 @@ function RoomCount({ roster }: { readonly roster: readonly RosterSeat[] }) {
   );
 
   return (
-    <Text style={styles.countLine}>
-      <Text style={styles.countJoined}>{joined}</Text>
-      {` of ${total} joined`}
-      {note === undefined ? '' : ` — ${note}`}
-    </Text>
+    <View style={styles.countLine}>
+      <Icon name="player-count" size={28} color={colors.ink} />
+      <Text style={styles.countText}>
+        <Text style={styles.countJoined}>{joined}</Text>
+        {` of ${total} joined`}
+        {note === undefined ? '' : ` — ${note}`}
+      </Text>
+    </View>
   );
 }
 
@@ -639,8 +643,14 @@ function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
  * no failure state for this screen at all (it draws a TV that is working).
  */
 function RoomCaption({ caption }: { readonly caption: RoomOpeningCaption }) {
-  if (!caption.trouble) {
-    return <Text style={styles.caption}>{caption.text}</Text>;
+  if (caption.kind === 'invitation') {
+    return (
+      <Text style={styles.caption}>
+        {caption.before}
+        <Text style={styles.captionEmphasis}>{caption.emphasis}</Text>
+        {caption.after}
+      </Text>
+    );
   }
 
   return (
@@ -665,9 +675,9 @@ function RoomQrCard({ code }: { readonly code: string | undefined }) {
         {code === undefined ? null : (
           <QRCode
             value={roomJoinLink(code)}
-            size={QR_SIZE}
+            size={ROOM_QR_SIZE}
             color={colors.ink}
-            backgroundColor={colors.surface}
+            backgroundColor={colors.roomSurface}
           />
         )}
       </View>
@@ -1140,16 +1150,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 23,
   },
-  // Down from Boardwalk's 148×176. The tiles gave up the middle of the screen
-  // when the roster moved onto it, and a room code is still legible across a
-  // room at an 84pt tile: the letter is 52px of SemiBold navy on white, which
-  // is more than twice the 22px body this television reads at.
+  // The approved board uses a warm 105×89 tile; the letter stays large enough
+  // to read across the room without changing the line box.
   tile: {
-    width: roomLayout.tile,
-    height: roomLayout.tile,
+    width: roomLayout.tileWidth,
+    height: roomLayout.tileHeight,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.roomSurface,
     borderColor: colors.border,
     borderWidth: borderWidth.hairline,
     borderRadius: radius.card,
@@ -1167,10 +1175,14 @@ const styles = StyleSheet.create({
     lineHeight: 58,
   },
   caption: {
-    color: colors.mutedText,
+    color: colors.roomCaption,
     fontFamily: fontFamily.regular,
     fontSize: 22,
     lineHeight: roomLayout.captionLine,
+  },
+  captionEmphasis: {
+    color: colors.ink,
+    fontFamily: fontFamily.bold,
   },
   // The caption's slot, on the soft peach accent surface, when the news is that
   // nothing is working.
@@ -1192,19 +1204,19 @@ const styles = StyleSheet.create({
     // read and acted on.
     fontSize: 22,
   },
-  // 128 square on the board, around a 95pt bitmap.
+  // The QR uses its own 87pt bitmap inside a warm Room card.
   qrCard: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 15,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.roomSurface,
     borderColor: colors.border,
     borderWidth: borderWidth.hairline,
     borderRadius: radius.card,
   },
   qr: {
-    width: QR_SIZE,
-    height: QR_SIZE,
+    width: ROOM_QR_SIZE,
+    height: ROOM_QR_SIZE,
   },
 
   divider: {
@@ -1246,6 +1258,17 @@ const styles = StyleSheet.create({
     width: seat.width,
     height: SEAT_HEIGHT,
     alignItems: 'center',
+  },
+  avatarWrap: {
+    width: seat.avatar,
+    height: seat.avatar,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hostCrown: {
+    position: 'absolute',
+    top: -26,
+    zIndex: 1,
   },
   seatAvatar: {
     width: seat.avatar,
@@ -1304,7 +1327,7 @@ const styles = StyleSheet.create({
     marginTop: seat.statusGap,
   },
   seatChipAway: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.awayChipSurface,
   },
   seatChipJustJoined: {
     backgroundColor: colors.justJoined,
@@ -1323,19 +1346,25 @@ const styles = StyleSheet.create({
     marginRight: -letterSpacing.label / 2,
   },
   seatChipTextAway: {
-    color: colors.mutedText,
+    color: colors.awayChipText,
   },
   seatChipTextJustJoined: {
     color: colors.inverse,
   },
 
   countLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    minHeight: roomLayout.countLine,
+    marginTop: roomLayout.countGap,
+  },
+  countText: {
     color: colors.mutedText,
     fontFamily: fontFamily.regular,
     fontSize: 22,
     lineHeight: roomLayout.countLine,
-    marginTop: roomLayout.countGap,
-    textAlign: 'center',
   },
   countJoined: {
     color: colors.accent,

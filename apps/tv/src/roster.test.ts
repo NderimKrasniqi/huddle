@@ -81,6 +81,12 @@ describe('roomSeats', () => {
 });
 
 describe('the grid', () => {
+  it('uses the approved five-column Room geometry', () => {
+    expect(seat.avatar).toBe(70);
+    expect(roomGridWidth()).toBe(5 * 118 + 4 * 6);
+    expect(seat.width + seat.columnGap).toBe(124);
+  });
+
   it('fits the stage inside the handoff’s TV safe margin', () => {
     // No television is attached to this machine, so the fit is checked as
     // arithmetic rather than seen.
@@ -90,6 +96,7 @@ describe('the grid', () => {
   it('lays the room out over two rows', () => {
     expect(SEATS_PER_ROW * 2).toBe(ROOM_PLAYER_CAP);
     expect(roomGridHeight()).toBe(2 * SEAT_HEIGHT + seat.rowGap);
+    expect(SEAT_HEIGHT + seat.rowGap).toBe(145);
   });
 
   it('leaves the rest of the screen room for the code, the QR and the count', () => {
@@ -100,6 +107,19 @@ describe('the grid', () => {
 });
 
 describe('roomScreenHeight', () => {
+  it('keeps the approved Room landmarks', () => {
+    expect(roomLayout).toMatchObject({
+      headerTop: 32,
+      wordmark: 47,
+      titleTop: 78,
+      titleLine: 48,
+      tileWidth: 105,
+      tileHeight: 89,
+      captionLine: 22,
+      dividerGap: 21,
+    });
+  });
+
   it('fits the stage at a full room', () => {
     // The bound is the stage itself, not the handoff's 64pt TV safe margin.
     // `TvStage` scales the whole 1280×720 composition into the title-safe inner
@@ -117,7 +137,7 @@ describe('roomScreenHeight', () => {
     // The board's own layout runs to 725 on a 768-tall frame; ours has 720, so
     // the five points come out of `gridGap` and this holds the rest of the
     // margin that difference leaves.
-    expect(STAGE.height - roomScreenHeight()).toBeGreaterThanOrEqual(8);
+    expect(roomScreenHeight()).toBeLessThanOrEqual(689);
   });
 
   it('spends every term in `roomLayout` except the wordmark’s, and the grid', () => {
@@ -127,10 +147,10 @@ describe('roomScreenHeight', () => {
     // clears it. Everything else is a term. A number added to `roomLayout` and
     // not wired into the sum fails here, which is what stops this being a total
     // somebody has to remember to update by hand.
-    const { headerTop, wordmark, ...inFlow } = roomLayout;
+    const { headerTop, wordmark, tileWidth, tileHeight, ...inFlow } = roomLayout;
     const stacked = Object.values(inFlow).reduce((total, term) => total + term, 0);
 
-    expect(roomScreenHeight()).toBe(stacked + roomGridHeight());
+    expect(roomScreenHeight()).toBe(stacked + tileHeight + roomGridHeight());
     expect(headerTop + wordmark).toBeLessThanOrEqual(roomLayout.titleTop + roomLayout.titleLine);
   });
 });
@@ -138,8 +158,10 @@ describe('roomScreenHeight', () => {
 describe('seatSlot', () => {
   it('gives an arrival their four seconds ahead of anything else', () => {
     // Including the Host's own: the room's first player is both at once, and
-    // for those four seconds the news is that somebody is here at all.
+    // for those four seconds the news is that somebody is here at all. The
+    // Host flag remains independent, so the avatar crown stays visible.
     expect(seatSlot(ada, true)).toBe('justJoined');
+    expect(ada.host).toBe(true);
     expect(seatSlot(alan, true)).toBe('justJoined');
   });
 

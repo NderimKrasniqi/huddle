@@ -193,7 +193,12 @@ describe('keepOpeningRoom', () => {
 
 describe('roomOpeningCaption', () => {
   it('invites the room to join while the room is opening and once it is open', () => {
-    const invitation = { text: 'Open Huddle on your phone and enter this code', trouble: false };
+    const invitation = {
+      kind: 'invitation',
+      before: 'Open ',
+      emphasis: 'Huddle',
+      after: ' on your phone and enter the code',
+    } as const;
 
     expect(roomOpeningCaption({ kind: 'opening' })).toEqual(invitation);
     expect(roomOpeningCaption({ kind: 'open', room })).toEqual(invitation);
@@ -202,21 +207,24 @@ describe('roomOpeningCaption', () => {
   it('says the TV is reconnecting, in the treatment that gets read across a room', () => {
     const caption = roomOpeningCaption({ kind: 'reconnecting' });
 
-    expect(caption.text).toMatch(/reconnecting/i);
-    expect(caption.trouble).toBe(true);
+    expect(caption).toEqual({
+      kind: 'trouble',
+      text: expect.stringMatching(/reconnecting/i),
+    });
   });
 
   it('says all of it on one line of the TV stage', () => {
-    // The caption sits in the code tiles' column, which shares the 1280px stage
-    // with the QR card (252px) across a 96px gap — so the column has 932px, and
-    // the chip spends 60 of them on its padding and ink border. At 22px Space
-    // Grotesk, whose advance averages well under 0.6em, that is room for about
-    // 66 characters; 64 leaves a margin. Arithmetic, not a measurement: there
-    // is no simulator in this suite, and a caption that wrapped would push the
-    // QR card sideways on the one screen nobody can touch.
+    // The caption shares the hero row with the QR, so it must stay on one line.
+    // Arithmetic, not a measurement: there is no simulator in this suite, and
+    // a wrapped caption would push the QR card sideways.
     const captions = (
       [{ kind: 'opening' }, { kind: 'reconnecting' }, { kind: 'misconfigured' }] as const
-    ).map((opening) => roomOpeningCaption(opening).text);
+    ).map((opening) => {
+      const caption = roomOpeningCaption(opening);
+      return caption.kind === 'invitation'
+        ? `${caption.before}${caption.emphasis}${caption.after}`
+        : caption.text;
+    });
 
     expect(captions.map((text) => text.length <= 64)).toEqual([true, true, true]);
   });
@@ -226,8 +234,10 @@ describe('roomOpeningCaption', () => {
     // what they need is the name of the variable, not an apology.
     const caption = roomOpeningCaption({ kind: 'misconfigured' });
 
-    expect(caption.text).toContain('EXPO_PUBLIC_CONVEX_URL');
-    expect(caption.trouble).toBe(true);
+    expect(caption).toEqual({
+      kind: 'trouble',
+      text: expect.stringContaining('EXPO_PUBLIC_CONVEX_URL'),
+    });
   });
 });
 

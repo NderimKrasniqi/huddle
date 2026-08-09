@@ -22,6 +22,8 @@ export const colors = {
   screen: '#FFF7F2',
   /** Cards, sheets, inputs, tiles. */
   surface: '#FFFFFF',
+  /** Warm Room cards and code tiles, sampled from the approved TV board. */
+  roomSurface: '#FDFAF9',
   /** Soft peach — accent surfaces and avatar wells. */
   soft: '#FFE9DE',
   /** Deep navy. Text, headings, icons, room-code letters. */
@@ -34,6 +36,8 @@ export const colors = {
    * rather than a grey picked to sit near it.
    */
   mutedText: '#64748B',
+  /** Neutral caption ink on the Room's warm surface. */
+  roomCaption: '#8A8E95',
   /** Warm grey. Borders, dividers, inactive surfaces. */
   border: '#E9E6E2',
   /** Sage. Decorative and supporting accent only — never a control. */
@@ -50,6 +54,11 @@ export const colors = {
   justJoined: '#2D9CDB',
   /** Away, and anything present but inactive. */
   away: '#A0A4AA',
+  /** Gold crown above the Room Host's avatar. */
+  hostCrown: '#F5A116',
+  /** Blue Away chip surface and label on the Room roster. */
+  awayChipSurface: '#EAF5FF',
+  awayChipText: '#2587C8',
   /**
    * The ink a shadow is cast in, at the three weights `elevation` uses. The
    * navy carries its own alpha rather than a shadow taking a colour and an
