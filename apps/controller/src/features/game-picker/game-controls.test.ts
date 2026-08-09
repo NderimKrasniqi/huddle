@@ -4,16 +4,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BACK_TO_ROOM,
-  backToLobbyLabel,
   CHOOSE_A_GAME,
   gameToStart,
   hostChoosingLine,
-  leaveConsequence,
-  LEAVE_ROOM,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
   startControl,
 } from './game-controls';
+import { backToLobbyLabel } from '../game-session';
+import { leaveConsequence, LEAVE_ROOM } from '../room';
 
 /** The installed game these tests read their expectations off. */
 const installed = GAME_REGISTRY[0]!.metadata;

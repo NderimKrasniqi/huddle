@@ -1,3 +1,3 @@
 /** Foreground/presence seam for the controller platform. */
-export * from '../../presence';
-
+export { type ForegroundWatch, keepPresent } from './presence';
+export { useHeartbeat } from './use-heartbeat';

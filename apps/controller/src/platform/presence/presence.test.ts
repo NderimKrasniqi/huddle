@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type ForegroundWatch, keepPresent } from './presence';
-import type { SessionTokenStore } from './session';
+import type { SessionTokenStore } from '../session';
 
 /**
  * How often these tests expect a beat. Spelled out rather than imported: how

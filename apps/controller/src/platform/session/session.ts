@@ -1,7 +1,7 @@
 import type { api } from '@huddle/convex';
 import type { FunctionReturnType } from 'convex/server';
 
-import { codeEntry } from './join-entry';
+import { codeEntry } from '../../features/join';
 
 /**
  * Rejoining, from the phone's side: what the Controller does with the Session

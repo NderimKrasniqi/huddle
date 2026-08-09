@@ -1,6 +1,6 @@
 # Huddle Architecture
 
-> Reconciled 2026-08-09 for **F-006 Platform Reliability and Maintainability**.
+> Reconciled 2026-08-10 for **F-007 Full-Codebase Behavior-Preserving Refactor**.
 > Phases 1–5 remain the frozen product baseline. This document records the
 > repository-informed target boundaries for Feature 6 without changing Expo,
 > Convex, pnpm workspaces, the game registry, shared UI primitives, or the
@@ -33,9 +33,9 @@ The current implementation is a pnpm workspace with Expo Router apps under
 `apps/controller` and `apps/tv`, Convex functions under `convex/convex`,
 platform contracts under `packages/game-core` and `packages/game-registry`,
 game modules under `packages/games/*`, and shared tokens/primitives under
-`packages/ui`. Route files currently contain more orchestration than the target
-boundaries allow; the extraction tasks preserve their public behavior while
-moving ownership into feature and platform folders.
+`packages/ui`. Controller route adapters are thin and its root screen now owns
+only deep-link/session composition; TV renderer ownership remains the active
+extraction task.
 
 ## Target app boundaries
 
@@ -57,7 +57,8 @@ Expo Router files in `apps/*/app` become thin adapters that mount a root
 coordinator. Features own screens, styles, pure models/helpers, and adjacent
 tests. Platform folders own Convex bindings, credentials, secure storage, and
 presence. Cross-feature deep imports are prohibited; each feature exposes a
-small public entry point. Only genuinely cross-app tokens and primitives live
+small model entry point plus an explicit native UI entry point where required.
+Only genuinely cross-app tokens and primitives live
 in `@huddle/ui`. Redux, Zustand, Nx, Turborepo, a second API server, and a new
 shared package are explicitly out of scope.
 
@@ -137,4 +138,3 @@ mutation. The purge must never be run against production without separate
 approval. Every implementation task receives a code review; runtime,
 credential, authorization, migration, rate-limit, and TV-presence tasks also
 receive a security review.
-

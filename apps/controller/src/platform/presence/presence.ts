@@ -1,6 +1,6 @@
 import { HEARTBEAT_INTERVAL_MS } from '@huddle/game-core';
 
-import type { SessionTokenStore } from './session';
+import type { SessionTokenStore } from '../session';
 
 /**
  * Presence, from the phone's side: saying "still here" for as long as the app
