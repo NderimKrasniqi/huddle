@@ -592,12 +592,6 @@ function YoureInScreen({
   const browsingAt = useQuery(api.games.browsing, { roomId: session.roomId });
   const browsing = carouselWindow(browsingAt ?? 0);
 
-  if (screen.kind === 'unknownGame') {
-    return (
-      <UnknownGameScreen code={code} gameId={screen.gameId} youAreHost={standing.youAreHost} />
-    );
-  }
-
   if (screen.kind === 'game') {
     return (
       <InGameScreen
@@ -1665,61 +1659,6 @@ function BackToLobbyControl() {
         </Text>
       )}
     </View>
-  );
-}
-
-/**
- * The room is playing a game this build does not have.
- *
- * An un-updated phone in a room whose TV has been updated. It is not the lobby,
- * because a lobby would invite a player to act on a room that is mid-game.
- *
- * The Host gets their way back here too. Everybody else on this screen is
- * waiting for the room to return to its lobby, and if the phone that runs the
- * room is the one that is behind, then without this it is waiting on itself —
- * a room that nothing in it can move.
- */
-function UnknownGameScreen({
-  code,
-  gameId,
-  youAreHost,
-}: {
-  readonly code: string;
-  readonly gameId: string;
-  readonly youAreHost: boolean;
-}) {
-  // The news itself is the same for everybody in the room; only what there is to
-  // do about it differs, so the two lines are one sentence and a tail rather
-  // than two sentences to keep in step.
-  const behind = `This room is playing ${gameId}, which this phone doesn’t have yet.`;
-  const whatToDo = youAreHost
-    ? 'It is still your room, though — take everyone back to the lobby, or update Huddle to play along.'
-    : 'Watch the TV — you’ll rejoin when they’re back in the lobby.';
-
-  return (
-    <PhoneScreen>
-      <View style={styles.seatedHeader}>
-        <Wordmark height={16} />
-        <View style={styles.seatedHeaderEnd}>
-          {youAreHost ? <HostPill /> : null}
-          <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
-            <Text style={styles.codeChipText}>{code}</Text>
-          </Surface>
-        </View>
-      </View>
-
-      <Text style={styles.title}>Update Huddle</Text>
-
-      <Surface
-        elevation={elevation.phoneCard}
-        style={[styles.stretch, styles.statusCard]}>
-        <Text style={styles.statusText}>
-          {behind} {whatToDo}
-        </Text>
-      </Surface>
-
-      {youAreHost ? <BackToLobbyControl /> : null}
-    </PhoneScreen>
   );
 }
 

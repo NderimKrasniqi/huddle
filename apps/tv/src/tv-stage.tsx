@@ -3,8 +3,6 @@ import background from '@huddle/ui/assets/tv-backgrounds/huddle-tv-background-01
 import { type ReactNode } from 'react';
 import { ImageBackground, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { AboutPanel } from './tv-about';
-
 /**
  * The fixed 1280×720 surface every TV screen is drawn on, scaled to fill
  * whatever television it lands on (see `tvStageScale`). Screens inside it are
@@ -22,12 +20,11 @@ import { AboutPanel } from './tv-about';
  * window leaves over, and the artwork is a 16:9 composition — stretching it out
  * there would draw a second pair of plants beside the first.
  *
- * The About Panel is drawn here, over the screen and inside the scale, because
- * every TV screen there is comes through this component: pairing, the carousel,
- * a game, and the unknown-game screen. Mounting it once here is what makes "the
- * TV's one remote-reachable control" a fact about the app rather than a claim
- * four call sites have to keep true. It draws nothing until the remote asks for
- * it — see `tv-about.tsx`.
+ * Nothing is drawn over the screen here. The About Panel used to be, and it was
+ * the one thing on this television a remote could reach; the approved design
+ * does not draw it, so it is gone and the Stage now holds only the screen it is
+ * handed. Eyes up is total — see `huddle/tv-remote-surface`, which no longer
+ * exempts anybody.
  */
 export function TvStage({ children }: { readonly children: ReactNode }) {
   const window = useWindowDimensions();
@@ -42,7 +39,6 @@ export function TvStage({ children }: { readonly children: ReactNode }) {
         style={[styles.stage, { transform: [{ scale: tvStageScale(window) }] }]}
       >
         {children}
-        <AboutPanel />
       </ImageBackground>
     </View>
   );

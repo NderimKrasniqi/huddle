@@ -123,10 +123,6 @@ function OpenRoomStage({
   // and Convex pushes it here.
   const browsingAt = useQuery(api.games.browsing, { roomId: room.roomId });
 
-  if (screen.kind === 'unknownGame') {
-    return <UnknownGameStage gameId={screen.gameId} />;
-  }
-
   if (screen.kind === 'game') {
     return <GameStage module={screen.module} state={screen.state} roster={roster ?? []} />;
   }
@@ -606,32 +602,6 @@ function GameStage({
 }
 
 /**
- * The room is playing a game this television does not have — an un-updated TV
- * in a room whose phones have moved on. Said out loud rather than drawn as a
- * pairing screen, which would put a Room Code up for a room that is mid-game.
- */
-function UnknownGameStage({ gameId }: { readonly gameId: string }) {
-  return (
-    <TvStage>
-      <View style={styles.screen}>
-        <View style={styles.header}>
-          <Wordmark height={roomLayout.wordmark} />
-        </View>
-
-        <View style={styles.center}>
-          <Surface elevation={elevation.phoneCard} style={styles.badge}>
-            <Text style={styles.badgeText}>UPDATE HUDDLE</Text>
-          </Surface>
-          <Text style={styles.unknownGameText}>
-            This room is playing {gameId}, which this TV doesn’t have yet.
-          </Text>
-        </View>
-      </View>
-    </TvStage>
-  );
-}
-
-/**
  * One tile per letter. The tiles are drawn before the code arrives so the
  * screen does not reflow around it — on a local backend the room opens well
  * inside a couple of frames.
@@ -947,9 +917,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // The wordmark's row on the carousel, the game frame and the unknown-game
-  // screen — every TV screen except the Room, which needs the mark out of the
-  // flow so its title can share the band (`roomWordmark`).
+  // The wordmark's row on the carousel and the game frame — every TV screen
+  // except the Room, which needs the mark out of the flow so its title can
+  // share the band (`roomWordmark`).
   header: {
     paddingHorizontal: 56,
     paddingTop: roomLayout.headerTop,
@@ -1107,35 +1077,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignSelf: 'stretch',
   },
-  // The unknown-game screen's own three: a centred stack with a badge over a
-  // sentence. It is the last surface in the app with no design behind it, and
-  // these are kept together and to itself so that whoever draws it — or deletes
-  // it — has one block to take.
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  badge: {
-    paddingHorizontal: 26,
-    paddingVertical: 10,
-    backgroundColor: colors.accent,
-    borderRadius: radius.pill,
-  },
-  badgeText: {
-    color: colors.inverse,
-    fontFamily: fontFamily.semibold,
-    fontSize: 20,
-    letterSpacing: letterSpacing.badge,
-  },
-  unknownGameText: {
-    color: colors.ink,
-    fontFamily: fontFamily.medium,
-    fontSize: 22,
-    textAlign: 'center',
-  },
-
   // ————— Room —————
   //
   // The whole screen is one column with pinned gaps rather than flexed space,

@@ -129,7 +129,12 @@ look like a mistake and far enough apart to show a seam.
 
 ## Screen inventory
 
-The platform's real surfaces. Six had no design in the package and are marked.
+The platform's real surfaces. Three have no design in the package and are marked.
+
+Three more used to be listed here and are now deleted rather than undesigned:
+the About panel and the unknown-game screen on each surface. The package draws
+none of them, and the platform no longer holds them — a game this build lacks
+resolves to the lobby (see `packages/game-registry/src/running.ts`).
 
 Every board named below is in `docs/design/reference/screens/`, flat — the
 `tv-screens/` and `phone-screens/` prefixes this table used to carry named
@@ -141,8 +146,6 @@ directories that have never existed.
 |---|---|---|---|
 | Room | `RoomStage` | `01-room.png` | Code, QR and roster on one screen |
 | Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Games only — no roster, no code chip |
-| Unknown game | `UnknownGameStage` | **none** | Needs design |
-| About panel | `AboutPanel` | **none** | Needs design; the TV's only remote-reachable control |
 | Game frame | `GameStage` | **none** | Needs design |
 
 ### Phone
@@ -155,7 +158,6 @@ directories that have never existed.
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
 | End room | `EndRoomSheet` | **none** | Board shows a "Leave" affordance instead |
 | Game frame | `InGameScreen` | **none** | Needs design |
-| Unknown game | `UnknownGameScreen` | **none** | Needs design |
 
 ## Decisions
 
@@ -260,8 +262,8 @@ landing together are now both greeted.
 3. **Avatars have not replaced colors yet.** That is a schema change, not a
    palette one. `player-colors.ts` is holding ten Boardwalk values as literals
    until it lands, and says so.
-4. **Six screens need designing** — the unknown-game pair, both game frames, the
-   About panel, the End Room sheet.
+4. **Three screens need designing** — both game frames and the End Room sheet.
+   It was six; the unknown-game pair and the About panel were deleted instead.
 5. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art
    but no game.
 6. **`accent-face` is interim.** A game's answer options still need a cycle of

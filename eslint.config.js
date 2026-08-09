@@ -20,13 +20,10 @@ const boardwalk = {
 
 // A second plugin rather than a third Boardwalk rule. Boardwalk is the design
 // system — what a screen is drawn with — and `huddle` is the product: Eyes up is
-// a line in docs/project-scope.md, not in the handoff, and a television with a
-// focusable button on it would be in perfect Boardwalk style.
+// this repo's name for a line in docs/project-scope.md, not anything in the
+// handoff, and a television with a focusable button on it would be in perfect
+// Boardwalk style.
 const huddle = { rules: { 'tv-remote-surface': tvRemoteSurface } };
-
-// The one file allowed to hold the remote's key listener — see the rule.
-// Repo-relative, like every other path here.
-const THE_REMOTE_OWNER = 'apps/tv/src/tv-about.tsx';
 
 // Soft Minimal's floors, as `packages/ui` holds them (`minBodyFontSize`) — the
 // smallest sizes on the handoff's own scale, phone caption 12 and TV caption
@@ -105,11 +102,16 @@ module.exports = defineConfig([
   // globs, because "the TV surface" is one answer and having it written twice
   // differently is how one of them ends up wrong. The Controller is pointedly
   // not among them: its screens are made of controls.
+  //
+  // The rule takes no options. It used to be handed the one file allowed to
+  // hold the remote's key listener, which was the About Panel; the approved
+  // design does not draw an About Panel, so that file is gone and with it the
+  // only exemption the TV surface had.
   {
     files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
     plugins: { huddle },
     rules: {
-      'huddle/tv-remote-surface': ['error', { remoteOwner: THE_REMOTE_OWNER }],
+      'huddle/tv-remote-surface': 'error',
     },
   },
 

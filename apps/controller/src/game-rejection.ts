@@ -42,12 +42,16 @@ function isGameLifecycleRejection(data: unknown): data is GameLifecycleRejection
 /**
  * A refusal in the words the Host reads.
  *
- * `notEnoughPlayers` is the only one the button does not already prevent, and
- * it is reachable: the roster this phone drew its count from is a subscription,
- * so somebody can leave between the render and the tap. The rest are the server
- * declining to trust its callers — no correct Controller produces them, and
- * they get a line anyway, because a silent tap is the one outcome a Host cannot
- * make sense of.
+ * Two of these are reachable from a correct Controller. `notEnoughPlayers`, the
+ * one the button does not prevent: the roster this phone drew its count from is
+ * a subscription, so somebody can leave between the render and the tap. And
+ * `alreadyInGame`, since the unknown-game screen was deleted — a room playing a
+ * module this build lacks now draws the ordinary lobby, Start button and all,
+ * so a Host on an older build can genuinely tap Start on a room that is already
+ * playing. `runningGameScreen` has the whole of that story.
+ *
+ * The rest are the server declining to trust its callers. They get a line
+ * anyway, because a silent tap is the one outcome a Host cannot make sense of.
  */
 export function rejectionMessage(rejection: GameLifecycleRejection): string {
   switch (rejection.kind) {
