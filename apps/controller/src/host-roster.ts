@@ -1,7 +1,7 @@
 import type { RosterSeat } from './host';
 
 /**
- * The Host's roster (docs/design/design-handoff.md §5): one row per player,
+ * The Host's roster (docs/design/legacy/boardwalk-handoff.md §5): one row per player,
  * what each row's right-hand slot says, and the count line under them.
  *
  * It is the only surface in Huddle that says a *non-Host* player is away
@@ -26,10 +26,10 @@ import type { RosterSeat } from './host';
  * Four states, and the approved board draws all four: the Host's word and
  * crown, the JUST JOINED chip, the online dot, and away.
  *
- * `away` was the one Boardwalk's §5 did not have — it is the status dot's own
+ * `away` was the one Soft Minimal's §5 did not have — it is the status dot's own
  * muted variant, which the system had already decided was how a listed player's
  * presence reads, and this roster exists to carry it. The chip was the reverse:
- * §5 drew it (as a pink NEW! pill), Boardwalk's phone dropped it, and Soft
+ * §5 drew it (as a pink NEW! pill), Soft Minimal's phone dropped it, and Soft
  * Minimal's board brings it back in the system's one informational blue. How
  * long a row wears it is not decided here — it is four seconds of the drawing
  * screen's own life, worked out by `just-joined.ts` and passed in as `greeting`.

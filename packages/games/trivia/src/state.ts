@@ -1,14 +1,14 @@
-import type { GameDeadline, GamePlayerId } from '@huddle/game-core';
+import type { GamePlayerId } from '@huddle/game-core';
 
-import type { TriviaAdvance, TriviaState } from './logic';
+import type { TriviaState } from './logic';
 
 /**
  * Trivia's state constants and the pure reads over it — the half of the rules a
  * client may hold.
  *
  * These are the selectors and rule-clocks the TV and Controller screens draw
- * from: the answered and expected counts, the beat a clock keys off, and the
- * Reveal Beat a phone sends. Each one touches nothing but the state it is handed,
+ * from: the answered and expected counts and the beat a clock keys off. Each
+ * one touches nothing but the state it is handed,
  * so it lives apart from `./logic`, which imports the Question Pack to *deal* a
  * game. A screen that imported a value from `./logic` would pull `./questions`,
  * and the pack's every answer with it, into the client bundle — where a modified
@@ -45,8 +45,8 @@ export const REVEAL_SECONDS = 5;
 /**
  * The beat a state is on, named: which question, and which half of it.
  *
- * What a clock is set for. Both of trivia's — the room's Question Timer and the
- * phones' Reveal Beat — key off this one function, so "the same beat" means one
+ * What a clock is set for. Both of trivia's server-owned timers key off this one
+ * function, so "the same beat" means one
  * thing however it is being timed, and the hub can tell whether a state it has
  * just written started a new one (`GameDeadline`).
  */
@@ -91,42 +91,4 @@ export function playersCounted(
 export function answersIn(state: TriviaState): number {
   return state.standings.filter((standing) => Object.hasOwn(state.answers, standing.playerId))
     .length;
-}
-
-/**
- * The beat that ends a Reveal, addressed and timed — or nothing, on a beat that
- * ends by itself.
- *
- * This is the room's clock, and it is here rather than in the screen that runs
- * it for one reason: it is the only thing in trivia that moves the room from
- * one question to the next, and a mistake in it does not fail loudly. An
- * `advance` addressed to the wrong beat is *inert by design* — the reducer
- * returns the state untouched and the hub skips the write — so getting this
- * wrong does not throw, does not log, and does not fail a renderer test. It
- * hangs the reveal forever. Deciding it here is what lets it be asserted.
- *
- * Who sends it is the screen's business (`./controller-screen`), and the answer
- * is "every playing phone": the event is addressed to the beat it ends, so the
- * first to arrive moves the room and the rest do nothing at all.
- */
-export function revealBeat(
-  state: TriviaState,
-  playerId: GamePlayerId,
-): GameDeadline<TriviaAdvance> | undefined {
-  if (state.phase !== 'reveal') {
-    return undefined;
-  }
-
-  return {
-    beat: beatOf(state),
-    afterMs: REVEAL_SECONDS * 1000,
-    event: {
-      kind: 'advance',
-      playerId,
-      // The beat on screen now — not the one that will be up when the timer
-      // fires, which is exactly what makes a late send harmless.
-      questionIndex: state.questionIndex,
-      phase: 'reveal',
-    },
-  };
 }

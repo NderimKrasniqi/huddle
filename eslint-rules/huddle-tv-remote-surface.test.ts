@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 /**
  * `huddle/tv-remote-surface` exercised through ESLint itself, against the
  * repo's real `eslint.config.js`, rather than through `RuleTester` — the same
- * choice Boardwalk's two rules made, for the same reason. The acceptance
+ * choice Soft Minimal's two rules made, for the same reason. The acceptance
  * criterion is about the *app*, so what has to be pinned is the whole gate: the
  * rule and the paths it is switched on for.
  *

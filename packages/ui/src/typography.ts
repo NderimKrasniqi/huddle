@@ -6,7 +6,7 @@
  * is silently ignored, so the weight has to be chosen by family. These are the
  * keys `fonts.ts` registers the font assets under.
  *
- * There is no display face. Boardwalk had one (Bungee, always all-caps) and
+ * There is no display face. Soft Minimal had one (Bungee, always all-caps) and
  * Soft Minimal does not: the one thing that genuinely needed a second face was
  * the HUDDLE wordmark, and the handoff (§5) says the wordmark ships as brand
  * artwork rather than being recreated from a text font. Everything else that
@@ -30,7 +30,7 @@ export const fontFamily = {
  *
  * Both are the floor of the handoff's own scale rather than a judgement laid
  * over it — phone caption is 12 and TV caption is 16, and a size under either
- * is off the scale rather than merely small. Boardwalk floored these at 14 and
+ * is off the scale rather than merely small. Soft Minimal floored these at 14 and
  * 18, which Soft Minimal's label and caption sizes both sit under; keeping the
  * old numbers would have made the design system illegal in its own repo.
  *

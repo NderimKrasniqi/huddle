@@ -351,3 +351,21 @@ Participant/session credentials may be stored securely on-device for reconnectio
 - Community-created game distribution
 - Runtime downloading/installing of third-Huddles
 - Ban/block moderation system
+# Feature 6 traceability — Platform Reliability and Maintainability
+
+This section records the reopened reliability work discovered after the
+original Phase 1–5 baseline was marked complete. It is intentionally additive:
+the product scope and existing room/game behavior remain unchanged.
+
+- **F-006** — Platform Reliability and Maintainability.
+- **J-006** — Recover a TV-held session after process termination, network loss,
+  and return to service without changing the room identity.
+- **C-006.1** — Durable TV identity.
+- **C-006.2** — Exact pause/resume.
+- **C-006.3** — Validated private game runtime.
+- **C-006.4** — Maintainable module boundaries.
+- **C-006.5** — Resumable engineering workflow.
+- **BR-006** — One live room per TV session token.
+- **BR-007** — Invalid game runtimes expose no state.
+- **BR-008** — Gameplay cannot advance while the TV is away.
+- **BR-009** — Legacy rooms are discarded, not migrated.

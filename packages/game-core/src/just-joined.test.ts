@@ -31,7 +31,7 @@ describe('JUST_JOINED_MS', () => {
   it('is the handoff’s four seconds', () => {
     // "holds the JUST JOINED! treatment for ~4s before settling to the normal
     // style" — the Avatar pop-in, carried into Soft Minimal, where the chip is
-    // the system's one informational blue rather than Boardwalk's pink.
+    // the system's one informational blue rather than Soft Minimal's pink.
     expect(JUST_JOINED_MS).toBe(4_000);
   });
 });

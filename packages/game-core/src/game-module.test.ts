@@ -44,7 +44,7 @@ type CoinTossSettings = {
 const coinTossMetadata: GameMetadata = {
   id: 'coin-toss',
   title: 'Coin Toss',
-  // Soft Minimal deleted Boardwalk's four accents; this fixture wore `yellow`.
+  // Soft Minimal deleted Soft Minimal's four accents; this fixture wore `yellow`.
   // `accent` is the one the system now has, and what a fixture needs of a key
   // art colour is only that it be a real `KeyArtColorName`.
   keyArt: { color: 'accent' },
@@ -67,6 +67,9 @@ const coinTossSettingsSchema: GameSettingsSchema = [
 
 /** The rules the server holds: what a game begins as, and what an event does to it. */
 const coinTossLogic: GameLogic<CoinTossState, CoinTossEvent, CoinTossSettings> = {
+  stateVersion: 1,
+  decodeState: (value) => value as CoinTossState,
+  decodeEvent: (value) => value as CoinTossEvent,
   metadata: coinTossMetadata,
   settingsSchema: coinTossSettingsSchema,
   createInitialState: ({ settings }) => ({ tossesLeft: Number(settings.tosses), calls: {} }),
@@ -74,6 +77,7 @@ const coinTossLogic: GameLogic<CoinTossState, CoinTossEvent, CoinTossSettings> =
     ...state,
     calls: { ...state.calls, [event.playerId]: event.call },
   }),
+  redactStateFor: (state) => state,
 };
 
 /** The view a client holds: the same card and schema, the screens, and no rules. */
@@ -95,6 +99,9 @@ const coinToss: GameModule<CoinTossState, CoinTossEvent> = {
 type EggTimerEvent = { readonly playerId?: string; readonly kind: 'ding' };
 
 const eggTimer: GameLogic<{ readonly rung: number }, EggTimerEvent> = {
+  stateVersion: 1,
+  decodeState: (value) => value as { readonly rung: number },
+  decodeEvent: (value) => value as EggTimerEvent,
   metadata: {
     id: 'egg-timer',
     title: 'Egg Timer',
@@ -106,6 +113,7 @@ const eggTimer: GameLogic<{ readonly rung: number }, EggTimerEvent> = {
   settingsSchema: [],
   createInitialState: () => ({ rung: 0 }),
   reduce: (state) => ({ rung: state.rung + 1 }),
+  redactStateFor: (state) => state,
   deadline: (state) => ({
     beat: `rung ${state.rung}`,
     afterMs: 60_000,
@@ -170,7 +178,7 @@ describe('the Game Module interface', () => {
     expect(metadata.title).toBe('Coin Toss');
   });
 
-  it('rejects key art in a color Boardwalk cannot draw', () => {
+  it('rejects key art in a color Soft Minimal cannot draw', () => {
     const keyArt: GameMetadata['keyArt'] = {
       // @ts-expect-error - chartreuse is not one of KEY_ART_COLOR_NAMES
       color: 'chartreuse',

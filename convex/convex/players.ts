@@ -575,15 +575,6 @@ export const removePlayer = mutation({
  *   by design — "an empty room is a television waiting for guests" — and
  *   `watchForDesertion` refuses to schedule one at all for the same reason.
  *
- * That leaves `expireUnjoinedRoom`, which does handle an empty room and says so
- * outright: *"Should a room ever be able to lose its last player without being
- * deleted, this would find an empty room hours later and take it."* But it is
- * armed once by `createRoom` and never re-armed, so it only catches a room
- * emptied inside `UNJOINED_ROOM_EXPIRY_MS` of being minted. **A party that runs
- * longer than that and then leaves would strand its room, and its Room Code,
- * for good** — the same code leak a hundred unjoined rooms on the dev
- * deployment already cost once.
- *
  * Deleting here closes it without a clock. It is also the honest reading:
  * an empty *unjoined* room is a television waiting for guests, but a room whose
  * whole party has walked out is a party that is over, and every one of them
@@ -636,9 +627,9 @@ export const leaveRoom = mutation({
       // seats have *all* gone quiet strands it exactly as an emptied one would:
       // `markAway` has already run for those seats and returns early on an
       // away player, so it never re-reaches this watcher; the last call that
-      // did reach it found the leaver still beating and so scheduled nothing;
-      // and `expireUnjoinedRoom` refuses a room with seats in it. Nothing would
-      // be left watching a room that is, in every sense that matters, deserted.
+      // did reach it found the leaver still beating and so scheduled nothing.
+      // Calling this watcher unconditionally keeps a room with remaining seats
+      // on the correct presence clock.
       //
       // At `AWAY_AFTER_MS` of 13 seconds that is not an exotic case — it is one
       // other person with their phone in their pocket. `watchForDesertion`
@@ -654,6 +645,12 @@ export const leaveRoom = mutation({
     if (pending !== undefined) {
       await ctx.scheduler.cancel(pending);
     }
+
+    const tvSessions = await ctx.db
+      .query('tvSessions')
+      .withIndex('by_room', (q) => q.eq('roomId', room._id))
+      .collect();
+    for (const tvSession of tvSessions) await ctx.db.delete('tvSessions', tvSession._id);
 
     await ctx.db.delete('rooms', room._id);
     return null;

@@ -1,8 +1,10 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
+import { z } from 'zod';
 
 import { votingMetadata } from './metadata';
 import { CURATED_PROMPTS, type VotingPrompt } from './prompts';
 import { votingSettings, VOTING_SETTINGS_SCHEMA } from './settings';
+import { playersCounted, votesIn, REVEAL_SECONDS, VOTE_SECONDS } from './state';
 
 /**
  * The Voting game's rules, with no screens attached.
@@ -20,11 +22,6 @@ import { votingSettings, VOTING_SETTINGS_SCHEMA } from './settings';
  */
 
 /** How long a prompt stays open for votes before the room stops waiting. */
-export const VOTE_SECONDS = 20;
-
-/** How long the tally stays up before the room moves to the next prompt. */
-export const REVEAL_SECONDS = 6;
-
 /**
  * Where a game of Voting is: a prompt taking votes, its tally on screen, or
  * over.
@@ -50,11 +47,9 @@ export type VotingPhase = 'voting' | 'reveal' | 'finished';
  *
  * No arrangement of the two can name a voter's choice, so — unlike a map of
  * player to option — a vote's owner is not in the payload the hub ships to every
- * client. That is why this module declares no `redactStateFor` (`GameLogic`):
- * trivia needs one because its state records which option each player picked,
- * and voting has nothing to hide because it never wrote it down. The structural
- * answer and the projected one reach the same place; this is the one that cannot
- * be got wrong later. That the *tally* is visible before the reveal
+ * client. Voting still declares the required identity projection explicitly:
+ * its implementation returns the state unchanged because there is no private
+ * field to redact. That the *tally* is visible before the reveal
  * is the price of never storing attribution: a game cannot reveal a count it did
  * not keep, and keeping it anonymously is what lets the reveal show the room its
  * own opinion without ever exposing a person's. The screens hold the count back
@@ -113,6 +108,9 @@ export type VotingEvent =
       readonly promptIndex: number;
       /** The beat being ended: the prompt on screen, or its reveal. */
       readonly phase: VotingPhase;
+      /** Hub-enriched clock/presence fields; ignored by the reducer. */
+      readonly msRemaining?: number;
+      readonly awayPlayerIds?: readonly GamePlayerId[];
     };
 
 /**
@@ -121,6 +119,43 @@ export type VotingEvent =
  * not a thing a clock can send.
  */
 type VotingAdvance = Extract<VotingEvent, { kind: 'advance' }>;
+
+const playerIdSchema = z.string().min(1);
+const votingPromptSchema = z.strictObject({
+  text: z.string(),
+  options: z.array(z.string()).min(2).max(4),
+});
+
+/** Strict server-side decoder for persisted Voting state. */
+export const votingStateSchema = z.strictObject({
+  prompts: z.array(votingPromptSchema).min(1),
+  promptIndex: z.number().int().nonnegative(),
+  phase: z.enum(['voting', 'reveal', 'finished']),
+  voters: z.array(playerIdSchema),
+  tally: z.array(z.number().int().nonnegative()),
+  players: z.array(playerIdSchema),
+});
+
+const votingVoteEventSchema = z.strictObject({
+  kind: z.literal('vote'),
+  playerId: playerIdSchema,
+  promptIndex: z.number().int().nonnegative(),
+  optionIndex: z.number().int().min(0).max(3),
+  msRemaining: z.number().finite().nonnegative().optional(),
+  awayPlayerIds: z.array(playerIdSchema).optional(),
+});
+
+const votingAdvanceEventSchema = z.strictObject({
+  kind: z.literal('advance'),
+  playerId: playerIdSchema.optional(),
+  promptIndex: z.number().int().nonnegative(),
+  phase: z.enum(['voting', 'reveal', 'finished']),
+  msRemaining: z.number().finite().nonnegative().optional(),
+  awayPlayerIds: z.array(playerIdSchema).optional(),
+});
+
+/** Strict server-side decoder for untrusted Voting events. */
+export const votingEventSchema = z.union([votingVoteEventSchema, votingAdvanceEventSchema]);
 
 /**
  * The beat a state is on, named: which prompt, and which half of it.
@@ -156,21 +191,7 @@ function isPlaying(state: VotingState, playerId: GamePlayerId): boolean {
  * Who is Away is the room's and arrives with the event (`VotingEvent`), so a
  * room that said nothing is a room with nobody away.
  */
-export function playersCounted(
-  state: VotingState,
-  awayPlayerIds: readonly GamePlayerId[] | undefined,
-): number {
-  const away = new Set(awayPlayerIds);
-
-  return state.players.filter(
-    (playerId) => !away.has(playerId) || state.voters.includes(playerId),
-  ).length;
-}
-
-/** How many of the current prompt's votes are in: the chip's numerator. */
-export function votesIn(state: VotingState): number {
-  return state.voters.length;
-}
+export { playersCounted, votesIn, REVEAL_SECONDS, VOTE_SECONDS } from './state';
 
 /** The prompt ends: the tally is what it is, and the room moves to showing it. */
 function revealed(state: VotingState): VotingState {
@@ -270,6 +291,9 @@ function advanced(
  * `votingSettings` is where they stop being strings.
  */
 export const votingGameLogic: GameLogic<VotingState, VotingEvent, GameSettings> = {
+  stateVersion: 1,
+  decodeState: (value) => votingStateSchema.parse(value) as VotingState,
+  decodeEvent: (value) => votingEventSchema.parse(value) as VotingEvent,
   metadata: votingMetadata,
   settingsSchema: VOTING_SETTINGS_SCHEMA,
   createInitialState: ({ players, settings }) => {
@@ -302,6 +326,10 @@ export const votingGameLogic: GameLogic<VotingState, VotingEvent, GameSettings> 
   // The room's own clock drives both beats — this game needs no phone to be
   // awake to move on. `voteTimer` and `revealTimer` are where each is decided.
   deadline: (state) => voteTimer(state) ?? revealTimer(state),
+  // Voting stores no player-to-option attribution, so every viewer receives
+  // the same state. The required projection seam still makes that guarantee
+  // explicit to the runtime.
+  redactStateFor: (state) => state,
 };
 
 /**

@@ -18,6 +18,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type { ComponentApi } from "@convex-dev/rate-limiter/_generated/component.js";
 
 declare const fullApi: ApiFromModules<{
   games: typeof games;
@@ -52,4 +53,4 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: { rateLimiter: ComponentApi<"rateLimiter"> };

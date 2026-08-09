@@ -15,7 +15,7 @@ import { colors } from './colors';
  * The fills are sampled from the artwork rather than invented, so a pill beside
  * a fox is the fox's own peach. Every one of them is a pale tint that measures
  * 12:1 or better against the navy and under 1.5:1 against white, which is why
- * the ink is not a per-avatar decision the way Boardwalk's was: white would
+ * the ink is not a per-avatar decision the way Soft Minimal's was: white would
  * disappear on all ten.
  *
  * `packages/ui/src` is the one place a colour may be written down, which is why
@@ -49,7 +49,7 @@ const FILLS: Record<AvatarId, string> = {
  *
  * A game's scoreboard outlives the seat: a player who leaves mid-game still has
  * a score, and the row that shows it has a nickname to fall back on and no
- * avatar at all. Boardwalk met the same need for the opposite reason — a colour
+ * avatar at all. Soft Minimal met the same need for the opposite reason — a colour
  * was claimed after joining, so a seat existed before the choice did.
  */
 const NO_AVATAR: AvatarFace = { fill: colors.border, ink: colors.ink };

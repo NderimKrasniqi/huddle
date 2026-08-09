@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit --project convex"
   },
   "dependencies": {
+    "@convex-dev/rate-limiter": "^0.3.2",
     "@huddle/game-core": "workspace:*",
     "@huddle/game-registry": "workspace:*",
     "convex": "^1.42.3"

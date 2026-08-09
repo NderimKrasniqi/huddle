@@ -16,7 +16,8 @@
   "dependencies": {
     "@huddle/game-core": "workspace:*",
     "@huddle/packs": "workspace:*",
-    "@huddle/ui": "workspace:*"
+    "@huddle/ui": "workspace:*",
+    "zod": "^4.4.3"
   },
   "//peerDependencies": "Screens only, and for the same reason `@huddle/ui` declares them this way: `react-native` resolves to whichever variant the consuming app installed — react-native-tvos on the TV, stock on the phone. The `./logic` entry point imports none of it, which is what lets the Convex server take the rules without any of this.",
   "peerDependencies": {

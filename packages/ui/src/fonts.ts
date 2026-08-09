@@ -16,7 +16,7 @@ import { fontFamily } from './typography';
  * re-exports a `useFonts` hook, which would pull `expo-font` and `react` into
  * this otherwise asset-only package.
  *
- * Four weights of one family, where Boardwalk loaded two families. The count is
+ * Four weights of one family, where Soft Minimal loaded two families. The count is
  * the same and the payload is smaller, which matters on the television: these
  * block the first frame.
  */

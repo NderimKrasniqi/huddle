@@ -7,9 +7,9 @@
 ## Method
 
 - **Automated** rows cite a passing test suite by file and, where it helps,
-  `describe`/`it`. The whole suite is `pnpm test` — **62 files, 721 tests, 0
-  failures** as of this task (was 61 files / 702 tests; +1 file and +19 tests
-  for the Voting hub suite added here).
+  `describe`/`it`. The whole suite is `pnpm test` — **69 files, 782 tests, 0
+  failures** in the current Feature 6 verification run (the historical Phase 5
+  baseline was 62 files / 721 tests).
 - The hub (`convex/convex/{rooms,players,games}.ts`) is game-independent: it
   never names a game and dispatches to whatever the Registry installs. So a
   workflow that runs *through* the hub without touching game rules (host
@@ -114,7 +114,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | Reconnect with the valid credential restores the same participant | 🔁 | 🔁 | `players.test.ts` › presence/session ("brings a player back the moment their phone beats again"); `apps/controller/src/presence.test.ts` |
 | Host disconnect → longest-connected eligible player becomes host | 🔁 | 🔁 | `players.test.ts` › host transfer ("hands the room to the longest-connected active player", "moves the room inside the fifteen seconds a host may be gone for", "passes over players who have gone quiet") |
 | Below-minimum after a departure: game cannot continue | 🔁 | 🔁 | Enforced at start for both (`refusalToStart`); mid-game below-minimum is the host's wait/end decision (see Findings F2 for the missing removal control) |
-| TV disconnect → room preserved for a window, then closes | 🔁 | 🔁 | Realized via player-presence + room expiry (`rooms.test.ts`), **not** a distinct TV heartbeat/pause — see Findings F3 |
+| TV disconnect → room pauses, preserves its exact beat, then closes after the recovery window | ✅ | ✅ | `convex/tv-recovery.test.ts` and `rooms.test.ts`: durable TV heartbeat, 13-second away transition, exact remainder, paused gameplay gate, and ten-minute expiry |
 | Back-to-back games, including switching between the two | ✅ | ✅ | `voting-lifecycle.test.ts` › "switches between the two games…", "replays Voting from a clean state" |
 
 ## Persistence and scope boundaries
@@ -127,7 +127,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 
 ---
 
-## Findings (input to 5.6)
+## Findings (historical baseline; Feature 6 resolutions below)
 
 **F1 — Manual host transfer — RESOLVED by task 3.7 (backend).** Was: scope
 lists "manually transfer host status" but only automatic `handOverRoom` existed.
@@ -136,9 +136,9 @@ Now implemented as the host-authorized `transferHost` mutation
 refuses a non-host caller / stale token / out-of-room target / the host's own
 seat / an away target. Covered by `players.test.ts` › host controls; independent
 security review PASS. **Wired into the UI (task 3.7):** the Host Roster's manage
-sheet (`apps/controller/app/index.tsx`) — a non-Host row opens a Boardwalk
+sheet (`apps/controller/src/app/controller-screen.tsx`) — a non-Host row opens a Soft Minimal
 confirm dialog whose "Make host" runs `transferHost`, dimmed for an away target;
-`docs/design/design-handoff.md` §5 now specifies the affordance. Row-offer logic is `host-controls.ts` (Vitest);
+`docs/design/legacy/boardwalk-handoff.md` §5 now specifies the affordance. Row-offer logic is `host-controls.ts` (Vitest);
 the RN screen is not unit-tested per the stack, but the sheet was exercised
 on-device (iPhone 17 sim against the cloud dev deployment): the away target drew
 "Make host" dimmed with the away hint, confirming the disabled path; the
@@ -157,16 +157,13 @@ and stays live for an away target. Verified end-to-end on-device (iPhone 17 sim)
 tapping Remove on an away player dropped their row and returned the footer to
 "1 player in".
 
-**F3 — TV disconnection is modeled through player presence, not a TV heartbeat
-or an explicit pause.** Scope (TV Disconnection) describes the TV disconnecting,
-gameplay *pausing*, a recovery window, and restore-on-reconnect. In the
-implementation the TV does not heartbeat; room lifetime runs off the newest
-player `lastSeenAt` (`rooms.ts`), and there is no `paused` room phase — a game
-"pauses" only in the sense that away players are not waited on. This satisfies
-the *outcome* (a room survives a window and then closes, gameplay does not
-advance on absent players) but not the scope's literal mechanism. 5.6 should
-decide whether to reconcile the scope's wording to the presence-based model or
-add a TV-presence/pause concept. Not a blocker on its own; the outcome holds.
+**F3 — TV disconnection — RESOLVED by Feature 6.** Repository inspection
+reopened the previously presence-only behavior. The TV now owns a durable
+session token, heartbeats every three seconds, marks the room away after 13
+seconds, cancels the active deadline, stores the exact remaining time, and
+returns a state-free paused projection. A returning heartbeat restores the same
+room and beat; ten minutes of silence deletes the room, players, and TV-session
+row. Malformed runtimes remain unavailable rather than being resumed blindly.
 
 **Resolved — player cap.** Scope now says 10, matching `ROOM_PLAYER_CAP`
 (reconciled in the 5.7 branch).

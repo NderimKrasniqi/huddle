@@ -15,7 +15,7 @@ export const votingMetadata: GameMetadata = {
   title: 'Hot Takes',
   /**
    * The accent — the second poster on the carousel, set apart from trivia's
-   * ink. Boardwalk had five accents to spread across the cards and Soft Minimal
+   * ink. Soft Minimal had five accents to spread across the cards and Soft Minimal
    * has one, so the two installed games take the only two fills the palette
    * offers a card: navy and orange. A third game is the point at which that
    * stops working, and the answer then is the real key art the design package

@@ -9,7 +9,7 @@ import logoLight from '../../assets/logo/huddle-logo-light.png';
  * §5 of the handoff is explicit that the wordmark uses supplied brand artwork
  * rather than being recreated from a text font — it is drawn heavier and more
  * tightly spaced than any weight of Inter, and typing it would be a redrawing
- * that drifts. Boardwalk did type it, in Bungee, with a tangerine full stop;
+ * that drifts. Soft Minimal did type it, in Bungee, with a tangerine full stop;
  * both are gone.
  *
  * `tone` is which surface it sits on, not which colour it is. The dark variant

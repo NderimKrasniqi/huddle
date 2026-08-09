@@ -4,6 +4,7 @@ import {
   settingsFrom,
   settingsRefusal,
   type GameEvent,
+  type GameDeadline,
   type GameLifecycleRejection,
   type GameLogic,
   type GamePlayer,
@@ -21,6 +22,9 @@ import {
   query,
   type QueryCtx,
 } from './_generated/server';
+import { playerForSession, requireRoomHost } from './lib/authorization';
+import { projectRuntime } from './lib/game-runtime';
+import { awayPlayerIds, playersInRoom } from './lib/presence';
 
 /**
  * The game lifecycle: the Host starting a game, and the Host ending it.
@@ -48,10 +52,7 @@ async function seatThisPhoneHolds(
   ctx: MutationCtx,
   sessionToken: string,
 ): Promise<{ player: Doc<'players'>; room: Doc<'rooms'> }> {
-  const player = await ctx.db
-    .query('players')
-    .withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken))
-    .first();
+  const player = await playerForSession(ctx, sessionToken);
 
   // Refused rather than ignored, as with a color claim: a phone whose seat has
   // gone would otherwise sit on a screen the room is not in.
@@ -80,23 +81,12 @@ async function roomThisPhoneRuns(
   ctx: MutationCtx,
   sessionToken: string,
 ): Promise<Doc<'rooms'>> {
-  const { player, room } = await seatThisPhoneHolds(ctx, sessionToken);
-
-  // The host moves — a player who joined second holds it the moment the room
-  // gives up on the first — so this is asked at the tap and never cached.
-  if (room.hostPlayerId !== player._id) {
-    throw new ConvexError<GameLifecycleRejection>({ kind: 'notHost' });
-  }
-
-  return room;
+  return (await requireRoomHost(ctx, sessionToken)).room;
 }
 
 /** Everyone in a room, in join order, as a game is given them. */
 async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePlayer[]> {
-  const seated = await ctx.db
-    .query('players')
-    .withIndex('by_room', (q) => q.eq('roomId', roomId))
-    .collect();
+  const seated = await playersInRoom(ctx, roomId);
 
   // The `roster` projection minus `host`: a game must not be able to tell who
   // is running the room, or it would eventually treat them differently.
@@ -128,25 +118,7 @@ async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePl
  * same answer; the alternative is presence the rules cannot see.
  */
 async function awayPlayersIn(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePlayerId[]> {
-  const seated = await ctx.db
-    .query('players')
-    .withIndex('by_room', (q) => q.eq('roomId', roomId))
-    .collect();
-
-  return seated.filter((player) => player.away).map((player) => player._id);
-}
-
-/**
- * Which beat of a running game has a clock on it, as the module names it — or
- * `undefined` where the beat has none.
- *
- * The one thing the hub can read about a game's state, and it reads it only to
- * compare: two states on the same beat are one countdown, so the room arms it
- * when it *enters* that beat and not again. Without that, a question would gain
- * another twenty seconds every time somebody pressed a button on it.
- */
-function timedBeat(game: GameLogic, state: unknown): string | undefined {
-  return game.deadline?.(state)?.beat;
+  return await awayPlayerIds(ctx, roomId);
 }
 
 /**
@@ -161,6 +133,77 @@ type RoomClock = {
   readonly deadline?: Id<'_scheduled_functions'>;
   readonly deadlineAt?: number;
 };
+
+type StoredGame = NonNullable<Doc<'rooms'>['game']>;
+
+type Runtime = {
+  readonly game: GameLogic;
+  readonly state: unknown;
+};
+
+type DeadlineResult =
+  | { readonly ok: true; readonly deadline?: GameDeadline }
+  | { readonly ok: false };
+
+/** Log only identifiers and a category; never include tokens, events, or state. */
+function runtimeFailure(roomId: Id<'rooms'>, running: StoredGame, category: string): void {
+  console.warn('Huddle game runtime unavailable', {
+    roomId,
+    gameId: running.gameId,
+    stateVersion: running.stateVersion ?? null,
+    category,
+  });
+}
+
+/** Decode a persisted state and resolve its exact installed runtime. */
+function decodeRuntime(roomId: Id<'rooms'>, running: StoredGame): Runtime | undefined {
+  const game = gameLogicById(running.gameId);
+  if (game === undefined) {
+    runtimeFailure(roomId, running, 'unknownGame');
+    return undefined;
+  }
+
+  if (running.stateVersion !== game.stateVersion) {
+    runtimeFailure(roomId, running, 'stateVersion');
+    return undefined;
+  }
+
+  try {
+    const state = game.decodeState(running.state);
+    if (state === undefined) throw new Error('decoder returned undefined');
+    return { game, state };
+  } catch {
+    runtimeFailure(roomId, running, 'stateDecode');
+    return undefined;
+  }
+}
+
+/** Validate a module deadline before it is persisted or scheduled. */
+function validatedDeadline(
+  roomId: Id<'rooms'>,
+  running: StoredGame,
+  game: GameLogic,
+  state: unknown,
+): DeadlineResult {
+  try {
+    const deadline = game.deadline?.(state);
+    if (deadline === undefined) return { ok: true };
+    if (
+      !deadline.beat ||
+      !Number.isFinite(deadline.afterMs) ||
+      deadline.afterMs < 0
+    ) {
+      runtimeFailure(roomId, running, 'deadline');
+      return { ok: false };
+    }
+    const event = game.decodeEvent(deadline.event);
+    if (event === undefined) throw new Error('deadline event decoder returned undefined');
+    return { ok: true, deadline: { ...deadline, event } };
+  } catch {
+    runtimeFailure(roomId, running, 'deadline');
+    return { ok: false };
+  }
+}
 
 /**
  * How much of the room's clock is left, for the rules that are about to be
@@ -205,12 +248,21 @@ async function stopGameClock(ctx: MutationCtx, room: Doc<'rooms'>): Promise<void
 async function windGameClock(
   ctx: MutationCtx,
   room: Doc<'rooms'>,
+  running: StoredGame,
   game: GameLogic,
   state: unknown,
-): Promise<RoomClock> {
+  candidate?: GameDeadline,
+): Promise<RoomClock | undefined> {
+  const checked =
+    candidate === undefined
+      ? validatedDeadline(room._id, running, game, state)
+      : ({ ok: true, deadline: candidate } satisfies DeadlineResult);
+
+  if (!checked.ok) return undefined;
+
   await stopGameClock(ctx, room);
 
-  const deadline = game.deadline?.(state);
+  const deadline = checked.deadline;
 
   if (deadline === undefined) {
     return {};
@@ -244,6 +296,10 @@ async function playGameEvent(
 ): Promise<void> {
   const running = room.game;
 
+  // TV recovery owns the pause boundary. A scheduled callback racing the
+  // silence marker must not advance state after the room became unavailable.
+  if (room.tvAway === true) return;
+
   // A thumb that landed just after the Host ended the game, or a phone that has
   // not heard yet. There is nothing to tell the person holding it — the screen
   // they tapped has already gone — so this is silence, not a refusal.
@@ -251,29 +307,48 @@ async function playGameEvent(
     return;
   }
 
-  // A room playing a game this build does not install: possible only across a
-  // deployment, and not something a phone can be told anything useful about.
-  const game = gameLogicById(running.gameId);
-
-  if (game === undefined) {
-    return;
-  }
+  const runtime = decodeRuntime(room._id, running);
+  if (runtime === undefined) return;
+  const { game, state } = runtime;
 
   // The clock and the room's away seats are read here and nowhere else, and
   // both are written over whatever the event arrived with — a phone claiming to
   // have answered faster than it did, or claiming somebody else has gone quiet,
   // is a claim, exactly as a phone naming a player is (see `GameEvent`).
-  const next = game.reduce(running.state, {
-    ...event,
-    msRemaining: clockRemaining(running),
-    awayPlayerIds: await awayPlayersIn(ctx, room._id),
-  });
+  let decodedEvent: GameEvent;
+  try {
+    decodedEvent = game.decodeEvent({
+      ...event,
+      msRemaining: clockRemaining(running),
+      awayPlayerIds: await awayPlayersIn(ctx, room._id),
+    });
+    if (decodedEvent === undefined) throw new Error('event decoder returned undefined');
+  } catch {
+    runtimeFailure(room._id, running, 'eventDecode');
+    return;
+  }
+
+  let next: unknown;
+  try {
+    next = game.reduce(state, decodedEvent);
+  } catch {
+    runtimeFailure(room._id, running, 'reducer');
+    return;
+  }
 
   // A module that does not recognise an event returns no state at all, and an
   // exhaustive switch over its own events is how it does that. Storing
   // `undefined` here would let one unrecognised event erase the game the room
   // is playing, so nothing arriving from a phone is ever stored unexamined.
   if (next === undefined) {
+    return;
+  }
+
+  try {
+    next = game.decodeState(next);
+    if (next === undefined) throw new Error('reducer decoder returned undefined');
+  } catch {
+    runtimeFailure(room._id, running, 'reducerOutput');
     return;
   }
 
@@ -294,13 +369,28 @@ async function playGameEvent(
   // was dealt its beat by a deployment older than this field. Keeping
   // `undefined` in either case stops the clock for good, and in silence, since
   // a beat that never expires throws nothing and fails no test.
-  const sameBeat = timedBeat(game, next) === timedBeat(game, running.state);
+  const currentDeadline = validatedDeadline(room._id, running, game, state);
+  const nextDeadline = validatedDeadline(room._id, running, game, next);
+  if (!currentDeadline.ok || !nextDeadline.ok) return;
+
+  const sameBeat = currentDeadline.deadline?.beat === nextDeadline.deadline?.beat;
   const clock =
     sameBeat && running.deadline !== undefined
       ? { deadline: running.deadline, deadlineAt: running.deadlineAt }
-      : await windGameClock(ctx, room, game, next);
+      : await windGameClock(ctx, room, running, game, next, nextDeadline.deadline);
 
-  await ctx.db.patch(room._id, { game: { gameId: running.gameId, state: next, ...clock } });
+  if (clock === undefined) return;
+
+  await ctx.db.patch(room._id, {
+    game: {
+      ...running,
+      gameId: running.gameId,
+      stateVersion: game.stateVersion,
+      state: next,
+      ...clock,
+      pausedRemainingMs: undefined,
+    },
+  });
 }
 
 /**
@@ -329,6 +419,10 @@ export const startGame = mutation({
   handler: async (ctx, args) => {
     const room = await roomThisPhoneRuns(ctx, args.sessionToken);
 
+    if (room.tvAway === true) {
+      throw new ConvexError({ kind: 'tvUnavailable' });
+    }
+
     // Whether a game exists at all is a property of what was sent, not of any
     // room — but it is asked after the Host check, so a non-Host learns only
     // that it is not the Host.
@@ -352,16 +446,36 @@ export const startGame = mutation({
       throw new ConvexError<GameLifecycleRejection>(refusal);
     }
 
-    const state = game.createInitialState({
-      players,
-      settings: settingsFrom(game.settingsSchema, args.settings),
-    });
+    let state: unknown;
+    try {
+      state = game.decodeState(
+        game.createInitialState({
+          players,
+          settings: settingsFrom(game.settingsSchema, args.settings),
+        }),
+      );
+      if (state === undefined) throw new Error('initial state decoder returned undefined');
+    } catch {
+      throw new ConvexError({ kind: 'gameUnavailable', gameId: game.metadata.id });
+    }
     // The first beat's clock starts with the game, so a room that has been
     // dealt a question is already being counted down at the moment every screen
     // in it draws that question.
-    const clock = await windGameClock(ctx, room, game, state);
+    const clock = await windGameClock(
+      ctx,
+      room,
+      { gameId: game.metadata.id, stateVersion: game.stateVersion, state },
+      game,
+      state,
+    );
 
-    await ctx.db.patch(room._id, { game: { gameId: game.metadata.id, state, ...clock } });
+    if (clock === undefined) {
+      throw new ConvexError({ kind: 'gameUnavailable', gameId: game.metadata.id });
+    }
+
+    await ctx.db.patch(room._id, {
+      game: { gameId: game.metadata.id, stateVersion: game.stateVersion, state, ...clock },
+    });
 
     return null;
   },
@@ -418,6 +532,8 @@ export const browseGame = mutation({
   handler: async (ctx, args) => {
     const room = await roomThisPhoneRuns(ctx, args.sessionToken);
 
+    if (room.tvAway === true) return null;
+
     await ctx.db.patch(room._id, { browsingGameIndex: browsingIndex(args.index) });
     return null;
   },
@@ -440,6 +556,10 @@ export const sendEvent = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { player, room } = await seatThisPhoneHolds(ctx, args.sessionToken);
+
+    // The TV is the shared clock/display. While it is away, accepting input
+    // would advance a beat nobody can see and break exact recovery.
+    if (room.tvAway === true) return null;
 
     // The player is named here and nowhere else. A phone may put whatever it
     // likes in the event — this overwrites it with the seat the Session Token
@@ -581,7 +701,17 @@ async function viewerIn(
  */
 export const running = query({
   args: { roomId: v.id('rooms'), sessionToken: v.optional(v.string()) },
-  returns: v.union(v.null(), v.object({ gameId: v.string(), state: v.any() })),
+  returns: v.union(
+    v.null(),
+    v.object({
+      kind: v.literal('running'),
+      gameId: v.string(),
+      state: v.any(),
+      clockRemainingMs: v.optional(v.number()),
+    }),
+    v.object({ kind: v.literal('paused'), gameId: v.string(), reason: v.literal('tvDisconnected') }),
+    v.object({ kind: v.literal('unavailable'), gameId: v.string() }),
+  ),
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
 
@@ -589,33 +719,37 @@ export const running = query({
       return null;
     }
 
-    // The room stores the game's state whole; each client is handed only the
-    // part the module says it may see. The viewer is this phone's own seat, so
-    // its own in-flight choices survive while the rest of the room's stay hidden
-    // until the game reveals them — and the television, which is nobody, sees a
-    // player's private state never. A game that declares no `redactStateFor`, or
-    // one this build does not install, is broadcast whole as it always was.
-    const game = gameLogicById(room.game.gameId);
-    const viewer = await viewerIn(ctx, args.roomId, args.sessionToken);
-    const redact = game?.redactStateFor;
-    const state = redact === undefined ? room.game.state : redact(room.game.state, viewer);
-
-    // A module that declares a projection and then returns nothing is a module
-    // whose secrets would be broadcast whole, silently and for good. Asked apart
-    // from "declares none" rather than folded into a `??`, because the two are
-    // opposite answers — one is a game with nothing to hide and the other is a
-    // game whose hiding just failed — and only one of them may fail open.
-    //
-    // It costs the room the game: a throwing query is a broken subscription on
-    // every phone and on the television, and neither app mounts an error
-    // boundary, so this is a module bug taken as far as it goes rather than
-    // hidden. That is the trade — a room that cannot draw its game is recoverable
-    // by the Host ending it; a room quietly showing everybody everybody's
-    // answers is not.
-    if (redact !== undefined && state === undefined) {
-      throw new Error(`${room.game.gameId} returned no state to show`);
+    const running = room.game;
+    const runtime = decodeRuntime(args.roomId, running);
+    if (runtime === undefined) {
+      return { kind: 'unavailable' as const, gameId: running.gameId };
     }
 
-    return { gameId: room.game.gameId, state };
+    if (room.tvAway === true) {
+      return {
+        kind: 'paused' as const,
+        gameId: running.gameId,
+        reason: 'tvDisconnected' as const,
+      };
+    }
+
+    const viewer = await viewerIn(ctx, args.roomId, args.sessionToken);
+    const state = projectRuntime(runtime, viewer);
+    if (state === undefined) {
+      runtimeFailure(args.roomId, running, 'projection');
+      return { kind: 'unavailable' as const, gameId: running.gameId };
+    }
+
+    const clockRemainingMs =
+      running.deadlineAt === undefined
+        ? undefined
+        : Math.max(0, running.deadlineAt - Date.now());
+
+    return {
+      kind: 'running' as const,
+      gameId: running.gameId,
+      state,
+      ...(clockRemainingMs === undefined ? {} : { clockRemainingMs }),
+    };
   },
 });

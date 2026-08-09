@@ -10,12 +10,10 @@ import {
   elevation,
 } from '@huddle/ui';
 import { Surface } from '@huddle/ui/native';
-import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
 import type { TriviaEvent, TriviaState } from './logic';
-import { revealBeat } from './state';
 
 /**
  * Trivia on the phone: four buttons, and then a phone that gets out of the way.
@@ -35,15 +33,15 @@ import { revealBeat } from './state';
  */
 
 /**
- * The four options, drawn as Boardwalk buttons.
+ * The four options, drawn as Soft Minimal buttons.
  *
  * The color is `accentFace(optionIndex)` — the same cycle, off the same
  * position, that the television will draw the option in. That is what makes the
  * two match: not a number copied between two files, but one function neither
  * screen can disagree with.
  *
- * The buttons are not tilted. Boardwalk tilts cards and badges
- * (docs/design/design-handoff.md §"Signature style rules"); its buttons sit
+ * The buttons are not tilted. Soft Minimal tilts cards and badges
+ * (docs/design/soft-minimal-handoff.md §"Signature style rules"); its buttons sit
  * square, and four tilted blocks under a thumb would read as a pile rather than
  * a row of choices.
  */
@@ -61,7 +59,7 @@ function AnswerButton({
   return (
     <Surface
       elevation={elevation.phoneCard}
-      // Dimmed rather than hidden or greyed, which is how Boardwalk says
+      // Dimmed rather than hidden or greyed, which is how Soft Minimal says
       // "present, but not yours to take" everywhere else — the claimed color
       // swatches on "You're in" are the same 30%.
       style={[[styles.answerBlock, option.state === 'closed' && styles.answerClosed], [styles.answer, { backgroundColor: face.fill }]]}>
@@ -89,78 +87,12 @@ function LockedInPill() {
   );
 }
 
-/**
- * Runs the beat that ends a Reveal.
- *
- * *What* to send and *when* is `revealBeat`, in the rules, where it can be
- * asserted — a mis-addressed advance is inert by design and would hang the
- * reveal in silence. This hook is only the timer around it.
- *
- * It comes from the phones because it cannot come from the television: a TV
- * screen is given the room's state and its roster and nothing else — it holds
- * no player record, and every game event has to name a player
- * (`TvGameScreenProps`, `GameEvent`). So the room's clock lives on the only
- * devices that can speak.
- *
- * *Every* playing phone runs it, not the Host's alone, and that is the point:
- * ten phones send the same `advance` a few milliseconds apart, the first moves
- * the room, and the rest are inert because the event is addressed to the beat
- * it ends. One nominated phone would be one phone whose screen locking stalls
- * the room; a crowd of redundant senders cannot. The hub skips the write for
- * the ones that change nothing, so the nine no-ops wake no subscription.
- */
-function useRevealBeat(
-  state: TriviaState,
-  playerId: string,
-  sendEvent: (event: TriviaEvent) => void,
-) {
-  const beat = revealBeat(state, playerId);
-
-  // Both the beat and the hub's callback are fresh objects on every render —
-  // `revealBeat` builds one, and nothing in `ControllerGameScreenProps`
-  // promises `sendEvent` is stable. Depending on either directly would restart
-  // the five seconds on each render, which is a reveal that never ends. The ref
-  // is what the timer reads when it fires, so it always sends the current beat
-  // through the current callback.
-  const latest = useRef({ beat, sendEvent });
-
-  useEffect(() => {
-    latest.current = { beat, sendEvent };
-  });
-
-  // What the beat *is*, rather than which object it is: this changes only when
-  // the room moves to another beat, which is exactly when the timer should
-  // start over. It is the rules' own name for the beat (`GameDeadline`), the
-  // same one the server winds its clock by, so the two cannot disagree about
-  // when a beat has changed.
-  const beatKey = beat?.beat ?? null;
-  const afterMs = beat?.afterMs;
-
-  useEffect(() => {
-    if (beatKey === null || afterMs === undefined) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const current = latest.current;
-
-      if (current.beat !== undefined) {
-        current.sendEvent(current.beat.event);
-      }
-    }, afterMs);
-
-    return () => clearTimeout(timer);
-  }, [beatKey, afterMs]);
-}
-
 export function TriviaControllerScreen({
   state,
   player,
   sendEvent,
 }: ControllerGameScreenProps<TriviaState, TriviaEvent>) {
   const screen = answerScreen(state, player.playerId);
-
-  useRevealBeat(state, player.playerId, sendEvent);
 
   if (screen.kind === 'eyesUp') {
     return (

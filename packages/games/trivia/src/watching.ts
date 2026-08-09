@@ -228,6 +228,7 @@ function verdictsOf(
 export function watchedScreen(
   state: TriviaState,
   players: readonly GamePlayer[],
+  clockRemainingMs?: number,
 ): WatchedScreen {
   const question = state.questions[state.questionIndex];
 
@@ -268,6 +269,11 @@ export function watchedScreen(
     // the game it walked in on.
     answered: answersIn(state),
     playerCount: playersCounted(state, awayIn(players)),
-    countdownSeconds: QUESTION_SECONDS,
+    // The server's remainder is authoritative. Ceil keeps the display from
+    // reaching zero before the room's deadline mutation has advanced the beat.
+    countdownSeconds:
+      clockRemainingMs !== undefined && Number.isFinite(clockRemainingMs)
+        ? Math.max(0, Math.ceil(clockRemainingMs / 1000))
+        : QUESTION_SECONDS,
   };
 }

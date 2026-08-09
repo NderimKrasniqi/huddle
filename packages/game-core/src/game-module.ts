@@ -167,7 +167,7 @@ export type GameKeyArt = {
 
 /**
  * What the hub can say about a game without playing it — the whole of the
- * carousel card (docs/design/design-handoff.md §6: key art, title, and the
+ * carousel card (docs/design/soft-minimal-handoff.md §6: key art, title, and the
  * chips under it).
  */
 export type GameMetadata = {
@@ -227,6 +227,12 @@ export type GameSetup<Settings> = {
 export type TvGameScreenProps<State> = {
   readonly state: State;
   readonly players: readonly GamePlayer[];
+  /**
+   * The authoritative remainder of the active server deadline, when one is
+   * running.  Screens may use this to initialise a local display countdown;
+   * the room remains the authority and advances the game itself.
+   */
+  readonly clockRemainingMs?: number;
 };
 
 /**
@@ -261,6 +267,12 @@ export interface GameLogic<
   Event extends GameEvent = GameEvent,
   Settings = unknown,
 > {
+  /** Monotonic schema version for the persisted state and event decoders. */
+  readonly stateVersion: number;
+  /** Strictly decode a value loaded from persistence before it reaches rules. */
+  decodeState(value: unknown): State;
+  /** Strictly decode an untrusted event before it reaches rules. */
+  decodeEvent(value: unknown): Event;
   readonly metadata: GameMetadata;
   readonly settingsSchema: GameSettingsSchema;
   /** The state a game begins in, given its players and the Host's settings. */
@@ -283,8 +295,9 @@ export interface GameLogic<
   deadline?(state: State): GameDeadline<Event> | undefined;
   /**
    * The state as one viewer is entitled to see it, for the broadcast the hub
-   * sends every client. Optional: a game whose whole state is shared declares
-   * none and the hub sends its state to everyone unchanged.
+   * sends every client. This is required even when a game has no private
+   * fields: such games return their state unchanged. Requiring the seam keeps
+   * the server runtime fail-closed when a module is added.
    *
    * `viewer` is the player this copy is for, or `undefined` for the television —
    * and for any phone whose seat is not in this room — which is entitled to no
@@ -300,7 +313,7 @@ export interface GameLogic<
    * cannot do this itself: only the module knows which of its own fields are one
    * player's and which are the room's.
    */
-  redactStateFor?(state: State, viewer: GamePlayerId | undefined): State;
+  redactStateFor(state: State, viewer: GamePlayerId | undefined): State;
 }
 
 /**

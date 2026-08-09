@@ -1,7 +1,11 @@
 import { api } from '@huddle/convex';
 
 import { convexClient } from './convex-client';
+import { ensureTvSessionToken } from './tv-session';
+import { keepTvPresent } from './tv-presence';
 import { type OpenRoom, roomOpener } from './room-opening';
+
+let activeTvSessionToken: string | undefined;
 
 /**
  * The room this TV shows, bound to this launch's Convex connection. The TV app
@@ -17,14 +21,27 @@ import { type OpenRoom, roomOpener } from './room-opening';
  * `keepOpeningRoom` is the caller that retries a room that will not open.
  */
 export const { openRoom, closeExpiredRoom } = roomOpener(
-  (): Promise<OpenRoom> =>
-    convexClient === undefined
-      ? // Unreachable from the pairing screen, which never starts opening a room
-        // without a deployment — but `openRoom` is exported, and a rejection is
-        // the one answer a caller of this can already handle.
-        Promise.reject(new Error('Huddle TV has no Convex deployment to open a room on'))
-      : convexClient.mutation(api.rooms.createRoom, {}),
+  async (): Promise<OpenRoom> => {
+    if (convexClient === undefined) {
+      throw new Error('Huddle TV has no Convex deployment to open a room on');
+    }
+    const token = await ensureTvSessionToken();
+    // Set only after the credential has been durably persisted. A storage
+    // failure therefore leaves no in-memory identity that could open a room.
+    activeTvSessionToken = token;
+    return await convexClient.mutation(api.rooms.openRoom, { tvSessionToken: token });
+  },
 );
+
+/** Starts the TV's 3-second presence loop for the currently open room. */
+export function keepRoomPresent(): () => void {
+  const client = convexClient;
+  if (client === undefined || activeTvSessionToken === undefined) return () => {};
+  const token = activeTvSessionToken;
+  return keepTvPresent(async () => {
+    await client.mutation(api.rooms.tvHeartbeat, { tvSessionToken: token });
+  });
+}
 
 /** Whether this build was given a Convex deployment to open a room on at all. */
 export const deployed = convexClient !== undefined;

@@ -11,7 +11,7 @@ import { colors } from './colors';
  *
  * ## This is interim
  *
- * Boardwalk ran four accents and used them for two unrelated jobs: answer
+ * Soft Minimal ran four accents and used them for two unrelated jobs: answer
  * options, and the Room Code's letters ("cobalt, tangerine, pink, green in
  * order"). Soft Minimal ends the second — every code letter is deep navy — and
  * has no opinion on the first, because the approved package designs no game

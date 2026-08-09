@@ -12,7 +12,7 @@ import type { FunctionReturnType } from 'convex/server';
  * stage at a full room, the slot has an order of precedence, and the count has
  * to read correctly at nought, one and ten players.
  *
- * What a seat has to say came *back* here. Boardwalk's television left the
+ * What a seat has to say came *back* here. Soft Minimal's television left the
  * pairing screen at the first join, so a seat with a player in it was never
  * drawn and every treatment that needed one had been deleted; Soft Minimal's
  * Room keeps the code, the QR and the roster on one screen for as long as the
@@ -188,7 +188,7 @@ export type SeatSlot = 'justJoined' | 'host' | 'away' | 'present';
  *
  * An arrival's four seconds come first, including the Host's own: the room's
  * first player is both at once, and for those four seconds the news is that
- * somebody is here at all. That is the precedence Boardwalk's carousel footer
+ * somebody is here at all. That is the precedence Soft Minimal's carousel footer
  * line gave an arrival over the browsing sentence, kept as the surface moved.
  *
  * After that the order is the Host roster's (`apps/controller/src/host-roster.ts`)

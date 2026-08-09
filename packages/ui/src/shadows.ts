@@ -3,14 +3,14 @@ import { colors } from './colors';
 /**
  * Soft Minimal's shadows: soft, blurred, and cast straight down.
  *
- * Boardwalk's were the opposite — hard-edged, never blurred, displaced equally
+ * Soft Minimal's were the opposite — hard-edged, never blurred, displaced equally
  * down *and right* so a card read as a sticker lifted off the page. That is the
  * single loudest thing the old system did, and the handoff's "subtle shadows"
  * is a direct answer to it. Nothing here is offset sideways, nothing has a hard
  * edge, and the strongest shadow in the system is fainter than the weakest one
- * Boardwalk drew.
+ * Soft Minimal drew.
  *
- * Values are `boxShadow` strings rather than the rectangle data Boardwalk
+ * Values are `boxShadow` strings rather than the rectangle data Soft Minimal
  * needed. That machinery existed because the old shadow was painted as a
  * sibling `View` — a workaround inherited from a wrong theory about a seam,
  * kept only because it was equivalent. With a real blurred shadow there is

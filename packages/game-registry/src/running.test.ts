@@ -19,7 +19,7 @@ describe('what a client draws for the room’s running game', () => {
   it('mounts the module the room named, on the state the room stored', () => {
     const state = { playerIds: ['p1', 'p2'] };
 
-    expect(runningGameScreen({ gameId: 'trivia', state })).toEqual({
+    expect(runningGameScreen({ kind: 'running', gameId: 'trivia', state })).toEqual({
       kind: 'game',
       module: trivia,
       state,
@@ -30,16 +30,30 @@ describe('what a client draws for the room’s running game', () => {
     // The hub stores and returns a game's state without reading it, and this is
     // the client half of that promise.
     const opaque = { anything: { at: ['all'] } };
-    const screen = runningGameScreen({ gameId: 'trivia', state: opaque });
+    const screen = runningGameScreen({ kind: 'running', gameId: 'trivia', state: opaque, clockRemainingMs: 1250 });
 
     expect(screen.kind === 'game' && screen.state).toBe(opaque);
+    expect(screen.kind === 'game' && screen.clockRemainingMs).toBe(1250);
   });
 
   it('falls back to the lobby when the room is playing something this build lacks', () => {
     // An un-updated phone walking into a room whose TV has been updated. It
     // waits on the lobby with everyone else rather than being told to update:
     // there is no screen for the news any more, and the wait is the same wait.
-    expect(runningGameScreen({ gameId: 'charades', state: {} })).toEqual({ kind: 'lobby' });
+    expect(runningGameScreen({ kind: 'running', gameId: 'charades', state: {} })).toEqual({
+      kind: 'unavailable',
+      gameId: 'charades',
+    });
+  });
+
+  it('does not expose state for paused or unavailable runtimes', () => {
+    expect(
+      runningGameScreen({ kind: 'paused', gameId: 'trivia', reason: 'tvDisconnected' }),
+    ).toEqual({ kind: 'paused', gameId: 'trivia', reason: 'tvDisconnected' });
+    expect(runningGameScreen({ kind: 'unavailable', gameId: 'trivia' })).toEqual({
+      kind: 'unavailable',
+      gameId: 'trivia',
+    });
   });
 });
 

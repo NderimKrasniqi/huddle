@@ -41,7 +41,7 @@ OUT = Path(__file__).parent / "blank-watch"
 # The tile row, as a fraction of the tvOS frame.
 #
 # Retuned for Soft Minimal's Room screen, where the tiles are 84x84 high on the
-# screen rather than Boardwalk's 148x176 in the middle of it. The old band
+# screen rather than Soft Minimal's 148x176 in the middle of it. The old band
 # (0.36-0.60) sits entirely below the new row, so this tool had quietly stopped
 # finding any tiles at all and would have reported "not the pairing screen?"
 # forever while claiming to guard the blank-`I` regression.
@@ -56,7 +56,7 @@ ROW_TOP, ROW_BOTTOM = 0.14, 0.36
 ROW_LEFT, ROW_RIGHT = 0.24, 0.63
 
 # A drawn letter covers ~20% of its tile — the glyph shrank less than the tile
-# did, so coverage went up from Boardwalk's ~16% — and an empty tile keeps only
+# did, so coverage went up from Soft Minimal's ~16% — and an empty tile keeps only
 # its hairline border, well under 3% now that the border is warm grey rather
 # than 4px of ink. Anything under this is a hole.
 #

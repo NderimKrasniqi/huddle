@@ -64,6 +64,8 @@ export default defineSchema({
       v.object({
         /** Which installed module — `GameMetadata.id`, as the Registry knows it. */
         gameId: v.string(),
+        /** Decoder version for the opaque state stored below. */
+        stateVersion: v.number(),
         state: v.any(),
         /**
          * The room's clock for the beat it is on: the scheduled function that
@@ -97,8 +99,12 @@ export default defineSchema({
          * room could not time, and never as an event that arrived instantly.
          */
         deadlineAt: v.optional(v.number()),
+        /** Remaining time captured when the TV goes away. */
+        pausedRemainingMs: v.optional(v.number()),
       }),
     ),
+    /** Stable lifecycle projection of the TV connection. */
+    tvAway: v.boolean(),
     /**
      * Which card the Host is browsing in the lobby: a position in the Registry's
      * ordered list, which the TV's carousel follows.
@@ -168,4 +174,15 @@ export default defineSchema({
     // A phone coming back from a force-quit knows its token and nothing else;
     // this is how that token finds the seat it still holds.
     .index('by_session_token', ['sessionToken']),
+
+  /** High-churn TV presence, kept off the shared room document. */
+  tvSessions: defineTable({
+    roomId: v.id('rooms'),
+    sessionToken: v.string(),
+    lastSeenAt: v.number(),
+    away: v.boolean(),
+  })
+    .index('by_session_token', ['sessionToken'])
+    .index('by_room', ['roomId']),
+
 });

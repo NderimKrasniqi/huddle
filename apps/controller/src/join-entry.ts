@@ -38,7 +38,7 @@ export function codeEntry(typed: string): string {
 }
 
 /**
- * The cell waiting for a letter — the one Boardwalk gives the cobalt border and
+ * The cell waiting for a letter — the one Soft Minimal gives the cobalt border and
  * the blinking caret — or `undefined` once the code is whole and no cell is
  * waiting for anything.
  */

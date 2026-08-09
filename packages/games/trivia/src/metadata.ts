@@ -15,7 +15,7 @@ export const triviaMetadata: GameMetadata = {
   id: 'trivia',
   title: 'Trivia',
   /**
-   * Ink. Boardwalk picked from four accents and chose `punch` as the one least
+   * Ink. Soft Minimal picked from four accents and chose `punch` as the one least
    * spoken for; Soft Minimal has one accent and it is the brand's, spent on
    * actions and never on a decorative fill. So a card's art is the deep navy,
    * with its title set in the inverse — which is also the only pairing on the

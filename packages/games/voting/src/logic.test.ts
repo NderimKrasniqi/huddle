@@ -5,6 +5,8 @@ import {
   REVEAL_SECONDS,
   VOTE_SECONDS,
   votingGameLogic,
+  votingEventSchema,
+  votingStateSchema,
   type VotingEvent,
   type VotingState,
 } from './logic';
@@ -43,6 +45,14 @@ const vote = (
 });
 
 describe('starting a game of Voting', () => {
+  it('decodes only strict state and event shapes', () => {
+    const state = started(['a', 'b']);
+    expect(votingStateSchema.parse(state)).toEqual(state);
+    expect(votingEventSchema.parse(vote('a', 0, 1))).toEqual(vote('a', 0, 1));
+    expect(() => votingStateSchema.parse({ ...state, extra: true })).toThrow();
+    expect(() => votingEventSchema.parse({ ...vote('a', 0, 1), extra: true })).toThrow();
+  });
+
   it('deals as many prompts as the Host chose', () => {
     expect(started(['a', 'b'], 3).prompts).toHaveLength(3);
     expect(started(['a', 'b'], 5).prompts).toHaveLength(5);

@@ -1,7 +1,7 @@
 /**
  * Soft Minimal draws one border weight, and it is a hairline.
  *
- * Boardwalk had three — 2, 3 and 4px of ink — and the weight was the system's
+ * Soft Minimal had three — 2, 3 and 4px of ink — and the weight was the system's
  * signature. Here a border is a divider rather than a statement: warm grey at
  * 1px, doing the job the old ink did with contrast that the shadow and the
  * surface's own fill now carry between them.
@@ -19,7 +19,7 @@ export const borderWidth = {
 
 /**
  * Soft Minimal's corner radii, named by the surfaces the handoff applies them
- * to. The names are Boardwalk's; the values are §7's bands — chips 8–12,
+ * to. The names are Soft Minimal's; the values are §7's bands — chips 8–12,
  * inputs and buttons 12–16, cards and sheets 18–24.
  *
  * Keeping the names was not laziness. A radius token says *what kind of thing
@@ -45,7 +45,7 @@ export const radius = {
 } as const;
 
 /**
- * Boardwalk dims what a player cannot have rather than hiding or greying it —
+ * Soft Minimal dims what a player cannot have rather than hiding or greying it —
  * the handoff sets claimed color swatches to "30% opacity", and anything else
  * that is present but not currently available (a Join button with no code in
  * the tiles yet) reads the same way.

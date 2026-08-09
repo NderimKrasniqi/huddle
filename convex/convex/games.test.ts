@@ -18,6 +18,20 @@ import schema from './schema';
 // default module lookup, so the function modules are handed over explicitly.
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 
+function runningState(response: unknown): any {
+  if (
+    typeof response === 'object' &&
+    response !== null &&
+    'kind' in response &&
+    response.kind === 'running' &&
+    'state' in response
+  ) {
+    return response.state;
+  }
+
+  return undefined;
+}
+
 type Backend = ReturnType<typeof convexTest>;
 
 /**
@@ -254,8 +268,8 @@ describe('the Host starting a game', () => {
     // scoreboard in roster order — which is what says the module's own factory
     // ran, and that the hub did not invent a state of its own. The rest of that
     // state is trivia's business and is tested where its rules are.
-    expect(running?.state.phase).toBe('question');
-    expect(running?.state.standings).toEqual(
+    expect(runningState(running).phase).toBe('question');
+    expect(runningState(running).standings).toEqual(
       roster.map((seat) => ({ playerId: seat.playerId, score: 0 })),
     );
   });
@@ -289,7 +303,11 @@ describe('the Host starting a game', () => {
 
     // The refusal earns its keep here: a start that went through would have
     // replaced the state of a game in progress.
-    expect(await t.query(api.games.running, { roomId })).toEqual(started);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'running',
+      gameId: started?.gameId,
+      state: runningState(started),
+    });
   });
 
   it('refuses a phone that is not the Host', async () => {
@@ -566,8 +584,8 @@ describe('the Host ending the game', () => {
     // The game really was played: somebody is ahead on the scoreboard the Host
     // is about to leave, which is what makes the assertions below mean anything.
     const played = await t.query(api.games.running, { roomId: room.roomId });
-    expect(played?.state.phase).toBe('finished');
-    expect(played?.state.standings[0].score).toBeGreaterThan(0);
+    expect(runningState(played).phase).toBe('finished');
+    expect(runningState(played).standings[0].score).toBeGreaterThan(0);
 
     await t.mutation(api.games.endGame, { sessionToken: host });
 
@@ -604,7 +622,7 @@ describe('the Host ending the game', () => {
     // — so a room with every phone backgrounded stalls here and nothing in it
     // can move. This is why the control is on every beat of a game and not only
     // on the last one: it is the only way out of this one.
-    expect((await t.query(api.games.running, { roomId }))?.state.phase).toBe('reveal');
+    expect(runningState(await t.query(api.games.running, { roomId })).phase).toBe('reveal');
 
     await t.mutation(api.games.endGame, { sessionToken: tokens.Ada ?? '' });
 
@@ -663,7 +681,7 @@ describe('a player’s event in the running game', () => {
       roomId,
       sessionToken: tokens.Grace ?? '',
     });
-    expect(running?.state.answers).toEqual({ [grace]: 2 });
+    expect(runningState(running).answers).toEqual({ [grace]: 2 });
   });
 
   it('names the player from the Session Token, never from the phone', async () => {
@@ -683,7 +701,7 @@ describe('a player’s event in the running game', () => {
       roomId,
       sessionToken: tokens.Grace ?? '',
     });
-    expect(running?.state.answers).toEqual({ [grace]: 1 });
+    expect(runningState(running).answers).toEqual({ [grace]: 1 });
   });
 
   it('lets a second tap change nothing', async () => {
@@ -704,7 +722,7 @@ describe('a player’s event in the running game', () => {
       roomId,
       sessionToken: tokens.Grace ?? '',
     });
-    expect(running?.state.answers).toEqual({ [grace]: 2 });
+    expect(runningState(running).answers).toEqual({ [grace]: 2 });
   });
 
   /**
@@ -743,10 +761,10 @@ describe('a player’s event in the running game', () => {
         sessionToken: tokens.Ada ?? '',
       });
 
-      expect(onTv?.state.answers).toEqual({ [grace]: HIDDEN_ANSWER });
-      expect(onAdasPhone?.state.answers).toEqual({ [grace]: HIDDEN_ANSWER });
+      expect(runningState(onTv).answers).toEqual({ [grace]: HIDDEN_ANSWER });
+      expect(runningState(onAdasPhone).answers).toEqual({ [grace]: HIDDEN_ANSWER });
       // The count the TV draws is unmoved by the hiding: it is the keys.
-      expect(Object.keys(onTv?.state.answers ?? {})).toEqual([grace]);
+      expect(Object.keys(runningState(onTv).answers ?? {})).toEqual([grace]);
     });
 
     it('shows a player their own answer', async () => {
@@ -766,7 +784,7 @@ describe('a player’s event in the running game', () => {
         sessionToken: tokens.Grace ?? '',
       });
 
-      expect(onHerPhone?.state.answers).toEqual({ [grace]: 2 });
+      expect(runningState(onHerPhone).answers).toEqual({ [grace]: 2 });
     });
 
     it('gives a token from another room the television’s view', async () => {
@@ -787,7 +805,7 @@ describe('a player’s event in the running game', () => {
         sessionToken: elsewhere.tokens.Linus ?? '',
       });
 
-      expect(seen?.state.answers).toEqual({ [grace]: HIDDEN_ANSWER });
+      expect(runningState(seen).answers).toEqual({ [grace]: HIDDEN_ANSWER });
     });
 
     it('keeps the answers to the questions off every client', async () => {
@@ -803,14 +821,14 @@ describe('a player’s event in the running game', () => {
       // The whole game is dealt at `startGame`, so without this the first
       // payload of the first question carries every answer to every question —
       // a client that reads its own socket wins the game.
-      const correctIndexes = seen?.state.questions.map(
+      const correctIndexes = runningState(seen).questions.map(
         (question: { correctIndex: number }) => question.correctIndex,
       );
 
       expect(correctIndexes).not.toHaveLength(0);
       expect(correctIndexes.every((index: number) => index < 0)).toBe(true);
       // And the questions the room has not reached carry no text to read ahead.
-      expect(seen?.state.questions[1].text).toBe('');
+      expect(runningState(seen).questions[1].text).toBe('');
     });
 
     it('keeps the rest of the game off the wire at the reveal too', async () => {
@@ -831,12 +849,12 @@ describe('a player’s event in the running game', () => {
         sessionToken: tokens.Grace ?? '',
       });
 
-      expect(seen?.state.phase).toBe('reveal');
+      expect(runningState(seen).phase).toBe('reveal');
       // The question just revealed gives up its answer, because that is what a
       // reveal is; the ones the room has not reached give up nothing.
-      expect(seen?.state.questions[0].correctIndex).toBeGreaterThanOrEqual(0);
-      expect(seen?.state.questions[1].text).toBe('');
-      expect(seen?.state.questions[1].correctIndex).toBeLessThan(0);
+      expect(runningState(seen).questions[0].correctIndex).toBeGreaterThanOrEqual(0);
+      expect(runningState(seen).questions[1].text).toBe('');
+      expect(runningState(seen).questions[1].correctIndex).toBeLessThan(0);
     });
 
     it('reveals every answer once the question is over', async () => {
@@ -860,8 +878,8 @@ describe('a player’s event in the running game', () => {
       // Read as the television, which is owed the least of any client.
       const onTv = await t.query(api.games.running, { roomId });
 
-      expect(onTv?.state.phase).toBe('reveal');
-      expect(onTv?.state.answers).toEqual({ [ada]: 1, [grace]: 2 });
+      expect(runningState(onTv).phase).toBe('reveal');
+      expect(runningState(onTv).answers).toEqual({ [ada]: 1, [grace]: 2 });
     });
 
     it('scores a hidden answer in full', async () => {
@@ -887,7 +905,7 @@ describe('a player’s event in the running game', () => {
       // reveal runs on the state the room stored, so an answer hidden from the
       // room still scores.
       const onTv = await t.query(api.games.running, { roomId });
-      const scored = onTv?.state.standings.find(
+      const scored = runningState(onTv).standings.find(
         (standing: { playerId: string }) => standing.playerId === grace,
       );
 
@@ -913,10 +931,10 @@ describe('a player’s event in the running game', () => {
     );
 
     const running = await t.query(api.games.running, { roomId });
-    expect(Object.keys(running?.state.answers ?? {})).toHaveLength(party.length);
+    expect(Object.keys(runningState(running).answers ?? {})).toHaveLength(party.length);
     // The last answer ends the question, which is only reached if none of the
     // five was lost on the way in.
-    expect(running?.state.phase).toBe('reveal');
+    expect(runningState(running).phase).toBe('reveal');
   });
 
   it('does nothing at all in a room that is between games', async () => {
@@ -947,7 +965,11 @@ describe('a player’s event in the running game', () => {
       event: { kind: 'not-an-event-trivia-knows' },
     });
 
-    expect(await t.query(api.games.running, { roomId })).toEqual(started);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'running',
+      gameId: started?.gameId,
+      state: runningState(started),
+    });
   });
 
   it('refuses a phone whose seat is gone', async () => {
@@ -962,7 +984,7 @@ describe('a player’s event in the running game', () => {
         }),
       ),
     ).toEqual({ kind: 'notInRoom' });
-    expect((await t.query(api.games.running, { roomId }))?.state.answers).toEqual({});
+    expect(runningState(await t.query(api.games.running, { roomId })).answers).toEqual({});
   });
 
   it('is open to every player, not only the Host', async () => {
@@ -980,8 +1002,55 @@ describe('a player’s event in the running game', () => {
       event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
     });
 
-    expect(Object.keys((await t.query(api.games.running, { roomId }))?.state.answers ?? {}))
+    expect(Object.keys(runningState(await t.query(api.games.running, { roomId })).answers ?? {}))
       .toHaveLength(2);
+  });
+});
+
+describe('fail-closed runtime boundaries', () => {
+  it('returns unavailable and never raw state for an unknown game', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const raw = { secret: 'must-not-cross-the-wire' };
+
+    await t.run(async (ctx) => {
+      const room = await ctx.db.get(roomId);
+      if (room?.game === undefined) throw new Error('expected a running game');
+      await ctx.db.patch(roomId, {
+        game: { ...room.game, gameId: 'removed-game', stateVersion: 1, state: raw },
+      });
+    });
+
+    const response = await t.query(api.games.running, { roomId });
+    expect(response).toEqual({ kind: 'unavailable', gameId: 'removed-game' });
+    expect(JSON.stringify(response)).not.toContain('must-not-cross-the-wire');
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'anything' },
+    });
+    expect(await t.run(async (ctx) => (await ctx.db.get(roomId))?.game?.state)).toEqual(raw);
+  });
+
+  it('treats a wrong decoder version as unavailable without advancing it', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await t.run(async (ctx) => {
+      const room = await ctx.db.get(roomId);
+      if (room?.game === undefined) throw new Error('expected a running game');
+      await ctx.db.patch(roomId, { game: { ...room.game, stateVersion: 99 } });
+    });
+
+    expect(await t.query(api.games.running, { roomId })).toEqual({
+      kind: 'unavailable',
+      gameId: 'trivia',
+    });
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Grace ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+    });
+    expect(await t.run(async (ctx) => (await ctx.db.get(roomId))?.game?.stateVersion)).toBe(99);
   });
 });
 
@@ -1039,7 +1108,7 @@ describe('the clock a question runs on', () => {
     ]);
   });
 
-  it('reveals as soon as everybody has answered, without waiting for the clock', async () => {
+  it('reveals as soon as everybody has answered and advances without a phone timer', async () => {
     const t = convexTest(schema, modules);
     const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
     const asked = await stateOf(t, roomId);
@@ -1053,16 +1122,18 @@ describe('the clock a question runs on', () => {
 
     expect((await stateOf(t, roomId)).phase).toBe('reveal');
 
-    // The clock still fires, long after the room stopped needing it. It is
-    // addressed to a question that has been revealed, so it must land as
-    // nothing: acting on it would cut the reveal short and take the room to a
-    // question nobody had read.
-    await elapse(t, clockOn(asked) * 2);
+    // The question clock that was armed at start was cancelled when the final
+    // answer moved the room into reveal. The server owns the reveal clock too:
+    // no phone timer/event is needed to advance the room.
+    const revealed = await stateOf(t, roomId);
+    expect(revealed.phase).toBe('reveal');
+    expect(revealed.questionIndex).toBe(0);
 
-    const still = await stateOf(t, roomId);
+    await elapse(t, clockOn(revealed));
 
-    expect(still.phase).toBe('reveal');
-    expect(still.questionIndex).toBe(0);
+    const next = await stateOf(t, roomId);
+    expect(next.phase).toBe('question');
+    expect(next.questionIndex).toBe(1);
   });
 
   it('does not give a question more time because somebody answered it', async () => {
@@ -1129,7 +1200,9 @@ describe('the clock a question runs on', () => {
       }
 
       await ctx.scheduler.cancel(room.game.deadline);
-      await ctx.db.patch(roomId, { game: { gameId: room.game.gameId, state: room.game.state } });
+      await ctx.db.patch(roomId, {
+        game: { ...room.game, deadline: undefined, deadlineAt: undefined },
+      });
     });
 
     await t.mutation(api.games.sendEvent, {
@@ -1332,6 +1405,10 @@ describe('the carousel the Host browses', () => {
     // whose thumb was still on the arrows as the game started.
     await t.mutation(api.games.browseGame, { sessionToken: host, index: 0 });
 
-    expect(await t.query(api.games.running, { roomId })).toEqual(running);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'running',
+      gameId: running?.gameId,
+      state: runningState(running),
+    });
   });
 });

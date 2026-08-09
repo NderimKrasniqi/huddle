@@ -1,6 +1,7 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/game-core';
 
-import { playersCounted, VOTE_SECONDS, votesIn, type VotingState } from './logic';
+import { playersCounted, VOTE_SECONDS, votesIn } from './state';
+import type { VotingState } from './logic';
 
 /**
  * The television as data: what the room is looking at, given the state the room
@@ -70,6 +71,7 @@ function awayIn(players: readonly GamePlayer[]): GamePlayerId[] {
 export function watchedVoteScreen(
   state: VotingState,
   players: readonly GamePlayer[],
+  clockRemainingMs?: number,
 ): WatchedVoteScreen {
   const promptCount = state.prompts.length;
 
@@ -119,6 +121,9 @@ export function watchedVoteScreen(
     options: prompt.options.map((text, optionIndex) => ({ optionIndex, text })),
     voted: votesIn(state),
     playerCount: playersCounted(state, awayIn(players)),
-    countdownSeconds: VOTE_SECONDS,
+      countdownSeconds:
+        clockRemainingMs !== undefined && Number.isFinite(clockRemainingMs)
+          ? Math.max(0, Math.ceil(clockRemainingMs / 1000))
+          : VOTE_SECONDS,
   };
 }
