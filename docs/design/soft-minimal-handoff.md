@@ -137,8 +137,13 @@ none of them, and the platform no longer holds them — a game this build lacks
 resolves to the lobby (see `packages/game-registry/src/running.ts`).
 
 Every board named below is in `docs/design/reference/screens/`, flat — the
-`tv-screens/` and `phone-screens/` prefixes this table used to carry named
-directories that have never existed.
+`tv-screens/` and `phone-screens/` prefixes this table used to carry were the
+delivered package's directories, and have never existed here.
+
+The two TV boards were re-exported on 2026-08-09 at 1672×941, the screen alone
+rather than a render of it inside a television mockup. Any measurement quoted
+below that predates that swap was taken off the mockup and is worth re-checking
+before it is trusted to the pixel.
 
 ### TV
 
@@ -322,3 +327,52 @@ landing together are now both greeted.
 6. **`accent-face` is interim.** A game's answer options still need a cycle of
    distinguishable colours, and the package designs no game screen, so its four
    faces are a holding pattern rather than a decision.
+7. **The Room screen's geometry and its board have parted company.** See below.
+
+## The 2026-08-09 TV re-export
+
+`screens/01-room.png` and `screens/02-game-carousel.png` were replaced with
+1672×941 exports of the screen alone. The originals were 1448×1086 renders of
+that screen inside a television mockup — bezel, stand, caption — and the layout
+constants in `apps/tv/src/roster.ts` were measured off the mockup, where a board
+pixel happened to be a design point.
+
+The replacement is a recomposition, not a rescale. At 1672 px across a 1280 pt
+stage a board pixel is 1/1.30625 of a point, and the layout that emerges is not
+the old one at a new size: the hero gained room and the roster lost it.
+
+| Measure | Shipping (`roster.ts`) | New board |
+|---|---|---|
+| Wordmark top | 32 | 32 |
+| Wordmark height | 39 | 47 |
+| Title line | `titleTop` 55, overlapping the wordmark | 78, clear of it |
+| Title height | 48 | 47 |
+| Code tile | 84 square | 105 × 89 |
+| QR height | shorter than the tiles | 87 against the tiles' 89 — still shorter |
+| Caption line | 30 | 22 |
+| Divider gap | 24 | 21 |
+| Avatar disc | 88 | 70 |
+| Nickname line | 22 | 22 |
+| Status line | 20 | 20 |
+| Column pitch | 158 | 124 |
+| Row pitch | 177 | 145 |
+| Content bottom | 710 of 720 | 689 of 720 |
+
+Four of those agree outright — the wordmark's top, the title's line, and both
+text lines in a seat. That is the tell that this is one design rather than two:
+where the board and the code disagree it is about *size*, not about what the
+screen is made of.
+
+The disagreement that remains is a consistent one. The hero is drawn larger than
+the code draws it (tile 105 against 84) and the roster smaller (disc 70 against
+88, pitch 124 against 158) — the board spends the 16:9 frame's extra width on
+the code and buys it back from the grid, which is what a room of six across can
+afford and a stage of 1.656 could not.
+
+An earlier 1672×941 export, replaced on the same day, had the QR taller than the
+tiles and so contradicted `roomHeroHeight()`'s stated reason for measuring the
+tile column. This board does not: 87 against 89, shorter as designed. No stated
+reason is now contradicted — only numbers.
+
+Nothing was changed to match. Adopting this redraws the Room screen, and nobody
+has seen it drawn; the last time this television ran on a simulator was Phase 2.

@@ -86,14 +86,31 @@ export function roomGridHeight(): number {
 /**
  * The Room screen's vertical stack, top to bottom.
  *
- * Every number is measured off `docs/design/reference/screens/01-room.png` and
- * used as drawn. That is possible because the board's pixels are square — its
- * QR bitmap measures 95×93, and a QR is square by construction — so a board
- * pixel is a design point and nothing needs rescaling. What does *not* carry
- * over is the frame: the mockup's screen is 1272×768, an aspect of 1.656, while
- * the stage is 16:9. The board's own layout runs to y 725 and the stage is 720,
- * so the whole difference is five points, taken out of `gridGap` — the largest
- * gap on the screen and the least missed.
+ * Every number was measured off `docs/design/reference/screens/01-room.png` as
+ * that file stood before 2026-08-09, and used as drawn. That was possible
+ * because the board's pixels were square — its QR bitmap measured 95×93, and a
+ * QR is square by construction — so a board pixel was a design point and
+ * nothing needed rescaling. What did *not* carry over was the frame: the
+ * mockup's screen was 1272×768, an aspect of 1.656, while the stage is 16:9.
+ * That board's layout ran to y 725 and the stage is 720, so the whole
+ * difference was five points, taken out of `gridGap` — the largest gap on the
+ * screen and the least missed.
+ *
+ * **That file is no longer that board.** It was replaced with a 1672×941
+ * re-export — the screen alone, at the stage's own 16:9 — and the replacement
+ * is a recomposition rather than a rescale: it gives the hero more room and the
+ * roster less. Measured against it (÷1.30625 for board px to design point) the
+ * numbers below are wrong by more than rounding — disc 70 against 88, column
+ * pitch 124 against 158, row pitch 145 against 177, tile 105 against 84 — and
+ * the wordmark no longer sits behind the title. Four numbers do agree exactly:
+ * the wordmark's top at 32, the title's 48-point line, and the 22 and 20 of a
+ * seat's two text lines. The full table is in
+ * `docs/design/soft-minimal-handoff.md`.
+ *
+ * Nothing here was changed to match, because adopting that geometry redraws the
+ * Room screen and no one has yet seen it drawn. What is below is what the
+ * television has been shipping; treat it as the current design, and the board as
+ * the open question.
  *
  * It lives here rather than in the screen's `StyleSheet` so the total is
  * testable. The first draft carried the sum in a comment instead, and the
@@ -133,6 +150,12 @@ export const roomLayout = {
  * The QR stands beside it and is deliberately the shorter of the two, so this
  * one column decides the row — a QR that grew past the code it accompanies
  * would be a QR that had become the hero.
+ *
+ * The 2026-08-09 board keeps that true — 87 against the tile column's 89 — but
+ * only just, and an export earlier the same day had it the other way round at
+ * 108.7 against 93.4, which would have returned a hero 15pt short. Two points of
+ * margin is the whole of the guarantee, so a board that grows the QR again is
+ * worth measuring rather than eyeballing.
  */
 export function roomHeroHeight(): number {
   return roomLayout.tile + roomLayout.tileCaptionGap + roomLayout.captionLine;
