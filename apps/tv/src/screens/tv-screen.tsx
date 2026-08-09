@@ -1178,17 +1178,24 @@ const styles = StyleSheet.create({
   // The board sets this as a plain heading rather than the pill Soft Minimal used:
   // Soft Minimal has one accent and it is spent on things you act on.
   // The wordmark's gutter position, out of the column's flow.
-  // Hard into the top-left corner as of 2026-08-09 — 10pt from each edge, where
-  // this sat at `headerTop` (32) from the top and 56 from the left. The shared
-  // `headerTop` is deliberately left alone: every other TV screen puts its mark in
-  // a header row that wants that band, and only the Room floats the mark out of
-  // the flow. 10pt is safe this close to the edge because the whole stage is
-  // already inset to the title-safe inner 90% (`tvSafeStageScale`), so the bezel
-  // cannot reach it.
+  // Hard into the top-left corner as of 2026-08-09, where this sat at `headerTop`
+  // (32) from the top and 56 from the left. The shared `headerTop` is deliberately
+  // left alone: every other TV screen puts its mark in a header row that wants
+  // that band, and only the Room floats the mark out of the flow.
+  //
+  // **0 is as far as this can go, and it is not the screen's corner.** The stage
+  // is the title-safe inner 90% (`tvSafeStageScale`), centred, so its own origin
+  // already sits ~5% in — about 71 of these units from the physical edge. Zero
+  // reaches the stage's corner and no further. Going beyond means a negative
+  // offset that draws the mark outside the title-safe rectangle, into the band a
+  // television crops without reporting it; #23 exists because this one does. If
+  // that trade is ever wanted it should be a deliberate, recorded decision, not a
+  // number nudged down until the simulator looks right — the simulator is exactly
+  // the surface that cannot show the cost.
   roomWordmark: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 0,
+    left: 0,
   },
   // 48/58 as of 2026-08-09, up from 40/48. The board's own title ink
   // measures 356 × 45 in design units against this screen's 334 × 42, so 40 was
