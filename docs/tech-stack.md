@@ -43,6 +43,8 @@ lint:                 pnpm lint
 all tests:            pnpm test                 # convex + packages + apps + lint-rules (Vitest)
 unit tests:           pnpm test:unit            # packages + apps + lint-rules
 backend/integration:  pnpm test:integration     # convex (edge-runtime)
+pack validation:      pnpm validate:packs
+workflow/architecture: pnpm validate:workflow
 android tv:           pnpm --filter @huddle/tv android
 android phone:        pnpm --filter @huddle/controller android
 ios phone:            pnpm --filter @huddle/controller ios

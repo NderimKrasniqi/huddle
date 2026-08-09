@@ -1,8 +1,12 @@
 name: CI
 
-# docs/tech-stack.md: the gates run "on every push". Solo project, no PR flow yet —
-# add a `pull_request:` trigger here the day one exists.
-on: push
+# Feature branches are verified in their pull request, while `main` is verified
+# after a merge or a direct maintenance push. Keeping feature-branch pushes out
+# of this trigger avoids running the same commit twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 # A newer push to the same branch makes the older run pointless; cancelling it
 # keeps the free-tier minutes for runs anyone still cares about.
@@ -41,6 +45,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Validate repository workflow
+        run: pnpm validate:workflow
 
       - name: Typecheck
         run: pnpm typecheck

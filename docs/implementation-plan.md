@@ -247,10 +247,10 @@ It preserves Expo, Convex, the game registry, Soft Minimal assets/palette, and
 the existing public room/game contracts except for the intentional TV APIs and
 `createRoom` → `openRoom` replacement.
 
-**Current feature:** —
-**Current phase:** —
-**Current task:** —
-**Last completed task:** 6.6.1 Run complete automated, export, prebuild, and device verification
+**Current feature:** F-007 Full-Codebase Behavior-Preserving Refactor
+**Current phase:** 7.2 Controller decomposition
+**Current task:** 7.2.1 Split Controller composition into owned features
+**Last completed task:** 7.1.1 Establish refactor guardrails and repository truth
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -362,3 +362,48 @@ the existing public room/game contracts except for the intentional TV APIs and
     checklist because this environment has no connected TV.
   - **Traceability:** F-006, J-006, BR-006, BR-007, BR-008, BR-009.
   - **Depends on:** 6.5.2
+
+---
+
+# Feature 7 — F-007 Full-Codebase Behavior-Preserving Refactor
+
+Feature 7 turns the app feature folders into real ownership boundaries, finishes
+the private Convex extraction, and makes repository checks match the staged
+GitHub delivery workflow. It preserves Expo routes, the Convex schema and all
+public APIs except the obsolete `rooms.createRoom`, package exports, and the
+approved Soft Minimal visuals/assets.
+
+## Phase 7.1 — Repository guardrails
+
+- [x] **7.1.1 — Establish refactor guardrails and repository truth**
+  - Run CI for pull requests and `main`, validate workflow/architecture in CI,
+    make ignored local agent state harmless, and make pack validation hermetic.
+  - **Depends on:** 6.6.1
+
+## Phase 7.2 — Controller decomposition
+
+- [ ] **7.2.1 — Split Controller composition into owned features**
+  - Move join, room, picker, game-session, UI, and platform implementation into
+    their declared boundaries while preserving session and screen transitions.
+  - **Depends on:** 7.1.1
+
+## Phase 7.3 — TV decomposition
+
+- [ ] **7.3.1 — Split TV composition into owned features**
+  - Move Room, carousel, game-session, shared TV UI, and room-session lifecycle
+    into their declared boundaries without changing rendering or recovery.
+  - **Depends on:** 7.2.1
+
+## Phase 7.4 — Convex consolidation
+
+- [ ] **7.4.1 — Finish private helper extraction and retire `createRoom`**
+  - Make `openRoom` the only public room opener, consolidate authorization,
+    runtime, clock, presence, and deletion helpers, and keep other APIs stable.
+  - **Depends on:** 7.3.1
+
+## Phase 7.5 — Full review closeout
+
+- [ ] **7.5.1 — Re-audit packages, reconcile truth, and run release verification**
+  - Recheck package seams and tooling, record dependency advisories separately,
+    reconcile active docs, and run the complete automated/native evidence set.
+  - **Depends on:** 7.4.1
