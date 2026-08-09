@@ -923,11 +923,9 @@ function usePopIn(greeting: boolean): { readonly transform: readonly [{ scale: A
 // Every measurement below is the handoff's own, at its 1280×720 design size;
 // `TvStage` scales the lot to the television.
 const styles = StyleSheet.create({
-  // No fill. `TvStage`'s artwork *is* the canvas on a TV screen, and this View
-  // covers the whole of it — a `colors.screen` here painted the plants out,
-  // which is why the background looked like it had failed to load. The only
-  // place that colour is painted is `TvStage`'s letterbox bars, exactly as the
-  // comment there claims.
+  // No fill. `TvStage` owns the full-viewport artwork; this content View covers
+  // the safe-scaled 1280×720 stage. `colors.screen` remains TvStage's loading
+  // fallback, so a screen-level fill here would paint over the plants.
   screen: {
     flex: 1,
   },

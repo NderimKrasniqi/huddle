@@ -16,52 +16,36 @@ art for two games that do not exist and none for one that does.
 
 ## `avatars/`
 
-Ten characters, generated from the delivered batch by
-`tools/prepare-avatars.py` — which documents the transform and can be re-run
-when a further batch arrives:
+Ten characters, generated from the authoritative
+`HUDDLE ASSETS/avatars/squares/` batch by `tools/prepare-avatars.py` — which
+documents the transform and can be re-run when a further batch arrives:
 
 ```bash
 python3 tools/prepare-avatars.py <batch-dir>
 ```
 
-One 640×640 file per character. The filename stem is the avatar's stable id —
-the value stored on a player, so it may never be renamed once a room has used
-it.
+One 640×640 RGBA file per character. The filename stem is the avatar's stable
+id — the value stored on a player, so it may never be renamed once a room has
+used it. The batch must contain exactly these ids: `fox`, `green-alien`,
+`pink-bunny`, `blue-robot`, `purple-owl`, `yellow-robot`, `red-robot`,
+`teal-bear`, `mint-cat`, and `puppy`.
 
 ### One asset, two shapes
 
-A batch ships `squares/` and `circles/`. **Only the squares are used.** The
-delivered circles are 1024×1536 portraits where the character breaks out of the
-disc at the shoulders and dissolves into a glow, with the disc's diameter and
-centre drifting ~80px across characters — masking one to a circle cuts the body
-at a different place for every avatar.
+The `squares/` files are authoritative; the delivered `circles/` files are not
+used. Those 1024×1536 portraits vary in framing and glow between characters,
+so masking them to a circle produces inconsistent crops and can expose their
+outer field.
 
-The square does not have that problem, and its background is already the
-character's own colour family, so the circular avatar is just the square under
-`borderRadius: size / 2`. That satisfies §9's "no white border" for free and
-removes any way for the two shapes to drift apart.
+Each square is first measured for its centred painted disc. The preparation
+script trims any baked black rim, rejects uncertain or off-centre bounds, crops
+to the disc, and only then resizes to 640×640. Runtime rendering may round the
+result with `borderRadius: size / 2`, but it no longer reveals a pale outer ring.
+The script stages the complete batch before writing, so an invalid source never
+partially replaces the runtime set.
 
-**Do not commission more circle art.** It is not used.
-
-### Fixed in the pipeline
-
-`mint-cat` (14px) and `teal-bear` (8px) shipped with a pure-black stroke baked
-around the rounded square that the other eight do not have. The script detects
-and trims it per-file, so a later batch that fixes it upstream needs no change
-here.
-
-### Outstanding — needs re-art
-
-**`yellow-robot`'s background is `#FAF6F2`**, which is the `#FFF7F2` canvas.
-Every other avatar has a clearly tinted disc; this one has none, so on the TV
-player strip and in the picker it reads as a robot floating with no avatar
-behind it. It needs a pale yellow background in the character's own colour
-family, like the other nine.
-
-**Ten characters is exactly `ROOM_PLAYER_CAP`.** Avatars are exclusive, so a
-full room consumes every one and the tenth player to join gets no choice at all.
-Twelve is the target. The delivered batch README refers to a `batch-2/`, which
-was not in the folder.
+**Do not commission more circle art or import the Expo-pack avatar crops.**
+Neither source is part of the runtime batch.
 
 ## `icons/`
 
@@ -88,8 +72,8 @@ badge is a bordered chip with a word in it and a dot is a filled circle; both
 are drawn as ordinary React Native views so they scale with their own text and
 take their colour from the palette. Shipping them as artwork would bake a font,
 a radius and a colour into a bitmap that the phone and the television need at
-different sizes. `crown.svg` *is* kept — it is a glyph inside the HOST chip, not
-the chip.
+different sizes. `crown.svg` *is* kept — it is the gold glyph rendered above a
+Host avatar, not a bitmap badge.
 
 ## `game-art/`
 
@@ -108,9 +92,10 @@ as one language.
 1672×941 (16:9), no alpha, clear centre with decoration at the edges per §11.
 
 **This is the TV canvas**, on every TV screen — not decoration layered over one.
-It replaces the solid `colors.screen` fill in `TvStage` and scales with the
-stage. The letterbox bars a non-16:9 window leaves stay a solid warm off-white;
-stretching a 16:9 composition into them would draw a second pair of plants.
+`huddle-tv-background-01.png` renders full-viewport with `cover`, so the artwork
+reaches every edge. `TvStage` applies `tvSafeStageScale` only to its 1280×720
+content layer; `colors.screen` remains the loading fallback. On a non-16:9
+panel, `cover` crops decorative edges rather than stretching the composition.
 
 `-01` is warmer, `-02` cooler and greyer. `-01` is the default for both screens
 until the assignment is settled — see the handoff.
@@ -139,10 +124,12 @@ well inside Android's 66% safe zone, so the OS mask cannot clip the symbol.
 **The Android adaptive background is `#FFF7F2`** — set it alongside the
 foreground, since the foreground alone is transparent.
 
-Not yet referenced by either `app.json`. One thing to settle when wiring: Expo
-resolves `icon` relative to the app directory, so these need
-`../../packages/ui/assets/…`, which reaches outside the app's project root.
-Worth a `prebuild` before trusting it.
+The mobile app configs reference the appropriate light/dark and Android icon
+assets. Android TV additionally uses the supplied `huddle-android-tv-icon.png`
+(1024²) and `huddle-android-tv-banner.png` (640×360) through
+`@react-native-tvos/config-tv` with `androidTVRequired: true`; `expo prebuild`
+verifies their generated resources and Leanback launcher metadata. Apple TV
+remains a simulator target and has no separate production artwork wired here.
 
 ## `logo/`
 
@@ -154,7 +141,7 @@ The wordmark and symbol, transparent, in exact token colors:
 | `huddle-logo-dark.png` | 1327×360, orange symbol + `#FFF7F2` wordmark, for dark surfaces |
 | `huddle-symbol-orange.png` | 1200×1234, standalone `#FF6B4A` symbol |
 
-These replace the drawn `HUDDLE.` wordmark Boardwalk sets in Bungee — §5 of the
+These replace the earlier drawn `HUDDLE.` wordmark Boardwalk set in Bungee — §5 of the
 handoff is explicit that the wordmark should use supplied artwork rather than be
 recreated from a text font, which also means the wordmark does not depend on the
 unresolved font decision.

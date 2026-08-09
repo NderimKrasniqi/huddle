@@ -1,23 +1,23 @@
 # Implementation Plan
 
-> **Reconciled 2026-08-07 against the existing implementation.**
+> **Reconciled 2026-08-09 against the existing implementation.**
 > Huddle was built through a prior plan into Phase 5. This roadmap has been
 > rebaselined against the actual repository. Completed tasks are checked with a
 > one-line evidence note; unchecked tasks are the real remaining work.
 >
-> **Evidence baseline:** `pnpm typecheck` clean; `pnpm test` green — 57 files,
-> 666 tests, 0 failures. Backend (`convex/convex/{rooms,players,games}.ts`),
+> **Evidence baseline:** `pnpm typecheck` clean; `pnpm test` green — 65 files,
+> 768 tests, 0 failures. Backend (`convex/convex/{rooms,players,games}.ts`),
 > platform packages (`game-core`, `game-registry`, `packs`, `ui`), the Trivia
 > module (`packages/games/trivia`), and both apps (`apps/tv`, `apps/controller`)
 > are implemented and tested.
 >
-> **Remaining work (as of 2026-08-08):** every required task is complete. 5.6
-> closed the MVP after finding and fixing two blocking issues (a private-state
-> broadcast and the missing end-room control), and 5.8 (the optional
-> remember-me) has since shipped. What is left is the single follow-up **5.9**
-> (keep the question pack out of the Controller bundle). The monorepo apps are `apps/tv` +
-> `apps/controller` (the "mobile" naming in the original draft mapped to the
-> controller).
+> **Remaining work (as of 2026-08-09):** no required implementation task is
+> open. 5.6 closed the MVP after finding and fixing two blocking issues (a
+> private-state broadcast and the missing end-room control), 5.8 (the optional
+> remember-me) shipped, 5.9 kept the question pack out of the Controller
+> bundle, and 5.10 reconciled the approved Soft Minimal TV visuals and assets.
+> The monorepo apps are `apps/tv` + `apps/controller` (the "mobile" naming in
+> the original draft mapped to the controller).
 
 ## Phase 1 — Create and Join a Live Room
 
@@ -25,7 +25,7 @@
 
 - [x] **1.1 — Establish the monorepo and local build baseline**
   - Done: pnpm workspaces (`apps/*`, `convex`, `packages/*`, `packages/games/*`), Expo SDK 57, RN 0.86, `react-native-tvos` on TV, Expo Router, Convex providers in both apps, root `typecheck`/`test` scripts, local iOS/Android/TV run scripts, native `ios/`+`android/` projects present.
-  - Note: styling uses the Boardwalk design-token system, not NativeWind (see `docs/tech-stack.md`). Controller RN fork alignment is tracked in 5.7.
+  - Note: styling uses the Soft Minimal design-token system, not NativeWind (see `docs/tech-stack.md`). Controller RN fork alignment is tracked in 5.7.
 
 - [x] **1.2 — Create authoritative room state**
   - Done: `convex/convex/rooms.ts` + `schema.ts` model rooms/players with room-code and membership indexes; 4-char codes; transactional creation; `rooms.test.ts` covers lookup and uniqueness.
@@ -105,7 +105,7 @@
     screen (`apps/controller/app/index.tsx`) as a **manage sheet** — the
     design decision, since `docs/design/design-handoff.md` §5 drew the roster
     but not the act of managing a player; §5 now specifies it. Every non-Host row gains a
-    disclosure chevron and opens a centred Boardwalk confirm dialog offering
+    disclosure chevron and opens a centred Soft Minimal confirm dialog offering
     "Make host" (cobalt) and "Remove" (punch); the Host's own row offers
     nothing (`targetIsSelf`), transfer is disabled for an away target
     (`targetAway`), and each refusal is surfaced through
@@ -156,14 +156,14 @@
 
 ## Phase 5 — Harden the Local MVP
 
-**Outcome:** The complete MVP runs reliably on Android TV + iOS/Android phones and is checked against the approved scope. **— Nearly complete; only 5.6 (final scope/architecture review) remains. The Voting game shipped, 5.4's F1/F2 gap was closed by task 3.7, and the 5.7 stack correction landed.**
+**Outcome:** The complete MVP runs reliably on Android TV + iOS/Android phones and is checked against the approved scope. **— Complete; 5.6, the 5.7 stack correction, the 5.9 bundle boundary, and the 5.10 TV visual reconciliation are all done.**
 
 - [x] **5.1 — Handle join and network failure UX**
   - Done: invalid/expired code, full room, and rejection states (`join-rejection.ts`, `game-rejection.ts`, `color-rejection.ts`); duplicate-submission guards; tested.
 
 - [x] **5.2 — Harden the Android TV shared display**
   - Done: large-screen layout, safe-area, typography floors, and the two handoff animations landed in Phase 5 design-fidelity work; every flow is driven from phones with the TV as display only.
-  - Note: the earlier "confirm NativeWind on Android TV" check is retired — styling is the Boardwalk token system.
+  - Note: the earlier "confirm NativeWind on Android TV" check is retired — styling is the Soft Minimal token system.
 
 - [x] **5.3 — Harden phone app lifecycle and deep links**
   - Done: foreground/background, lock/unlock, QR deep links, cold start, and reconnection credentials verified, including real-device verification (see git history).
@@ -203,7 +203,7 @@
   - **Also closed, found by the follow-up code review:** the phones never actually returned to the Join Screen — `players.session` was a one-shot read, so nothing noticed a seat ending, and the end-room copy promised what did not happen. The seated screen now subscribes to its seat, which also covers `removePlayer` and room expiry.
   - **Verify:** `pnpm typecheck` clean (9 workspaces); `pnpm lint` clean; `pnpm test` green — **771 passed, 64 files**. Independent code review and security review both **PASS** on the final tree, each having re-verified the redaction against a real payload.
   - **Not verified on hardware:** that both phones reach the Join Screen after a Host ends the room, and that the TV opens a fresh room afterwards. Reviewed by reading only, per the stack's no-RN-render-tests rule.
-  - Residuals recorded here: **5.9** below (the pack ships in the Controller bundle, so a *modified* client can still reproduce the deal) remains open. The three smaller ones have since been closed on branch `fix/5.6-residuals`: `expireRoom` now cancels a pending game deadline exactly as `endRoom` does; a player who loses a seat lands on the join form with a line saying why — "The host removed you from the room." when the room is still standing, "This room has closed." when it is not (told apart by the roster on the same Convex snapshot, `apps/controller/src/seat-loss.ts`); and the two host-confirm sheets now share one `ConfirmSheet` shell (surface, scrim, Cancel) rather than duplicating it.
+  - Residuals recorded here: **5.9** below (the pack ships in the Controller bundle, so a *modified* client can still reproduce the deal) was closed by the follow-up bundle-boundary task. The three smaller ones have since been closed on branch `fix/5.6-residuals`: `expireRoom` now cancels a pending game deadline exactly as `endRoom` does; a player who loses a seat lands on the join form with a line saying why — "The host removed you from the room." when the room is still standing, "This room has closed." when it is not (told apart by the roster on the same Convex snapshot, `apps/controller/src/seat-loss.ts`); and the two host-confirm sheets now share one `ConfirmSheet` shell (surface, scrim, Cancel) rather than duplicating it.
 
 - [x] **5.7 — Align the Controller to the `react-native-tvos` fork**
   - Done: `apps/controller/package.json` now uses `react-native: npm:react-native-tvos@~0.86.0-2`, matching the TV. `pnpm install` re-resolved the controller's whole tree onto the fork and deduped the redundant plain-RN dependency tree (lockfile −442/+27; `--frozen-lockfile` clean). Both apps now resolve one RN fork.
@@ -220,10 +220,18 @@
   - The redaction is what stops a passive read (the socket, a proxy, an honest client showing too much); this is what would stop a determined one.
   - The fix is structural rather than a projection: the client-side `GameModule` would have to stop carrying `createInitialState`, so the dealing code — and the pack with it — stays on the server. Deliberately not attempted inside 5.6.
   - **Verify:** a production Controller bundle contains no pack question text; the server still deals a game unchanged.
-  - **Done** (branch `fix/5.9-pack-out-of-client-bundle`). The fix turned out larger than "stop carrying `createInitialState`": the client's *screens* also pulled `./logic` (and the pack behind it) through pure value helpers (`revealBeat`, `answersIn`, `playersCounted`, `QUESTION_SECONDS`), and the trivia *barrel* re-exported `triviaGameLogic` as a value. Changes: `GameModule` no longer `extends GameLogic` (game-core) — a client type with metadata/settingsSchema/screens and no rules; the pack-free selectors moved to `trivia/src/state.ts` so the screens import them without `./logic`; `settings.ts` takes category names from a new client-safe `@huddle/packs/categories` (`curated-categories.ts`, drift-guarded by test) instead of `./questions`; the trivia barrel re-exports the module + types only (`export type { … }`, not `export { type … }` — the latter keeps a runtime edge). Guards: an eslint `no-restricted-imports` ban on `@huddle/packs` in client files, and `client-seam.test.ts`. **Verified** by bundling the client registry entry with esbuild — `huddle-classics.json`, `curated-pack.ts`, `questions.ts`, `logic.ts` are absent from the client module graph and no question text is in the output; the server's `games.test.ts` deals unchanged. Independent security review still to run.
+  - **Done** (branch `fix/5.9-pack-out-of-client-bundle`). The fix turned out larger than "stop carrying `createInitialState`": the client's *screens* also pulled `./logic` (and the pack behind it) through pure value helpers (`revealBeat`, `answersIn`, `playersCounted`, `QUESTION_SECONDS`), and the trivia *barrel* re-exported `triviaGameLogic` as a value. Changes: `GameModule` no longer `extends GameLogic` (game-core) — a client type with metadata/settingsSchema/screens and no rules; the pack-free selectors moved to `trivia/src/state.ts` so the screens import them without `./logic`; `settings.ts` takes category names from a new client-safe `@huddle/packs/categories` (`curated-categories.ts`, drift-guarded by test) instead of `./questions`; the trivia barrel re-exports the module + types only (`export type { … }`, not `export { type … }` — the latter keeps a runtime edge). Guards: an eslint `no-restricted-imports` ban on `@huddle/packs` in client files, and `client-seam.test.ts`. **Verified** by bundling the client registry entry with esbuild — `huddle-classics.json`, `curated-pack.ts`, `questions.ts`, `logic.ts` are absent from the client module graph and no question text is in the output; the server's `games.test.ts` deals unchanged. Independent security review **PASS**.
+
+- [x] **5.10 — Reconcile Soft Minimal TV visuals and shipped assets**
+  - Done: `huddle-tv-background-01.png` is the full-viewport TV canvas; only the 1280×720 content layer receives `tvSafeStageScale`, with `colors.screen` retained as the loading fallback.
+  - Done: Android TV uses the supplied 1024px launcher icon and 640×360 banner through `@react-native-tvos/config-tv` (`androidTVIcon`, `androidTVBanner`, `androidTVRequired: true`); regenerated native resources contain the required Leanback feature and launcher metadata.
+  - Done: Room geometry, 5×2 seating, warm surfaces, neutral caption, gold Host crown, blue AWAY chip, footer player-count icon, structured invitation copy, and Host/greeting/status accessibility precedence match the approved 1672×941 board. The Room arithmetic and caption/status tests cover the landmarks.
+  - Done: all ten stable avatar IDs are regenerated from `HUDDLE ASSETS/avatars/squares/` by a validate-first painted-disc crop pipeline; every runtime asset is 640×640 RGBA and the source/runtime ID sets must match exactly.
+  - **Verify:** `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm validate:packs`, avatar `--check`, TV prebuild/resource inspection, and Expo TV export. Physical Philips Android TV checks (launcher, overscan, QR scan, sofa-distance legibility) remain a manual release check.
 
 ## MVP Acceptance
 
 The MVP is complete when Phase 2.4 (Voting game) ships, 5.4 passes across both
-games, 5.7 is corrected, and 5.6 finds no blocking discrepancy against the
-approved scope and stack.
+games, 5.7 is corrected, 5.6 finds no blocking discrepancy against the
+approved scope and stack, and 5.10 reconciles the shipped TV visuals/assets
+against the approved Soft Minimal board.

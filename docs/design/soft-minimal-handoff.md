@@ -103,16 +103,17 @@ at speed and at distance, so they take navy, and `accent-face.test.ts` holds a
 `tv-backgrounds/` is not decoration layered onto a screen — it **is** the TV
 canvas, on every TV screen. Nothing paints a flat colour behind it.
 
-That matters for `TvStage`, which today fills the 1280×720 stage with a solid
-`colors.screen`. The image replaces that fill and scales with the stage, so the
-plants stay at the edges at any panel size.
+That matters for `TvStage`: `huddle-tv-background-01.png` renders full-viewport
+with `cover`, while only the 1280×720 content layer receives
+`tvSafeStageScale`. The plants therefore reach every edge without sacrificing
+title-safe UI space; `colors.screen` remains the loading fallback.
 
 Two things it does not change:
 
-- **The letterbox bars stay a solid warm off-white.** They are what a non-16:9
-  window leaves over, and the background is a 16:9 composition — tiling or
-  stretching it into the bars would put a second pair of plants beside the
-  first.
+- **Non-16:9 panels crop the artwork, rather than letterboxing it.** `cover`
+  keeps the 16:9 composition intact and sacrifices decorative outer edges when
+  a panel is wider or taller. The content stage remains centred and title-safe;
+  the warm `colors.screen` fill is only the loading fallback.
 - **The clear centre is load-bearing.** §11 puts decoration near the edges
   precisely so the room code, the QR, the player strip and the game cards never
   sit on top of it. A screen that needs the middle of the canvas is a screen
@@ -306,17 +307,17 @@ the spring had been rehomed onto the carousel's footer line — one greeting at 
 time, since a line has one slot. The Room's grid restores it, and two phones
 landing together are now both greeted.
 
-## Open
+## Reconciled decisions and remaining open items
 
-1. **Two more avatars, and re-art on `yellow-robot`.** The cleaned batch landed
-   ten usable characters — exactly `ROOM_PLAYER_CAP`, so a full room leaves the
-   last player no choice. `yellow-robot`'s background is the canvas colour, so
-   it draws no disc at all. See `packages/ui/assets/README.md`. Circle art is no
-   longer needed: the circular avatar is the square under `borderRadius`.
+1. **Resolved — complete avatar batch.** The authoritative
+   `HUDDLE ASSETS/avatars/squares/` source now produces exactly the ten stable
+   runtime ids. `tools/prepare-avatars.py` crops each centred painted disc,
+   rejects uncertain bounds, and writes 640×640 assets only after the complete
+   batch validates. Circle portraits and Expo-pack crops remain excluded.
 2. **`packages/ui/assets/` is wired**, except `game-art/`. Avatars, the TV
-   background, the logo and the app icons are all consumed and proved through
-   `expo export` / `expo prebuild`. Game art is the one set still staged, and
-   only in part — see 5.
+   background, the logo, the mobile icons, and the Android TV launcher icon and
+   banner are consumed and proved through `expo export` / `expo prebuild`.
+   Game art is the one set still staged, and only in part — see 5.
 3. **Avatars have replaced colors.** Done: the schema stores an avatar id, the
    join form is the picker, and `claimColor`, `player-colors.ts`,
    `color-picker.ts` and `color-rejection.ts` are deleted.
@@ -327,7 +328,8 @@ landing together are now both greeted.
 6. **`accent-face` is interim.** A game's answer options still need a cycle of
    distinguishable colours, and the package designs no game screen, so its four
    faces are a holding pattern rather than a decision.
-7. **The Room screen's geometry and its board have parted company.** See below.
+7. **Resolved — Room screen geometry adopted.** The implementation now uses the
+   approved board landmarks recorded below, including the 5×2 ten-seat grid.
 
 ## The 2026-08-09 TV re-export
 
@@ -341,12 +343,12 @@ The replacement is a recomposition, not a rescale. At 1672 px across a 1280 pt
 stage a board pixel is 1/1.30625 of a point, and the layout that emerges is not
 the old one at a new size: the hero gained room and the roster lost it.
 
-| Measure | Shipping (`roster.ts`) | New board |
+| Measure | Previous implementation | Approved board / adopted |
 |---|---|---|
 | Wordmark top | 32 | 32 |
 | Wordmark height | 39 | 47 |
 | Title line | `titleTop` 55, overlapping the wordmark | 78, clear of it |
-| Title height | 48 | 47 |
+| Title height | 48 | 48 |
 | Code tile | 84 square | 105 × 89 |
 | QR height | shorter than the tiles | 87 against the tiles' 89 — still shorter |
 | Caption line | 30 | 22 |
@@ -374,5 +376,16 @@ tiles and so contradicted `roomHeroHeight()`'s stated reason for measuring the
 tile column. This board does not: 87 against 89, shorter as designed. No stated
 reason is now contradicted — only numbers.
 
-Nothing was changed to match. Adopting this redraws the Room screen, and nobody
-has seen it drawn; the last time this television ran on a simulator was Phase 2.
+The approved values are now the shipping geometry: wordmark top 32 and height
+47; title top 78 with a 48pt line; code tiles 105×89; QR visual height 87;
+caption line 22; divider gap 21; avatar disc 70; seat pitch 124 horizontally
+and 145 vertically; nickname/status lines 22/20; and content bottom 689 or
+less. Ten seats remain centred in a 5×2 grid.
+
+The same reconciliation carries the board's supporting details into the Room:
+the card and QR surfaces are `#FDFAF9`, the caption is neutral `#8A8E95`, the
+Host crown is the existing vector rendered in `#F5A116`, `AWAY` is a blue chip
+(`#EAF5FF` / `#2587C8`), and the existing `player-count` vector leads the
+joined-player footer. The normal invitation is structured so **Huddle** is
+semibold and the copy ends with “enter the code.” Host crown visibility is
+independent of the transient `JUST JOINED!` status precedence.

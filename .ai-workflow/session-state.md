@@ -61,10 +61,15 @@ taken at a fixed x well clear of the content; the canvas is flat at about
 (249, 241, 235) and the code tiles are only ~5–20 RGB levels off it, so
 thresholds below about 6 are noise and above about 10 miss the tiles.
 
-**It was not adopted because nobody had seen it drawn.** That is now partly
-answered — see below — but the call is still open and it is the user's.
+**It was not adopted because nobody had seen it drawn.** The reconciliation
+below adopts it as the shipping geometry; the remaining hardware check is
+limited to release verification on the target Philips set.
 
-## The simulator run (2026-08-09) — what it established
+## The simulator run (2026-08-09) — baseline findings before reconciliation
+
+The notes in this section describe the pre-reconciliation render and are kept
+as evidence for the six findings. The completion section below supersedes their
+open/defect status.
 
 The TV app was built and run on the Apple TV 4K (3rd gen, at 1080p) simulator,
 udid `091BC127-357A-4104-8321-EE294BEF1311`, against the cloud dev deployment.
@@ -75,10 +80,12 @@ udid `091BC127-357A-4104-8321-EE294BEF1311`, against the cloud dev deployment.
   `Podfile.lock` and no `Pods/`, so everything compiled from scratch: Build
   Succeeded, installed, launched. This is the gate `expo export` cannot run — it
   bundles JavaScript and never touches CocoaPods.
-- **The TV background artwork renders as the canvas.** Plants and edge
-  decoration, inset with the content by the title-safe transform. The binary
-  already resident on the device predated that wiring and drew flat off-white,
-  which is worth knowing because it looks like a regression and is not.
+- **The TV background artwork renders as the canvas.** In the baseline render,
+  plants and edge decoration were inset with the content by the title-safe
+  transform. The reconciliation moved the artwork to a full-viewport `cover`
+  layer and left the title-safe transform on content only. The binary already
+  resident on the device predated that wiring and drew flat off-white, which is
+  worth knowing because it looks like a regression and is not.
 
 **Three differences from the board that are not about size**, all confirmed on
 crops rather than eyeballed at scale:
@@ -236,36 +243,41 @@ cd convex && npx convex run players:joinRoom '{"code":"XXXX","nickname":"Sam","a
 
 Run the scripts CI runs, **by name**, from `.github/workflows/`: `pnpm
 typecheck`, `pnpm lint`, `pnpm test:unit`, `pnpm test:integration`, `pnpm
-validate:packs`. As of the last commit: typecheck clean, **764 tests pass across
-64 files**.
+validate:packs`. As of the final reconciliation: typecheck clean, **768 tests
+pass across 65 files**.
 
 `pnpm typecheck` is not `pnpm -r typecheck`. The root script is `tsc --noEmit &&
 pnpm -r typecheck`, and the root half is the only thing covering files belonging
 to no package (`eslint-rules/`, `test/`). Running only the recursive half left CI
 red on eight consecutive commits once.
 
+## Visual reconciliation completed (2026-08-09)
+
+The six visual findings from this session are resolved in the implementation:
+
+1. `huddle-tv-background-01.png` now covers the full viewport; only the
+   1280×720 content layer is title-safe scaled, so no background border appears.
+2. All ten avatars are regenerated from the authoritative square batch by the
+   painted-disc crop pipeline; the exact source/runtime ID set is enforced and
+   no pale outer ring remains.
+3. Room code tiles and the QR use the warm `#FDFAF9` surface, and the caption
+   uses neutral `#8A8E95` with semibold **Huddle** and the corrected “enter the
+   code” invitation.
+4. The Room uses the approved wordmark/title/hero/grid geometry and a centred
+   5×2 layout that fits ten seats through content bottom 689.
+5. The existing vector crown is gold above every Host avatar (including during
+   `JUST JOINED!`), and the `player-count` vector leads the joined-player footer.
+6. `AWAY` is the approved blue chip (`#EAF5FF` / `#2587C8`); phone roster away
+   dots remain grey.
+
+Android TV launcher artwork and the required Leanback metadata are also wired
+   and verified by prebuild resource inspection. The Soft Minimal handoff and
+   asset README record these decisions and exclude the unused 4K, Expo, circle,
+   raster-badge, mobile-only, and Apple TV source files.
+
 ## Next action
 
-The user's call, in this order of confidence:
-
-1. **The two with established root causes**, in this order — both are
-   independent of the geometry decision:
-   - **The avatar ring**, fixed in `tools/prepare-avatars.py` by cropping each
-     square to its baked disc, plus the correction to
-     `packages/ui/assets/README.md`. Highest confidence of anything here: the
-     cause is measured per-file, not inferred.
-   - **The background not reaching the screen edges**, fixed in `tv-stage.tsx`
-     by scaling content rather than canvas. This one reverses an argument the
-     file currently makes, so rewrite the comment rather than leaving it
-     contradicting the code.
-2. **The crown and the count-line glyph** — the board, the code and
-   `icons.ts:31` give three different accounts of the crown, so at least one is
-   wrong whichever board wins. `AWAY`'s colour is **not** in this group; it is a
-   reasoned decision and needs the user, not a fix.
-2. **Decide the geometry.** The suggested test is to build the Room screen at
-   the board's numbers on a branch and compare the two on the user's actual
-   television — a 75" Philips Android TV, which they have. A 70pt disc against
-   an 88pt one is a sofa-distance judgment, not a measurement.
-3. Note for that test: the TV backgrounds are 1672×941 bitmaps and will upscale
-   ~2.3× on a 4K panel. Everything drawn in code is resolution-independent; that
-   one image is the exception, and a 75" panel is where it will show.
+The implementation and automated checks are complete. The remaining release
+check is physical verification on the 75″ Philips Android TV: launcher artwork,
+sofa-distance legibility, QR scanning, overscan/title-safe framing, full-bleed
+background scaling, and the ten generated avatar crops.

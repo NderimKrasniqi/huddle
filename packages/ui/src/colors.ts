@@ -10,14 +10,12 @@
  * is how a design system stops being one.
  */
 export const colors = {
-  /** Warm off-white. The phone canvas, and the TV's letterbox bars. */
+  /** Warm off-white. The phone canvas and the TV's native/loading fallback. */
   canvas: '#FFF7F2',
   /**
-   * The TV's own background. The same warm off-white, and deliberately its own
-   * name: on the TV this is only ever seen through the gaps in
-   * `tv-backgrounds/`, which *is* the canvas there rather than decoration over
-   * one. A television that ever paints this flat is a television whose
-   * background image failed to load.
+   * The TV's native/loading fallback. The full-viewport image in
+   * `tv-backgrounds/` is the actual TV canvas; this token is shown only before
+   * it resolves or if the asset fails.
    */
   screen: '#FFF7F2',
   /** Cards, sheets, inputs, tiles. */

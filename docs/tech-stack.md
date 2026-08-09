@@ -10,7 +10,7 @@ Record only choices this project actually needs.
 | Mobile | Expo SDK 57 + React Native 0.86 | Native iOS/Android with shared implementation. |
 | TV | `react-native-tvos@0.86-stable` | Android TV support while remaining compatible with normal mobile targets. |
 | Navigation | Expo Router | Shared Expo-native navigation model. |
-| Styling | Boardwalk design tokens + React Native `StyleSheet` | A shared design-token system in `@huddle/ui` (colors, typography, motion, shadows, shape) consumed through `StyleSheet`, verified for Android TV legibility through Phase 5. NativeWind was evaluated and not adopted; its v4 behavior on Android TV was an open risk and the token system already met the design handoff. |
+| Styling | Soft Minimal design tokens + React Native `StyleSheet` | A shared design-token system in `@huddle/ui` (colors, typography, motion, shadows, shape) consumed through `StyleSheet`, verified for Android TV legibility through Phase 5. NativeWind was evaluated and not adopted; its v4 behavior on Android TV was an open risk and the token system already met the approved Soft Minimal handoff. |
 | Backend/realtime | Convex | Authoritative room/game state, reactive queries, transactional mutations, and scheduled functions without a separate API or realtime service. |
 | Local preferences | AsyncStorage | Last-used name, avatar, and other non-sensitive convenience preferences. |
 | Session credential storage | Expo SecureStore | Protect participant/session credentials used for reconnection and authorization. |
