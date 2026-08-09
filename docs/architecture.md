@@ -33,21 +33,22 @@ The current implementation is a pnpm workspace with Expo Router apps under
 `apps/controller` and `apps/tv`, Convex functions under `convex/convex`,
 platform contracts under `packages/game-core` and `packages/game-registry`,
 game modules under `packages/games/*`, and shared tokens/primitives under
-`packages/ui`. Controller route adapters are thin and its root screen now owns
-only deep-link/session composition; TV renderer ownership remains the active
-extraction task.
+`packages/ui`. Expo route adapters are thin. The Controller root screen owns
+only deep-link/session composition, while the TV root screen owns room opening,
+live subscriptions, and pure surface selection. Both apps keep rendering,
+styles, feature hooks, and platform lifecycle code behind explicit entrypoints.
 
 ## Target app boundaries
 
 ```text
 apps/controller/src/
-  app/                         # composition and route-facing coordinators
+  screens/                     # deep-link/session composition
   features/{join,room,game-picker,game-session}/
   platform/{convex,session,presence,storage}/
   ui/                          # controller-only primitives
 
 apps/tv/src/
-  app/                         # TV composition and lifecycle coordinator
+  screens/                     # room opening, subscriptions, surface selection
   features/{room,carousel,game-session}/
   platform/{convex,room-session}/
   ui/                          # TV-only primitives

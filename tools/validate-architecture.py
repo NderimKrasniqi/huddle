@@ -55,11 +55,45 @@ def validate_public_entrypoints(app: Path) -> None:
                 fail(f"screen bypasses the UI entrypoint: {screen.relative_to(ROOT)} -> {imported}")
 
 
+def validate_cross_boundary_imports(app: Path) -> None:
+    """Allow internals within an owner, but only entrypoints across owners."""
+
+    src = app / "src"
+    owners = [
+        *(path for path in (src / "features").iterdir() if path.is_dir()),
+        *(path for path in (src / "platform").iterdir() if path.is_dir()),
+        src / "ui",
+    ]
+
+    for source in sorted((*src.rglob("*.ts"), *src.rglob("*.tsx"))):
+        source_owner = next((owner for owner in owners if source.is_relative_to(owner)), None)
+
+        for match in IMPORT.finditer(source.read_text(encoding="utf-8")):
+            imported = match.group("path")
+            if not imported.startswith("."):
+                continue
+
+            target = (source.parent / imported).resolve()
+            target_owner = next((owner for owner in owners if target.is_relative_to(owner)), None)
+            if target_owner is None or target_owner == source_owner:
+                continue
+
+            allowed = {target_owner.resolve()}
+            if target_owner.parent.name == "features":
+                allowed.add((target_owner / "native").resolve())
+
+            if target not in allowed:
+                fail(
+                    f"cross-boundary deep import: {source.relative_to(ROOT)} -> {imported}"
+                )
+
+
 def main() -> int:
     for name in APP_NAMES:
         app = ROOT / "apps" / name
         validate_route_adapters(app)
         validate_public_entrypoints(app)
+        validate_cross_boundary_imports(app)
 
     print("App architecture validation passed.")
     return 0

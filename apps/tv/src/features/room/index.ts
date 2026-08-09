@@ -1,2 +1,20 @@
 /** Public TV room feature seam (rendering and roster geometry). */
-export * from '../../roster';
+export {
+  ROOM_QR_SIZE,
+  roomCountLine,
+  roomGridHeight,
+  roomGridWidth,
+  roomHeroHeight,
+  roomLayout,
+  roomScreenHeight,
+  roomSeats,
+  seat,
+  SEAT_HEIGHT,
+  seatSlot,
+  seatSpokenAs,
+  SEATS_PER_ROW,
+  type RoomCountLine,
+  type RoomSeat,
+  type RosterSeat,
+  type SeatSlot,
+} from './roster';
