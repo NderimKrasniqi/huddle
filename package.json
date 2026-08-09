@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project lint-rules --project packages --project apps",
     "test:integration": "vitest run --project convex",
-    "validate:packs": "tsx packages/packs/src/validate-packs.ts",
+    "validate:packs": "node --import tsx packages/packs/src/validate-packs.ts",
     "validate:workflow": "python3 tools/validate-workflow.py"
   },
   "devDependencies": {

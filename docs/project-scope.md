@@ -369,3 +369,11 @@ the product scope and existing room/game behavior remain unchanged.
 - **BR-007** — Invalid game runtimes expose no state.
 - **BR-008** — Gameplay cannot advance while the TV is away.
 - **BR-009** — Legacy rooms are discarded, not migrated.
+
+# Feature 7 traceability — Full-Codebase Behavior-Preserving Refactor
+
+This refactor changes ownership and engineering safeguards, not product
+behavior. It preserves the supported surfaces, room/game contracts, and active
+Soft Minimal design while removing the obsolete development room opener.
+
+- **F-007** — Full-Codebase Behavior-Preserving Refactor.

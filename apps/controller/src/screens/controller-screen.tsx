@@ -87,7 +87,7 @@ import {
   settingsControls,
   settingsToStart,
 } from '../features/game-picker';
-import { PhoneScreen } from '../ui/phone-screen';
+import { PhoneScreen } from '../ui';
 import { phoneIdentityStore } from '../platform/storage';
 import { type ForegroundWatch, keepPresent } from '../platform/presence';
 import {
