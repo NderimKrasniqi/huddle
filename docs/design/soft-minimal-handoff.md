@@ -156,7 +156,7 @@ directories that have never existed.
 | Lobby (host) | `YoureInScreen` | `02-your-room-host`, `04-pick-a-game` | Two states of one screen |
 | Lobby (player) | `YoureInScreen` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
-| End room | `EndRoomSheet` | **none** | Board shows a "Leave" affordance instead |
+| Leave | `LeaveRoomSheet` | **none** | The board draws the pill, not the sheet |
 | Game frame | `InGameScreen` | **none** | Needs design |
 
 ## Icons
@@ -227,13 +227,20 @@ of who is still in the room.
 **Ten seats, not twelve.** `ROOM_PLAYER_CAP` is 10. The board's 12-seat grid and
 "of 12 joined" line are the old number.
 
-**"Leave" is not End Room.** The board's header affordance has no backend behind
-it. The built host-ends-room flow with its confirm sheet stands, and it now sits
-in the header slot the board draws the pill in — **still labelled `End room`**,
-because that is what it does. A pill labelled Leave that in fact deletes every
-seat is the one substitution in this rebuild that could cost somebody their
-party. The label moves when `leaveRoom` lands. The sheet still needs a Soft
-Minimal treatment.
+**"Leave" is Leave.** *(Settled; this entry used to record a placeholder.)* The
+board's header affordance had no backend behind it, so Phase 4 drew the pill in
+the slot the board gives it and labelled it `End room` — a pill saying Leave
+that in fact deleted every seat was the one substitution in that rebuild that
+could have cost somebody their party. `players.leaveRoom` landed in Phase 5 and
+the label is now the board's own.
+
+It is on the waiting screen too, which the board does not draw. The board shows
+a bare wordmark there because it predates the decision that leaving is
+everybody's; a player with no way out would make that decision false on the
+screen most of the party is looking at.
+
+The sheet behind it still needs a Soft Minimal treatment — it is the reused
+`ConfirmSheet`, which is the manage sheet's surface.
 
 **TV pairing lost its roster switch.** *(Settled; this entry used to defer it.)*
 Boardwalk showed the code large while the room was empty and switched to the

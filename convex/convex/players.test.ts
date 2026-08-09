@@ -2,6 +2,7 @@ import {
   AVATAR_IDS,
   AWAY_AFTER_MS,
   HEARTBEAT_INTERVAL_MS,
+  ROOM_EXPIRY_MS,
   type HostControlRejection,
   type JoinRejection,
 } from '@huddle/game-core';
@@ -1336,5 +1337,283 @@ describe('host controls', () => {
       expect(await t.query(api.games.running, { roomId: room.roomId })).not.toBeNull();
       expect(await rosterNames(t, room.roomId)).toEqual(['Ada']);
     });
+  });
+});
+
+/**
+ * Leaving — the scope's "leave", and the control every phone carries.
+ *
+ * It replaced the Host-only `rooms.endRoom`, and the three things worth pinning
+ * are the three ways it differs from what it replaced: it is nobody's power
+ * over anybody, a departing Host hands the room on rather than closing it, and
+ * the *last* player out is the one who ends it.
+ *
+ * That last one is a deliberate departure from the plan, which expected an
+ * emptied room to linger until expiry. It cannot: `expireRoom` refuses an empty
+ * room by design and `watchForDesertion` never schedules one for it, so the
+ * only thing that would ever collect it is `expireUnjoinedRoom` — armed once at
+ * `createRoom` and never re-armed. A party outlasting that check and then
+ * leaving would strand its room and its Room Code for good. See `leaveRoom`.
+ */
+describe('leaveRoom', () => {
+  /** A room with a Host and a guest, and the token each phone holds. */
+  async function roomWithParty(t: Backend): Promise<{
+    roomId: Id<'rooms'>;
+    host: string;
+    guest: string;
+  }> {
+    const room = await openRoom(t);
+    const host = (await join(t, room.code, 'Ada')) as { sessionToken: string };
+    const guest = (await join(t, room.code, 'Grace')) as { sessionToken: string };
+
+    return { roomId: room.roomId, host: host.sessionToken, guest: guest.sessionToken };
+  }
+
+  /** Whether the room is drawing this player as away. */
+  async function isAwayNamed(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<boolean> {
+    const roster = await t.query(api.players.roster, { roomId });
+
+    return roster.find((player) => player.nickname === nickname)?.away === true;
+  }
+
+  it('takes the leaver’s seat and nobody else’s', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host, guest } = await roomWithParty(t);
+
+    await t.mutation(api.players.leaveRoom, { sessionToken: guest });
+
+    expect(await t.query(api.players.session, { sessionToken: guest })).toBeNull();
+    // The whole difference from the End room this replaced: everybody else is
+    // still seated, and the room is still open.
+    expect(await t.query(api.players.session, { sessionToken: host })).not.toBeNull();
+    expect(await rosterNames(t, roomId)).toEqual(['Ada']);
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+
+  it('hands the room on when the Host is the one leaving', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.players.leaveRoom, { sessionToken: host });
+
+    // `handOverRoom`'s successor, chosen before the row goes — a room that lost
+    // its host and gained nobody could never start another game.
+    expect(await hostName(t, roomId)).toBe('Grace');
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+
+  it('closes the room when the last player walks out', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host, guest } = await roomWithParty(t);
+
+    await t.mutation(api.players.leaveRoom, { sessionToken: guest });
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+
+    await t.mutation(api.players.leaveRoom, { sessionToken: host });
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+  });
+
+  it('frees the Room Code the moment the room closes, rather than in two hours', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const only = (await join(t, room.code, 'Ada')) as { sessionToken: string };
+
+    await t.mutation(api.players.leaveRoom, { sessionToken: only.sessionToken });
+
+    // The point of deleting rather than leaving it to a clock. Nothing holds
+    // the code, so the pool `createRoom` draws from has it back.
+    const next = await t.mutation(api.rooms.createRoom, {});
+    expect(await t.query(api.rooms.stillOpen, { roomId: next.roomId })).toBe(true);
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+  });
+
+  it('is the only thing that collects an emptied room', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await join(t, room.code, 'Ada');
+
+    // The fact the deletion above rests on, pinned rather than argued. The one
+    // check that can ever delete an *empty* room is `expireUnjoinedRoom`, and
+    // it is armed once by `createRoom` and never re-armed — a join does not add
+    // another. So a party that outlives that check and then leaves would have
+    // nothing watching at all: `expireRoom` refuses an empty room by design and
+    // `watchForDesertion` will not schedule one for it. Deferring to a clock
+    // would strand the room, and its Room Code, for good.
+    const unjoinedChecks = await t.run(async (ctx) =>
+      (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+        (job) => job.name === 'rooms:expireUnjoinedRoom',
+      ),
+    );
+
+    expect(unjoinedChecks).toHaveLength(1);
+  });
+
+  it('hands a room whose remaining players are all away back to its clock', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      const { roomId, host, guest } = await roomWithParty(t);
+
+      // Grace's phone goes into a pocket. The room notices and marks her away —
+      // and that check, having done its work, never looks again.
+      await elapse(t, AWAY_AFTER_MS + 1_000);
+      expect(await isAwayNamed(t, roomId, 'Grace')).toBe(true);
+
+      // Ada leaves. The room is not empty, so it is not deleted — but the one
+      // seat left is one nobody is hearing from, which is a deserted room by
+      // every definition the expiry machinery uses. Before `leaveRoom` called
+      // the watcher, nothing was left to collect it: `markAway` returns early
+      // on an away player, the last `watchForDesertion` found Ada still
+      // beating, and `expireUnjoinedRoom` refuses a room with a seat in it.
+      await t.mutation(api.players.leaveRoom, { sessionToken: host });
+      expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+
+      await elapse(t, ROOM_EXPIRY_MS + 1_000);
+
+      expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+      // And the seat with it, which is what sends Grace's phone home.
+      expect(await t.query(api.players.session, { sessionToken: guest })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels a running game’s clock when the last player leaves', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      const { roomId, host, guest } = await roomWithParty(t);
+
+      await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+      await t.mutation(api.players.leaveRoom, { sessionToken: guest });
+      await t.mutation(api.players.leaveRoom, { sessionToken: host });
+
+      expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+
+      // Asserted as *cancelled* rather than merely harmless: `reachDeadline`
+      // already tolerates a room that has gone, so a test that only advanced
+      // the clock would pass with the cancel deleted.
+      const deadlines = await t.run(async (ctx) =>
+        (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+          (job) => job.name === 'games:reachDeadline',
+        ),
+      );
+      expect(deadlines).toHaveLength(1);
+      expect(deadlines[0]?.state.kind).toBe('canceled');
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      await t.finishInProgressScheduledFunctions();
+
+      expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('accepts a token no seat answers to, rather than refusing it', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId } = await roomWithParty(t);
+
+    // A phone leaving a room it is no longer in has got what it wanted, and
+    // there is nothing it could do about a refusal — the same tolerance
+    // `heartbeat` extends, and pointedly not the `notInRoom` the host controls
+    // throw, because this is nobody's power over anybody.
+    await expect(
+      t.mutation(api.players.leaveRoom, { sessionToken: 'not-a-token' }),
+    ).resolves.toBeNull();
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+
+  it('lets a guest leave, which the control it replaced refused', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, guest } = await roomWithParty(t);
+
+    await expect(
+      t.mutation(api.players.leaveRoom, { sessionToken: guest }),
+    ).resolves.toBeNull();
+    expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
+  });
+});
+
+/**
+ * The room a departing Host leaves behind.
+ *
+ * Raised by the Phase 5 security review (NB-1). `handOverRoom` was written for
+ * `markAway`, where a room with nobody beating keeps the host it has because
+ * that host's row survives and they may come back. A leaver's row does not
+ * survive, so "keeps the host it has" would leave the room pointing at a
+ * deleted row — and every host control reads that as `notHost`, which is a
+ * party stuck in a lobby nobody can start.
+ *
+ * At an `AWAY_AFTER_MS` of thirteen seconds, "everyone else is quiet" is one
+ * person with their phone in a pocket, not an exotic case.
+ */
+describe('the host a leaver hands on to', () => {
+  it('is a quiet seat rather than nobody, when nobody is beating', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const host = (await join(t, room.code, 'Ada')) as { sessionToken: string };
+      await join(t, room.code, 'Grace');
+
+      // Grace's phone goes quiet. She is still seated, and still the only
+      // person who could hold this room.
+      await elapse(t, AWAY_AFTER_MS + 1_000);
+
+      await t.mutation(api.players.leaveRoom, { sessionToken: host.sessionToken });
+
+      // Not `undefined`: a room left hostless here has no way back to a host
+      // except somebody new joining, which a full room cannot even offer.
+      expect(await hostName(t, room.roomId)).toBe('Grace');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still prefers a seat the room is hearing from', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      const host = (await join(t, room.code, 'Ada')) as { sessionToken: string };
+      await join(t, room.code, 'Grace');
+      const carol = (await join(t, room.code, 'Carol')) as { sessionToken: string };
+
+      // Grace joined first and would win on join order alone; Carol is the one
+      // the room can actually reach, and reachability wins.
+      await elapse(t, AWAY_AFTER_MS + 1_000);
+      await t.mutation(api.players.heartbeat, { sessionToken: carol.sessionToken });
+
+      await t.mutation(api.players.leaveRoom, { sessionToken: host.sessionToken });
+
+      expect(await hostName(t, room.roomId)).toBe('Carol');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('leaves a going-away Host’s room alone, which is not the same case', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      const room = await openRoom(t);
+      await join(t, room.code, 'Ada');
+      await join(t, room.code, 'Grace');
+
+      // Both phones go quiet. Ada's row survives, so the room keeps her —
+      // being away is not resigning, and this is the case `handOverRoom`'s
+      // original rule was written for.
+      await elapse(t, AWAY_AFTER_MS + 1_000);
+
+      expect(await hostName(t, room.roomId)).toBe('Ada');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

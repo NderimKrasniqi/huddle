@@ -6,9 +6,10 @@ import {
   BACK_TO_ROOM,
   backToLobbyLabel,
   CHOOSE_A_GAME,
-  END_ROOM,
   gameToStart,
   hostChoosingLine,
+  leaveConsequence,
+  LEAVE_ROOM,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
   startControl,
@@ -109,22 +110,52 @@ describe('the Host’s way back to the lobby', () => {
   });
 });
 
-describe('the Host’s way out of the room', () => {
-  it('names what is lost rather than asking whether they are sure', () => {
-    // The confirm has to earn the second tap it costs. "Are you sure?" tells a
-    // Host nothing they did not already know; what they cannot know without
-    // being told is that the code stops working and everybody is sent home.
-    expect(END_ROOM.title).toBe('End the room?');
-    expect(END_ROOM.body).toBe(
-      'Everyone is sent back to the join screen and the room code stops working. This cannot be undone.',
-    );
+describe('leaving the room', () => {
+  it('is a different act from “Back to lobby”, and says so', () => {
+    // The two sit one tap apart on the Host's screens and do opposite things:
+    // one ends a game and keeps every seat, the other gives up a seat and keeps
+    // the game. Labels that read alike would be the wrong one tapped.
+    expect(LEAVE_ROOM.label).not.toBe(backToLobbyLabel(false));
   });
 
-  it('is not a second “Back to lobby”', () => {
-    // The two sit on the same screen and do opposite things: one keeps the room
-    // and ends the game, the other ends the room. Labels that read alike would
-    // be the more destructive of the two being tapped by mistake.
-    expect(END_ROOM.label).not.toBe(backToLobbyLabel(false));
+  it('warns the last player out that the room goes with them', () => {
+    // The only irreversible case, and the only one that costs anybody else
+    // anything — because there is nobody else.
+    const alone = leaveConsequence(1, true);
+
+    expect(alone).toContain('room closes');
+    expect(alone).toContain('code stops working');
+  });
+
+  it('treats an empty roster as the last player out', () => {
+    // A count of zero is a roster that has not landed rather than a room with
+    // nobody in it — the reader is in it. The cautious sentence is the right
+    // one to show while the phone does not know.
+    expect(leaveConsequence(0, false)).toBe(leaveConsequence(1, false));
+  });
+
+  it('tells a departing Host the room carries on without them', () => {
+    // `handOverRoom` picks the successor, so the room does not end — which is
+    // the whole difference from the End room this replaced.
+    const host = leaveConsequence(4, true);
+
+    expect(host).toContain('takes over');
+    expect(host).toContain('rejoin');
+  });
+
+  it('promises a successor, which the backend always keeps', () => {
+    // `handOverRoom` hands a leaver's room to the longest-connected remaining
+    // seat even when the room is not currently hearing from it, so there is no
+    // "nobody to take over" case left for this to describe. See its
+    // `departingIsLeaving` argument.
+    expect(leaveConsequence(4, true)).toContain('takes over');
+  });
+
+  it('tells everybody else they are only giving up a seat', () => {
+    const player = leaveConsequence(4, false);
+
+    expect(player).toContain('rejoin');
+    expect(player).not.toContain('closes');
   });
 });
 

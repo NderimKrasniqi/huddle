@@ -70,7 +70,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | Start a game; non-host start refused | ✅ | ✅ | `games.test.ts` + `voting-lifecycle.test.ts` › "refuses a phone that is not the Host" |
 | Settings locked at start (re-start refused mid-game) | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › "refuses to start a second game over the one being played" (`alreadyInGame`) |
 | End the active game; discard state, keep room | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › ending |
-| End the room / room closes | 🔁 | 🔁 | `rooms.test.ts` › expiry (`expireRoom`) |
+| Leave the room / room closes when the last player goes | 🔁 | 🔁 | `players.test.ts` › `leaveRoom` ("closes the room when the last player walks out", "frees the Room Code the moment the room closes") |
 | Host is also a normal player; can act in the game | ✅ | ✅ | `games.test.ts` › "is open to every player, not only the Host"; Voting votes from the host seat in `voting-lifecycle.test.ts` |
 | Host cannot read another player's private state | ✅ | 🔁 | Trivia: `games.test.ts`/`players.test.ts` private-projection; Voting has **no** private per-player state — the tally is anonymous (`voting-lifecycle.test.ts` › "keeps the tally anonymous") |
 | **Manually transfer host status** | 🔁 | 🔁 | `players.test.ts` › host controls › transferHost + `host-controls.test.ts` (row offers, away-target disable) — task 3.7, see Findings F1. Host Roster manage sheet wired; sheet + away-disabled transfer verified on-device (iPhone 17 sim) |

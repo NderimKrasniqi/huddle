@@ -7,12 +7,16 @@ import type { MutationCtx } from './_generated/server';
 /**
  * The gate every Host-only write over a room's people stands behind.
  *
- * `players.transferHost`, `players.removePlayer` and `rooms.endRoom` are all the
- * Host acting on the room's seats, so all three ask the same two questions the
+ * `players.transferHost` and `players.removePlayer` are both the Host acting on
+ * somebody else's seat, so both ask the same two questions the
  * game lifecycle does (`games.ts`, `roomThisPhoneRuns`): which player holds this
  * phone, and does the room point at them. The Session Token is the only thing a
  * phone presents, so the lookup starts there and a phone naming itself is never
  * believed.
+ *
+ * `players.leaveRoom` pointedly does not stand here. A phone leaving its own
+ * seat is nobody's power over anybody — there is no target to be entitled to —
+ * so it is gated by the Session Token alone, the way `heartbeat` is.
  *
  * It sits in a file of its own rather than in either caller because the two that
  * would otherwise host it already point at each other — `players.ts` reaches for
