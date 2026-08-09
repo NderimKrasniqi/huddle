@@ -343,24 +343,36 @@ the old one at a new size: the hero gained room and the roster lost it.
 
 | Measure | Shipping (`roster.ts`) | New board |
 |---|---|---|
-| Wordmark top / height | 32 / 39 | 34 / 45 |
-| Title | overlaps the wordmark; `titleTop` 55 | clears it — ink starts at 90 |
-| Code tile | 84 square | 94 × 93 |
-| QR | shorter than the tiles | 108.7 tall — **taller** than the tiles' 93.4 |
-| Caption gap / line | 24 / 30 | 12 / 22 |
-| Divider gap | 24 | 36 |
-| Avatar disc | 88 | 58 |
-| Column pitch | 158 | 109 |
-| Row pitch | 177 | 131 |
+| Wordmark top | 32 | 32 |
+| Wordmark height | 39 | 47 |
+| Title line | `titleTop` 55, overlapping the wordmark | 78, clear of it |
+| Title height | 48 | 47 |
+| Code tile | 84 square | 105 × 89 |
+| QR height | shorter than the tiles | 87 against the tiles' 89 — still shorter |
+| Caption line | 30 | 22 |
+| Divider gap | 24 | 21 |
+| Avatar disc | 88 | 70 |
+| Nickname line | 22 | 22 |
+| Status line | 20 | 20 |
+| Column pitch | 158 | 124 |
+| Row pitch | 177 | 145 |
 | Content bottom | 710 of 720 | 689 of 720 |
 
-Nothing was changed to match. Adopting these redraws the Room screen — the
-roster at roughly two-thirds its current size — and nobody has seen it drawn;
-the last time this television was run on a simulator was Phase 2. The QR row is
-the one entry that contradicts a *reason* rather than a number: `roomHeroHeight()`
-returns the tile column's height because the QR is the shorter of the two, which
-the new board makes false.
+Four of those agree outright — the wordmark's top, the title's line, and both
+text lines in a seat. That is the tell that this is one design rather than two:
+where the board and the code disagree it is about *size*, not about what the
+screen is made of.
 
-So the open question is not "which numbers" but which board is the design. Until
-that is answered, `roster.ts` is the Room screen and `01-room.png` is a picture
-of a different one.
+The disagreement that remains is a consistent one. The hero is drawn larger than
+the code draws it (tile 105 against 84) and the roster smaller (disc 70 against
+88, pitch 124 against 158) — the board spends the 16:9 frame's extra width on
+the code and buys it back from the grid, which is what a room of six across can
+afford and a stage of 1.656 could not.
+
+An earlier 1672×941 export, replaced on the same day, had the QR taller than the
+tiles and so contradicted `roomHeroHeight()`'s stated reason for measuring the
+tile column. This board does not: 87 against 89, shorter as designed. No stated
+reason is now contradicted — only numbers.
+
+Nothing was changed to match. Adopting this redraws the Room screen, and nobody
+has seen it drawn; the last time this television ran on a simulator was Phase 2.

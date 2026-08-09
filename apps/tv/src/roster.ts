@@ -100,9 +100,11 @@ export function roomGridHeight(): number {
  * re-export — the screen alone, at the stage's own 16:9 — and the replacement
  * is a recomposition rather than a rescale: it gives the hero more room and the
  * roster less. Measured against it (÷1.30625 for board px to design point) the
- * numbers below are wrong by more than rounding — disc 58 against 88, column
- * pitch 109 against 158, row pitch 131 against 177, tile 94 against 84 — and
- * the wordmark no longer sits behind the title at all. The full table is in
+ * numbers below are wrong by more than rounding — disc 70 against 88, column
+ * pitch 124 against 158, row pitch 145 against 177, tile 105 against 84 — and
+ * the wordmark no longer sits behind the title. Four numbers do agree exactly:
+ * the wordmark's top at 32, the title's 48-point line, and the 22 and 20 of a
+ * seat's two text lines. The full table is in
  * `docs/design/soft-minimal-handoff.md`.
  *
  * Nothing here was changed to match, because adopting that geometry redraws the
@@ -149,11 +151,11 @@ export const roomLayout = {
  * one column decides the row — a QR that grew past the code it accompanies
  * would be a QR that had become the hero.
  *
- * On the 2026-08-09 board that premise is no longer true: the QR measures 108.7
- * against the tile column's 93.4, so it is the taller and this function would
- * return a hero some 15pt short of what it draws. That is the single place the
- * new board contradicts a stated reason rather than only a number, so it is the
- * first thing to settle if the geometry is adopted.
+ * The 2026-08-09 board keeps that true — 87 against the tile column's 89 — but
+ * only just, and an export earlier the same day had it the other way round at
+ * 108.7 against 93.4, which would have returned a hero 15pt short. Two points of
+ * margin is the whole of the guarantee, so a board that grows the QR again is
+ * worth measuring rather than eyeballing.
  */
 export function roomHeroHeight(): number {
   return roomLayout.tile + roomLayout.tileCaptionGap + roomLayout.captionLine;
