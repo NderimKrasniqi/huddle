@@ -45,7 +45,7 @@ export const BACK_TO_ROOM = 'Your room';
 
 /**
  * Which card a phone that is not running the room is watching
- * (docs/design/design-handoff.md §8) — the one half of that screen that does
+ * (docs/design/soft-minimal-handoff.md §8) — the one half of that screen that does
  * depend on the game.
  */
 export function nowViewingLine(metadata: GameMetadata): string {

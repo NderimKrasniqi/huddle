@@ -1,6 +1,8 @@
-import type { GameModule, RunningGame } from '@huddle/game-core';
+import type { GameModule, RunningGame, RunningGameResponse } from '@huddle/game-core';
 
 import { GAME_REGISTRY } from './registry';
+
+export type { RunningGameResponse };
 
 /**
  * What a client should be drawing, given what the room says it is playing.
@@ -17,7 +19,16 @@ export type RunningGameScreen =
    */
   | { readonly kind: 'lobby' }
   /** Draw this module's screen, on this state. */
-  | { readonly kind: 'game'; readonly module: GameModule; readonly state: unknown };
+  | {
+      readonly kind: 'game';
+      readonly module: GameModule;
+      readonly state: unknown;
+      readonly clockRemainingMs?: number;
+    }
+  /** The room is paused and no game controls should mount. */
+  | { readonly kind: 'paused'; readonly gameId: string; readonly reason: 'tvDisconnected' }
+  /** The stored runtime failed closed and no state is available to clients. */
+  | { readonly kind: 'unavailable'; readonly gameId: string };
 
 /** The installed module answering to `gameId`, or `undefined` if none does. */
 export function gameModuleById(gameId: string): GameModule | undefined {
@@ -51,13 +62,38 @@ export function gameModuleById(gameId: string): GameModule | undefined {
  * something I cannot draw" — this function deliberately cannot.
  */
 export function runningGameScreen(
-  running: RunningGame | null | undefined,
+  running: RunningGameResponse | RunningGame | undefined,
 ): RunningGameScreen {
   if (running === null || running === undefined) {
     return { kind: 'lobby' };
   }
 
-  const module = gameModuleById(running.gameId);
+  // Keep accepting the pre-6.2 shape for one release so older callers can
+  // adopt the discriminated response without a flag day. New runtime queries
+  // always use the `kind: 'running'` branch below.
+  const response =
+    'kind' in running
+      ? running
+      : { kind: 'running' as const, gameId: running.gameId, state: running.state };
 
-  return module === undefined ? { kind: 'lobby' } : { kind: 'game', module, state: running.state };
+  if (response.kind === 'paused') {
+    return { kind: 'paused', gameId: response.gameId, reason: response.reason };
+  }
+
+  if (response.kind === 'unavailable') {
+    return { kind: 'unavailable', gameId: response.gameId };
+  }
+
+  const module = gameModuleById(response.gameId);
+
+  return module === undefined
+    ? { kind: 'unavailable', gameId: response.gameId }
+    : {
+        kind: 'game',
+        module,
+        state: response.state,
+        ...(response.clockRemainingMs === undefined
+          ? {}
+          : { clockRemainingMs: response.clockRemainingMs }),
+      };
 }

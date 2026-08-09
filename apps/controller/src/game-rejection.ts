@@ -24,6 +24,7 @@ const REJECTION_KINDS: Readonly<Record<GameLifecycleRejection['kind'], true>> = 
   notHost: true,
   notInRoom: true,
   settingRejected: true,
+  tvUnavailable: true,
 };
 
 /** Whether `data` off a `ConvexError` is one of the lifecycle refusals. */
@@ -75,6 +76,8 @@ export function rejectionMessage(rejection: GameLifecycleRejection): string {
       // and gets the same answer. The key is not named: the Host cannot act on
       // it, and the control they used is on their screen either way.
       return 'This room can’t play that game that way. Update Huddle and try again.';
+    case 'tvUnavailable':
+      return 'The TV is reconnecting. Wait for it to return, then try again.';
   }
 }
 

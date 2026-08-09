@@ -19,7 +19,7 @@
  * focus target the moment it renders — nobody has to ask for it, and nothing
  * about the diff that adds one *looks* like it is adding a remote surface. So
  * the guard has to be the thing that fails when somebody adds a control, in the
- * spirit of the two Boardwalk rules beside it: a syntactic question, answered by
+ * spirit of the two Soft Minimal rules beside it: a syntactic question, answered by
  * a parser, reported on the line.
  *
  * It is deliberately a rule about *names* rather than about provenance. Its
@@ -32,7 +32,7 @@
  * ## Which files stand on the TV
  *
  * Not the rule's question — the flat config's, exactly as with
- * `boardwalk/body-text-floor`: `apps/tv` and a game module's `tv-*` screens. A
+ * `soft-minimal/body-text-floor`: `apps/tv` and a game module's `tv-*` screens. A
  * Controller screen is a screen made entirely of controls, and this rule must
  * never reach one.
  *
@@ -56,7 +56,7 @@
  * named `tv-*`.** This is the likeliest gap by some distance: a game author
  * splitting a scoreboard into `packages/games/trivia/src/score-board.tsx` gets
  * no gate on it, because the config's glob keys on the file name. The glob is
- * `boardwalk/body-text-floor`'s, deliberately — "the TV surface" should be one
+ * `soft-minimal/body-text-floor`'s, deliberately — "the TV surface" should be one
  * answer rather than two that drift — so widening it is a decision about both
  * rules, and neither is worth widening until a module actually splits a screen.
  * Nothing in the repo does today.

@@ -20,7 +20,7 @@
     },
     "ios": {
       "bundleIdentifier": "tv.huddle.hub",
-      "//infoPlist": "CALayer.allowsEdgeAntialiasing is false by default, and a layer carrying a transform is composited without antialiasing \u2014 so Boardwalk's \u00b11\u20132\u00b0 sticker tilts turn every tile border into a visible staircase (measured: a rotated edge steps 2px per 50 rows with no intermediate pixel values, where Android feathers the same edge). This key turns edge antialiasing on app-wide. Apple documents a rendering cost; the TV screens are near-static, so it does not matter here. Only the TV app needs it \u2014 nothing in the Controller is rotated.",
+      "//infoPlist": "CALayer.allowsEdgeAntialiasing is false by default, and a layer carrying a transform is composited without antialiasing \u2014 so Soft Minimal's \u00b11\u20132\u00b0 sticker tilts turn every tile border into a visible staircase (measured: a rotated edge steps 2px per 50 rows with no intermediate pixel values, where Android feathers the same edge). This key turns edge antialiasing on app-wide. Apple documents a rendering cost; the TV screens are near-static, so it does not matter here. Only the TV app needs it \u2014 nothing in the Controller is rotated.",
       "infoPlist": {
         "UIViewEdgeAntialiasing": true
       },

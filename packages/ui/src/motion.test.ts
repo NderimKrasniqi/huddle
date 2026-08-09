@@ -37,7 +37,7 @@ describe('springOf', () => {
   });
 
   it('carries the damping ratio it was asked for', () => {
-    // Boardwalk's pop-in overshoots ("slight overshoot"), which is exactly what
+    // Soft Minimal's pop-in overshoots ("slight overshoot"), which is exactly what
     // a damping ratio under 1 means; the number has to survive the conversion
     // to stiffness/damping or the overshoot is whatever the arithmetic left.
     expect(dampingRatioOf(springOf(300, 0.6))).toBeCloseTo(0.6, 12);

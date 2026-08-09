@@ -35,6 +35,20 @@ import schema from './schema';
 // default module lookup, so the function modules are handed over explicitly.
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 
+function runningState(response: unknown): any {
+  if (
+    typeof response === 'object' &&
+    response !== null &&
+    'kind' in response &&
+    response.kind === 'running' &&
+    'state' in response
+  ) {
+    return response.state;
+  }
+
+  return undefined;
+}
+
 type Backend = ReturnType<typeof convexTest>;
 
 /** A room already playing Voting on its default settings, every phone's token by nickname. */
@@ -83,7 +97,12 @@ async function stateOf(t: Backend, roomId: Id<'rooms'>) {
     throw new Error('this room is in its lobby, not in a game');
   }
 
-  return running.state;
+  const state = runningState(running);
+  if (state === undefined) {
+    throw new Error('this room cannot safely expose its game state');
+  }
+
+  return state;
 }
 
 /**
@@ -144,11 +163,11 @@ describe('the Host starting Voting', () => {
     // Voting opens on its first prompt with an empty tally and the room's
     // players fixed into the game in roster order — the module's own factory
     // ran, and the hub invented nothing. A three-option prompt, so three zeros.
-    expect(running?.state.phase).toBe('voting');
-    expect(running?.state.promptIndex).toBe(0);
-    expect(running?.state.voters).toEqual([]);
-    expect(running?.state.tally).toEqual([0, 0, 0]);
-    expect(running?.state.players).toEqual(roster.map((seat) => seat.playerId));
+    expect(runningState(running).phase).toBe('voting');
+    expect(runningState(running).promptIndex).toBe(0);
+    expect(runningState(running).voters).toEqual([]);
+    expect(runningState(running).tally).toEqual([0, 0, 0]);
+    expect(runningState(running).players).toEqual(roster.map((seat) => seat.playerId));
   });
 
   it('refuses a party below Voting’s declared minimum', async () => {
@@ -247,7 +266,11 @@ describe('the Host starting Voting', () => {
       ),
     ).toEqual({ kind: 'alreadyInGame' });
     // A start that went through would have replaced a game in progress.
-    expect(await t.query(api.games.running, { roomId })).toEqual(started);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'running',
+      gameId: started?.gameId,
+      state: runningState(started),
+    });
   });
 });
 
@@ -265,16 +288,16 @@ describe('a vote in the running game', () => {
     const grace = await playerIdOf(t, roomId, 'Grace');
 
     // The count went up at the chosen option and nowhere names whose it was.
-    expect(running?.state.tally).toEqual([0, 1, 0]);
+    expect(runningState(running).tally).toEqual([0, 1, 0]);
     // `voters` says *that* Grace voted — a second tap is refused and the "1/3"
     // numerator is counted from it — never *what* she voted.
-    expect(running?.state.voters).toEqual([grace]);
+    expect(runningState(running).voters).toEqual([grace]);
     // The privacy the game promises is structural: the payload the hub ships to
     // every phone and the TV alike holds no map of voter → choice, so no client
     // can name a vote's owner however it reads the state. This asserts the shape
     // at the hub boundary, which is where the security review's claim has to
     // hold — the reveal shows the room its own opinion, never a person's.
-    expect(Object.keys(running?.state ?? {}).sort()).toEqual(
+    expect(Object.keys(runningState(running) ?? {}).sort()).toEqual(
       ['phase', 'players', 'promptIndex', 'prompts', 'tally', 'voters'].sort(),
     );
   });
@@ -349,7 +372,11 @@ describe('a vote in the running game', () => {
       event: { kind: 'not-an-event-voting-knows' },
     });
 
-    expect(await t.query(api.games.running, { roomId })).toEqual(started);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'running',
+      gameId: started?.gameId,
+      state: runningState(started),
+    });
   });
 
   it('leaves a mid-game joiner in the room but out of the game', async () => {
@@ -366,7 +393,7 @@ describe('a vote in the running game', () => {
     const before = await t.query(api.games.running, { roomId: room.roomId });
 
     expect(roster).toHaveLength(3);
-    expect(before?.state.players).toHaveLength(2);
+    expect(runningState(before).players).toHaveLength(2);
 
     // A vote from someone the game is not playing lands on nothing.
     await t.mutation(api.games.sendEvent, {
@@ -374,7 +401,11 @@ describe('a vote in the running game', () => {
       event: { kind: 'vote', promptIndex: 0, optionIndex: 0 },
     });
 
-    expect(await t.query(api.games.running, { roomId: room.roomId })).toEqual(before);
+    expect(await t.query(api.games.running, { roomId: room.roomId })).toMatchObject({
+      kind: 'running',
+      gameId: before?.gameId,
+      state: runningState(before),
+    });
   });
 });
 
@@ -480,9 +511,9 @@ describe('the Host ending Voting, and playing something else', () => {
     await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
     const trivia = await t.query(api.games.running, { roomId });
     expect(trivia?.gameId).toBe('trivia');
-    expect(trivia?.state.phase).toBe('question');
-    expect(trivia?.state.tally).toBeUndefined();
-    expect(trivia?.state.prompts).toBeUndefined();
+    expect(runningState(trivia).phase).toBe('question');
+    expect(runningState(trivia).tally).toBeUndefined();
+    expect(runningState(trivia).prompts).toBeUndefined();
 
     await t.mutation(api.games.endGame, { sessionToken: host });
 
@@ -492,10 +523,10 @@ describe('the Host ending Voting, and playing something else', () => {
     await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'voting' });
     const voting = await t.query(api.games.running, { roomId });
     expect(voting?.gameId).toBe('voting');
-    expect(voting?.state.phase).toBe('voting');
-    expect(voting?.state.promptIndex).toBe(0);
-    expect(voting?.state.questions).toBeUndefined();
-    expect(voting?.state.standings).toBeUndefined();
+    expect(runningState(voting).phase).toBe('voting');
+    expect(runningState(voting).promptIndex).toBe(0);
+    expect(runningState(voting).questions).toBeUndefined();
+    expect(runningState(voting).standings).toBeUndefined();
   });
 
   it('replays Voting from a clean state after a game is played out', async () => {

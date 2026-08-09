@@ -1,4 +1,5 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
+import { z } from 'zod';
 
 import { triviaMetadata } from './metadata';
 import { questionsFor, type TriviaQuestion } from './questions';
@@ -8,9 +9,9 @@ import { triviaSettings, TRIVIA_SETTINGS_SCHEMA, type ScoringMode } from './sett
 // from — into the client bundle (docs/implementation-plan.md 5.9). They are
 // imported here for the rules' own use and re-exported, so the server and the
 // tests go on reading them off the module they always have.
-import { answersIn, beatOf, playersCounted, QUESTION_SECONDS } from './state';
+import { answersIn, beatOf, playersCounted, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 
-export { answersIn, playersCounted, QUESTION_SECONDS, REVEAL_SECONDS, revealBeat } from './state';
+export { answersIn, playersCounted, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 
 /**
  * Trivia's rules, with no screens attached.
@@ -160,6 +161,9 @@ export type TriviaEvent =
       readonly questionIndex: number;
       /** The beat being ended: the question on screen, or its reveal. */
       readonly phase: TriviaPhase;
+      /** Hub-enriched clock/presence fields; ignored by the reducer. */
+      readonly msRemaining?: number;
+      readonly awayPlayerIds?: readonly GamePlayerId[];
     };
 
 /**
@@ -168,6 +172,50 @@ export type TriviaEvent =
  * answer, which is not a thing a clock can send.
  */
 export type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;
+
+const playerIdSchema = z.string().min(1);
+const awayPlayerIdsSchema = z.array(playerIdSchema);
+const triviaQuestionSchema = z.strictObject({
+  text: z.string(),
+  options: z.tuple([z.string(), z.string(), z.string(), z.string()]),
+  // -2 is the redacted correct-answer sentinel used by the client projection.
+  correctIndex: z.number().int().min(-2).max(3).refine((value) => value !== -1),
+});
+
+/** Strict server-side decoder for persisted Trivia state. */
+export const triviaStateSchema = z.strictObject({
+  questions: z.array(triviaQuestionSchema).min(1),
+  questionIndex: z.number().int().nonnegative(),
+  phase: z.enum(['question', 'reveal', 'finished']),
+  // -1 is the redacted answer sentinel; the server's stored state only has 0–3.
+  answers: z.record(playerIdSchema, z.number().int().min(-1).max(3)),
+  answerSeconds: z.record(playerIdSchema, z.number().finite().nonnegative()).optional(),
+  standings: z.array(
+    z.strictObject({ playerId: playerIdSchema, score: z.number().finite() }),
+  ),
+  scoring: z.enum(['flat', 'speed']).optional(),
+});
+
+const triviaAnswerEventSchema = z.strictObject({
+  kind: z.literal('answer'),
+  playerId: playerIdSchema,
+  questionIndex: z.number().int().nonnegative(),
+  optionIndex: z.number().int().min(0).max(3),
+  msRemaining: z.number().finite().nonnegative().optional(),
+  awayPlayerIds: awayPlayerIdsSchema.optional(),
+});
+
+const triviaAdvanceEventSchema = z.strictObject({
+  kind: z.literal('advance'),
+  playerId: playerIdSchema.optional(),
+  questionIndex: z.number().int().nonnegative(),
+  phase: z.enum(['question', 'reveal', 'finished']),
+  msRemaining: z.number().finite().nonnegative().optional(),
+  awayPlayerIds: awayPlayerIdsSchema.optional(),
+});
+
+/** Strict server-side decoder for untrusted Trivia events. */
+export const triviaEventSchema = z.union([triviaAnswerEventSchema, triviaAdvanceEventSchema]);
 
 /** The scoreboard order: highest first, ties left in the order they had. */
 function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStanding[] {
@@ -500,6 +548,9 @@ export function redactTriviaStateFor(
  * `triviaSettings` is where they stop being strings.
  */
 export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> = {
+  stateVersion: 1,
+  decodeState: (value) => triviaStateSchema.parse(value) as TriviaState,
+  decodeEvent: (value) => triviaEventSchema.parse(value) as TriviaEvent,
   metadata: triviaMetadata,
   settingsSchema: TRIVIA_SETTINGS_SCHEMA,
   createInitialState: ({ players, settings }) => {
@@ -532,7 +583,7 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
   },
   // The room's own clock, which the hub schedules and no phone has to be awake
   // for. `questionTimer` is where what it does is decided and tested.
-  deadline: questionTimer,
+  deadline: (state) => questionTimer(state) ?? revealTimer(state),
   // A live answer is its player's until the Reveal: the hub broadcasts the state
   // each client is entitled to, and this is trivia's projection of it.
   redactStateFor: redactTriviaStateFor,
@@ -570,6 +621,23 @@ export function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> |
       kind: 'advance',
       questionIndex: state.questionIndex,
       phase: 'question',
+    },
+  };
+}
+
+/** The server-owned clock that ends a reveal and opens the next question. */
+export function revealTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
+  if (state.phase !== 'reveal') {
+    return undefined;
+  }
+
+  return {
+    beat: beatOf(state),
+    afterMs: REVEAL_SECONDS * 1000,
+    event: {
+      kind: 'advance',
+      questionIndex: state.questionIndex,
+      phase: 'reveal',
     },
   };
 }

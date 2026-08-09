@@ -9,7 +9,7 @@
  * taken, and a `joinedAt` on the wire would be a server timestamp compared
  * against a television's own clock, which nothing in Huddle keeps in step.
  *
- * It is back on the seats it was written for. Boardwalk's television left the
+ * It is back on the seats it was written for. Soft Minimal's television left the
  * pairing screen at the first join, which made a taken seat unreachable and
  * moved these four seconds onto the carousel's footer line — one greeting at a
  * time, on the one screen that had no seats. Soft Minimal's Room keeps the

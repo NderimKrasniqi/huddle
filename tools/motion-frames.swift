@@ -1,6 +1,6 @@
 // Pull frames, with their timestamps, out of a simulator recording.
 //
-// The two Boardwalk animations run in 250ms and 300ms, and `simctl io
+// The two Soft Minimal animations run in 250ms and 300ms, and `simctl io
 // screenshot` takes longer than either of them to return a single frame — so an
 // animation cannot be watched the way the design-fidelity captures watch a
 // screen. `simctl io <udid> recordVideo` can: it records the simulator at 60fps.

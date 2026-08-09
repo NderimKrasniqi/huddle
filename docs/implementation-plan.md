@@ -31,7 +31,7 @@
   - Done: `convex/convex/rooms.ts` + `schema.ts` model rooms/players with room-code and membership indexes; 4-char codes; transactional creation; `rooms.test.ts` covers lookup and uniqueness.
 
 - [x] **1.3 — Build the TV lobby**
-  - Done: `apps/tv/app/index.tsx` + `src/tv-stage.tsx` show room code, QR join payload, and lobby; QR destination is native-app-only; invalid-room/restoration handled.
+  - Done: `apps/tv/src/app/tv-screen.tsx` + `src/tv-stage.tsx` show room code, QR join payload, and lobby; QR destination is native-app-only; invalid-room/restoration handled.
 
 - [x] **1.4 — Build native phone joining and participant identity**
   - Done: `apps/controller/app/join/[code].tsx` join-by-code + deep link; display name and built-in avatar/color selection; Session Token issued and stored in SecureStore (`src/session-store.ts`); 10-player ceiling (`ROOM_PLAYER_CAP`); first joiner becomes host.
@@ -102,8 +102,8 @@
     review: PASS** (token-first authorization complete, cross-room/self-target
     guards hold, credential invalidation total, no mid-game deadlock).
   - **Done (host-roster UI):** both controls are wired into the Host's roster
-    screen (`apps/controller/app/index.tsx`) as a **manage sheet** — the
-    design decision, since `docs/design/design-handoff.md` §5 drew the roster
+    screen (`apps/controller/src/app/controller-screen.tsx`) as a **manage sheet** — the
+    design decision, since `docs/design/legacy/boardwalk-handoff.md` §5 drew the roster
     but not the act of managing a player; §5 now specifies it. Every non-Host row gains a
     disclosure chevron and opens a centred Soft Minimal confirm dialog offering
     "Make host" (cobalt) and "Remove" (punch); the Host's own row offers
@@ -235,3 +235,130 @@ The MVP is complete when Phase 2.4 (Voting game) ships, 5.4 passes across both
 games, 5.7 is corrected, 5.6 finds no blocking discrepancy against the
 approved scope and stack, and 5.10 reconciles the shipped TV visuals/assets
 against the approved Soft Minimal board.
+
+---
+
+# Feature 6 — F-006 Platform Reliability and Maintainability
+
+The Phase 1–5 sections above are a frozen historical baseline. Repository
+inspection reopened TV recovery and fail-closed runtime work that had been
+claimed complete, so Feature 6 is the active, resumable implementation stream.
+It preserves Expo, Convex, the game registry, Soft Minimal assets/palette, and
+the existing public room/game contracts except for the intentional TV APIs and
+`createRoom` → `openRoom` replacement.
+
+**Current feature:** —
+**Current phase:** —
+**Current task:** —
+**Last completed task:** 6.6.1 Run complete automated, export, prebuild, and device verification
+**Blockers:** None
+
+## Phase 6.1 — Project workflow and truth
+
+- [x] **6.1.1 — Replace/adapt project workflow skills**
+  - Vendor the five supplied skills under `.agents/skills/`, normalize their
+    Codex metadata, adapt helpers to resolve `docs/` from a repository root,
+    remove obsolete Claude/Convex skill copies, and add the workflow check.
+  - **Traceability:** C-006.5.
+  - **Depends on:** None
+
+- [x] **6.1.2 — Create architecture and resumable Feature 6 project truth**
+  - Add `docs/architecture.md`, reconcile scope/stack/acceptance claims, and
+    record F-006/J-006/C-006.1–C-006.5/BR-006–BR-009 with frozen Phases 1–5.
+  - **Traceability:** F-006, J-006, C-006.1, C-006.2, C-006.3, C-006.4,
+    C-006.5, BR-006, BR-007, BR-008, BR-009.
+  - **Depends on:** 6.1.1
+
+## Phase 6.2 — Fail-closed game runtime
+
+- [x] **6.2.1 — Add runtime versions, decoders, required projection, and client/server seams**
+  - Extend `GameLogic`, add strict Trivia/Voting Zod 4 decoders behind
+    server-only logic entries, make Voting’s client entry safe, and add the
+    running response union plus remainder-aware TV props.
+  - **Traceability:** C-006.3, BR-007.
+  - **Depends on:** 6.1.2
+
+- [x] **6.2.2 — Make Convex runtime operations and query projections fail closed**
+  - Validate state, overwritten events, reducer output, deadlines, and
+    redaction; return sanitized unavailable projections and inert malformed
+    events with category-only logs.
+  - **Traceability:** C-006.3, BR-007.
+  - **Depends on:** 6.2.1
+
+- [x] **6.2.3 — Make all game beats server-authoritative and TV countdowns remainder-aware**
+  - Move Trivia reveal timing to the server, remove the controller timer hook,
+    and initialize TV countdowns from the authoritative remainder.
+  - **Traceability:** C-006.2, BR-008.
+  - **Depends on:** 6.2.2
+
+## Phase 6.3 — Durable TV session and recovery
+
+- [x] **6.3.1 — Add durable TV credential, idempotent room opening, and creation limiting**
+  - Add Expo Crypto/SecureStore, persist the TV token before mutation, add
+    `tvSessions`, transactional `openRoom`, and the global new-token rate limit.
+  - **Traceability:** J-006, C-006.1, BR-006.
+  - **Depends on:** 6.2.1
+
+- [x] **6.3.2 — Add TV heartbeat, pause/resume/expiry, and paused/unavailable UI**
+  - Add 3-second heartbeat, 13-second away transition, exact pause remainder,
+    ten-minute expiry, inert-away gameplay, and controller/TV paused and
+    unavailable states.
+  - **Traceability:** J-006, C-006.2, BR-006, BR-008.
+  - **Depends on:** 6.3.1, 6.2.3
+
+- [x] **6.3.3 — Purge legacy development rooms and tighten the final schema**
+  - Deploy optional compatibility fields, run a development-only internal
+    cleanup through `npx convex run`, verify zero legacy rows, then require
+    final fields and remove the cleanup mutation.
+  - **Traceability:** BR-009.
+  - **Depends on:** 6.3.2
+
+## Phase 6.4 — Maintainable module boundaries
+
+- [x] **6.4.1 — Extract cohesive Convex helpers without changing public behavior**
+  - Consolidate authorization, lifecycle, presence, clock, and runtime helpers
+    under `convex/convex/lib/` while preserving generated public paths.
+  - **Traceability:** C-006.4.
+  - **Depends on:** 6.3.3
+
+- [x] **6.4.2 — Extract Controller features and thin its routes**
+  - Move join, room, picker, and game-session ownership into feature/platform
+    folders with route adapters that only mount the coordinator.
+  - **Traceability:** C-006.4.
+  - **Depends on:** 6.4.1
+
+- [x] **6.4.3 — Extract TV features and thin its route**
+  - Move room, carousel, game-session, and room-session platform ownership into
+    the TV feature-first folders without changing visuals or protocol behavior.
+  - **Traceability:** C-006.4.
+  - **Depends on:** 6.4.2
+
+## Phase 6.5 — Soft Minimal and documentation reconciliation
+
+- [x] **6.5.1 — Complete Soft Minimal and legacy-tooling cleanup**
+  - Rename the legacy ESLint rule namespace to `softMinimal`, move the
+    superseded handoff to `docs/design/legacy/`, and add a guard against stale
+    historical design-system text in active source.
+  - **Traceability:** C-006.4, C-006.5.
+  - **Depends on:** 6.4.3
+
+- [x] **6.5.2 — Reconcile documentation and acceptance evidence**
+  - Update AGENTS, scope, architecture, acceptance matrix, asset README, and
+    this plan with the adopted runtime/TV recovery semantics and evidence.
+  - **Traceability:** C-006.5, J-006.
+  - **Depends on:** 6.5.1
+
+## Phase 6.6 — Verification and release evidence
+
+- [x] **6.6.1 — Run complete automated, export, prebuild, and device verification**
+  - Run workflow/task-state checks, typecheck, lint, all tests, pack/avatar
+    validation, Expo export/prebuild, Android Leanback resource checks, and
+    manual 1920×1080/Philips Android TV recovery verification.
+  - Evidence so far: workflow validator/task-state tests PASS; typecheck and
+    lint PASS; full suite PASS (69 files, 782 tests); `pnpm validate:packs`
+    PASS; avatar `--check` PASS for all ten IDs; Android TV prebuild generated
+    Leanback `required=true`, `@drawable/tv_icon`, and `@drawable/tv_banner`;
+    Expo Android export PASS. Physical Philips verification remains a release
+    checklist because this environment has no connected TV.
+  - **Traceability:** F-006, J-006, BR-006, BR-007, BR-008, BR-009.
+  - **Depends on:** 6.5.2

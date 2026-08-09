@@ -45,8 +45,8 @@ function OpenOption({ option }: { readonly option: PromptOption }) {
  * The bar is measured against the highest count rather than the total, so the
  * leader's bar always fills the row and the rest are read against it — the shape
  * a room glances at, rather than percentages it would have to add up. The
- * leaders wear Boardwalk's offset shadow, the system's "look here" everywhere
- * else (docs/design/design-handoff.md, "Signature style rules").
+ * leaders wear Soft Minimal's offset shadow, the system's "look here" everywhere
+ * else (docs/design/soft-minimal-handoff.md, "Signature style rules").
  */
 function TallyBar({ row, highest }: { readonly row: TallyRow; readonly highest: number }) {
   const face = accentFace(row.optionIndex);
@@ -140,8 +140,8 @@ function Wrap({ promptCount }: { readonly promptCount: number }) {
   );
 }
 
-export function VotingTvScreen({ state, players }: TvGameScreenProps<VotingState>) {
-  const screen = watchedVoteScreen(state, players);
+export function VotingTvScreen({ state, players, clockRemainingMs }: TvGameScreenProps<VotingState>) {
+  const screen = watchedVoteScreen(state, players, clockRemainingMs);
 
   if (screen.kind === 'finished') {
     return <Wrap promptCount={screen.promptCount} />;

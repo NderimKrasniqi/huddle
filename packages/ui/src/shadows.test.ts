@@ -6,7 +6,7 @@ import { elevation } from './shadows';
 /**
  * The old suite tested `stickerShadowRect`: that a shadow was displaced down
  * *and right* by an equal distance, and stayed the surface's own size. That was
- * Boardwalk's whole signature and it is exactly what Soft Minimal removes, so
+ * Soft Minimal's whole signature and it is exactly what Soft Minimal removes, so
  * the promises below are the opposite ones.
  */
 const SHADOW = /^0px (\d+)px (\d+)px (#[0-9A-F]{8})$/;
@@ -14,7 +14,7 @@ const SHADOW = /^0px (\d+)px (\d+)px (#[0-9A-F]{8})$/;
 describe('the elevation scale', () => {
   it('casts every shadow straight down, never sideways', () => {
     // The `0px` first field is the point: a sideways offset is what made a
-    // Boardwalk card read as a sticker lifted off the page.
+    // Soft Minimal card read as a sticker lifted off the page.
     for (const shadow of Object.values(elevation)) {
       expect(shadow).toMatch(SHADOW);
     }

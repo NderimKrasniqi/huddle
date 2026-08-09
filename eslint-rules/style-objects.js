@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * The parts of "find every style object this file writes" that Boardwalk's two
+ * The parts of "find every style object this file writes" that Soft Minimal's two
  * lint rules both need.
  *
- * `boardwalk/tokens-only` asks where a value was *written*; `boardwalk/body-text-floor`
+ * `soft-minimal/tokens-only` asks where a value was *written*; `soft-minimal/body-text-floor`
  * asks what a value *is*. Different questions, but both of them have to reach
  * the same places first — the object passed to `StyleSheet.create`, and
  * anything inside a `style`/`…Style` JSX prop — and neither has any business

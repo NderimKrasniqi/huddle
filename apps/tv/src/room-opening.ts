@@ -20,7 +20,7 @@ import { onlyOnce } from './only-once';
  */
 
 /** The room this TV opened: its id, and the Room Code on the pairing screen. */
-export type OpenRoom = FunctionReturnType<typeof api.rooms.createRoom>;
+export type OpenRoom = FunctionReturnType<typeof api.rooms.openRoom>;
 
 /** The room this TV is showing, and the news that it has expired. */
 export type RoomOpener = {

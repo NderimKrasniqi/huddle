@@ -10,8 +10,10 @@ import {
   QUESTION_SECONDS,
   questionTimer,
   REVEAL_SECONDS,
-  revealBeat,
+  revealTimer,
+  triviaEventSchema,
   triviaGameLogic,
+  triviaStateSchema,
   type TriviaState,
 } from './logic';
 import { EVERY_CATEGORY, PACK_CATEGORIES } from './questions';
@@ -208,6 +210,16 @@ describe('the questions a game is dealt', () => {
 });
 
 describe('a game of trivia', () => {
+  it('decodes only strict state and event shapes', () => {
+    const state = gameWith(ADA, GRACE);
+    const event = { kind: 'answer' as const, playerId: ADA, questionIndex: 0, optionIndex: 0 };
+
+    expect(triviaStateSchema.parse(state)).toEqual(state);
+    expect(triviaEventSchema.parse(event)).toEqual(event);
+    expect(() => triviaStateSchema.parse({ ...state, extra: true })).toThrow();
+    expect(() => triviaEventSchema.parse({ ...event, extra: true })).toThrow();
+  });
+
   it('opens on the first question with everybody on nothing', () => {
     const state = gameWith(ADA, GRACE);
 
@@ -427,65 +439,21 @@ describe('a game played to the end', () => {
  * These are the assertions that turn that into a red test.
  */
 describe('the beat that ends a reveal', () => {
-  it('is nothing at all while a question is still up', () => {
-    expect(revealBeat(gameWith(ADA, GRACE), ADA)).toBeUndefined();
+  it('is owned by the server deadline', () => {
+    const revealed = triviaGameLogic.reduce(gameWith(ADA, GRACE), {
+      kind: 'advance',
+      questionIndex: 0,
+      phase: 'question',
+    });
+
+    expect(revealTimer(revealed)).toMatchObject({ afterMs: REVEAL_SECONDS * 1000 });
+    expect(triviaGameLogic.deadline?.(revealed)?.event).toEqual({
+      kind: 'advance',
+      questionIndex: 0,
+      phase: 'reveal',
+    });
   });
 
-  it('is nothing once the game is over', () => {
-    let finished = shortGameWith(ADA, GRACE);
-    const questionsInIt = finished.questions.length;
-
-    for (let question = 0; question < questionsInIt; question += 1) {
-      finished = answering(finished, ADA, rightAnswerTo(finished));
-      finished = answering(finished, GRACE, rightAnswerTo(finished));
-      finished = advancing(finished);
-    }
-
-    expect(finished.phase).toBe('finished');
-    expect(revealBeat(finished, ADA)).toBeUndefined();
-  });
-
-  it('is addressed to the reveal on screen, so the room actually moves on', () => {
-    const revealed = answering(
-      answering(gameWith(ADA, GRACE), ADA, 0),
-      GRACE,
-      0,
-    );
-
-    expect(revealed.phase).toBe('reveal');
-
-    const beat = revealBeat(revealed, ADA);
-
-    if (beat === undefined) {
-      throw new Error('a reveal must have a beat that ends it');
-    }
-
-    expect(beat.afterMs).toBe(REVEAL_SECONDS * 1000);
-
-    // The assertion that matters: the event this produces must be one the
-    // reducer acts on. Addressed to any other beat it would be swallowed in
-    // silence and the reveal would never end.
-    const moved = triviaGameLogic.reduce(revealed, beat.event);
-
-    expect(moved).not.toBe(revealed);
-    expect(moved.phase).toBe('question');
-    expect(moved.questionIndex).toBe(revealed.questionIndex + 1);
-  });
-
-  it('is inert when it fires late, which is what lets every phone send it', () => {
-    const revealed = answering(answering(gameWith(ADA, GRACE), ADA, 0), GRACE, 0);
-    const beat = revealBeat(revealed, ADA);
-    const movedOn = advancing(revealed);
-
-    if (beat === undefined) {
-      throw new Error('a reveal must have a beat that ends it');
-    }
-
-    // Ada's phone was slow; by the time it fires the room is on the next
-    // question. The nine other phones that sent the same thing are why the
-    // room did not wait for her.
-    expect(triviaGameLogic.reduce(movedOn, beat.event)).toBe(movedOn);
-  });
 });
 
 /**
@@ -549,8 +517,8 @@ describe('the clock a question runs on', () => {
 
   it('is nothing on a beat the room is not being timed on', () => {
     const asked = gameWith(ADA, GRACE);
-    // The reveal is ended by the phones (`revealBeat`), not by the room's own
-    // clock, and a finished game has no next beat at all.
+    // The reveal is ended by the room's own server clock, and a finished game
+    // has no next beat at all.
     const revealed = advancing(asked);
 
     expect(questionTimer(revealed)).toBeUndefined();

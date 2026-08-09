@@ -13,7 +13,7 @@ import { elevation } from '../shadows';
  * down and right. A real blurred shadow is one style property, so the sibling,
  * the rectangle maths and the wrapper that shrink-wrapped them all go.
  *
- * The second was the seam. Boardwalk stroked 2–4px of ink around a white fill,
+ * The second was the seam. Soft Minimal stroked 2–4px of ink around a white fill,
  * and a view that both fills and strokes paints its background across the whole
  * rounded rect before stroking inside it — at the antialiased boundary the fill
  * out-covers the stroke and a sub-pixel sliver escapes past the ink. The fix

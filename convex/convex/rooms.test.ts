@@ -448,30 +448,32 @@ describe('room expiry', () => {
       expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
     });
 
-    it('is deleted once the window passes with nobody in it', async () => {
+    it('stays owned by the TV even when no phone has joined', async () => {
       const t = convexTest(schema, modules);
       const room = await t.mutation(api.rooms.createRoom, {});
 
-      // The television was switched off, or the evening never happened. Either
-      // way the room has heard nothing from anybody since it was minted, and
-      // holding it forever is what leaked the codes.
+      // There is no legacy unjoined-room timer. A production TV owns this room
+      // through its durable heartbeat, including the empty-before-first-join
+      // interval.
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
 
-      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
     });
 
-    it('gives its Room Code back to the pool', async () => {
+    it('does not recycle a code while its owner is still live', async () => {
       const t = convexTest(schema, modules);
       const room = await t.mutation(api.rooms.createRoom, {});
 
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
 
-      // The point of the deletion rather than a side effect of it: `createRoom`
-      // draws against live rooms, so a room held forever is a code spent
-      // forever.
-      pinDrawsTo(room.code);
-      const next = await t.mutation(api.rooms.createRoom, {});
-      expect(next.code).toBe(room.code);
+      // The code remains held until the TV session expires, so a collision is
+      // still rejected rather than silently handing it to a second room.
+      pinDrawsTo(...Array<string>(20).fill(room.code));
+      const rejection: unknown = await t
+        .mutation(api.rooms.createRoom, {})
+        .then(() => undefined)
+        .catch((error: unknown) => error);
+      expect(rejection).toBeInstanceOf(ConvexError);
     });
 
     it('stops being one the moment somebody joins', async () => {

@@ -84,7 +84,7 @@ function VerdictRow({ verdict }: { readonly verdict: PlayerVerdict }) {
 }
 
 /**
- * The Status Dot beside a scoreboard name: Boardwalk green while the room is
+ * The Status Dot beside a scoreboard name: Soft Minimal green while the room is
  * hearing from that phone, muted once it has gone quiet.
  *
  * The same badge the pairing roster wears on its seats, because presence is
@@ -128,7 +128,7 @@ function Scoreboard({ rows }: { readonly rows: readonly ScoreRow[] }) {
  * any number of ways — a party that answered every question wrongly ties all ten
  * seats on nothing — and a screen that grew a card per winner would run off a
  * 720px stage on a game that really happens. The celebration rides the
- * treatment instead: Boardwalk's accent offset shadow, which is how the system
+ * treatment instead: Soft Minimal's accent offset shadow, which is how the system
  * highlights a card everywhere else (handoff, "Signature style rules"), plus
  * the headline above naming who earned it.
  */
@@ -235,8 +235,8 @@ function Countdown({ seconds }: { readonly seconds: number }) {
   );
 }
 
-export function TriviaTvScreen({ state, players }: TvGameScreenProps<TriviaState>) {
-  const screen = watchedScreen(state, players);
+export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScreenProps<TriviaState>) {
+  const screen = watchedScreen(state, players, clockRemainingMs);
 
   if (screen.kind === 'finished') {
     return <Victory headline={screen.headline} standings={screen.standings} />;
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   // The countdown tile, built like a Room Code tile because it is the same
   // thing on a television: one number the whole room reads at once. Tilted as
-  // Boardwalk tilts cards and badges — the two chips beside it sit square, so
+  // Soft Minimal tilts cards and badges — the two chips beside it sit square, so
   // there is nothing here for the handoff's alternating siblings to alternate
   // against.
   countdownBlock: {
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  // Boardwalk's online dot at the size the TV's pairing seats draw it: eighteen
+  // Soft Minimal's online dot at the size the TV's pairing seats draw it: eighteen
   // across, with a 12px core inside the ink border.
   statusDot: {
     width: 18,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
-  // The Victory Screen. Boardwalk's badge tilt on the label, the winner's name
+  // The Victory Screen. Soft Minimal's badge tilt on the label, the winner's name
   // in the largest display type on the television, and the placings under it.
   finalBadgeBlock: {
   },

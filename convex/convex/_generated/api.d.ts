@@ -10,6 +10,11 @@
 
 import type * as games from "../games.js";
 import type * as hostControl from "../hostControl.js";
+import type * as lib_authorization from "../lib/authorization.js";
+import type * as lib_gameClock from "../lib/gameClock.js";
+import type * as lib_gameRuntime from "../lib/gameRuntime.js";
+import type * as lib_presence from "../lib/presence.js";
+import type * as lib_roomLifecycle from "../lib/roomLifecycle.js";
 import type * as players from "../players.js";
 import type * as rooms from "../rooms.js";
 
@@ -22,6 +27,11 @@ import type {
 declare const fullApi: ApiFromModules<{
   games: typeof games;
   hostControl: typeof hostControl;
+  "lib/authorization": typeof lib_authorization;
+  "lib/gameClock": typeof lib_gameClock;
+  "lib/gameRuntime": typeof lib_gameRuntime;
+  "lib/presence": typeof lib_presence;
+  "lib/roomLifecycle": typeof lib_roomLifecycle;
   players: typeof players;
   rooms: typeof rooms;
 }>;
@@ -52,4 +62,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};

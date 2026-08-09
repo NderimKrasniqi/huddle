@@ -1,7 +1,7 @@
 # Handoff: Huddle — Soft Minimal
 
 The visual source of truth for both apps, replacing Boardwalk
-(`design-handoff.md`, retained until the swap lands).
+(`legacy/boardwalk-handoff.md`, retained as historical provenance).
 
 This document reconciles the approved Soft Minimal package against the platform
 **as built**. The design board was drawn against the original Boardwalk §1–§8

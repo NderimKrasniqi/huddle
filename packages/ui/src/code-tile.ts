@@ -2,7 +2,7 @@
  * A Room Code is rendered one letter per tile — on the TV's pairing screen and
  * in the Controller's code entry.
  *
- * Boardwalk coloured the letters by position, running its four accents "in
+ * Soft Minimal coloured the letters by position, running its four accents "in
  * order". Soft Minimal draws every letter in deep navy: the approved board
  * shows four identical white tiles with one navy character each, on both the
  * phone and the television. `codeLetterColor` went with the cycle — a caller
@@ -10,7 +10,7 @@
  * that returns the same value for every input is a function pretending a
  * decision is still being made.
  *
- * Boardwalk also tilted the tiles ±1–2°, "alternating direction between
+ * Soft Minimal also tilted the tiles ±1–2°, "alternating direction between
  * siblings". Soft Minimal's are upright — the approved board draws four square
  * tiles in a straight row — so `codeTileTilt` went with the lean.
  */
@@ -19,7 +19,7 @@
  * How a Room Code letter sits in its tile: the box is the tile's, never the
  * glyph's. Spread it into the letter's text style.
  *
- * Boardwalk's tiles are fixed-size cells with one centred letter, so a letter
+ * Soft Minimal's tiles are fixed-size cells with one centred letter, so a letter
  * that sized itself to its own glyph was reaching the same pixels by a longer
  * route — and on tvOS that route is broken. React Native measures an empty
  * `<Text>` by substituting the placeholder string **"I"**

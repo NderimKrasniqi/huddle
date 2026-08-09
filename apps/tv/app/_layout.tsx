@@ -3,11 +3,11 @@ import { ConvexProvider } from 'convex/react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 
-import { convexClient } from '../src/convex-client';
+import { convexClient } from '../src/platform/convex';
 
 export default function TvLayout() {
-  // Boardwalk is a typographic system, so hold the first frame until Bungee
-  // and Space Grotesk are available rather than flash a fallback face. If a
+  // Soft Minimal is a typographic system, so hold the first frame until Inter
+  // is available rather than flash a fallback face. If a
   // font fails to load, render anyway — degraded type beats a blank TV.
   const [fontsLoaded, fontError] = useFonts(huddleFonts);
   if (!fontsLoaded && fontError === null) {

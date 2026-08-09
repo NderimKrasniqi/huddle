@@ -7,29 +7,29 @@
 const { defineConfig, globalIgnores } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 
-const bodyTextFloor = require('./eslint-rules/boardwalk-body-text-floor');
-const tokensOnly = require('./eslint-rules/boardwalk-tokens-only');
+const bodyTextFloor = require('./eslint-rules/soft-minimal-body-text-floor');
+const tokensOnly = require('./eslint-rules/soft-minimal-tokens-only');
 const tvRemoteSurface = require('./eslint-rules/huddle-tv-remote-surface');
 
-// One plugin object for both of Boardwalk's rules, shared by reference: two
-// config blocks that each defined a `boardwalk` plugin of their own would be
+// One plugin object for both of Soft Minimal's rules, shared by reference: two
+// config blocks that each defined a `soft-minimal` plugin of their own would be
 // two different objects under one name, which flat config refuses.
-const boardwalk = {
+const softMinimal = {
   rules: { 'tokens-only': tokensOnly, 'body-text-floor': bodyTextFloor },
 };
 
-// A second plugin rather than a third Boardwalk rule. Boardwalk is the design
+// A second plugin rather than a third Soft Minimal rule. Soft Minimal is the design
 // system — what a screen is drawn with — and `huddle` is the product: Eyes up is
 // this repo's name for a line in docs/project-scope.md, not anything in the
 // handoff, and a television with a focusable button on it would be in perfect
-// Boardwalk style.
+// Soft Minimal style.
 const huddle = { rules: { 'tv-remote-surface': tvRemoteSurface } };
 
 // Soft Minimal's floors, as `packages/ui` holds them (`minBodyFontSize`) — the
 // smallest sizes on the handoff's own scale, phone caption 12 and TV caption
 // 16. Written
 // out here because nothing in this repo compiles a config, so a CommonJS file
-// cannot import the TypeScript token — `eslint-rules/boardwalk-body-text-floor.test.ts`
+// cannot import the TypeScript token — `eslint-rules/soft-minimal-body-text-floor.test.ts`
 // reads this config and the token and fails if the two ever disagree.
 const MIN_BODY_FONT_SIZE = { tv: 16, phone: 12 };
 
@@ -44,7 +44,7 @@ module.exports = defineConfig([
     'convex/convex/_generated/**',
     // The incoming Soft Minimal handoff, vendored verbatim so the swap has
     // something to be checked against. It is a specification, not source: it
-    // carries its own palette and its own token names, so every Boardwalk rule
+    // carries its own palette and its own token names, so every Soft Minimal rule
     // fires on it by design. Lint it and the only way to pass is to edit the
     // handoff, which would make it useless as a reference.
     'docs/design/soft-minimal/**',
@@ -57,7 +57,7 @@ module.exports = defineConfig([
 
   expoConfig,
 
-  // Boardwalk's own rule: a colour, radius, border width, shadow depth or font
+  // Soft Minimal's own rule: a colour, radius, border width, shadow depth or font
   // family is read from a `packages/ui` token and never written where it is
   // used. Repo-wide rather than trivia-only — the trivia screens are what the
   // plan's acceptance criterion names, but the hub screens turned out to hold
@@ -68,11 +68,11 @@ module.exports = defineConfig([
   {
     files: ['**/*.ts', '**/*.tsx'],
     ignores: ['packages/ui/src/**'],
-    plugins: { boardwalk },
-    rules: { 'boardwalk/tokens-only': 'error' },
+    plugins: { 'soft-minimal': softMinimal },
+    rules: { 'soft-minimal/tokens-only': 'error' },
   },
 
-  // Boardwalk's other rule, and the half of it that is config: body text is
+  // Soft Minimal's other rule, and the half of it that is config: body text is
   // floored at the smallest size the surface it is read from allows, and this
   // is where the repo says which surface a file stands on. Two blocks and not
   // one, because 12 and 16 are two floors rather than a lax one and a strict
@@ -91,9 +91,9 @@ module.exports = defineConfig([
   // floor here. None of them sets a `fontSize` today.
   {
     files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
-    plugins: { boardwalk },
+    plugins: { 'soft-minimal': softMinimal },
     rules: {
-      'boardwalk/body-text-floor': ['error', { surface: 'tv', minBodyFontSize: MIN_BODY_FONT_SIZE }],
+      'soft-minimal/body-text-floor': ['error', { surface: 'tv', minBodyFontSize: MIN_BODY_FONT_SIZE }],
     },
   },
   // Eyes up, as a gate: the television is the stage and the phones are the
@@ -121,9 +121,9 @@ module.exports = defineConfig([
       'apps/controller/**/*.tsx',
       'packages/games/*/src/controller-*.tsx',
     ],
-    plugins: { boardwalk },
+    plugins: { 'soft-minimal': softMinimal },
     rules: {
-      'boardwalk/body-text-floor': [
+      'soft-minimal/body-text-floor': [
         'error',
         { surface: 'phone', minBodyFontSize: MIN_BODY_FONT_SIZE },
       ],

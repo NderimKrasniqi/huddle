@@ -23,6 +23,31 @@ export type RunningGame<State = unknown> = {
   readonly state: State;
 };
 
+/**
+ * The sanitized running-game projection returned to clients.
+ *
+ * Paused and unavailable responses intentionally carry no state. A client can
+ * still identify the game (and offer the Host a way back to the lobby) without
+ * ever rendering stale or undecodable data.
+ */
+export type RunningGameResponse =
+  | null
+  | {
+      readonly kind: 'running';
+      readonly gameId: string;
+      readonly state: unknown;
+      readonly clockRemainingMs?: number;
+    }
+  | {
+      readonly kind: 'paused';
+      readonly gameId: string;
+      readonly reason: 'tvDisconnected';
+    }
+  | {
+      readonly kind: 'unavailable';
+      readonly gameId: string;
+    };
+
 /** The phase of a room holding `game` — the lobby if it holds none. */
 export function roomPhase(game: RunningGame | undefined | null): RoomPhase {
   return game === undefined || game === null ? 'lobby' : 'in-game';
@@ -56,7 +81,9 @@ export type GameLifecycleRejection =
    * the refusal names what was actually sent rather than only that something
    * was. See `settingsRefusal`, which is where it is decided.
    */
-  | { readonly kind: 'settingRejected'; readonly key: string; readonly value: string };
+  | { readonly kind: 'settingRejected'; readonly key: string; readonly value: string }
+  /** The shared TV is away, so starting a game would advance unseen state. */
+  | { readonly kind: 'tvUnavailable' };
 
 /** What the Host asked the room to do. */
 export type GameLifecycleIntent = 'start' | 'end';

@@ -1,11 +1,11 @@
 /**
- * Boardwalk's motion: the two animations the handoff pins a duration to
- * (docs/design/design-handoff.md, "Interactions & Behavior") and the arithmetic
+ * Soft Minimal's motion: the two animations the handoff pins a duration to
+ * (docs/design/soft-minimal-handoff.md, "Interactions & Behavior") and the arithmetic
  * that turns one of them into something React Native's spring understands.
  *
  * Durations live here for the same reason colors do — a number written at the
  * call site is a design decision nobody can find again — even though
- * `boardwalk/tokens-only` does not police them: that rule keys on the property
+ * `soft-minimal/tokens-only` does not police them: that rule keys on the property
  * names a style object uses, and a duration is an argument to an animation
  * rather than a style. The convention is the design system's; the lint rule
  * happens to cover only the part of it that lives in a stylesheet.
@@ -16,7 +16,7 @@
  */
 
 /**
- * How long each of Boardwalk's animations runs, per the handoff's own two
+ * How long each of Soft Minimal's animations runs, per the handoff's own two
  * numbers. Both are approximate in the handoff ("~300ms", "~250ms") and exact
  * here, because a screen has to be given one number.
  */

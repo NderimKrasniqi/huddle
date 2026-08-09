@@ -1427,25 +1427,20 @@ describe('leaveRoom', () => {
     expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
   });
 
-  it('is the only thing that collects an emptied room', async () => {
+  it('does not schedule a legacy unjoined-room expiry for a TV-owned room', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
     await join(t, room.code, 'Ada');
 
-    // The fact the deletion above rests on, pinned rather than argued. The one
-    // check that can ever delete an *empty* room is `expireUnjoinedRoom`, and
-    // it is armed once by `createRoom` and never re-armed — a join does not add
-    // another. So a party that outlives that check and then leaves would have
-    // nothing watching at all: `expireRoom` refuses an empty room by design and
-    // `watchForDesertion` will not schedule one for it. Deferring to a clock
-    // would strand the room, and its Room Code, for good.
+    // TV presence owns an empty room's lifetime. The old unjoined timer must
+    // not be scheduled alongside the durable TV session.
     const unjoinedChecks = await t.run(async (ctx) =>
       (await ctx.db.system.query('_scheduled_functions').collect()).filter(
         (job) => job.name === 'rooms:expireUnjoinedRoom',
       ),
     );
 
-    expect(unjoinedChecks).toHaveLength(1);
+    expect(unjoinedChecks).toHaveLength(0);
   });
 
   it('hands a room whose remaining players are all away back to its clock', async () => {

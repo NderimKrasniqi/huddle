@@ -1,4 +1,4 @@
-// The Boardwalk design system (docs/design/design-handoff.md): the single
+// The Soft Minimal design system (docs/design/soft-minimal-handoff.md): the single
 // source of every color, radius, border, shadow, and font face in Huddle.
 export { type AccentFace, accentFace } from './accent-face';
 export { type AvatarFace, avatarFace } from './avatar-face';

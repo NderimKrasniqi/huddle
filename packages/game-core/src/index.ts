@@ -39,7 +39,7 @@ export type { JoinRejection } from './join-rejection';
 export { AVATAR_IDS, type AvatarId, isAvatarId } from './avatar';
 export { KEY_ART_COLOR_NAMES, type KeyArtColorName } from './key-art';
 export { NICKNAME_MAX_LENGTH } from './nickname';
-// The names only: what a swatch looks like is Boardwalk's business, and lives
+// The names only: what a swatch looks like is Soft Minimal's business, and lives
 // in `packages/ui`, which keys its palette off this list.
 // Presence is a two-sided rule: the Controller keeps the beat, the room keeps
 // the deadline, and neither number means anything alone.
@@ -56,6 +56,7 @@ export {
   ROOM_PHASES,
   type RoomPhase,
   type RunningGame,
+  type RunningGameResponse,
 } from './room-phase';
 // The room's own two: how long it outlives the last phone it heard from, and
 // how long it is held for a television whose party never arrived at all.

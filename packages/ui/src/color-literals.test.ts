@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { colors } from './colors';
 
 /**
- * The plan's design rule — "all styling comes from the Boardwalk theme
+ * The plan's design rule — "all styling comes from the Soft Minimal theme
  * package; no hex value outside it" — enforced rather than merely believed.
  * It runs in the unit suite so CI fails the moment a color is written
  * anywhere but `packages/ui`.
@@ -17,7 +17,7 @@ import { colors } from './colors';
  * React view exists, and the config cannot import the token: Expo transpiles
  * `app.config.ts` and then `require`s it, so an imported `.ts` file is never
  * transpiled and the import fails outright. The literal is therefore allowed
- * *only where it equals a Boardwalk value*, which keeps the rule's actual
+ * *only where it equals a Soft Minimal value*, which keeps the rule's actual
  * purpose — no color is ever invented outside the theme — rather than trading
  * it away for the exception.
  */
@@ -44,9 +44,9 @@ const HEX_DIGIT_COUNTS = new Set([3, 4, 6, 8]);
 /**
  * Compared case-insensitively in both directions: the palette is written upper
  * case today, but a lower-case token would otherwise silently stop matching and
- * the guard would start rejecting colors that are in fact Boardwalk's.
+ * the guard would start rejecting colors that are in fact Soft Minimal's.
  */
-const BOARDWALK_VALUES = new Set<string>(
+const SOFT_MINIMAL_VALUES = new Set<string>(
   Object.values(colors).map((value) => value.toUpperCase()),
 );
 
@@ -60,7 +60,13 @@ function sourceFiles(): string[] {
 
   return listed
     .split('\n')
-    .filter((file) => file !== '' && CODE_FILE.test(file) && !EXEMPT.test(file));
+    .filter(
+      (file) =>
+        file !== '' &&
+        CODE_FILE.test(file) &&
+        !EXEMPT.test(file) &&
+        existsSync(path.join(repoRoot, file)),
+    );
 }
 
 function hexColorsIn(file: string): string[] {
@@ -82,7 +88,7 @@ describe('hex color literals', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('are Boardwalk values wherever an app config states one', () => {
+  it('are Soft Minimal values wherever an app config states one', () => {
     const configs = sourceFiles().filter((file) => APP_CONFIG.test(file));
     // Pinned to the two apps that exist: zero would make the exception
     // untested, and a new app should have to opt into it deliberately.
@@ -90,7 +96,7 @@ describe('hex color literals', () => {
 
     const strays = configs.flatMap((file) =>
       hexColorsIn(file)
-        .filter((hex) => !BOARDWALK_VALUES.has(hex.toUpperCase()))
+        .filter((hex) => !SOFT_MINIMAL_VALUES.has(hex.toUpperCase()))
         .map((hex) => `${file}: ${hex}`),
     );
 

@@ -30,11 +30,11 @@ import { voteScreen, type VoteOption } from './voting-controller';
  */
 
 /**
- * One option, drawn as a Boardwalk button in the accent the television draws it
+ * One option, drawn as a Soft Minimal button in the accent the television draws it
  * in — `accentFace(optionIndex)`, the same cycle off the same position, so the
  * two match by one function rather than a number copied between files.
  *
- * Buttons sit square: Boardwalk tilts cards and badges, not buttons, and a row
+ * Buttons sit square: Soft Minimal tilts cards and badges, not buttons, and a row
  * of tilted blocks under a thumb would read as a pile rather than choices.
  */
 function OptionButton({
@@ -51,7 +51,7 @@ function OptionButton({
   return (
     <Surface
       elevation={elevation.phoneCard}
-      // Dimmed once the ballot is in, which is how Boardwalk says "present, but
+      // Dimmed once the ballot is in, which is how Soft Minimal says "present, but
       // not yours to take" everywhere else.
       style={[[styles.optionBlock, option.state === 'closed' && styles.optionClosed], [styles.option, { backgroundColor: face.fill }]]}>
       <Pressable

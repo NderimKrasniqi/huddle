@@ -6,7 +6,7 @@ import type { RosterSeat } from './roster';
  * their phone.").
  *
  * It used to be a *slot* that an arrival could borrow for four seconds, and
- * that is no longer its job. Boardwalk's television left the pairing screen at
+ * that is no longer its job. Soft Minimal's television left the pairing screen at
  * the first join, so after the first player there were no seats anywhere on the
  * TV and a phone landing mid-lobby changed nothing on the screen the party was
  * looking at; this line was where that news went. Soft Minimal's Room keeps the
