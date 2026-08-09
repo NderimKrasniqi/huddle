@@ -7,6 +7,23 @@ records **measured** differences, not impressions.
 Captured 2026-08-09 from `feat/huddle-reliability-refactor` on the Apple TV 4K
 (3rd gen, tvOS 26.5) and iPhone 17 (iOS 26.5) simulators.
 
+## Settled decisions
+
+**Maximum players is 10** (decided 2026-08-09). The app is already right and the
+board is wrong wherever the two disagree about capacity, so these are **not**
+parity work:
+
+- **TV seats stay 2 × 5 = 10.** Do not adopt the board's 2 × 6 = 12, and leave the
+  count line reading "of 10".
+- **Trivia's range stays 2–10.** The board's "2–12 players" is superseded.
+- **The phone's 10 avatars stay.** The board offers 8, which is under-specified
+  rather than a target: with ten seats, eight choices means two players collide.
+
+Both remaining board-vs-app disagreements about capacity are therefore closed.
+What is still open on the board's side is Trivia's **duration** (board 15 min vs
+app ~5 min) and its **category** (board "Quiz" vs app "Knowledge") — those are not
+capacity and still need a call.
+
 ## Method
 
 - References live in `docs/design/reference/screens/`. The TV board is
@@ -43,11 +60,8 @@ renders ~**92 × 77**.
 
 ### Structural
 
-1. **Seat count: board 12 (2 × 6), app 10 (2 × 5).** The count line reads "of 10"
-   against the board's "of 12". This is a capacity decision, not layout — it
-   changes max players and must be settled before any pixel work.
-   Note the phone's avatar grid offers **8** on its board and **10** in the app,
-   so the seat/avatar counts disagree across the design set too.
+1. ~~**Seat count: board 12, app 10.**~~ **Settled: 10 is correct**, the app already
+   matches, the board does not. See *Settled decisions* above. No work.
 2. **Divider rules beside "PLAYERS IN THE ROOM" are far too faint.** The board's
    1028px-wide rules register as ink at a threshold that finds nothing in the
    app. Label widths already match (264 vs 253) — only the rules differ.
@@ -127,9 +141,9 @@ The rest, independent of the art:
 1. **Chips sit in the wrong place and lose their icons.** Board: chips overlay the
    foot of the artwork, each with an icon (people, clock, tag). App: chips sit in
    a **white footer panel below** the card, with no icons.
-2. **Trivia's metadata disagrees with the board in all three facts** — board
-   "2–12 players / 15 min / Quiz" vs app "2–10 players / ~5 min / Knowledge". The
-   player maximum is the same 12-vs-10 question as the TV seats.
+2. **Trivia's metadata disagrees with the board in two remaining facts** — duration
+   (board 15 min vs app ~5 min) and category (board "Quiz" vs app "Knowledge").
+   The player range is settled at 2–10; the app is already right there.
 3. **No carousel chevrons.** The board draws ‹ › buttons flanking the cards; the
    app draws none (the phone is the only control).
 4. **Pagination indicator differs**: board is five grey dots with the active one
@@ -160,8 +174,9 @@ Reference: `docs/design/reference/screens/01-join-room.png`
 4. **Name field:** board is a hairline-bordered rounded rect with the name in
    dark text; the app's border is heavier, the field taller, and the remembered
    name renders as **grey placeholder** rather than a value.
-5. **Avatar count: board 8 (4 × 2), app 10 (4 + 4 + 2).** The trailing row of two
-   also breaks the board's grid.
+5. **Avatar count stays 10** (board shows 8 — see *Settled decisions*). What is
+   still worth fixing is the **grid**: the app's trailing row of two breaks the
+   board's even 4-per-row rhythm. Ten avatars want a 5 × 2 grid, not 4 + 4 + 2.
 6. **Join button enabled colour** needs checking against the board's solid orange
    — at capture the app's was in its pale disabled state.
 
