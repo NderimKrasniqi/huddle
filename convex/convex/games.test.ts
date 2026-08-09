@@ -1275,19 +1275,26 @@ describe('the clock a question runs on', () => {
 });
 
 describe('the carousel the Host browses', () => {
-  it('starts on the first card in a room nobody has browsed in', async () => {
+  it('reports no card at all in a room nobody has browsed in', async () => {
     const t = convexTest(schema, modules);
     const { roomId } = await roomWithParty(t);
 
-    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+    // Not card zero. The television's Room screen — code, QR and roster
+    // together — stands until the Host takes over the carousel, so "nobody has
+    // browsed yet" has to survive the trip to a client rather than being
+    // flattened into the first card here.
+    expect(await t.query(api.games.browsing, { roomId })).toBeNull();
   });
 
-  it('remembers where the Host browsed to', async () => {
+  it('remembers where the Host browsed to, first card included', async () => {
     const t = convexTest(schema, modules);
     const { roomId, host } = await roomWithParty(t);
 
     await t.mutation(api.games.browseGame, { sessionToken: host, index: 0 });
 
+    // Zero rather than null: the Host browsing *to* the first card is a
+    // different fact from nobody having browsed, and it is the one that moves
+    // the television off its Room screen.
     expect(await t.query(api.games.browsing, { roomId })).toBe(0);
   });
 
@@ -1311,7 +1318,7 @@ describe('the carousel the Host browses', () => {
     expect(
       await rejectionFrom(t.mutation(api.games.browseGame, { sessionToken: guest, index: 0 })),
     ).toEqual({ kind: 'notHost' });
-    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+    expect(await t.query(api.games.browsing, { roomId })).toBeNull();
   });
 
   it('leaves a running game alone', async () => {

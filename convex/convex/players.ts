@@ -12,7 +12,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { hostSeatAndRoom } from './host-control';
+import { hostSeatAndRoom } from './hostControl';
 import { watchForDesertion } from './rooms';
 import { avatarValidator } from './schema';
 

@@ -131,12 +131,16 @@ look like a mistake and far enough apart to show a seam.
 
 The platform's real surfaces. Six had no design in the package and are marked.
 
+Every board named below is in `docs/design/reference/screens/`, flat — the
+`tv-screens/` and `phone-screens/` prefixes this table used to carry named
+directories that have never existed.
+
 ### TV
 
 | Surface | Component | Design | Notes |
 |---|---|---|---|
-| Pairing | `PairingStage` | `tv-screens/01-room.png` | Merge conflict, below |
-| Lobby / carousel | `CarouselStage` | `tv-screens/02-game-carousel.png` | — |
+| Room | `RoomStage` | `01-room.png` | Code, QR and roster on one screen |
+| Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Games only — no roster, no code chip |
 | Unknown game | `UnknownGameStage` | **none** | Needs design |
 | About panel | `AboutPanel` | **none** | Needs design; the TV's only remote-reachable control |
 | Game frame | `GameStage` | **none** | Needs design |
@@ -145,7 +149,7 @@ The platform's real surfaces. Six had no design in the package and are marked.
 
 | Surface | Component | Design | Notes |
 |---|---|---|---|
-| Join | `JoinForm` | `phone-screens/01-join-room.png` | Now carries avatar selection |
+| Join | `JoinForm` | `01-join-room.png` | Now carries avatar selection |
 | Lobby (host) | `YoureInScreen` | `02-your-room-host`, `04-pick-a-game` | Two states of one screen |
 | Lobby (player) | `YoureInScreen` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
@@ -183,12 +187,64 @@ across a game; splitting it would reintroduce the problem that merge solved.
 it. The built host-ends-room flow with its confirm sheet stands; the sheet needs
 a Soft Minimal treatment.
 
-**TV pairing keeps its roster switch — for now.** The board draws code, QR and a
-full roster on one screen. The app shows the code large while the room is empty
-and switches to the carousel at the first join, code demoted to a header chip
-(`apps/tv/src/roster.ts`). Worth revisiting on the merits — the board's version
-keeps the code reachable for latecomers — but it is a behavioural change, not
-something the board settles, and it is out of scope for the token swap.
+**TV pairing lost its roster switch.** *(Settled; this entry used to defer it.)*
+Boardwalk showed the code large while the room was empty and switched to the
+carousel at the first join, code demoted to a header chip. The board draws code,
+QR and a full roster on one screen, and that is now what ships: the Room stands
+until the Host starts browsing, so the second player and everyone after them can
+still read the code off the television.
+
+That needed one backend change. `games.browsing` used to flatten an unbrowsed
+room to card zero, which is the right card to draw and the wrong answer to "has
+the Host started picking"; it now returns `null` for a room nobody has browsed
+in. Every client that only wants a card writes `?? 0` and is unchanged.
+
+**The Room is measured off the board, at 1:1.** The mockup's pixels are square —
+its QR bitmap is 95×93, and a QR is square by construction — so a board pixel is
+a design point and every size and gap on that screen is the board's own number,
+not a reinterpretation. `apps/tv/src/roster.ts` holds the vertical stack as
+`roomLayout` / `roomScreenHeight()` so the total is testable rather than
+described in a comment.
+
+What does *not* carry over is the frame. **The mockup's TV screen is 1272×768 —
+an aspect of 1.656, not 16:9.** Its layout runs to y 725 where the stage has 720,
+so five points come out of the largest gap on the screen (`gridGap`) and nothing
+else moves. Verified on a simulator: every vertical landmark lands within 12pt of
+the board, and everything above the roster within 4pt.
+
+**The in-stage 64pt TV safe margin is not applied to the Room.** `TvStage`
+already scales the whole 1280×720 composition into the title-safe inner 90%
+(`tvSafeStageScale`), so the entire design surface is clear of the bezel and a
+second inset inside it is belt *and* braces. Here that second inset had a cost:
+the board's own element sizes do not fit a 16:9 stage inside a further 64pt, and
+the board is the design. `roomScreenHeight()` is held against the stage instead,
+with 10pt to spare.
+
+**The title is 40/48, which is the scale, not the board's ~33.** The board draws
+`Grab your phone!` noticeably smaller than the TV Title step above. The scale
+wins: a one-off size on one screen is how a type scale stops being one. Recorded
+rather than silently resolved, because it is the board that is off-system here.
+
+**`AWAY` is grey on the TV, not the board's blue.** Blue is the system's one
+informational colour and `JUST JOINED!` already means it. The two share a seat's
+status slot, so drawing both blue would make the loudest thing on the grid
+ambiguous — and `colors.away` exists for exactly this, and is what the Host's own
+roster already uses to say the same thing about the same player.
+
+**Ten seats, 5×2.** The board's grid is 6×2. At `ROOM_PLAYER_CAP = 10` that
+leaves four stragglers under a row of six, so the TV draws five and five. Empty
+places are dashed circles carrying their own number, as the board draws them.
+
+**The QR loses its caption.** Boardwalk captioned it "or scan to join". The board
+draws a bare QR card, and the line under the tiles ("Open Huddle on your phone
+and enter this code") already says what to do. The space it freed is the space
+the roster grew into.
+
+**The avatar pop-in went back onto a face.** The handoff hangs the ~300ms spring
+on the arriving player's avatar. Boardwalk had no TV seat with a player in it, so
+the spring had been rehomed onto the carousel's footer line — one greeting at a
+time, since a line has one slot. The Room's grid restores it, and two phones
+landing together are now both greeted.
 
 ## Open
 

@@ -11,11 +11,14 @@ import type { RosterSeat } from './roster';
  * taken, and a `joinedAt` on the wire would be a server timestamp compared
  * against a television's own clock, which nothing in Huddle keeps in step.
  *
- * It outlived the seats it was written for. The pairing screen's taken seat is
- * unreachable — the carousel replaces that screen at the first join — so what
- * spends these four seconds is now the Carousel Footer Line's greeting
- * (`carousel-footer.ts`, and `BrowsingLine` on the screen), which reads the same
- * arrivals for the same reason.
+ * It is back on the seats it was written for. Boardwalk's television left the
+ * pairing screen at the first join, which made a taken seat unreachable and
+ * moved these four seconds onto the carousel's footer line — one greeting at a
+ * time, on the one screen that had no seats. Soft Minimal's Room keeps the
+ * roster up for as long as the room is between games, so the treatment goes
+ * back where the handoff hangs it: on the arriving player's own avatar, which
+ * also means two phones landing together are both greeted rather than the
+ * newer one taking the older one's sentence.
  *
  * There is no clock here, for the same kind of reason there is no timestamp. The
  * four seconds are counted by whatever is drawing them; all this has to answer
@@ -71,6 +74,33 @@ export function noteArrivals(seen: Arrivals | undefined, roster: readonly Roster
 /** Whether this screen watched the player take the seat it is drawing. */
 export function isArrival(seen: Arrivals, playerId: RosterSeat['playerId']): boolean {
   return seen.arrived.has(playerId);
+}
+
+/**
+ * Whether this seat is being greeted right now: an arrival whose four seconds
+ * this screen has not already spent.
+ *
+ * The second half is the whole difference between a greeting and an
+ * announcement of nothing, because being an Arrival is permanent and a greeting
+ * is not. The four seconds cannot be counted by whatever is drawing them alone
+ * — the Room is unmounted for the length of a game and mounted again when it
+ * ends, so a mount would re-announce everybody who joined before the game, and
+ * again on any blink that flashes the lobby. That is exactly the case the
+ * paragraph above already refuses for an arrival: "a room coming back from a
+ * game has not [seen ten people walk in] either."
+ *
+ * Which arrivals have been greeted is therefore held by the screen, above the
+ * switch between the Room and a game, and passed in.
+ *
+ * `undefined` is the moment before the first roster lands, which greets nobody:
+ * a screen that has not been told who is here has watched nobody arrive.
+ */
+export function isGreeting(
+  seen: Arrivals | undefined,
+  greeted: ReadonlySet<RosterSeat['playerId']>,
+  playerId: RosterSeat['playerId'],
+): boolean {
+  return seen !== undefined && isArrival(seen, playerId) && !greeted.has(playerId);
 }
 
 /** Whether two sets hold the same players. */

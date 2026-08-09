@@ -6,10 +6,10 @@ does cold launch -> screenshot -> decide, and keeps only the frames that look
 wrong. It reports per-tile ink coverage so a hole is a number, not a judgement
 of a thumbnail.
 
-A Room Code tile is a white rounded card on the pairing screen. A drawn letter
-covers a few percent of the card in a saturated accent colour; a blank tile is
-white all the way across. We find the four cards by scanning for wide white
-runs on the tile row, then measure non-white coverage inside each.
+A Room Code tile is a white rounded card on the TV's Room screen. A drawn letter
+covers a few percent of the card in navy; a blank tile is white all the way
+across. We find the four cards by scanning for wide white runs on the tile row,
+then measure non-white coverage inside each.
 
 Usage:
 
@@ -38,15 +38,32 @@ TV_UDID = "071FB022-581E-4454-94FF-7F10727D5B81"
 BUNDLE = "tv.huddle.hub"
 OUT = Path(__file__).parent / "blank-watch"
 
-# The tile row, as a fraction of the 3840x2160 tvOS frame. Taken from a known
-# good pairing screenshot: tiles occupy roughly the middle third vertically and
-# the left half horizontally, beside the QR card.
-ROW_TOP, ROW_BOTTOM = 0.36, 0.60
-ROW_LEFT, ROW_RIGHT = 0.10, 0.65
+# The tile row, as a fraction of the tvOS frame.
+#
+# Retuned for Soft Minimal's Room screen, where the tiles are 84x84 high on the
+# screen rather than Boardwalk's 148x176 in the middle of it. The old band
+# (0.36-0.60) sits entirely below the new row, so this tool had quietly stopped
+# finding any tiles at all and would have reported "not the pairing screen?"
+# forever while claiming to guard the blank-`I` regression.
+#
+# The band is deliberately loose, because two frames have to fall inside it: this
+# branch draws the stage edge to edge, while `main` insets the whole composition
+# to the title-safe inner 90% (`tvSafeStageScale`), which pulls every fraction
+# 10% toward the centre. The tiles land at 0.17-0.29 of the frame uninset and
+# 0.20-0.33 inset; 0.14-0.36 holds both. The right edge stops short of the QR
+# card, which is white too and would otherwise read as a fifth tile.
+ROW_TOP, ROW_BOTTOM = 0.14, 0.36
+ROW_LEFT, ROW_RIGHT = 0.24, 0.63
 
-# A drawn letter covers ~16% of its tile; an empty tile keeps only its border,
-# ~3%. Anything under this is a hole. Calibrated on a real pairing frame and a
-# synthetically blanked copy of it, so the detector is known to fire.
+# A drawn letter covers ~20% of its tile — the glyph shrank less than the tile
+# did, so coverage went up from Boardwalk's ~16% — and an empty tile keeps only
+# its hairline border, well under 3% now that the border is warm grey rather
+# than 4px of ink. Anything under this is a hole.
+#
+# Unlike the numbers above, this threshold has not been re-verified against a
+# synthetically blanked frame since the retune; it is derived from the tile and
+# glyph sizes. It is also further from both populations than it was before, so
+# the arithmetic erring would have to be large to matter.
 BLANK_BELOW = 0.08
 
 

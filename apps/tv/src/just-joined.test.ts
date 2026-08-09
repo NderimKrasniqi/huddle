@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isArrival, JUST_JOINED_MS, noteArrivals } from './just-joined';
+import { type Arrivals, isArrival, isGreeting, JUST_JOINED_MS, noteArrivals } from './just-joined';
 import type { RosterSeat } from './roster';
 
 /**
@@ -93,5 +93,59 @@ describe('noteArrivals', () => {
     const empty = noteArrivals(undefined, []);
 
     expect(noteArrivals(empty, [])).toBe(empty);
+  });
+});
+
+describe('isGreeting', () => {
+  /** Nobody greeted yet — a television that has just put the Room up. */
+  const nobody = new Set<RosterSeat['playerId']>();
+
+  /** What this screen has watched, having found `found` seated and then been pushed `pushed`. */
+  const watched = (found: readonly RosterSeat[], ...pushed: readonly RosterSeat[][]): Arrivals =>
+    pushed.reduce<Arrivals>(
+      (seen, roster) => noteArrivals(seen, roster),
+      noteArrivals(undefined, found),
+    );
+
+  it('greets an arrival the screen has not spent its four seconds on', () => {
+    const seen = watched([], seatsOf('Ada'));
+
+    expect(isGreeting(seen, nobody, idOf('Ada'))).toBe(true);
+  });
+
+  it('does not greet the same arrival twice', () => {
+    // The bug this exists for: being an Arrival is permanent, so without this
+    // the seat wears its chip forever.
+    const seen = watched([], seatsOf('Ada'));
+
+    expect(isGreeting(seen, new Set([idOf('Ada')]), idOf('Ada'))).toBe(false);
+  });
+
+  it('does not re-greet a spent arrival when a game ends and the Room comes back', () => {
+    // The grid is unmounted for the length of a game and mounted again when it
+    // ends. Ada joined before the game; nobody joined during it, so the
+    // television has nothing to announce on its way back.
+    const seen = watched([], seatsOf('Ada'));
+
+    expect(isGreeting(seen, new Set([idOf('Ada')]), idOf('Ada'))).toBe(false);
+  });
+
+  it('greets two phones that land together, each on their own seat', () => {
+    // What the carousel's single footer line could not do: it had one slot, so
+    // the newer arrival took the older one's sentence.
+    const seen = watched([], seatsOf('Ada'), seatsOf('Ada', 'Grace'));
+
+    expect(isGreeting(seen, nobody, idOf('Ada'))).toBe(true);
+    expect(isGreeting(seen, nobody, idOf('Grace'))).toBe(true);
+  });
+
+  it('greets nobody the screen merely found sitting there', () => {
+    const seen = watched(seatsOf('Ada', 'Grace'));
+
+    expect(isGreeting(seen, nobody, idOf('Ada'))).toBe(false);
+  });
+
+  it('greets nobody before the first roster has landed', () => {
+    expect(isGreeting(undefined, nobody, idOf('Ada'))).toBe(false);
   });
 });
