@@ -1,7 +1,11 @@
 import { api } from '@huddle/convex';
 import {
+  type Arrivals,
   gamePlayersFrom,
   type GameModule,
+  isGreeting,
+  JUST_JOINED_MS,
+  noteArrivals,
   ROOM_CODE_LENGTH,
   roomJoinLink,
 } from '@huddle/game-core';
@@ -28,7 +32,6 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { cardEntryOffset } from '../src/card-transition';
 import { carouselFooterLine } from '../src/carousel-footer';
-import { type Arrivals, isGreeting, JUST_JOINED_MS, noteArrivals } from '../src/just-joined';
 import { closeExpiredRoom, deployed, openRoom } from '../src/room';
 import {
   keepOpeningRoom,
@@ -754,12 +757,14 @@ function useRoster(room: OpenRoom): readonly RosterSeat[] | undefined {
  * roster and nothing else: the first snapshot to land is the baseline, and every
  * one after it is compared with what was already on the screen. `noteArrivals`
  * hands back the identical value whenever a snapshot seats nobody — which is
- * most of them, since claiming a color and going away both push a fresh roster —
- * so this settles on the render after a join and holds still through everything
+ * most of them, since a heartbeat and going away both push a fresh roster — so
+ * this settles on the render after a join and holds still through everything
  * else.
  */
-function useArrivals(roster: readonly RosterSeat[] | undefined): Arrivals | undefined {
-  const [arrivals, setArrivals] = useState<Arrivals>();
+function useArrivals(
+  roster: readonly RosterSeat[] | undefined,
+): Arrivals<RosterSeat['playerId']> | undefined {
+  const [arrivals, setArrivals] = useState<Arrivals<RosterSeat['playerId']>>();
   const noted = roster === undefined ? arrivals : noteArrivals(arrivals, roster);
 
   if (noted !== arrivals) {

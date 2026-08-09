@@ -1,7 +1,5 @@
-import type { RosterSeat } from './roster';
-
 /**
- * "JUST JOINED!", as logic: which seats this television watched being taken.
+ * "JUST JOINED!", as logic: which seats a screen watched being taken.
  *
  * The handoff holds the treatment for about four seconds after a player lands
  * (its avatar pop-in) and then lets it settle, so the news is a fact about
@@ -26,9 +24,18 @@ import type { RosterSeat } from './roster';
  * merely found them sitting there. A seat already taken when the screen started
  * watching is news to nobody: a relaunched app has not just seen ten people walk
  * in, and a room coming back from a game has not either.
+ *
+ * ## Why it is here rather than in an app
+ *
+ * It was the television's, in `apps/tv/src/`, for as long as the television was
+ * the only surface with seats to greet. The approved phone board draws a JUST
+ * JOINED chip on the Host's roster too, and an app cannot import another app —
+ * so it moved to the one place both clients already share. It is generic over
+ * the seat's id for that move: the two rosters are the same Convex query, but
+ * each app names its own row type off it, and this only ever asks who.
  */
 
-/** How long an arrival is greeted in pink: the handoff's "~4s". */
+/** How long an arrival is greeted: the handoff's "~4s". */
 export const JUST_JOINED_MS = 4_000;
 
 /**
@@ -37,12 +44,15 @@ export const JUST_JOINED_MS = 4_000;
  * Both are pruned to the roster they were folded from, which keeps them the size
  * of a room and makes a seat that goes and comes back an arrival all over again.
  */
-export type Arrivals = {
+export type Arrivals<PlayerId> = {
   /** Everybody seated as of the last snapshot. */
-  readonly seated: ReadonlySet<RosterSeat['playerId']>;
+  readonly seated: ReadonlySet<PlayerId>;
   /** Those of them who took their seat while this screen was watching. */
-  readonly arrived: ReadonlySet<RosterSeat['playerId']>;
+  readonly arrived: ReadonlySet<PlayerId>;
 };
+
+/** The only thing any of this asks of a roster row. */
+type Seated<PlayerId> = { readonly playerId: PlayerId };
 
 /**
  * The roster as it now stands, folded into what this screen has already seen.
@@ -50,12 +60,15 @@ export type Arrivals = {
  * it was simply found there.
  *
  * Returns what it was given, identically, whenever the snapshot seats nobody and
- * empties no seat, which most of them do: claiming a color and going away both
- * push a fresh roster. The screen folds this during render and stores the
+ * empties no seat, which most of them do: a heartbeat and going away both push
+ * a fresh roster. The screen folds this during render and stores the
  * result, so the unchanged answer being the *same* answer is what makes that
  * settle rather than loop.
  */
-export function noteArrivals(seen: Arrivals | undefined, roster: readonly RosterSeat[]): Arrivals {
+export function noteArrivals<PlayerId>(
+  seen: Arrivals<PlayerId> | undefined,
+  roster: readonly Seated<PlayerId>[],
+): Arrivals<PlayerId> {
   const seated = new Set(roster.map(({ playerId }) => playerId));
 
   if (seen === undefined) {
@@ -72,7 +85,7 @@ export function noteArrivals(seen: Arrivals | undefined, roster: readonly Roster
 }
 
 /** Whether this screen watched the player take the seat it is drawing. */
-export function isArrival(seen: Arrivals, playerId: RosterSeat['playerId']): boolean {
+export function isArrival<PlayerId>(seen: Arrivals<PlayerId>, playerId: PlayerId): boolean {
   return seen.arrived.has(playerId);
 }
 
@@ -95,18 +108,18 @@ export function isArrival(seen: Arrivals, playerId: RosterSeat['playerId']): boo
  * `undefined` is the moment before the first roster lands, which greets nobody:
  * a screen that has not been told who is here has watched nobody arrive.
  */
-export function isGreeting(
-  seen: Arrivals | undefined,
-  greeted: ReadonlySet<RosterSeat['playerId']>,
-  playerId: RosterSeat['playerId'],
+export function isGreeting<PlayerId>(
+  seen: Arrivals<PlayerId> | undefined,
+  greeted: ReadonlySet<PlayerId>,
+  playerId: PlayerId,
 ): boolean {
   return seen !== undefined && isArrival(seen, playerId) && !greeted.has(playerId);
 }
 
 /** Whether two sets hold the same players. */
-function sameSet(
-  one: ReadonlySet<RosterSeat['playerId']>,
-  other: ReadonlySet<RosterSeat['playerId']>,
+function sameSet<PlayerId>(
+  one: ReadonlySet<PlayerId>,
+  other: ReadonlySet<PlayerId>,
 ): boolean {
   return one.size === other.size && [...one].every((playerId) => other.has(playerId));
 }

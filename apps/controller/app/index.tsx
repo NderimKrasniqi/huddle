@@ -1,13 +1,18 @@
 import { api } from '@huddle/convex';
 import {
+  type Arrivals,
   AVATAR_IDS,
   type AvatarId,
   gamePlayersFrom,
   type GameEvent,
+  type GameMetadata,
   type GameModule,
   type GamePlayer,
   type GameSettings,
   type GameSettingsSchema,
+  isGreeting,
+  JUST_JOINED_MS,
+  noteArrivals,
   ROOM_CODE_LENGTH,
 } from '@huddle/game-core';
 import {
@@ -22,16 +27,17 @@ import {
   codeLetterBox,
   colors,
   fontFamily,
+  type IconName,
   letterSpacing,
   minBodyFontSize,
   opacity,
   radius,
   elevation,
 } from '@huddle/ui';
-import { Avatar, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Icon, Surface, Wordmark } from '@huddle/ui/native';
 import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -50,17 +56,24 @@ import {
   rosterRowIsManageable,
 } from '../src/host-controls';
 import {
+  BACK_TO_ROOM,
   backToLobbyLabel,
-  browsedGameMeta,
+  CHOOSE_A_GAME,
   END_ROOM,
   gameToStart,
+  hostChoosingLine,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
   startControl,
 } from '../src/game-controls';
 import { lifecycleFailureMessage } from '../src/game-rejection';
-import { lobbyStanding, lobbyStatusText, type RosterSeat } from '../src/host';
-import { rosterFooterLine, rosterRowSlot, rosterRowSpokenAs } from '../src/host-roster';
+import { lobbyStanding, type LobbyStanding, type RosterSeat } from '../src/host';
+import {
+  rosterFooterLine,
+  type RosterRowSlot,
+  rosterRowSlot,
+  rosterRowSpokenAs,
+} from '../src/host-roster';
 import { joinFailureMessage } from '../src/join-rejection';
 import { PhoneScreen } from '../src/phone-screen';
 import {
@@ -90,6 +103,33 @@ const CARET_BLINK_MS = 530;
 
 /** How far a pressed button travels into its own shadow. */
 const PRESS_TRAVEL = 2;
+
+/**
+ * The join form's avatar tile, and the gap between two of them.
+ *
+ * Four across is the board's grid and it is held to that by arithmetic rather
+ * than by luck: `avatarGrid` caps its width at four tiles and three gaps, so ten
+ * avatars are two full rows and a pair on every phone wide enough for the row at
+ * all (292pt of content, which the narrowest phone Huddle draws on clears by
+ * 50). Wrapping alone would have given a wider phone five and a narrower one
+ * three, and the last row's ragged pair is the shape a player reads the grid by.
+ */
+const AVATAR_TILE = 64;
+const AVATAR_GAP = 12;
+const AVATAR_COLUMNS = 4;
+
+/** The roster row's circular avatar. */
+const ROSTER_AVATAR = 36;
+
+/**
+ * The waiting screen's hero — the Host's face, at the size the board draws it.
+ * It is the only thing on that screen with anything to look at, which is what
+ * earns it more than twice the manage sheet's.
+ */
+const WAITING_AVATAR = 176;
+
+/** The manage sheet's hero: one player, named and about to be acted on. */
+const SHEET_AVATAR = 88;
 
 /**
  * React Native's `AppState`, in the shape `keepPresent` watches: whether the app
@@ -367,10 +407,22 @@ function JoinForm({
               >
                 <Avatar
                   avatar={id}
-                  size={64}
+                  size={AVATAR_TILE}
                   shape="tile"
                   style={chosen ? styles.avatarChosen : undefined}
                 />
+
+                {/* The board's tick, on the chosen tile's shoulder. The accent
+                    ring alone is the selection; this is what makes it legible
+                    to somebody who cannot tell the ring from the artwork's own
+                    warm edge. Unlabelled — the tile it sits on is already a
+                    radio that reports `selected`, and a screen reader saying
+                    "check" after "selected" would be the same news twice. */}
+                {chosen ? (
+                  <View style={styles.avatarTick}>
+                    <Icon name="check" size={14} color={colors.inverse} />
+                  </View>
+                ) : null}
               </Pressable>
             );
           })}
@@ -391,7 +443,7 @@ function JoinForm({
               // Dimming belongs to the whole sticker: fading the face alone
               // would leave a solid shadow under a ghosted button.
               style={[[styles.stretch, !ready && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
-              <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join →'}</Text>
+              <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join'}</Text>
             </Surface>
           )}
         </Pressable>
@@ -509,17 +561,23 @@ function BlinkingCaret() {
 }
 
 /**
- * The room's answer (handoff §4): the code they are in, their avatar, and their
- * name in the room's own words. It is also where a relaunched app opens — the
- * handoff's reconnect rule is that a rejoining phone lands on the screen its
- * room's phase calls for, and in the lobby that is this one.
+ * What a seated phone is looking at, and the subscriptions every one of those
+ * answers is read from.
  *
- * The Host gets the pill, a line saying the room is theirs, and then the whole
- * of §5 and §7 below it — the roster and the picker, which are sections of this
- * screen rather than screens of their own (see `LobbyGameControls`). So this is
- * where a player finds out they are running the room, including when they
- * become the host mid-party, which is why the standing is read from a live
- * query rather than from the answer that seated them.
+ * It draws nothing itself. There are three screens under here — the Host's
+ * room, the Host's picker, and the one everybody else gets — and this is where
+ * the choice between them is made, because all three stand on the same seat,
+ * the same roster and the same running-game query, and a phone that moved
+ * between them by remounting would drop all three.
+ *
+ * It is also where a relaunched app opens: the handoff's reconnect rule is that
+ * a rejoining phone lands on the screen its room's phase calls for, which is
+ * this decision and not a route.
+ *
+ * The standing is read from the live roster rather than from the answer that
+ * seated this phone, so a player who becomes the host mid-party finds out here
+ * — their screen changes under them, which is the whole reason the two host
+ * screens are states of this one rather than somewhere the app navigates to.
  */
 function YoureInScreen({
   session,
@@ -528,10 +586,32 @@ function YoureInScreen({
   readonly session: PlayerSession;
   readonly onSeatLost: (reason: string) => void;
 }) {
-  const { code, nickname, avatar } = session;
+  const { code } = session;
   useHeartbeat();
-  const roster = useRoomRoster(session);
+  const { roster, answered } = useRoomRoster(session);
   const standing = lobbyStanding(roster, session.playerId);
+
+  // Which of the Host's two states this phone is on: their room, or the picker.
+  // One component with a state rather than two routes, as the handoff records —
+  // the board draws two screens and they are two *states*, because everything
+  // under them (the seat, the roster subscription, the settings the Host has
+  // chosen) has to survive moving between them, and a route would remount it.
+  //
+  // It is also deliberately not derived from `browsingGameIndex`. The room's
+  // browsed card is shared — the television and every phone follow it — and
+  // which screen *this* Host is looking at is not: a Host who backs out to
+  // their room has not un-browsed anything for the room, and the TV should not
+  // flick back to the Room behind them.
+  const [picking, setPicking] = useState(false);
+
+  // Which seats this phone watched arrive, and which of those greetings it has
+  // already spent — the same pair the television keeps, for the same four
+  // seconds, now that the Host's roster draws the chip too.
+  //
+  // Fed the *unanswered* roster on purpose: see `useRoomRoster`. Everything
+  // else on this screen takes the flattened one.
+  const arrivals = useArrivals(answered);
+  const { greeted, noteGreeted } = useGreeted();
   // The Host's settings, held here rather than on the picker below because this
   // screen is the one that survives a game: the picker is unmounted for the
   // whole of a game and remounted on "Back to lobby", and a party playing twice
@@ -583,14 +663,33 @@ function YoureInScreen({
   }, [seat, onSeatLost, roster]);
   const screen = runningGameScreen(running);
 
-  // The card the room is browsing. Held here rather than by the controls that
-  // draw it because §5's roster reads it too — its footer line only offers to
-  // start when the room in fact can, which is a question about the card — and
-  // the roster sits above the color picker while the controls sit below it. One
-  // subscription answering both is what keeps the two sections from disagreeing
-  // about whether the party can begin.
+  // The card the room is browsing. Held here rather than by the picker that
+  // draws it, because both host screens read it: the picker draws the card, and
+  // the room's count line only offers to start when the room in fact can, which
+  // is a question about the card. One subscription answering both is what keeps
+  // the two screens from disagreeing about whether the party can begin — and
+  // what lets the Host move between them without re-asking.
   const browsingAt = useQuery(api.games.browsing, { roomId: session.roomId });
   const browsing = carouselWindow(browsingAt ?? 0);
+
+  // A game ends by returning the Host to their *room*, not to the picker they
+  // were on when it started. Phase 2 left "which screen does a room land on
+  // after a game" open and sent it here; this is the phone's half of the
+  // answer, and it is the same one the television gives — a game ending is the
+  // moment a party takes stock of who is still in the room, and people have
+  // come and gone during it. Adjusted during render, which is React's own way
+  // to reset state when an input changes, and the pattern `JoinScreen` already
+  // uses for its notice.
+  const inGame = screen.kind === 'game';
+  const [wasInGame, setWasInGame] = useState(inGame);
+
+  if (wasInGame !== inGame) {
+    setWasInGame(inGame);
+
+    if (inGame) {
+      setPicking(false);
+    }
+  }
 
   if (screen.kind === 'game') {
     return (
@@ -605,60 +704,377 @@ function YoureInScreen({
     );
   }
 
-  return (
-    <PhoneScreen>
-      <View style={styles.seatedHeader}>
-        <Wordmark height={16} />
-        <View style={styles.seatedHeaderEnd}>
-          {standing.youAreHost ? <HostPill /> : null}
-          <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
-            <Text style={styles.codeChipText}>{code}</Text>
-          </Surface>
-        </View>
-      </View>
+  // Everybody who is not running the room gets one screen and no controls.
+  if (!standing.youAreHost) {
+    return <WaitingScreen standing={standing} browsing={browsing} />;
+  }
 
-      {/* The avatar they picked on the join form. There is no unclaimed state
-          to draw any more — the choice arrives with the join — so this is the
-          artwork and not a face standing in for one. */}
-      <Avatar avatar={avatar} size={128} label={nickname} style={styles.avatar} />
+  // The room says it is playing something and `runningGameScreen` still sent
+  // this phone to the lobby, so this build does not have the module. Read
+  // before the picker, because a Host who was on the picker when the room was
+  // handed to them mid-game must not be offered a Select for a room that is
+  // already playing — see `stranded` on the room screen.
+  const stranded = running !== null && running !== undefined && screen.kind === 'lobby';
 
-      <Text style={styles.title}>You’re in, {nickname}!</Text>
-
-      {/* Directly under the heading, where §5 draws it, and above the color
-          picker rather than below it: a color is claimed once and the roster is
-          re-read all through a lobby, so the section a Host keeps coming back
-          to is the one that should not need scrolling to. What it costs is
-          measured against the task in docs/implementation-plan.md. */}
-      {standing.youAreHost && browsing !== undefined ? (
-        <HostRoster
-          roster={roster}
-          // `startControl` is pure and is asked again by the control itself; the
-          // alternative is threading one answer through two sections that need
-          // different halves of it.
-          canStart={startControl(roster, browsing.index).enabled}
-        />
-      ) : null}
-
-      <Surface
-        elevation={elevation.phoneCard}
-        style={[styles.stretch, styles.statusCard]}>
-        <View style={styles.statusDot} />
-        <Text style={styles.statusText}>{lobbyStatusText(standing)}</Text>
-      </Surface>
-
-      <LobbyGameControls
+  // The picker needs a card to draw. `browsing` is `undefined` only in a build
+  // with no games at all, which is nothing to pick from — so that Host stays in
+  // their room, where the count line and the roster are still true.
+  if (picking && !stranded && browsing !== undefined) {
+    return (
+      <PickAGameScreen
         browsing={browsing}
         roster={roster}
-        youAreHost={standing.youAreHost}
         settingsChoice={settingsChoice}
         onChooseSetting={setSettingsChoice}
+        onBack={() => setPicking(false)}
+      />
+    );
+  }
+
+  return (
+    <YourRoomScreen
+      code={code}
+      roster={roster}
+      canStart={browsing !== undefined && startControl(roster, browsing.index).enabled}
+      canPick={browsing !== undefined}
+      stranded={stranded}
+      greeting={(playerId) => isGreeting(arrivals, greeted, playerId)}
+      onGreeted={noteGreeted}
+      onChooseGame={() => setPicking(true)}
+    />
+  );
+}
+
+/**
+ * Phone — the Host's room (the approved board's "Your room").
+ *
+ * Everything about the room and nothing about the games: who is in it, how many
+ * that is, and the one control that moves on. The picker used to sit below this
+ * on the same scroll, which is what made the roster — the section carrying news
+ * nothing else in the product carries — the thing a Host scrolled past. Two
+ * states, one screen (see `YoureInScreen`), and this is the one the Host is on
+ * for as long as people are still arriving.
+ *
+ * The roster is drawn borderless with hairline rules between the rows, as the
+ * board draws it. Boardwalk gave each row its own bordered card on its own
+ * shadow, which at ten players was ten objects stacked down a phone; a rule is
+ * what says "these are one list" without spending a surface per person.
+ */
+function YourRoomScreen({
+  code,
+  roster,
+  canStart,
+  canPick,
+  stranded,
+  greeting,
+  onGreeted,
+  onChooseGame,
+}: {
+  readonly code: string;
+  readonly roster: readonly RosterSeat[];
+  readonly canStart: boolean;
+  /** Whether there is anything to pick — false only in a build with no games. */
+  readonly canPick: boolean;
+  /**
+   * Whether the room is mid-game in something this build does not have.
+   *
+   * The one case where the Host is on their room while the room is *not* between
+   * games. It is reachable: `handOverRoom` can hand a room over mid-game, so an
+   * older build can inherit a game it cannot draw. Everybody else on such a
+   * phone simply waits, but the Host is the only player who can end a game —
+   * `endGame` is Host-only — so without a way back here the room is one nothing
+   * in it can move, and End Room, which takes every seat, is the only exit.
+   *
+   * Phase 3 deleted the screen that used to carry this control and recorded the
+   * gap; this is it closed.
+   */
+  readonly stranded: boolean;
+  readonly greeting: (playerId: RosterSeat['playerId']) => boolean;
+  readonly onGreeted: (playerId: RosterSeat['playerId']) => void;
+  readonly onChooseGame: () => void;
+}) {
+  // Which player's row the Host has opened to manage, if any. Held as the id
+  // rather than the seat so the sheet always reads the *current* row off the
+  // live roster: a target that goes away between opening the sheet and acting
+  // dims transfer without the sheet reopening, and a target that leaves the room
+  // (or is removed) drops out of `roster` and closes the sheet on its own.
+  const [managing, setManaging] = useState<RosterSeat['playerId']>();
+  const managingSeat = roster.find((seat) => seat.playerId === managing);
+
+  return (
+    <PhoneScreen>
+      <RoomHeader />
+
+      <View style={styles.roomTitleRow}>
+        <Text style={styles.title}>Your room</Text>
+        <RoomCodeChip code={code} />
+      </View>
+
+      <View style={styles.roster}>
+        {roster.map((seat, position) => (
+          <RosterRow
+            key={seat.playerId}
+            seat={seat}
+            // The rule belongs between rows, so the first one goes without.
+            // Drawn on the row rather than as a view of its own: a separator
+            // that is a sibling is a thing that can end up orphaned at the foot
+            // of a list when the last row goes.
+            first={position === 0}
+            greeting={greeting(seat.playerId)}
+            onGreeted={onGreeted}
+            onManage={setManaging}
+          />
+        ))}
+      </View>
+
+      <View style={styles.countLine}>
+        <View style={styles.statusDot} />
+        <Text style={styles.aside}>{rosterFooterLine(roster.length, canStart)}</Text>
+      </View>
+
+      {stranded ? (
+        <>
+          <Text style={[styles.waitingFor, styles.asideCentred]}>
+            This room is playing a game this phone doesn’t have. Take everyone back
+            to the lobby, or update Huddle to play along.
+          </Text>
+          <BackToLobbyControl />
+        </>
+      ) : (
+        <PrimaryButton
+          label={CHOOSE_A_GAME}
+          trailingIcon="arrow-right"
+          enabled={canPick}
+          onPress={onChooseGame}
+        />
+      )}
+
+      {managingSeat === undefined ? null : (
+        <ManagePlayerSheet seat={managingSeat} onDismiss={() => setManaging(undefined)} />
+      )}
+    </PhoneScreen>
+  );
+}
+
+/**
+ * Phone — the Host's picker (the approved board's "Pick a game").
+ *
+ * The card the room is browsing, the arrows either side of where it sits in the
+ * list, and the button that commits the room to it. The arrows write
+ * `browsingGameIndex` and nothing else — the television follows the room, not
+ * this phone, so what the Host sees here and what the room sees on the TV
+ * cannot come apart.
+ *
+ * `Your room` at the header's end is this screen's way back, and it is a way
+ * back rather than a cancel: browsing is already shared, so there is nothing
+ * here to discard.
+ */
+function PickAGameScreen({
+  browsing,
+  roster,
+  settingsChoice,
+  onChooseSetting,
+  onBack,
+}: {
+  readonly browsing: CarouselWindow;
+  readonly roster: readonly RosterSeat[];
+  readonly settingsChoice: SettingsChoice | undefined;
+  readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
+  readonly onBack: () => void;
+}) {
+  const browseGame = useMutation(api.games.browseGame);
+  const back = previousIndex(browsing.index);
+  const on = nextIndex(browsing.index);
+  // The Host's settings live on this phone and nowhere else — see
+  // `settings-choice`. They travel as one argument of `startGame`, so browsing
+  // stays exactly what it was before this screen gained settings: a mutation of
+  // its own that the TV and every other phone follow, and that nothing here
+  // touches.
+  const { id: gameId } = browsing.focused.metadata;
+  const { settingsSchema } = browsing.focused;
+
+  async function browse(to: number | undefined) {
+    if (to === undefined) {
+      return;
+    }
+
+    const sessionToken = await phoneSessionTokenStore.read();
+
+    if (sessionToken !== null) {
+      await browseGame({ sessionToken, index: to });
+    }
+  }
+
+  return (
+    <PhoneScreen>
+      <RoomHeader onBack={onBack} />
+
+      <Text style={styles.pickingLabel}>YOU’RE THE HOST — PICK A GAME</Text>
+
+      <GameCard metadata={browsing.focused.metadata} />
+
+      <View style={styles.pickerRow}>
+        <RoundButton
+          icon="chevron-left"
+          spokenAs="Previous game"
+          enabled={back !== undefined}
+          onPress={() => void browse(back)}
+        />
+        <Text style={styles.pickedPosition}>
+          {browsing.index + 1} / {browsing.total}
+        </Text>
+        <RoundButton
+          icon="chevron-right"
+          spokenAs="Next game"
+          enabled={on !== undefined}
+          onPress={() => void browse(on)}
+        />
+      </View>
+
+      <Text style={[styles.aside, styles.asideCentred]}>
+        Swipe or tap arrows — the TV follows along
+      </Text>
+
+      <SettingsControls
+        schema={settingsSchema}
+        gameId={gameId}
+        choice={settingsChoice}
+        // Chosen from the choice React holds rather than the one this render
+        // closed over: two chips tapped in the same beat both count.
+        onChoose={(key, value) =>
+          onChooseSetting((current) => settingChosen(gameId, current, key, value))
+        }
       />
 
-      {/* Last on the screen, and the Host's alone: it is the one control here
-          that cannot be undone, so it sits as far from "Start" as the lobby is
-          long. */}
-      {standing.youAreHost ? <EndRoomControl /> : null}
+      <StartGameControl
+        roster={roster}
+        browsingAt={browsing.index}
+        settings={settingsToStart(settingsSchema, gameId, settingsChoice)}
+      />
     </PhoneScreen>
+  );
+}
+
+/**
+ * Phone — everybody who is not running the room (the approved board's
+ * "Waiting").
+ *
+ * The Host's face rather than the reader's own, because the sentence under it
+ * names the Host: this screen is about the person the room is waiting on, and a
+ * player looking at their own avatar over "Sam is choosing…" would be reading
+ * two different people. Their own avatar is on the television, at the size the
+ * room is actually looking at.
+ *
+ * There is nothing to press here, which is the whole screen, and the card at the
+ * foot is what says so out loud rather than leaving it as an absence.
+ */
+function WaitingScreen({
+  standing,
+  browsing,
+}: {
+  readonly standing: LobbyStanding;
+  /** The card the room is on; `undefined` only in a build with no games. */
+  readonly browsing: CarouselWindow | undefined;
+}) {
+  return (
+    <PhoneScreen>
+      <Wordmark height={20} />
+
+      {/* No label. The name is in the line directly under it, and an avatar
+          that announced itself would make a screen reader say it twice. */}
+      {standing.hostAvatar === undefined ? null : (
+        <Avatar avatar={standing.hostAvatar} size={WAITING_AVATAR} />
+      )}
+
+      <Text style={styles.title}>{hostChoosingLine(standing.hostNickname)}</Text>
+
+      {browsing === undefined ? null : (
+        <View style={styles.nowViewing}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>{nowViewingLine(browsing.focused.metadata)}</Text>
+        </View>
+      )}
+
+      <View style={styles.explainer}>
+        <Icon name="gamepad" size={32} color={colors.mutedText} />
+        <Text style={styles.explainerText}>{NOW_VIEWING_CAPTION}</Text>
+      </View>
+    </PhoneScreen>
+  );
+}
+
+/**
+ * The header both of the Host's screens wear: the wordmark, and a pill at the
+ * far end that is either the way out of the room or the way back from the
+ * picker.
+ *
+ * The board draws `Leave` in that pill. **This says `End room`, because that is
+ * what it still does** — Leave is a new mutation and it is Phase 5's, and a
+ * button labelled Leave that in fact deletes every seat in the room is the one
+ * mistake in this rebuild that would cost somebody their party. The label moves
+ * when the behaviour behind it does.
+ */
+function RoomHeader({ onBack }: { readonly onBack?: () => void }) {
+  return (
+    <View style={styles.seatedHeader}>
+      <Wordmark height={20} />
+      {onBack === undefined ? <EndRoomControl /> : <OutlinePill label={BACK_TO_ROOM} onPress={onBack} />}
+    </View>
+  );
+}
+
+/** The `ROOM CODE` label and its letters, at the far end of the room's title row. */
+function RoomCodeChip({ code }: { readonly code: string }) {
+  return (
+    <View style={styles.roomCode}>
+      <Text style={styles.roomCodeLabel}>ROOM CODE</Text>
+      <View style={styles.roomCodeLetters}>
+        {[...code].map((letter, position) => (
+          <View key={position} style={styles.roomCodeLetter}>
+            <Text style={styles.roomCodeLetterText}>{letter}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * The browsed game, as the board's card: its key art filling a tall rounded
+ * surface, with the title and the three facts over the foot of it.
+ *
+ * The art is the flat `keyArt.color` the module declares, which is what the
+ * television's carousel draws too. The board shows a photographic render there;
+ * wiring `game-art/` to a module is a change to `GameMetadata` and the plan puts
+ * it out of scope for this pass, so the two surfaces stay in step at the
+ * treatment they both currently have rather than one of them getting ahead.
+ */
+function GameCard({ metadata }: { readonly metadata: GameMetadata }) {
+  const { title, keyArt, playerRange, estimatedMinutes, category } = metadata;
+
+  return (
+    <Surface
+      elevation={elevation.phoneCard}
+      style={[styles.stretch, styles.gameCard, { backgroundColor: colors[keyArt.color] }]}>
+      <Text style={styles.gameCardTitle}>{title}</Text>
+
+      <View style={styles.gameCardChips}>
+        <GameCardChip icon="players" label={`${playerRange.min}–${playerRange.max} players`} />
+        <GameCardChip icon="clock" label={`${estimatedMinutes} min`} />
+        <GameCardChip icon="tag" label={category} />
+      </View>
+    </Surface>
+  );
+}
+
+/** One fact about a game, on the card's own art. */
+function GameCardChip({ icon, label }: { readonly icon: IconName; readonly label: string }) {
+  return (
+    <View style={styles.gameCardChip}>
+      <View style={[StyleSheet.absoluteFill, styles.gameCardChipWash]} />
+      <Icon name={icon} size={14} color={colors.ink} />
+      <Text style={styles.gameCardChipText}>{label}</Text>
+    </View>
   );
 }
 
@@ -671,33 +1087,97 @@ function YoureInScreen({
  * the lobby rather than mid-game because a Host who wants out of a game has the
  * other control, and the room outlives games by design.
  *
- * Behind the same confirm sheet the Manage Sheet uses, for the reason removal is:
- * this deletes seats, and it deletes all of them at once. The failure is shown
- * rather than swallowed — a Host who taps and sees nothing happen has no way to
- * make sense of it — though the ordinary success of this control is the screen
- * disappearing, since this phone's own seat goes with the room.
+ * It moved from the foot of the lobby to the header's far end, where the board
+ * draws a pill, and shrank with the move. That is not a demotion of a
+ * destructive control: it is behind the same confirm sheet it always was, and
+ * the old placement — a full-width orange button directly under Start — put the
+ * room's one irreversible act in the same shape and colour as its most ordinary
+ * one. An outlined pill in the corner is harder to hit by accident than a
+ * thumb-width bar at the bottom of a scroll.
+ *
+ * The confirm shows its failure rather than swallowing it — a Host who taps and
+ * sees nothing happen has no way to make sense of it — though the ordinary
+ * success of this control is the screen disappearing, since this phone's own
+ * seat goes with the room.
  */
 function EndRoomControl() {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <View style={styles.field}>
-      <Pressable
-        style={styles.stretch}
-        onPress={() => setConfirming(true)}
-        accessibilityRole="button"
-      >
-        {({ pressed }) => (
-          <Surface
-            elevation={elevation.phoneCard}
-            style={[styles.stretch, [styles.button, styles.endRoomButton, pressed && styles.buttonPressed]]}>
-            <Text style={styles.buttonLabel}>{END_ROOM.label}</Text>
-          </Surface>
-        )}
-      </Pressable>
-
+    <>
+      <OutlinePill label={END_ROOM.label} onPress={() => setConfirming(true)} />
       {confirming ? <EndRoomSheet onDismiss={() => setConfirming(false)} /> : null}
-    </View>
+    </>
+  );
+}
+
+/**
+ * The header's pill: an outlined accent control, for the two things at the end
+ * of a header bar that are neither the primary action nor a status.
+ *
+ * Outlined rather than filled because the primary action on every one of these
+ * screens is the orange bar at the foot, and two solid oranges on one screen is
+ * two primary actions.
+ */
+function OutlinePill({
+  label,
+  onPress,
+}: {
+  readonly label: string;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+      {({ pressed }) => (
+        <View style={[styles.outlinePill, pressed && styles.buttonPressed]}>
+          <Text style={styles.outlinePillText}>{label}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/**
+ * The orange bar at the foot of a screen: the one thing that screen is for.
+ *
+ * Every screen in the Controller has exactly one, which is what makes it read
+ * as the answer to "and then?" rather than as a button among buttons. The
+ * trailing icon is optional and is only ever an arrow — a control that moves
+ * the Host to another screen says so, and a control that commits the room does
+ * not.
+ */
+function PrimaryButton({
+  label,
+  trailingIcon,
+  enabled,
+  onPress,
+}: {
+  readonly label: string;
+  readonly trailingIcon?: IconName;
+  readonly enabled: boolean;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={styles.stretch}
+      disabled={!enabled}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !enabled }}
+    >
+      {({ pressed }) => (
+        <Surface
+          elevation={elevation.phoneCard}
+          // Dimming belongs to the whole surface: fading the face alone would
+          // leave a solid shadow under a ghosted button.
+          style={[[styles.stretch, !enabled && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
+          <Text style={styles.buttonLabel}>{label}</Text>
+          {trailingIcon === undefined ? null : (
+            <Icon name={trailingIcon} size={20} color={colors.inverse} />
+          )}
+        </Surface>
+      )}
+    </Pressable>
   );
 }
 
@@ -821,181 +1301,147 @@ function EndRoomSheet({ onDismiss }: { readonly onDismiss: () => void }) {
 }
 
 /**
- * What the lobby offers below the status card: the Host's picker (handoff §7),
- * and for everybody else the one thing they need to know about the room (§8).
+ * One player, as the approved board draws a roster row: a circular avatar, the
+ * nickname, and the right-hand slot, on no surface of its own and separated
+ * from the row above by a hairline.
  *
- * Both draw the card the room is browsing, which is why the screen above hands
- * it down rather than each section asking: "Now viewing Trivia" on a player's
- * phone is the card the Host is looking at and the card the television is
- * showing — one subscription, three screens, and §5's roster above makes a
- * fourth reader of it.
- */
-function LobbyGameControls({
-  browsing,
-  roster,
-  youAreHost,
-  settingsChoice,
-  onChooseSetting,
-}: {
-  /** The card the room is on; `undefined` only in a build with no games. */
-  readonly browsing: CarouselWindow | undefined;
-  readonly roster: readonly RosterSeat[];
-  readonly youAreHost: boolean;
-  /** The Host's settings, kept by the screen above — see `YoureInScreen`. */
-  readonly settingsChoice: SettingsChoice | undefined;
-  readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
-}) {
-  if (browsing === undefined) {
-    return null;
-  }
-
-  return youAreHost ? (
-    <HostGamePicker
-      browsing={browsing}
-      roster={roster}
-      settingsChoice={settingsChoice}
-      onChooseSetting={onChooseSetting}
-    />
-  ) : (
-    <NowViewing browsing={browsing} />
-  );
-}
-
-/**
- * Phone — Host lobby (handoff §5): who is in the room, and whether the party
- * can begin.
- *
- * It is the Host's screen because §5 is, and because the Host is the one with
- * something to do about what it says: wait for the phone that has gone quiet,
- * or start without them. It is also the only place left in Huddle that says a
- * non-Host player is away between games — see `host-roster.ts`, which carries
- * the reasoning, and the departures recorded against §5 in
- * docs/implementation-plan.md.
- *
- * A section rather than the screen §5 draws. The Host already has §4's screen
- * (their avatar, "You're in, <Name>!", the color picker) and §7's picker, and
- * one screen cannot carry two headings — the same reason §8 is the tail of §4
- * here. So §5's "Your room" is a section label in the vocabulary the rest of
- * this screen labels its sections with.
- *
- * Where it sits is not cosmetic. §5 draws the rows immediately under the
- * heading and they are drawn there, above §4's color picker, because a section
- * the Host has to scroll to is a section a party does not read — and this one
- * carries news nothing else in the product carries. It does not fit every room:
- * from about the sixth player the last rows and the count line fall below the
- * fold on a 402×874 phone, which is measured against the task in
- * docs/implementation-plan.md rather than left to be discovered.
- */
-function HostRoster({
-  roster,
-  canStart,
-}: {
-  readonly roster: readonly RosterSeat[];
-  readonly canStart: boolean;
-}) {
-  // Which player's row the Host has opened to manage, if any. Held as the id
-  // rather than the seat so the sheet always reads the *current* row off the
-  // live roster: a target that goes away between opening the sheet and acting
-  // dims transfer without the sheet reopening, and a target that leaves the room
-  // (or is removed) drops out of `roster` and closes the sheet on its own.
-  const [managing, setManaging] = useState<RosterSeat['playerId']>();
-  const managingSeat = roster.find((seat) => seat.playerId === managing);
-
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>YOUR ROOM</Text>
-
-      <View style={styles.roster}>
-        {roster.map((seat) => (
-          <RosterRow key={seat.playerId} seat={seat} onManage={setManaging} />
-        ))}
-      </View>
-
-      <Text style={styles.aside}>{rosterFooterLine(roster.length, canStart)}</Text>
-
-      {managingSeat === undefined ? null : (
-        <ManagePlayerSheet seat={managingSeat} onDismiss={() => setManaging(undefined)} />
-      )}
-    </View>
-  );
-}
-
-/**
- * One player, as §5 draws a roster row: white, ink-bordered, on its own small
- * offset shadow — a 40px avatar, the nickname, and the right slot.
- *
- * The away treatment is the one the away-badge task settled on for a listed
- * player and the TV seats wore until the carousel took their screen: the face
- * dims to Boardwalk's "present but unavailable" opacity, the dot mutes, and the
+ * The away treatment is the one the away-badge task settled on and the TV seats
+ * wear: the face dims to the system's "present but unavailable" opacity and the
  * nickname goes to muted text rather than dimming with the circle — 30% ink is
- * not text any more. The dot's colour is the only part of that a screen reader
- * cannot see, which is what `rosterRowSpokenAs` is for.
+ * not text any more. What a slot says in colour alone is what
+ * `rosterRowSpokenAs` exists to say in words.
  *
- * Every row but the Host's own opens the manage sheet (task 3.7): the room is
- * the Host's to hand over or clear a seat from, and `rosterRowIsManageable` is
- * where "every row but the Host's own" is decided, so the row draws a
- * disclosure chevron and becomes a button exactly where a control is on offer.
- * The Host's own row stays a plain label — there is nothing to do to oneself
- * (`targetIsSelf`).
+ * Every row but the Host's own opens the manage sheet: the room is the Host's
+ * to hand over or clear a seat from, and `rosterRowIsManageable` is where
+ * "every row but the Host's own" is decided, so the row becomes a button
+ * exactly where a control is on offer. The Host's own row stays a plain label —
+ * there is nothing to do to oneself (`targetIsSelf`) — and is the one that
+ * carries "(You)", since it is the only row a reader could mistake for
+ * somebody else's.
  */
 function RosterRow({
   seat,
+  first,
+  greeting,
+  onGreeted,
   onManage,
 }: {
   readonly seat: RosterSeat;
+  /** The first row of the list, which draws no rule above it. */
+  readonly first: boolean;
+  readonly greeting: boolean;
+  readonly onGreeted: (playerId: RosterSeat['playerId']) => void;
   readonly onManage: (playerId: RosterSeat['playerId']) => void;
 }) {
-  const slot = rosterRowSlot(seat);
+  const slot = rosterRowSlot(seat, greeting);
   const away = slot === 'away';
   const manageable = rosterRowIsManageable(seat);
+  const { playerId } = seat;
+
+  // Four seconds, then the row settles into whatever it steadily is. Counted
+  // here because the row is what is drawing the chip, and spent upwards so the
+  // screen above remembers — a greeting this phone has already given must not
+  // come back when the roster next changes. `onGreeted` is idempotent.
+  //
+  // **The cleanup spends it too, and that is the important half.** Being an
+  // arrival is permanent for as long as the seat is; only `greeted` ends a
+  // greeting. So an unmount inside the four seconds that merely cancelled the
+  // timer would leave the greeting unspent and run it again on the next mount —
+  // and this row is unmounted by the most travelled move on the screen, the
+  // Host stepping to the picker and back, as well as by a game starting. A chip
+  // that reappeared every round trip, or greeted somebody again after ten
+  // minutes of trivia, is worse than one cut short. The television's seat makes
+  // the same trade in the same words.
+  useEffect(() => {
+    if (!greeting) {
+      return;
+    }
+
+    const settling = setTimeout(() => onGreeted(playerId), JUST_JOINED_MS);
+
+    return () => {
+      clearTimeout(settling);
+      onGreeted(playerId);
+    };
+  }, [greeting, onGreeted, playerId]);
 
   const row = (
-    <Surface
-      elevation={elevation.phoneSmall}
-      style={[styles.stretch, styles.rosterRow]}>
+    <View style={[styles.rosterRow, !first && styles.rosterRowRuled]}>
       <Avatar
         avatar={seat.avatar}
-        size={40}
+        size={ROSTER_AVATAR}
         label={seat.nickname}
         style={away ? styles.rosterAway : undefined}
       />
 
       <Text style={[styles.rosterName, away && styles.rosterNameAway]} numberOfLines={1}>
         {seat.nickname}
+        {seat.host ? <Text style={styles.rosterYou}> (You)</Text> : null}
       </Text>
 
-      {slot === 'host' ? (
-        <HostPill />
-      ) : (
-        <View style={[styles.statusDot, away && styles.statusDotAway]} />
-      )}
-
-      {/* The disclosure chevron a mobile list wears to say a row opens onto
-          more — drawn only where there is more, so the Host's own row does not
-          invite a tap that has nothing behind it. */}
-      {manageable ? <Text style={styles.rosterDisclosure}>›</Text> : null}
-    </Surface>
+      <RosterSlot slot={slot} />
+    </View>
   );
 
-  // The label and role are on the wrapper rather than the surface: `Surface`
-  // is a shadow and a face, and forwards no accessibility of its own. A
-  // manageable row is a button that opens the sheet; the Host's own row is a
+  // A manageable row is a button that opens the sheet; the Host's own row is a
   // plain label with nothing to press.
   return manageable ? (
     <Pressable
       style={styles.stretch}
-      onPress={() => onManage(seat.playerId)}
+      onPress={() => onManage(playerId)}
       accessibilityRole="button"
-      accessibilityLabel={rosterRowSpokenAs(seat)}
+      accessibilityLabel={rosterRowSpokenAs(seat, greeting)}
       accessibilityHint="Opens options to make host or remove"
     >
       {row}
     </Pressable>
   ) : (
-    <View accessible accessibilityLabel={rosterRowSpokenAs(seat)} style={styles.stretch}>
+    <View accessible accessibilityLabel={rosterRowSpokenAs(seat, greeting)} style={styles.stretch}>
       {row}
     </View>
   );
+}
+
+/**
+ * The right-hand end of a roster row: what this player is, in the fewest marks
+ * that say it.
+ *
+ * Four states and three shapes — the Host gets a word and the crown, an arrival
+ * gets a word in a chip, and the two steady presences get a dot, because
+ * "online" and "away" are the ones a room reads at a glance down the column
+ * rather than one at a time. All four are drawn here rather than shipped as the
+ * badge artwork the package delivered: a chip is a border, a radius and a word,
+ * and those three scale with the type around them where a bitmap does not.
+ *
+ * Nothing here is spoken. The row above owns one accessibility label for the
+ * whole of itself (`rosterRowSpokenAs`), which is what keeps a reader hearing
+ * one sentence per player instead of a name and then a badge.
+ */
+function RosterSlot({ slot }: { readonly slot: RosterRowSlot }) {
+  switch (slot) {
+    case 'host':
+      return (
+        <View style={styles.hostSlot}>
+          <Text style={styles.hostSlotText}>HOST</Text>
+          <Icon name="crown" size={16} color={colors.accent} />
+        </View>
+      );
+    case 'just-joined':
+      return (
+        <View style={styles.justJoinedChip}>
+          <Text style={styles.justJoinedText}>JUST JOINED</Text>
+        </View>
+      );
+    case 'away':
+      return (
+        <View style={styles.awaySlot}>
+          <Text style={styles.awayText}>Away</Text>
+          <Icon name="clock" size={14} color={colors.away} />
+        </View>
+      );
+    default:
+      return <View style={styles.statusDot} />;
+  }
 }
 
 /**
@@ -1062,16 +1508,35 @@ function ManagePlayerSheet({
 
   return (
     <ConfirmSheet onDismiss={onDismiss}>
+      {/* The board stacks the target: face, name, state. Centred and vertical
+          rather than the row this used to be, because the sheet is about one
+          person and a row reads as one of a list. */}
       <View style={styles.sheetHeader}>
-        <Avatar
-          avatar={seat.avatar}
-          size={96}
-          label={seat.nickname}
-          style={away ? styles.rosterAway : undefined}
-        />
+        <View>
+          <Avatar
+            avatar={seat.avatar}
+            size={SHEET_AVATAR}
+            label={seat.nickname}
+            style={away ? styles.rosterAway : undefined}
+          />
+
+          {/* The clock on the avatar's shoulder, as the board draws an away
+              target. It repeats the word below it on purpose: the face is
+              dimmed, and a dimmed face with no mark on it reads as a rendering
+              fault rather than as a state. Unspoken — the line under it is the
+              same news in words. */}
+          {away ? (
+            <View style={styles.sheetAwayBadge}>
+              <Icon name="clock" size={14} color={colors.away} />
+            </View>
+          ) : null}
+        </View>
+
         <Text style={styles.sheetName} numberOfLines={1}>
           {seat.nickname}
         </Text>
+
+        <Text style={styles.sheetState}>{away ? 'Away' : 'Online'}</Text>
       </View>
 
       {controls.map((control) => (
@@ -1128,6 +1593,23 @@ function ManageAction({
       ? `Make ${nickname} host`
       : `Remove ${nickname} from the room`;
 
+  // Remove is the sheet's one orange bar; transfer is quieter, which is the
+  // board's own reading and the system's — one primary per surface, and the
+  // primary here is the act the Host opened this sheet to be sure about.
+  //
+  // A control that cannot be pressed goes inert rather than merely faded: the
+  // soft fill and muted ink the board draws on the disabled `Make host`. The
+  // 30% dim this used to wear is the treatment for something *present but
+  // unavailable*, which is right for an away face and wrong for a button — a
+  // ghosted orange bar still reads as the thing to press.
+  const face = !pressable ? styles.buttonInert : remove ? undefined : styles.buttonSecondary;
+  const labelFace = !pressable
+    ? styles.buttonLabelInert
+    : remove
+      ? undefined
+      : styles.buttonLabelSecondary;
+  const glyph = !pressable ? colors.mutedText : remove ? colors.inverse : colors.ink;
+
   return (
     <View style={styles.stretch}>
       <Pressable
@@ -1141,100 +1623,18 @@ function ManageAction({
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneCard}
-            // Dimmed whenever it cannot be pressed — a disabled transfer (away
-            // target), and either action while the other is in flight — so a
-            // button that ignores a tap never looks fully live.
-            style={[[styles.stretch, !pressable && styles.buttonUnavailable], [styles.button, remove && styles.sheetRemove, pressed && styles.buttonPressed]]}>
-            <Text style={styles.buttonLabel}>{busy ? 'Working…' : control.label}</Text>
+            style={[styles.stretch, [styles.button, face, pressed && styles.buttonPressed]]}>
+            <Icon name={remove ? 'trash' : 'crown'} size={18} color={glyph} />
+            <Text style={[styles.buttonLabel, labelFace]}>
+              {busy ? 'Working…' : control.label}
+            </Text>
           </Surface>
         )}
       </Pressable>
 
       {control.disabledBecause === undefined ? null : (
-        <Text style={styles.waitingFor}>{control.disabledBecause}</Text>
+        <Text style={[styles.waitingFor, styles.asideCentred]}>{control.disabledBecause}</Text>
       )}
-    </View>
-  );
-}
-
-/**
- * Phone — Host game picker (handoff §7): the card being browsed, arrows either
- * side of "1 / 1", and the button that starts it.
- *
- * The arrows write `browsingGameIndex` and nothing else — the television is
- * following the room, not this phone, so what the Host sees here and what the
- * room sees on the TV cannot come apart.
- */
-function HostGamePicker({
-  browsing,
-  roster,
-  settingsChoice,
-  onChooseSetting,
-}: {
-  readonly browsing: CarouselWindow;
-  readonly roster: readonly RosterSeat[];
-  readonly settingsChoice: SettingsChoice | undefined;
-  readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
-}) {
-  const browseGame = useMutation(api.games.browseGame);
-  const back = previousIndex(browsing.index);
-  const on = nextIndex(browsing.index);
-  // The Host's settings live on this phone and nowhere else — see
-  // `settings-choice`. They travel as one argument of `startGame`, so browsing
-  // stays exactly what it was before this screen gained settings: a mutation of
-  // its own that the TV and every other phone follow, and that nothing here
-  // touches.
-  const { id: gameId } = browsing.focused.metadata;
-  const { settingsSchema } = browsing.focused;
-
-  async function browse(to: number | undefined) {
-    if (to === undefined) {
-      return;
-    }
-
-    const sessionToken = await phoneSessionTokenStore.read();
-
-    if (sessionToken !== null) {
-      await browseGame({ sessionToken, index: to });
-    }
-  }
-
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>YOU’RE THE HOST — PICK A GAME</Text>
-
-      <View style={styles.pickerRow}>
-        <RoundButton label="‹" enabled={back !== undefined} onPress={() => void browse(back)} />
-        <View style={styles.pickedGame}>
-          <Text style={styles.pickedTitle}>{browsing.focused.metadata.title}</Text>
-          <Text style={styles.pickedMeta}>{browsedGameMeta(browsing.focused.metadata)}</Text>
-          <Text style={styles.pickedPosition}>
-            {browsing.index + 1} / {browsing.total}
-          </Text>
-        </View>
-        <RoundButton label="›" enabled={on !== undefined} onPress={() => void browse(on)} />
-      </View>
-
-      <Text style={[styles.aside, styles.asideCentred]}>
-        Swipe or tap arrows — the TV follows along
-      </Text>
-
-      <SettingsControls
-        schema={settingsSchema}
-        gameId={gameId}
-        choice={settingsChoice}
-        // Chosen from the choice React holds rather than the one this render
-        // closed over: two chips tapped in the same beat both count.
-        onChoose={(key, value) =>
-          onChooseSetting((current) => settingChosen(gameId, current, key, value))
-        }
-      />
-
-      <StartGameControl
-        roster={roster}
-        browsingAt={browsing.index}
-        settings={settingsToStart(settingsSchema, gameId, settingsChoice)}
-      />
     </View>
   );
 }
@@ -1349,37 +1749,24 @@ function SettingOption({
 }
 
 /**
- * Phone — Player waiting (handoff §8): the card the room is looking at, on the
- * status card the handoff draws it on, and the line saying what this phone is
- * about to become.
+ * One of the picker's round buttons.
  *
- * It is the same Boardwalk surface as the lobby's own status card above it —
- * white, green dot, one line — because it is the same kind of statement: the
- * room is doing something and this phone is watching. The handoff draws §8 as a
- * screen of its own; here it is the tail of §4, for the reason the Host's
- * picker is (see `LobbyGameControls`).
+ * The chevron is an icon rather than a `‹` typed in the body face, which is
+ * what it was: a glyph borrowed from a text font is whatever weight and
+ * optical centre that font happens to give it, and it drifted from the arrow
+ * beside it on the primary button. Both are now the same drawing at two sizes.
+ *
+ * It carries its own spoken name because the glyph is the whole control — there
+ * is no text beside it to read instead.
  */
-function NowViewing({ browsing }: { readonly browsing: CarouselWindow }) {
-  return (
-    <View style={styles.field}>
-      <Surface
-        elevation={elevation.phoneCard}
-        style={[styles.stretch, styles.statusCard]}>
-        <View style={styles.statusDot} />
-        <Text style={styles.statusText}>{nowViewingLine(browsing.focused.metadata)}</Text>
-      </Surface>
-      <Text style={[styles.aside, styles.asideCentred]}>{NOW_VIEWING_CAPTION}</Text>
-    </View>
-  );
-}
-
-/** One of the picker's 76px round buttons (§7). */
 function RoundButton({
-  label,
+  icon,
+  spokenAs,
   enabled,
   onPress,
 }: {
-  readonly label: string;
+  readonly icon: IconName;
+  readonly spokenAs: string;
   readonly enabled: boolean;
   readonly onPress: () => void;
 }) {
@@ -1388,17 +1775,62 @@ function RoundButton({
       disabled={!enabled}
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={spokenAs}
       accessibilityState={{ disabled: !enabled }}
     >
       {({ pressed }) => (
         <Surface
           elevation={elevation.phoneSmall}
           style={[enabled ? undefined : styles.buttonUnavailable, [styles.roundButton, pressed && styles.buttonPressed]]}>
-          <Text style={styles.roundButtonLabel}>{label}</Text>
+          <Icon name={icon} size={26} color={colors.ink} />
         </Surface>
       )}
     </Pressable>
   );
+}
+
+/**
+ * Which seats this phone has watched arrive, folded from the roster snapshots
+ * the subscription pushes.
+ *
+ * The television's own hook, on the phone now that the Host's roster draws the
+ * JUST JOINED chip too. Folded during render and stored, so it settles rather
+ * than loops: `noteArrivals` hands back the identical value whenever a snapshot
+ * seats nobody, which is most of them.
+ */
+function useArrivals(
+  roster: readonly RosterSeat[] | undefined,
+): Arrivals<RosterSeat['playerId']> | undefined {
+  const [arrivals, setArrivals] = useState<Arrivals<RosterSeat['playerId']>>();
+  const noted = roster === undefined ? arrivals : noteArrivals(arrivals, roster);
+
+  if (noted !== arrivals) {
+    setArrivals(noted);
+  }
+
+  return noted;
+}
+
+/**
+ * Which greetings this phone has already spent.
+ *
+ * Held above the switch between the Host's two screens and a running game, for
+ * the reason the television holds its own copy above the same switch: a
+ * greeting is four seconds of this screen's life, and remounting the roster —
+ * which moving to the picker and back does, and a game ending does — must not
+ * announce everybody who joined before it all over again.
+ */
+function useGreeted(): {
+  readonly greeted: ReadonlySet<RosterSeat['playerId']>;
+  readonly noteGreeted: (playerId: RosterSeat['playerId']) => void;
+} {
+  const [greeted, setGreeted] = useState<ReadonlySet<RosterSeat['playerId']>>(() => new Set());
+
+  const noteGreeted = useCallback((playerId: RosterSeat['playerId']) => {
+    setGreeted((already) => (already.has(playerId) ? already : new Set(already).add(playerId)));
+  }, []);
+
+  return { greeted, noteGreeted };
 }
 
 /**
@@ -1517,7 +1949,12 @@ function InGameScreen({
       <View style={styles.seatedHeader}>
         <Wordmark height={16} />
         <View style={styles.seatedHeaderEnd}>
-          {youAreHost ? <HostPill /> : null}
+          {/* The Host's mark mid-game is the crown alone. The word belongs to
+              the roster, where it labels a row among rows; here there is one
+              player on the screen and the glyph is the whole of the news. */}
+          {youAreHost ? (
+            <Icon name="crown" size={18} color={colors.accent} label="You are the host" />
+          ) : null}
           <Surface elevation={elevation.phoneSmall} style={styles.codeChip}>
             <Text style={styles.codeChipText}>{code}</Text>
           </Surface>
@@ -1662,29 +2099,34 @@ function BackToLobbyControl() {
   );
 }
 
-/** Boardwalk's HOST pill (handoff §5): ink fill, white Bungee, fully rounded. */
-function HostPill() {
-  return (
-    <View style={styles.hostPill}>
-      <Text style={styles.hostPillText}>HOST</Text>
-    </View>
-  );
-}
-
 /**
  * Who else is in the room, live.
  *
  * The seated screen subscribes to the same roster the TV draws its seats from,
  * because everything on it that can change without this phone doing anything is
- * on that one query: who is running the room, and which colors are spoken for.
- * So a handover and a swatch claimed across the room both arrive as a push,
- * within a round trip of the room deciding them, rather than at the next launch.
+ * on that one query: who is running the room, who has gone quiet, and who has
+ * just walked in. So a handover and an arrival across the room both land as a
+ * push, within a round trip of the room deciding them, rather than at the next
+ * launch.
  *
- * An empty roster while the subscription is in flight is the right neutral: no
- * host to name yet, and no color yet claimed by anybody.
+ * **The unanswered moment is handed on rather than flattened**, which is the
+ * whole reason this returns what it does. Every consumer that merely draws the
+ * room wants an empty list as its neutral — no host to name, nobody to count —
+ * but `useArrivals` has to tell "the room is empty" from "nobody has said yet",
+ * and `[]` makes those the same snapshot. Fold `[]` as the baseline and the
+ * first real answer reads as ten people walking in at once, which is precisely
+ * the thing `just-joined.ts` exists to refuse. The television keeps the same
+ * split for the same reason.
  */
-function useRoomRoster(session: PlayerSession): readonly RosterSeat[] {
-  return useQuery(api.players.roster, { roomId: session.roomId }) ?? [];
+function useRoomRoster(session: PlayerSession): {
+  /** The room as it stands, or `[]` while the answer is in flight. */
+  readonly roster: readonly RosterSeat[];
+  /** The same answer with the in-flight moment intact — for `useArrivals` alone. */
+  readonly answered: readonly RosterSeat[] | undefined;
+} {
+  const answered = useQuery(api.players.roster, { roomId: session.roomId });
+
+  return { roster: answered ?? [], answered };
 }
 
 /**
@@ -1759,7 +2201,14 @@ function useHeartbeat(): void {
   );
 }
 
-// Every measurement below is the handoff's own for phone screens (§2, §4).
+// Where the phone's measurements come from, which is now two places.
+//
+// The older entries below are the Boardwalk handoff's own numbers for phone
+// screens (§2, §4) and still say so on the line. Everything Soft Minimal added
+// — the roster's slots, the room's title row, the game card, the waiting screen
+// — is measured off the approved boards in `docs/design/reference/screens/`
+// instead, because those screens have no § to be measured against: the board
+// draws surfaces the old spec never had.
 const styles = StyleSheet.create({
   heading: {
     alignItems: 'center',
@@ -1780,15 +2229,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 10,
   },
-  // A measurement the handoff gives and this screen does not take.
-  // §2 writes this label at 13px, and the same document floors phone body text
-  // at 14 — and this is body text by that document's own naming, since its two
-  // type roles are Display (Bungee) and Body/UI (Space Grotesk 400–700) and
-  // this is the second one. A floor a single spec line can undercut is not a
-  // floor, so the floor wins and the 1px is spent. Written as the token rather
-  // than as `14` for exactly that reason: this element's handoff measurement is
-  // 13, so a bare 14 would read as one and hide which of the document's two
-  // lines won. The token says it, and moves if Boardwalk ever moves the floor.
+  // A measurement the handoff gives and this screen does not take, twice over.
+  // Boardwalk wrote this label at 13 against a floor of 14; Soft Minimal writes
+  // it at 13 against a floor of 12. Either way the answer is the token and not
+  // a number: a floor a single spec line can undercut is not a floor, and a
+  // bare literal here would read as a measurement rather than as the rule being
+  // obeyed. It moves when `minBodyFontSize` does, which is the point.
   label: {
     alignSelf: 'flex-start',
     color: colors.mutedText,
@@ -1884,9 +2330,13 @@ const styles = StyleSheet.create({
   },
 
   button: {
+    flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
     justifyContent: 'center',
+    // The gap a button with an icon needs, and nothing on one without: an empty
+    // flex gap costs a button with a single label nothing.
+    gap: 10,
     minHeight: 56,
     backgroundColor: colors.accent,
     borderColor: colors.ink,
@@ -1941,29 +2391,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  hostPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.ink,
-    borderRadius: radius.pill,
-  },
-  hostPillText: {
-    color: colors.surface,
-    fontFamily: fontFamily.semibold,
-    // The smallest type on the phone, so the pill reads as the code chip's
-    // sibling rather than shouting over it. This 13 was the field label's 13
-    // until the Body Text Floor took that one to 14; the handoff sizes this
-    // pill nowhere, so it now stands on its own rather than on a match. Outside
-    // the floor either way, because Bungee is Boardwalk's display face — and
-    // that exemption is not a claim anybody can make on a line: it costs an
-    // actual change of face, and Bungee's caps at 13 stand taller and heavier
-    // than Space Grotesk's do.
-    fontSize: 13,
-    letterSpacing: letterSpacing.label,
-    // The label's letter spacing trails its last letter; pulling it back keeps
-    // the word centred in the pill.
-    marginRight: -letterSpacing.label,
-  },
   codeChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -1982,122 +2409,63 @@ const styles = StyleSheet.create({
     marginRight: -letterSpacing.roomCode,
   },
 
-  // The fill and the monogram's ink both arrive from `playerFace`, so neither
-  // is stated here: a default would only ever be the answer it already gives
-  // for a player who has claimed nothing.
-  avatar: {
-    width: 128,
-    height: 128,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: colors.ink,
-    borderWidth: borderWidth.hairline,
-    borderRadius: radius.pill,
-  },
-  avatarInitials: {
-    fontFamily: fontFamily.semibold,
-    // The TV's seat draws a 24px monogram in a 72px circle; this circle is
-    // 128px, and the monogram keeps its proportion.
-    fontSize: 42,
-    lineHeight: 46,
-  },
-
-  // Ten 44px circles (the handoff's size), wrapped: a row of ten runs 500px
-  // before any gap, on a phone that is 390–430 wide. How many land on the first
-  // row is the phone's business and not a number written down here — an iPhone
-  // 17 takes six, a 390pt phone five — which is why they are centred rather
-  // than laid out in a grid a narrower screen would break.
-  swatches: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  swatch: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-  },
-  // The handoff gives the selected swatch the ink border and the shadow; the
-  // shadow comes from the Surface this is drawn on.
-  swatchYours: {
-    borderColor: colors.ink,
-    borderWidth: borderWidth.hairline,
-  },
-  // Boardwalk's treatment for something present but not available — the same
-  // 30% the TV dims an away player's face to.
-  swatchTaken: {
-    opacity: opacity.unavailable,
-  },
-
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    gap: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderColor: colors.ink,
-    borderWidth: borderWidth.hairline,
-    borderRadius: radius.row,
-  },
   // The join form's avatar grid: four across, which is what makes ten read as
-  // two full rows and a pair rather than an arbitrary heap.
+  // two full rows and a pair rather than an arbitrary heap. Capped at exactly
+  // four tiles and three gaps and centred, so the column count is arithmetic
+  // rather than whatever the phone's width happens to allow — see AVATAR_TILE.
   avatarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
+    gap: AVATAR_GAP,
+    maxWidth: AVATAR_COLUMNS * AVATAR_TILE + (AVATAR_COLUMNS - 1) * AVATAR_GAP,
   },
-  // The chosen one, per §8's selected state: the accent, and a border rather
-  // than a tint, because the artwork already fills the tile.
+  // The chosen one: the accent, and a border rather than a tint, because the
+  // artwork already fills the tile.
   avatarChosen: {
     borderColor: colors.accent,
     borderWidth: borderWidth.focus,
   },
+  // The tick on the chosen tile's shoulder, half off the corner so it reads as
+  // a mark applied to the tile rather than a badge drawn inside it.
+  avatarTick: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 24,
+    height: 24,
+    backgroundColor: colors.accent,
+    borderColor: colors.canvas,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.pill,
+  },
 
-  // The Host's roster (§5). The rows sit closer together than the screen's own
-  // 28pt section gap: they are one list, not four sections.
+  // The Host's roster. No gap: the rows are one list and the rule between them
+  // is what says so, which only works if they are actually touching.
   roster: {
     alignSelf: 'stretch',
-    gap: 10,
   },
-  // §5's row, measurement for measurement: white, 3px ink border, radius 16,
-  // and the 3px shadow its `Surface` casts.
+  // The board's row: no surface, no border, no shadow — a face, a name and the
+  // slot, on the canvas. Ten of these is a list; ten bordered cards on ten
+  // shadows was ten objects.
   rosterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
     gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: colors.surface,
-    borderColor: colors.ink,
-    borderWidth: borderWidth.hairline,
-    borderRadius: radius.input,
+    paddingVertical: 12,
   },
-  // §5's 40px avatar. Its ink is Boardwalk's thin border rather than the row's
-  // own 3px: a circle inside a bordered row drawn at the row's width would
-  // out-weigh the thing containing it, and 2px on 40px is the proportion the
-  // handoff's 4px on §4's 128px circle already sets.
-  rosterAvatar: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: colors.ink,
-    borderWidth: borderWidth.hairline,
-    borderRadius: radius.pill,
+  // The hairline between two rows, drawn as the lower row's top edge so it can
+  // never be orphaned under the last one.
+  rosterRowRuled: {
+    borderTopColor: colors.border,
+    borderTopWidth: borderWidth.hairline,
   },
-  rosterInitials: {
-    fontFamily: fontFamily.semibold,
-    // The proportion the TV's seat and §4's hero avatar both keep — a monogram
-    // about a third of the circle it sits in.
-    fontSize: 14,
-    // Bungee rides low in its own line box; pinning it centres the monogram.
-    lineHeight: 16,
+  // "(You)" on the Host's own row, muted so the name still reads as the name.
+  rosterYou: {
+    color: colors.mutedText,
   },
   // Boardwalk's treatment for something present but not available, which is
   // exactly what an away player is. The circle only: see `rosterNameAway`.
@@ -2114,22 +2482,6 @@ const styles = StyleSheet.create({
   // being text, which is the away-badge task's own measurement.
   rosterNameAway: {
     color: colors.mutedText,
-  },
-  // The muted half of the Status Dot: the room is not hearing
-  // from this phone.
-  statusDotAway: {
-    backgroundColor: colors.away,
-  },
-  // The disclosure chevron on a manageable row — Boardwalk's own glyph (§7's
-  // picker draws the same one), muted so it reads as an affordance the row
-  // carries rather than a control competing with the name.
-  rosterDisclosure: {
-    color: colors.mutedText,
-    fontFamily: fontFamily.medium,
-    fontSize: 22,
-    // Bungee rides low in its own line box; pinning it centres the chevron on
-    // the row.
-    lineHeight: 24,
   },
 
   // The manage sheet (task 3.7): a centred confirm dialog over a dimmed room.
@@ -2169,11 +2521,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fontFamily.medium,
     fontSize: 20,
-  },
-  // Boardwalk's "this ends something" face, the same punch as Back to lobby:
-  // removing a player deletes their seat and is not undone.
-  sheetRemove: {
-    backgroundColor: colors.accent,
   },
   // The end-room sheet's own title: `sheetName` is a row item beside an avatar
   // and stretches to fill it, which is not what a heading on its own line does.
@@ -2225,10 +2572,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  // The handoff's 76px round buttons, in Boardwalk's white-and-ink.
+  // The board's round buttons. 56 rather than the handoff's 76: they used to
+  // hold a 30pt glyph typed in the body face and now hold a 26pt drawing, and
+  // 76 around that is a button mostly made of nothing.
   roundButton: {
-    width: 76,
-    height: 76,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -2236,42 +2585,13 @@ const styles = StyleSheet.create({
     borderWidth: borderWidth.hairline,
     borderRadius: radius.pill,
   },
-  roundButtonLabel: {
+  // Where in the list the card is, between the arrows. The board draws it at
+  // the weight of a heading rather than as an aside — it is the one thing on
+  // the screen that says the picker has more than one thing in it.
+  pickedPosition: {
     color: colors.ink,
     fontFamily: fontFamily.semibold,
-    fontSize: 30,
-    // Bungee rides low in its own line box; pinning it centres the chevron.
-    lineHeight: 34,
-  },
-  pickedGame: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-  },
-  pickedTitle: {
-    color: colors.ink,
-    fontFamily: fontFamily.bold,
-    fontSize: 22,
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  // The handoff's "title + meta" on the selected-game card (§7): the same three
-  // facts the TV's carousel chips carry, on one line because a phone's card is
-  // as wide as a thumb and three chips would wrap into a paragraph.
-  pickedMeta: {
-    color: colors.mutedText,
-    fontFamily: fontFamily.medium,
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  // Where in the list the card is — the handoff puts this between the arrows
-  // ("Prev/next round buttons 76px … with '2 / 3' between") but pins no weight
-  // for it, so it keeps the one it has always had rather than gaining emphasis
-  // this pass has no line to trace.
-  pickedPosition: {
-    color: colors.mutedText,
-    fontFamily: fontFamily.medium,
-    fontSize: 15,
+    fontSize: 26,
   },
   // The settings group sits between the picker and the start button, and is
   // left-aligned rather than centred like the picker above it: the chips wrap
@@ -2325,8 +2645,8 @@ const styles = StyleSheet.create({
   backToLobbyButton: {
     backgroundColor: colors.accent,
   },
-  // The same punch every irreversible control in Huddle wears (see
-  // `sheetRemove`): ending the room deletes every seat in it.
+  // The confirm sheet's own bar: ending the room deletes every seat in it, and
+  // the accent is what every irreversible control in Huddle wears.
   endRoomButton: {
     backgroundColor: colors.accent,
   },
@@ -2348,6 +2668,259 @@ const styles = StyleSheet.create({
     height: 12,
     backgroundColor: colors.online,
     borderRadius: radius.pill,
+  },
+
+  // ————— The Host's room —————
+
+  // "Your room" and the code, on one line with the title's baseline. The code
+  // is the thing a latecomer is being read off somebody's screen, so it keeps
+  // the far end rather than sitting under the title where the roster starts.
+  roomTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  roomCode: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  roomCodeLabel: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.medium,
+    fontSize: minBodyFontSize.phone,
+    letterSpacing: letterSpacing.label,
+    marginRight: -letterSpacing.label,
+  },
+  roomCodeLetters: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  // One boxed letter each, as the board draws it and as the television does:
+  // a Room Code is read out loud a letter at a time, and four separated boxes
+  // is what stops "HUDD" being read as a word.
+  roomCodeLetter: {
+    minWidth: 24,
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.chip,
+  },
+  roomCodeLetterText: {
+    ...codeLetterBox,
+    color: colors.ink,
+    fontFamily: fontFamily.semibold,
+    fontSize: 18,
+    lineHeight: 22,
+  },
+
+  // The count line under the roster, with the dot the board puts on it.
+  countLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 10,
+  },
+
+  // The header's outlined pill — End room on the room, Your room on the picker.
+  outlinePill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderColor: colors.accent,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.pill,
+  },
+  outlinePillText: {
+    color: colors.accent,
+    fontFamily: fontFamily.semibold,
+    fontSize: 15,
+  },
+
+  // ————— The roster's right-hand slots —————
+
+  // The Host: the word and the crown, in the accent. Not a filled pill — the
+  // accent is the system's one colour and a solid one here would out-shout the
+  // primary button at the foot of the same screen.
+  hostSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  hostSlotText: {
+    color: colors.accent,
+    fontFamily: fontFamily.semibold,
+    fontSize: 13,
+    letterSpacing: letterSpacing.label,
+    marginRight: -letterSpacing.label,
+  },
+  // The system's one informational blue, and the only chip in the product with
+  // a border of its own colour: it is news, and it is gone in four seconds, so
+  // it has to be findable in a column of dots without being alarming.
+  justJoinedChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderColor: colors.justJoined,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.chip,
+  },
+  // At the floor rather than under it. The board draws this chip smaller than
+  // every other word on the screen, and the smallest the phone is allowed to
+  // draw body text is 12 — so the floor wins and the chip is a point wider than
+  // the board. Written as the token for the reason the field label is: a bare
+  // 12 would read as a measurement rather than as a rule being obeyed.
+  justJoinedText: {
+    color: colors.justJoined,
+    fontFamily: fontFamily.semibold,
+    fontSize: minBodyFontSize.phone,
+    letterSpacing: letterSpacing.label,
+    marginRight: -letterSpacing.label,
+  },
+  awaySlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  awayText: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.medium,
+    fontSize: 15,
+  },
+
+  // ————— The picker —————
+
+  pickingLabel: {
+    color: colors.accent,
+    fontFamily: fontFamily.semibold,
+    fontSize: minBodyFontSize.phone,
+    letterSpacing: letterSpacing.label,
+    marginRight: -letterSpacing.label,
+    textAlign: 'center',
+  },
+  // The board's tall card. `aspectRatio` rather than a height, so it is the
+  // same shape on a small phone and a large one instead of the same number of
+  // points on both.
+  gameCard: {
+    aspectRatio: 1,
+    justifyContent: 'flex-end',
+    gap: 12,
+    padding: 20,
+    borderRadius: radius.card,
+  },
+  gameCardTitle: {
+    color: colors.inverse,
+    fontFamily: fontFamily.bold,
+    fontSize: 30,
+    lineHeight: 36,
+    textAlign: 'center',
+  },
+  gameCardChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  // On the art rather than beside it, so its fill is the inverse at a wash — a
+  // solid white chip here punches a hole in the card. The wash is a view of its
+  // own beneath the contents rather than an `opacity` on the chip, which would
+  // fade the icon and the word along with the fill and leave neither legible
+  // against the art they are on.
+  gameCardChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.chip,
+  },
+  gameCardChipWash: {
+    backgroundColor: colors.inverse,
+    borderRadius: radius.chip,
+    opacity: opacity.chipOnArt,
+  },
+  gameCardChipText: {
+    color: colors.ink,
+    fontFamily: fontFamily.medium,
+    fontSize: 13,
+  },
+
+  // ————— Waiting —————
+
+  // The green-washed chip the board draws under the hero. It is not the lobby's
+  // status card: there is no border and no shadow, because nothing on this
+  // screen is a surface the reader can act on.
+  nowViewing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    backgroundColor: colors.soft,
+    borderRadius: radius.row,
+  },
+  // What this phone is about to become, said out loud because the screen is
+  // otherwise an absence of controls.
+  explainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    borderColor: colors.border,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.row,
+  },
+  explainerText: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: fontFamily.medium,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+
+  // ————— The manage sheet's target —————
+
+  sheetState: {
+    color: colors.mutedText,
+    fontFamily: fontFamily.medium,
+    fontSize: 16,
+  },
+  // The clock on the away face's shoulder.
+  sheetAwayBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    padding: 5,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.pill,
+  },
+
+  // ————— Button faces —————
+
+  // A control that cannot be pressed: the board's soft fill and muted ink,
+  // rather than the 30% dim, which is the treatment for something present but
+  // unavailable and reads on a button as "orange, but faint".
+  buttonInert: {
+    backgroundColor: colors.border,
+    borderColor: colors.border,
+  },
+  buttonLabelInert: {
+    color: colors.mutedText,
+  },
+  // The second action on a surface that already has a primary one.
+  buttonSecondary: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+  },
+  buttonLabelSecondary: {
+    color: colors.ink,
   },
   statusText: {
     flex: 1,

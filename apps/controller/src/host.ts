@@ -25,6 +25,12 @@ export type LobbyStanding = {
    * no phone is ever on this screen for.
    */
   readonly hostNickname: string | undefined;
+  /**
+   * The Host's avatar, for the waiting screen's hero — the board draws the
+   * player who is choosing, not the player who is waiting. `undefined` for the
+   * same two moments `hostNickname` is.
+   */
+  readonly hostAvatar: RosterSeat['avatar'] | undefined;
 };
 
 /** Where `playerId` stands in the room this roster describes. */
@@ -37,28 +43,13 @@ export function lobbyStanding(
   return {
     youAreHost: host?.playerId === playerId,
     hostNickname: host?.nickname,
+    hostAvatar: host?.avatar,
   };
 }
 
-/**
- * The line on the lobby's status card (docs/design/design-handoff.md §4).
- *
- * The host's own phone is told it is the host, and everybody else is told who
- * they are waiting on — which is the handoff's copy, and the reason the host is
- * on the roster at all. Until the roster lands there is no name to name, so the
- * card falls back to the one thing that is true on every phone in the room: the
- * player's name is up on the television.
- *
- * There is nothing here for the host to *do* yet. Picking a game, settings and
- * start are Phase 3 (docs/implementation-plan.md), so this screen states the
- * role and the controls arrive on it later.
- */
-export function lobbyStatusText({ youAreHost, hostNickname }: LobbyStanding): string {
-  if (youAreHost) {
-    return 'You’re running this room — you’ll pick the game when everyone’s in.';
-  }
-
-  return hostNickname === undefined
-    ? 'Eyes on the TV — your name is up there now.'
-    : `Eyes on the TV — ${hostNickname} is about to pick a game.`;
-}
+// `lobbyStatusText` was here: one line on a status card telling the Host the
+// room was theirs and everybody else whose room it was. The approved boards
+// draw neither card. The Host's two screens say whose room it is by being the
+// Host's screens, and the player's screen says who they are waiting on in its
+// own heading (`hostChoosingLine`) — so the sentence had two better places to
+// be said and no place left to be drawn.

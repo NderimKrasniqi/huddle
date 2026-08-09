@@ -27,6 +27,12 @@ export type {
 // and refused generically against whatever schema the game declares.
 export { type GameSettings, settingsFrom, settingsRefusal } from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
+// Which seats a screen watched arrive, so both clients can greet an arrival the
+// same way. Here rather than in an app because both draw a roster now.
+// `isArrival` is deliberately not among them: it answers "did this screen ever
+// watch them arrive", which is permanent, and a client that asked it instead of
+// `isGreeting` would draw the chip for the life of the room.
+export { type Arrivals, isGreeting, JUST_JOINED_MS, noteArrivals } from './just-joined';
 export type { JoinRejection } from './join-rejection';
 // The names only: a module declares the colour its Key Art wears, and
 // `packages/ui` says what that colour is.

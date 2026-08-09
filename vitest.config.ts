@@ -6,13 +6,23 @@ import { defineConfig } from 'vitest/config';
 // convex-test emulates the backend in; everything else (game modules, packs) is
 // plain TypeScript on Node.
 //
-// Every project resolves `react-native` to a stub. A Game Module's `screens`
-// reach React Native, and React Native's own source is Flow-typed and
-// unparseable by Node — so the Registry's tests, the carousel's, and the hub's
-// would all fail on the import alone, without ever rendering anything. See
-// `test/react-native-stub.ts` for what that does and does not license.
+// Every project resolves `react-native` and `react-native-svg` to stubs. A Game
+// Module's `screens` reach both — React Native directly, and the SVG package
+// through `@huddle/ui/native`'s icon set — and both ship source Node cannot
+// parse, so the Registry's tests, the carousel's, and the hub's would all fail
+// on the import alone, without ever rendering anything. See the two stub files
+// for what that does and does not license.
+//
+// The aliases are exact module names, so `react-native-svg` needs its own entry
+// rather than being caught by the first: a prefix match would also swallow
+// `react-native-safe-area-context` and anything else named this way.
 const reactNativeStub = fileURLToPath(new URL('./test/react-native-stub.ts', import.meta.url));
-const stubReactNative = { alias: { 'react-native': reactNativeStub } };
+const reactNativeSvgStub = fileURLToPath(
+  new URL('./test/react-native-svg-stub.ts', import.meta.url),
+);
+const stubReactNative = {
+  alias: { 'react-native': reactNativeStub, 'react-native-svg': reactNativeSvgStub },
+};
 
 export default defineConfig({
   test: {

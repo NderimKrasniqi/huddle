@@ -6,10 +6,13 @@ bundle live in `docs/design/reference/` instead.
 Source: the approved Soft Minimal asset package (`HUDDLE ASSETS`, 2026-08-08),
 plus the cleaned avatar batch delivered the same day.
 
-## Status: staged, not yet wired
+## Status: wired
 
-Nothing here is imported by a screen. The Soft Minimal token swap is the change
-that consumes it.
+`avatars/`, `logo/`, `tv-backgrounds/` and `app-icons/` are all consumed by the
+apps and proved through `expo export` / `expo prebuild`. `icons/` is consumed
+differently — see its own section, which is the one folder here that is not a
+bundle input. `game-art/` is the only set still staged, and only in part: it has
+art for two games that do not exist and none for one that does.
 
 ## `avatars/`
 
@@ -59,6 +62,34 @@ family, like the other nine.
 full room consumes every one and the tenth player to join gets no choice at all.
 Twelve is the target. The delivered batch README refers to a `batch-2/`, which
 was not in the folder.
+
+## `icons/`
+
+The UI icon set (`Huddle UI Icons — Single Files`, 2026-08-09). **SVG sources
+only**, and they are not loaded at runtime: `packages/ui/src/icons.ts`
+transcribes each one's geometry into TypeScript, `native/icon.tsx` draws it with
+`react-native-svg`, and `icons.test.ts` parses these files and fails if the two
+ever disagree. So the files here are the provenance record and the thing the
+test checks against, not a bundle input — the only folder under `assets/` that
+works that way, which is why it says so.
+
+One drawing per icon, at any size and in any colour. The package also delivered
+each icon as a PNG twice — `dark/` for light surfaces and `white/` for coloured
+ones — and **neither set was taken**: two rasters would be two things to keep in
+step and still wrong on the third surface, where a path is sharp at 14pt on a
+phone and 48pt on a television and takes its colour from a token at the call
+site.
+
+### Deliberately not taken
+
+`badge_host.svg`, `badge_just-joined.svg` and the three status dots
+(`online-dot`, `away-dot`, `coral-dot`) were delivered and are **not** here. A
+badge is a bordered chip with a word in it and a dot is a filled circle; both
+are drawn as ordinary React Native views so they scale with their own text and
+take their colour from the palette. Shipping them as artwork would bake a font,
+a radius and a colour into a bitmap that the phone and the television need at
+different sizes. `crown.svg` *is* kept — it is a glyph inside the HOST chip, not
+the chip.
 
 ## `game-art/`
 

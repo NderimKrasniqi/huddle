@@ -2,91 +2,103 @@
 
 ## Current task
 
-**Soft Minimal screen replacement, Phase 3 — remove About and unknown-game.**
-Complete on branch `feat/soft-minimal-design-assets`. The approved plan is
-`~/.claude/plans/make-a-plan-to-enchanted-boole.md`; Phase 3 is marked DONE
-there, with the three things the plan did not anticipate recorded against it.
+**Soft Minimal screen replacement, Phase 4 — the phone screens.** Complete on
+branch `feat/soft-minimal-design-assets`. The approved plan is
+`~/.claude/plans/make-a-plan-to-enchanted-boole.md`; Phase 4 is marked DONE
+there, with the four things the plan did not anticipate recorded against it.
 
-Phase 2 (TV Room and carousel) is committed and pushed — `cd12570`.
+Phases 1–3 are committed and pushed (`6cb2b48`, `cd12570`, `8654088`).
 
 ## What this change did
 
-- **The About Panel is gone.** `tv-about.tsx`, `about.ts` and `about.test.ts`
-  deleted, and its mount removed from `TvStage`, which now holds only the screen
-  it is handed.
-- **`huddle/tv-remote-surface` has no exemption left.** The rule's `remoteOwner`
-  option was removed outright rather than made optional — with the panel gone
-  there is no file to name, and a dormant option would keep a paragraph of
-  documentation alive for a hole nothing uses. `schema: []`, and the config
-  passes `'error'` bare. Its test lost the three exemption cases and gained one
-  that pins the opposite: a listener put back at `apps/tv/src/tv-about.tsx` is
-  caught like a listener anywhere else.
-- **Both unknown-game screens are gone.** `UnknownGameStage` (TV) and
-  `UnknownGameScreen` (phone), plus the TV's four dead styles.
-  `runningGameScreen` lost its third kind: a game this build lacks now resolves
-  to `{kind: 'lobby'}`.
-- **`deploymentUrl` un-exported** in `apps/tv/src/convex-client.ts` — the About
-  Panel was its only reader.
+**An icon layer, delivered mid-phase.** The user handed over a fifteen-glyph set
+and the rule that goes with it: room-code tiles, buttons, cards, chips, status
+dots, shadows, borders, page dots, player slots and swatches stay React Native
+components so they scale across phones and TVs, and the QR is generated (it
+already was). So the icons are **geometry, not artwork** — SVG sources in
+`packages/ui/assets/icons/`, transcribed into `packages/ui/src/icons.ts`, drawn
+by `Icon` with `react-native-svg`, coloured from a token at the call site.
+`icons.test.ts` parses the sources and fails if the transcription drifts. The
+delivered badge and status-dot PNGs were deliberately **not** wired, and the
+dark/white PNG pairs were not taken at all.
+
+**The four screens, against the boards.** Join gains a deterministic 4-column
+avatar grid and a check badge; `YoureInScreen` becomes a chooser over
+`YourRoomScreen`, `PickAGameScreen` and `WaitingScreen`; the roster row is
+borderless with hairline rules and a four-state right slot (HOST + crown / JUST
+JOINED / online dot / Away + clock); the manage sheet stacks its target and
+draws Remove as the one orange bar.
+
+**`just-joined.ts` moved to `packages/game-core`** and became generic over the
+seat id, because the phone roster now draws the chip and an app cannot import
+another app.
+
+**Phase 3's owed escape hatch is closed.** `YourRoomScreen` takes `stranded` and
+draws Back to lobby instead of the picker when the room reports a game this
+build lacks.
+
+**Dead code removed:** `lobbyStatusText`, `browsedGameMeta`, `HostPill`,
+`LobbyGameControls`, `HostRoster`, `HostGamePicker`, `NowViewing`, and ten dead
+styles — seven of them left over from the colour picker Phase 1 deleted.
 
 ## Checks
 
 `pnpm -r typecheck` clean; `npx eslint . --max-warnings=0` clean; `npx vitest
-run` green — **715 passed, 61 files** (was 746/62; `about.test.ts` and three
-exemption cases went, one case came back). `npx expo export --platform ios`
-succeeds in both `apps/tv` and `apps/controller`.
+run` green — **739 passed, 62 files**. `npx expo export --platform ios` succeeds
+in both apps.
 
 ## Review
 
-`workflow-code-reviewer`, fresh context. One blocking finding and five
-non-blocking; all resolved. The blocking one is worth carrying forward:
+`workflow-code-reviewer`, fresh context. Four blocking findings and ten
+non-blocking; all fixed. Three are worth carrying:
 
-**An out-of-date Host now has no way back to the lobby.** The deleted
-`UnknownGameScreen` carried a `BackToLobbyControl` for the Host and said in its
-own comment why — `endGame` is the only write that clears the running game, only
-the Host may call it, and the only other control that calls it lives on the
-in-game screen, which needs the module. A Host on an older build (reachable:
-`handOverRoom` can hand a room over mid-game) lands on the ordinary lobby, whose
-Start button refuses with "This room is already playing", and End Room — which
-takes every seat with it — is the only exit.
-
-Resolved as documentation rather than code: the comment on `runningGameScreen`
-now states the limit instead of claiming a recovery that does not exist, and
-**Phase 4 owns the fix**, since it is the phone's lobby navigation — the same
-place Phase 2 sent its own leftover. If the user would rather close it now, the
-code fix is small: render `BackToLobbyControl` for the Host when
-`screen.kind === 'lobby'` and `running` is non-null.
-
-The others: `game-rejection.ts` claimed no correct Controller produces
-`alreadyInGame`, which a lobby drawn for a mid-game room now does (comment
-fixed); the lint rule cited "zero remote interaction after launch" from
-`docs/project-scope.md`, a phrase `600d844` removed from the docs (citation
-fixed to the line that is actually there); an ambiguous clause in the
-design-fidelity note; and `apps/tv`'s `expo-constants`, which the deleted panel
-was the only importer of — left in place because `apps/controller` declares it
-identically without importing it either, so removing it from one app only would
-be an asymmetry on a guess.
-
-No security review: nothing here touches auth, ownership, credentials,
-participant data or a privileged operation. Removals only, plus one client-side
-fallback.
+1. **`expo export` does not run CocoaPods, so it cannot prove a native
+   dependency.** `react-native-svg` is native, and `apps/controller` aliases
+   `react-native` to `react-native-tvos` exactly as the TV does — so it needed
+   the TV's `REACT_NATIVE_NODE_MODULES_DIR` escape hatch or `pod install` dies
+   on `File.join(nil, ...)`. Every check in the plan's Verification list passed
+   while the phone could not be built at all. **Verified the mechanism directly**
+   with a Ruby probe of the podspec's own resolution: without the variable the
+   sibling lookup and the fallback are both `nil`; with it, the fallback
+   resolves. Adding a native module is a `prebuild` gate, not an `export` one.
+2. **The phone copied the TV's arrival hooks and dropped half of each.**
+   `useRoomRoster` flattened the in-flight roster to `[]`, which made the
+   baseline snapshot empty and greeted everybody already in the room on a cold
+   start. And `RosterRow`'s timer cleanup cancelled the greeting without
+   spending it, so stepping to the picker and back inside four seconds
+   re-announced the arrival, every time. Both fixed the way the television
+   already does it; both of the TV's comments explain exactly why, and neither
+   was read.
+3. **`picking` survived a game and was checked before `stranded`.** A game now
+   ends onto Your room, and the picker guard reads `stranded` first, which is
+   what makes `game-rejection.ts`'s "no correct Controller offers to start a
+   room already playing" true again.
 
 ## Not verified
 
-Nothing was run on a simulator for this phase — it is three deletions and their
-paperwork, and the deleted surfaces were unreachable without a build skew or a
-remote press. The end-to-end walk in the plan's Verification section still
-stands, and Phase 4 is the natural place to do it.
+**Nothing has been run on a simulator this phase, and no pixel pass was done
+against the boards.** Structure and content follow the five boards; sizes and
+gaps are judged, not measured, unlike Phase 2's Room. The plan's Verification
+step 2 (boot a TV sim and a phone sim and walk the flow) and step 3 (screenshot
+each screen beside its board) are both outstanding and are the natural next
+move — and step 2 now also has to cover `pnpm --filter @huddle/controller
+prebuild`, which is the check that would have caught finding 1.
 
 Also unproven, as before: real TV hardware.
 
 ## Where the plan stands
 
-Phases 1, 2 and 3 of the screen replacement are done. **Phase 4 is next** — the
-phone screens (Join, Your room, Pick a game, Waiting, Manage player sheet) —
-and it now carries the out-of-date-Host escape above. Then Phase 5 (Leave).
+Phases 1–4 of the screen replacement are done. **Phase 5 is next** — Leave:
+`leaveRoom` in `convex/convex/players.ts`, `endRoom` losing its caller, the
+phone clearing its own session with no notice, and the header pill's label
+finally moving from `End room` to `Leave`.
+
+Two things recorded in the handoff as outstanding rather than done: greying
+taken avatars on the join picker (a live roster subscription on a form that
+deliberately has none), and the End Room sheet's Soft Minimal treatment.
 
 From the MVP roadmap: 5.9 merged as PR #24; nothing outstanding there.
 
 ## Next action
 
-Commit Phase 3 and push to PR #25. Then Phase 4.
+Commit Phase 4 and push to PR #25. Then Phase 5.

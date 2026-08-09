@@ -1,32 +1,37 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Arrivals, isArrival, isGreeting, JUST_JOINED_MS, noteArrivals } from './just-joined';
-import type { RosterSeat } from './roster';
+
+/**
+ * A roster row, as much of one as this module reads. The real type is each
+ * app's own name for a `players.roster` row; the module is generic over the id
+ * precisely so it does not need either, and neither does this.
+ */
+type Seat = { readonly playerId: string; readonly nickname: string; readonly avatar: string };
 
 /**
  * A roster the way `players.roster` serves one. The ids are the room's, written
- * here as the opaque strings they are on the wire — the TV reads nothing out of
- * one but the seat it belongs to.
+ * here as the opaque strings they are on the wire — a screen reads nothing out
+ * of one but the seat it belongs to.
  */
-function seatsOf(...names: readonly string[]): RosterSeat[] {
+function seatsOf(...names: readonly string[]): Seat[] {
   return names.map((nickname) => ({
     playerId: idOf(nickname),
     nickname,
-    away: false,
-    host: false,
     avatar: 'fox',
   }));
 }
 
 /** The id the room knows a player by, as `seatsOf` mints them. */
-function idOf(nickname: string): RosterSeat['playerId'] {
-  return `player-${nickname}` as RosterSeat['playerId'];
+function idOf(nickname: string): string {
+  return `player-${nickname}`;
 }
 
 describe('JUST_JOINED_MS', () => {
   it('is the handoff’s four seconds', () => {
-    // "holds the pink JUST JOINED! treatment for ~4s before settling to the
-    // normal style" — docs/design/design-handoff.md, Avatar pop-in.
+    // "holds the JUST JOINED! treatment for ~4s before settling to the normal
+    // style" — the Avatar pop-in, carried into Soft Minimal, where the chip is
+    // the system's one informational blue rather than Boardwalk's pink.
     expect(JUST_JOINED_MS).toBe(4_000);
   });
 });
@@ -61,17 +66,17 @@ describe('noteArrivals', () => {
   });
 
   it('hands back the same answer when a snapshot seats nobody', () => {
-    // Claiming a color and going away both push a fresh roster, and this is
-    // folded during render: an unchanged answer that were a *new* object would
-    // set state on every render and never settle.
+    // Going away and a heartbeat both push a fresh roster, and this is folded
+    // during render: an unchanged answer that were a *new* object would set
+    // state on every render and never settle.
     const seen = noteArrivals(noteArrivals(undefined, []), seatsOf('Ada'));
-    const recolored = seatsOf('Ada').map((seat) => ({
+    const restated = seatsOf('Ada').map((seat) => ({
       ...seat,
       avatar: 'fox' as const,
       away: true,
     }));
 
-    expect(noteArrivals(seen, recolored)).toBe(seen);
+    expect(noteArrivals(seen, restated)).toBe(seen);
     expect(noteArrivals(seen, seatsOf('Ada'))).toBe(seen);
   });
 
@@ -98,11 +103,11 @@ describe('noteArrivals', () => {
 
 describe('isGreeting', () => {
   /** Nobody greeted yet — a television that has just put the Room up. */
-  const nobody = new Set<RosterSeat['playerId']>();
+  const nobody = new Set<string>();
 
   /** What this screen has watched, having found `found` seated and then been pushed `pushed`. */
-  const watched = (found: readonly RosterSeat[], ...pushed: readonly RosterSeat[][]): Arrivals =>
-    pushed.reduce<Arrivals>(
+  const watched = (found: readonly Seat[], ...pushed: readonly Seat[][]): Arrivals<string> =>
+    pushed.reduce<Arrivals<string>>(
       (seen, roster) => noteArrivals(seen, roster),
       noteArrivals(undefined, found),
     );

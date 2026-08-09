@@ -66,4 +66,11 @@ export const opacity = {
    * standing back, so a shared number would drift the moment one meaning moved.
    */
   scrim: 0.45,
+  /**
+   * 88% — a white chip laid over a game's key art (the phone's picker card).
+   * Its own name for the same reason as the three above: this is a surface
+   * letting the art read *through* it, which is the opposite of a thing made
+   * unavailable, and at full strength it punches a hole in the card it is on.
+   */
+  chipOnArt: 0.88,
 } as const;

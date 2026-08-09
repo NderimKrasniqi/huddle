@@ -159,6 +159,33 @@ directories that have never existed.
 | End room | `EndRoomSheet` | **none** | Board shows a "Leave" affordance instead |
 | Game frame | `InGameScreen` | **none** | Needs design |
 
+## Icons
+
+A set of fifteen 24×24 line glyphs, delivered 2026-08-09 (`Huddle UI Icons —
+Single Files`) and held as **geometry, not artwork**: the SVG sources sit in
+`packages/ui/assets/icons/` as the provenance record, `packages/ui/src/icons.ts`
+transcribes each one's shapes, and `Icon` (`@huddle/ui/native`) draws them with
+`react-native-svg` at a size and colour the call site gives it.
+
+The package also shipped every icon as a PNG twice — a dark set for light
+surfaces and a white set for coloured ones. **Neither was taken.** One path is
+sharp at 14pt in a phone chip and at 48pt on a television, and takes its colour
+from a palette token rather than from which folder it was imported out of; two
+raster sets would be two things to keep in step and still wrong on the third
+surface. `icons.test.ts` parses the sources and fails if the transcription
+drifts from them.
+
+**Badges and dots are components, not icons.** The set also held `badge_host`,
+`badge_just-joined` and three status dots. A badge is a bordered chip with a
+word in it and a dot is a filled circle, and both are drawn as ordinary React
+Native views so they scale with their own text and take their colour from the
+palette — the same rule that keeps room-code tiles, buttons, cards, page dots
+and player slots out of the asset folder. Only `crown` survives from that group,
+because it is a glyph *inside* the HOST chip rather than the chip.
+
+The QR is generated at runtime (`react-native-qrcode-svg`) and has never been an
+asset.
+
 ## Decisions
 
 **Avatars replace colors.** The join screen carries a 4×3 avatar picker; the
@@ -168,26 +195,45 @@ and turns the roster's `color` field into an avatar id.
 
 It also moves the choice earlier. Color was claimed *after* joining, against a
 live roster that could grey out taken swatches; the avatar is picked *before*,
-on a form with no room subscription until the code resolves. So: the picker
-greys taken avatars the moment four letters resolve to a room, and a collision
-inside a round trip returns as another join rejection — `join-rejection.ts`
-already has that shape, so it gains a case rather than a path.
+on a form with no room subscription until the code resolves. A collision
+therefore returns as a join rejection — `join-rejection.ts` already had that
+shape, so it gained a case rather than a path.
+
+**Greying taken avatars did not ship.** This section used to promise the picker
+would dim them the moment four letters resolved to a room. It does not: the
+rejection is the whole of the collision handling, and the board draws no dimmed
+tile. Worth doing — it turns a refused join into one the player never attempts —
+but it is a live roster subscription on a form that deliberately has none, so it
+is a decision rather than a detail, and it is recorded here as outstanding.
 
 This is also why the final board drops "You're in (player)". That screen existed
 to claim a color; with the choice made on the join form it has nothing left to
 do. The player lobby survives as `05-waiting-player.png`.
 
-**The lobby stays one screen.** The board draws "Your room" and "Pick a game" as
-separate screens, which is the old §-per-screen shape. `YoureInScreen` already
-switches between roster and picker on one surface and keeps host settings alive
-across a game; splitting it would reintroduce the problem that merge solved.
+**The lobby stays one component, and is now two states.** *(Settled; this entry
+used to read "stays one screen".)* The board draws "Your room" and "Pick a game"
+as separate screens and they now are — but as two states of `YoureInScreen`,
+not two routes. That distinction is the whole entry: the seat, the roster
+subscription, the running-game query and the Host's chosen settings all have to
+survive moving between them and a route would remount every one, which is the
+problem the original merge solved. What the merge got wrong was drawing both at
+once: the roster carries news nothing else in the product carries, and it was
+the section a Host scrolled past to reach the picker.
+
+A game ends onto **Your room**, not onto the picker the Host left. That was the
+open question Phase 2 deferred here; a game ending is when a party takes stock
+of who is still in the room.
 
 **Ten seats, not twelve.** `ROOM_PLAYER_CAP` is 10. The board's 12-seat grid and
 "of 12 joined" line are the old number.
 
 **"Leave" is not End Room.** The board's header affordance has no backend behind
-it. The built host-ends-room flow with its confirm sheet stands; the sheet needs
-a Soft Minimal treatment.
+it. The built host-ends-room flow with its confirm sheet stands, and it now sits
+in the header slot the board draws the pill in — **still labelled `End room`**,
+because that is what it does. A pill labelled Leave that in fact deletes every
+seat is the one substitution in this rebuild that could cost somebody their
+party. The label moves when `leaveRoom` lands. The sheet still needs a Soft
+Minimal treatment.
 
 **TV pairing lost its roster switch.** *(Settled; this entry used to defer it.)*
 Boardwalk showed the code large while the room was empty and switched to the
@@ -255,13 +301,13 @@ landing together are now both greeted.
    last player no choice. `yellow-robot`'s background is the canvas colour, so
    it draws no disc at all. See `packages/ui/assets/README.md`. Circle art is no
    longer needed: the circular avatar is the square under `borderRadius`.
-2. **Nothing in `packages/ui/assets/` is wired yet.** The tokens are swapped, but
-   the avatars, game art, TV background, logo and app icons are all still
-   staged. Wiring them needs Metro's cross-package asset resolution proved
-   first — worth a `prebuild` before trusting it.
-3. **Avatars have not replaced colors yet.** That is a schema change, not a
-   palette one. `player-colors.ts` is holding ten Boardwalk values as literals
-   until it lands, and says so.
+2. **`packages/ui/assets/` is wired**, except `game-art/`. Avatars, the TV
+   background, the logo and the app icons are all consumed and proved through
+   `expo export` / `expo prebuild`. Game art is the one set still staged, and
+   only in part — see 5.
+3. **Avatars have replaced colors.** Done: the schema stores an avatar id, the
+   join form is the picker, and `claimColor`, `player-colors.ts`,
+   `color-picker.ts` and `color-rejection.ts` are deleted.
 4. **Three screens need designing** — both game frames and the End Room sheet.
    It was six; the unknown-game pair and the About panel were deleted instead.
 5. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art

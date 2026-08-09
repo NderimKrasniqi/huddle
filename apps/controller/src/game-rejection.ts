@@ -42,13 +42,15 @@ function isGameLifecycleRejection(data: unknown): data is GameLifecycleRejection
 /**
  * A refusal in the words the Host reads.
  *
- * Two of these are reachable from a correct Controller. `notEnoughPlayers`, the
- * one the button does not prevent: the roster this phone drew its count from is
- * a subscription, so somebody can leave between the render and the tap. And
- * `alreadyInGame`, since the unknown-game screen was deleted — a room playing a
- * module this build lacks now draws the ordinary lobby, Start button and all,
- * so a Host on an older build can genuinely tap Start on a room that is already
- * playing. `runningGameScreen` has the whole of that story.
+ * `notEnoughPlayers` is the only one a correct Controller produces, and it is
+ * reachable: the roster this phone drew its count from is a subscription, so
+ * somebody can leave between the render and the tap.
+ *
+ * `alreadyInGame` was briefly a second — deleting the unknown-game screen sent
+ * a Host whose build lacks the running module to the ordinary lobby, Start
+ * button and all. The Host's room now draws Back to lobby instead of the picker
+ * in exactly that case (`stranded`), so there is again no correct Controller
+ * that offers to start a room already playing.
  *
  * The rest are the server declining to trust its callers. They get a line
  * anyway, because a silent tap is the one outcome a Host cannot make sense of.

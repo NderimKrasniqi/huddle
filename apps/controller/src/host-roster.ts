@@ -21,15 +21,20 @@ import type { RosterSeat } from './host';
  */
 
 /**
- * What a row's right-hand slot says (§5: "right slot = HOST pill / green online
- * dot / pink NEW! pill").
+ * What a row's right-hand slot says.
  *
- * `away` is not one of §5's three, and it is not an invention either: it is the
- * Status Dot's own muted variant, which the system already
- * decided is how a listed player's presence reads. The pink NEW! pill is the
- * one of the three that is *not* here — see the departure recorded against §5.
+ * Four states, and the approved board draws all four: the Host's word and
+ * crown, the JUST JOINED chip, the online dot, and away.
+ *
+ * `away` was the one Boardwalk's §5 did not have — it is the status dot's own
+ * muted variant, which the system had already decided was how a listed player's
+ * presence reads, and this roster exists to carry it. The chip was the reverse:
+ * §5 drew it (as a pink NEW! pill), Boardwalk's phone dropped it, and Soft
+ * Minimal's board brings it back in the system's one informational blue. How
+ * long a row wears it is not decided here — it is four seconds of the drawing
+ * screen's own life, worked out by `just-joined.ts` and passed in as `greeting`.
  */
-export type RosterRowSlot = 'host' | 'present' | 'away';
+export type RosterRowSlot = 'host' | 'just-joined' | 'present' | 'away';
 
 /**
  * What this player's row has to say.
@@ -43,10 +48,23 @@ export type RosterRowSlot = 'host' | 'present' | 'away';
  *
  * Away-ness is therefore never the thing the slot gives up: every row that can
  * meaningfully be away is a row with a dot on it.
+ *
+ * `greeting` is the approved board's JUST JOINED chip, and it outranks the two
+ * ordinary dots because it is news and they are steady state — four seconds of
+ * "this one just walked in", then the row settles into what it always was. It
+ * does not outrank the Host pill, which is not a state that settles. It is
+ * optional and false by default because it is a fact about *this screen's* last
+ * few seconds rather than anything the roster carries (`just-joined.ts`), so a
+ * caller without that history is right to have no opinion — an away row asked
+ * about in isolation is away, not silently new.
  */
-export function rosterRowSlot(seat: RosterSeat): RosterRowSlot {
+export function rosterRowSlot(seat: RosterSeat, greeting = false): RosterRowSlot {
   if (seat.host) {
     return 'host';
+  }
+
+  if (greeting) {
+    return 'just-joined';
   }
 
   return seat.away ? 'away' : 'present';
@@ -55,6 +73,7 @@ export function rosterRowSlot(seat: RosterSeat): RosterRowSlot {
 /** What each slot reads as aloud. §5's own word for the green dot is "online". */
 const SPOKEN_SLOT: Readonly<Record<RosterRowSlot, string>> = {
   host: 'host',
+  'just-joined': 'just joined',
   present: 'online',
   away: 'away',
 };
@@ -63,12 +82,14 @@ const SPOKEN_SLOT: Readonly<Record<RosterRowSlot, string>> = {
  * The row as a screen reader takes it: the nickname, and what its slot says.
  *
  * It exists because the slot's two dots differ in colour and in nothing else —
- * Boardwalk green against the muted border grey — and away-ness is the one
- * thing this roster was built to carry. A row that says it in a hue alone says
- * it to some of the room.
+ * green against the muted grey — and away-ness is the one thing this roster was
+ * built to carry. A row that says it in a hue alone says it to some of the room.
+ * The chip above them has a word in it and so needs no translating, but it is
+ * spoken through the same slot anyway: a reader should hear one sentence per
+ * row, not a word the sighted reader gets and a dot they do not.
  */
-export function rosterRowSpokenAs(seat: RosterSeat): string {
-  return `${seat.nickname}, ${SPOKEN_SLOT[rosterRowSlot(seat)]}`;
+export function rosterRowSpokenAs(seat: RosterSeat, greeting = false): string {
+  return `${seat.nickname}, ${SPOKEN_SLOT[rosterRowSlot(seat, greeting)]}`;
 }
 
 /**

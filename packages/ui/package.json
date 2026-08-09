@@ -19,15 +19,18 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@huddle/game-core": "workspace:*"
   },
+  "//peerDependencies": "react-native-svg joins react-native as a peer for the same reason: `./native` draws the icon set with it, and the app that mounts the component is the one that must own the native module. The TV already had it for the room's QR.",
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-svg": "*"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/react": "~19.2.17",
     "react": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-svg": "15.15.4",
     "typescript": "~5.9.3"
   }
 }

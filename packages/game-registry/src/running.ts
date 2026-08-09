@@ -40,15 +40,15 @@ export function gameModuleById(gameId: string): GameModule | undefined {
  * phone in a room playing a game it lacks now waits with everybody else instead
  * of being told to update, and rejoins when the room returns to its lobby.
  *
- * **Which it can only do if the Host is not the phone that is behind.** Only
- * `endGame` clears the running game, only the Host may call it, and the one
- * control that does is on the in-game screen — which needs the module. So a
- * Host on an older build (reachable: `handOverRoom` can hand a room over
- * mid-game) sits on a lobby whose Start button refuses with "This room is
- * already playing", and End Room, which takes every seat with it, is the only
- * way out. The deleted screen carried a Back to lobby for exactly this and said
- * so. Restoring the escape belongs to Phase 4, which owns the phone's lobby
- * navigation; it is written down here rather than left for someone to rediscover.
+ * **The Host is the exception, and the lobby handles it.** Only `endGame`
+ * clears the running game and only the Host may call it, so a Host whose build
+ * lacks the module — reachable, since `handOverRoom` can hand a room over
+ * mid-game — would be sitting in a room nothing in it could move. The deleted
+ * screen carried a Back to lobby for exactly that. The Host's room now draws
+ * the same control whenever the room reports a game and this answer is still
+ * the lobby (`stranded`, in `apps/controller/app/index.tsx`), which is the one
+ * place that can tell the difference between "between games" and "playing
+ * something I cannot draw" — this function deliberately cannot.
  */
 export function runningGameScreen(
   running: RunningGame | null | undefined,
