@@ -147,7 +147,7 @@ const watchAppForeground: ForegroundWatch = (onChange) => {
 };
 
 /**
- * The Controller's first screen (docs/design/legacy/boardwalk-handoff.md §2 and §4): the
+ * The Controller's first screen (docs/design/soft-minimal-handoff.md §2 and §4): the
  * Room Code off the television and a nickname, then the room's answer.
  *
  * The two are one screen rather than two routes: joining is not somewhere a

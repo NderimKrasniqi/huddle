@@ -1,6 +1,6 @@
 /**
  * Soft Minimal lays TV screens out at a fixed design size and scales the whole
- * screen to whatever the television reports (docs/design/legacy/boardwalk-handoff.md:
+ * screen to whatever the television reports (docs/design/soft-minimal-handoff.md:
  * "TV screens are designed at 1280×720 (scale ×1.5 for 1080p)").
  *
  * Every TV measurement in the handoff — a 148×176 code tile, an 88px Bungee

@@ -1,7 +1,7 @@
 import type { RosterSeat } from './host';
 
 /**
- * The Host's roster (docs/design/legacy/boardwalk-handoff.md §5): one row per player,
+ * The Host's roster (docs/design/soft-minimal-handoff.md §5): one row per player,
  * what each row's right-hand slot says, and the count line under them.
  *
  * It is the only surface in Huddle that says a *non-Host* player is away

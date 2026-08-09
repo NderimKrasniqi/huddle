@@ -1,6 +1,6 @@
 /**
  * Soft Minimal's motion: the two animations the handoff pins a duration to
- * (docs/design/legacy/boardwalk-handoff.md, "Interactions & Behavior") and the arithmetic
+ * (docs/design/soft-minimal-handoff.md, "Interactions & Behavior") and the arithmetic
  * that turns one of them into something React Native's spring understands.
  *
  * Durations live here for the same reason colors do — a number written at the
