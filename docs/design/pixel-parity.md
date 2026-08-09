@@ -20,9 +20,15 @@ parity work:
   rather than a target: with ten seats, eight choices means two players collide.
 
 Both remaining board-vs-app disagreements about capacity are therefore closed.
-What is still open on the board's side is Trivia's **duration** (board 15 min vs
-app ~5 min) and its **category** (board "Quiz" vs app "Knowledge") — those are not
-capacity and still need a call.
+
+**Trivia's duration and category are not parity items yet.** Board says 15 min /
+"Quiz", the app says ~5 min / "Knowledge", but the games themselves have not been
+worked on, so the app's values are placeholders rather than a position. Revisit
+when the game is built; do not "fix" the app to the board in the meantime.
+
+**Game key art stays deferred** by the same reasoning plus an explicit decision
+(2026-08-09): it will be picked up later. The gap is documented under *TV — Game
+carousel* so it is not rediscovered.
 
 ## Method
 
