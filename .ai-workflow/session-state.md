@@ -43,9 +43,19 @@ styles — seven of them left over from the colour picker Phase 1 deleted.
 
 ## Checks
 
-`pnpm -r typecheck` clean; `npx eslint . --max-warnings=0` clean; `npx vitest
-run` green — **739 passed, 62 files**. `npx expo export --platform ios` succeeds
-in both apps.
+The five steps `.github/workflows` actually runs, by name: `pnpm typecheck`,
+`pnpm lint`, `pnpm test:unit` (**587 passed, 59 files**), `pnpm test:integration`
+(**166 passed, 5 files**), `pnpm validate:packs`. All clean. `expo export
+--platform ios` succeeds in both apps.
+
+**Run those, not hand-assembled equivalents.** `pnpm typecheck` is `tsc --noEmit
+&& pnpm -r typecheck`, and the recursive half alone — which is what every
+session ran from the palette swap onward — covers only the workspace packages.
+The bare root `tsc` is the sole thing that typechecks files belonging to no
+package: `eslint-rules/`, `test/`. CI was red on fourteen consecutive commits
+over one error nobody saw locally (`colors.punch`, deleted by the palette swap,
+still referenced by `boardwalk-tokens-only.test.ts`). Fixed in `5c85d72`; that
+was the branch's first green run.
 
 ## Review
 
@@ -97,8 +107,32 @@ Two things recorded in the handoff as outstanding rather than done: greying
 taken avatars on the join picker (a live roster subscription on a form that
 deliberately has none), and the End Room sheet's Soft Minimal treatment.
 
-From the MVP roadmap: 5.9 merged as PR #24; nothing outstanding there.
+From the MVP roadmap: every task is checked, 5.9 included (PR #24). Nothing
+substantive remains in `docs/implementation-plan.md`.
+
+## `origin/main` is merged in
+
+The branch had drifted six commits behind while this work ran, and PR #25 was
+`CONFLICTING`. `origin/main` is now merged, six conflicts resolved:
+
+- **`apps/tv/src/tv-stage.tsx` — both sides kept.** Main's PR #23 insets the
+  stage into the title-safe 90% (real televisions crop ~5% of every edge without
+  saying so); this branch made the background artwork the canvas and deleted the
+  About Panel. The resolution takes all three. They compose rather than collide:
+  the inset *scales* the stage instead of cropping it, so the artwork is inset
+  with the content and its composition holds.
+- **Three game modules — main's structure, this branch's palette.** 5.9 moved
+  each game's metadata into its own `metadata.ts` so a client bundle stops
+  carrying the rules; the palette swap had changed the `keyArt` colour in the
+  old location. Taking main's side alone would have restored `punch`,
+  `tangerine` and `yellow` — three tokens Soft Minimal deleted — so each moved
+  value was re-applied in its new home. Trivia is `ink`, Hot Takes is `accent`:
+  the only two card fills one accent leaves, and a third game is where that
+  stops working.
+- **`trivia.test.ts`** — main's side; the helper's callers moved to
+  `logic.test.ts` in the same split, so keeping it would have been dead code.
+- **This file** — this branch's side; main's copy describes 5.9, which is done.
 
 ## Next action
 
-Commit Phase 4 and push to PR #25. Then Phase 5.
+Phase 5 — Leave.

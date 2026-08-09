@@ -1,6 +1,7 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/game-core';
 
-import { answersIn, playersCounted, QUESTION_SECONDS, type TriviaState } from './logic';
+import type { TriviaState } from './logic';
+import { answersIn, playersCounted, QUESTION_SECONDS } from './state';
 
 /**
  * The television as data: what the room is looking at, given the state the room

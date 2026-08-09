@@ -1,6 +1,15 @@
 import { type GameSettings, type GameSettingsSchema, settingsFrom } from '@huddle/game-core';
 
-import { EVERY_CATEGORY, PACK_CATEGORIES } from './questions';
+// The category names and the "no filter" sentinel, from the pack's client-safe
+// entry — pointedly not `./questions`, which imports `CURATED_PACK` and would
+// pull every answer into the Controller bundle (docs/implementation-plan.md
+// 5.9). The Host filters by a category *name*, and a name is not an answer, so
+// the names may ship where the questions may not. `EVERY_CATEGORY` keeps its
+// trivia-side name for the rest of this file; it is the pack's own reserved word.
+import {
+  CURATED_CATEGORIES as PACK_CATEGORIES,
+  RESERVED_CATEGORY as EVERY_CATEGORY,
+} from '@huddle/packs/categories';
 
 /**
  * Trivia's host-tunable options: what the Host is offered, and what trivia makes

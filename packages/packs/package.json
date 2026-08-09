@@ -5,8 +5,10 @@
   "description": "Question Pack schema and the curated pack that ships with Huddle.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "//exports": "`./categories` is the client-safe half — the category *names* and the reserved 'all' sentinel, with no path to `CURATED_PACK`'s question text. A Controller filters by category without shipping the answers (5.9); the pack itself is only reachable through `.`, which the Convex server and trivia's rules import.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./categories": "./src/curated-categories.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

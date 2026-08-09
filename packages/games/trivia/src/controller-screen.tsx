@@ -14,7 +14,8 @@ import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
-import { revealBeat, type TriviaEvent, type TriviaState } from './logic';
+import type { TriviaEvent, TriviaState } from './logic';
+import { revealBeat } from './state';
 
 /**
  * Trivia on the phone: four buttons, and then a phone that gets out of the way.

@@ -129,4 +129,48 @@ module.exports = defineConfig([
       ],
     },
   },
+
+  // 5.9: the Question Pack stays server-side. `@huddle/packs` carries
+  // `CURATED_PACK` — every question's text and its correct answer — and
+  // `questionsFor` is deterministic, so a client that imports it can reproduce
+  // the exact deal and know every answer before the TV asks. Only the rules may
+  // reach it: trivia's `questions.ts`, which the Convex server pulls through
+  // `@huddle/game-trivia/logic`. Everything that ends up in a client bundle —
+  // the two apps, and every game file that is not that one server-only
+  // `questions.ts` — takes the category *names* it needs from
+  // `@huddle/packs/categories` instead, which imports no questions. This gate
+  // catches a direct import; the type seam (a `GameModule` has no rules, so no
+  // spread of the logic can ride the pack in) is what catches the transitive one.
+  {
+    files: [
+      'apps/**/*.ts',
+      'apps/**/*.tsx',
+      'packages/games/*/src/**/*.ts',
+      'packages/games/*/src/**/*.tsx',
+    ],
+    // `questions.ts` is the one client-path file that legitimately holds the
+    // pack — it *is* the deal, and only the server pulls it. Tests are exempt
+    // too: they import the pack to assert against it and are never bundled into
+    // an app, so the thing this gate protects (the client bundle) is not
+    // something a `.test.ts` can be in.
+    ignores: [
+      'packages/games/*/src/questions.ts',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@huddle/packs',
+              message:
+                'The Question Pack must not ship in a client bundle (5.9): @huddle/packs carries every answer. Import category names from @huddle/packs/categories; the pack itself belongs to trivia’s questions.ts, which only the server pulls.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

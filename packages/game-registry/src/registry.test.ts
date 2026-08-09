@@ -94,15 +94,21 @@ describe('the Registry the server reads', () => {
     );
   });
 
-  it('is the same rules the clients hold, not a copy of them', () => {
-    // Identity, not equality: a module is its logic with screens laid on top,
-    // so a second object here would be a second set of rules to keep in step.
+  it('shares one metadata and schema with the rules, and carries none of the rules', () => {
+    // Two views of one game, held to each other by the objects they point at
+    // rather than by copies kept in step: same `metadata`, same `settingsSchema`,
+    // by identity. What the module must *not* share is the rules —
+    // `createInitialState` deals from the Question Pack, so a module carrying it
+    // would carry the pack into the client bundle (docs/implementation-plan.md
+    // 5.9). That the module has no rules on it is the seam, asserted here rather
+    // than trusted: a spread of the logic would quietly put them back.
     for (const [index, logic] of GAME_LOGIC_REGISTRY.entries()) {
       const module = GAME_REGISTRY[index];
 
-      expect(module?.reduce).toBe(logic.reduce);
-      expect(module?.createInitialState).toBe(logic.createInitialState);
       expect(module?.metadata).toBe(logic.metadata);
+      expect(module?.settingsSchema).toBe(logic.settingsSchema);
+      expect(module).not.toHaveProperty('createInitialState');
+      expect(module).not.toHaveProperty('reduce');
     }
   });
 

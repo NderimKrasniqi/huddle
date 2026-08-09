@@ -6,6 +6,7 @@ import type {
   GameModule,
   GamePlayer,
   GameRegistry,
+  GameSettingsSchema,
   TvGameScreenProps,
 } from './game-module';
 
@@ -20,7 +21,10 @@ import type {
  * Coin Toss is deliberately nothing like trivia — different state, different
  * event, different settings — because the promise being tested is that the
  * interface fits a game nobody has thought of yet (docs/project-scope.md: the
- * hub must take a game #2 with no changes of its own).
+ * hub must take a game #2 with no changes of its own). It is expressed the way a
+ * real game is: shared `metadata` and schema, a `GameLogic` that holds the
+ * rules, and a `GameModule` that adds the screens and carries none of the rules
+ * — the client/server seam the interface exists to keep (5.9).
  */
 
 type CoinTossState = {
@@ -37,31 +41,45 @@ type CoinTossSettings = {
   readonly tosses: '1' | '3';
 };
 
-const coinToss: GameModule<CoinTossState, CoinTossEvent, CoinTossSettings> = {
-  metadata: {
-    id: 'coin-toss',
-    title: 'Coin Toss',
-    keyArt: { color: 'accent' },
-    playerRange: { min: 2, max: 10 },
-    estimatedMinutes: 1,
-    category: 'Chance',
+const coinTossMetadata: GameMetadata = {
+  id: 'coin-toss',
+  title: 'Coin Toss',
+  // Soft Minimal deleted Boardwalk's four accents; this fixture wore `yellow`.
+  // `accent` is the one the system now has, and what a fixture needs of a key
+  // art colour is only that it be a real `KeyArtColorName`.
+  keyArt: { color: 'accent' },
+  playerRange: { min: 2, max: 10 },
+  estimatedMinutes: 1,
+  category: 'Chance',
+};
+
+const coinTossSettingsSchema: GameSettingsSchema = [
+  {
+    key: 'tosses',
+    label: 'Tosses',
+    options: [
+      { value: '1', label: 'One' },
+      { value: '3', label: 'Three' },
+    ],
+    defaultValue: '1',
   },
-  settingsSchema: [
-    {
-      key: 'tosses',
-      label: 'Tosses',
-      options: [
-        { value: '1', label: 'One' },
-        { value: '3', label: 'Three' },
-      ],
-      defaultValue: '1',
-    },
-  ],
+];
+
+/** The rules the server holds: what a game begins as, and what an event does to it. */
+const coinTossLogic: GameLogic<CoinTossState, CoinTossEvent, CoinTossSettings> = {
+  metadata: coinTossMetadata,
+  settingsSchema: coinTossSettingsSchema,
   createInitialState: ({ settings }) => ({ tossesLeft: Number(settings.tosses), calls: {} }),
   reduce: (state, event) => ({
     ...state,
     calls: { ...state.calls, [event.playerId]: event.call },
   }),
+};
+
+/** The view a client holds: the same card and schema, the screens, and no rules. */
+const coinToss: GameModule<CoinTossState, CoinTossEvent> = {
+  metadata: coinTossMetadata,
+  settingsSchema: coinTossSettingsSchema,
   screens: {
     tv: () => null,
     controller: () => null,
@@ -103,15 +121,26 @@ function player(playerId: string, nickname: string): GamePlayer {
 
 describe('the Game Module interface', () => {
   it('takes a game the hub knows nothing about', () => {
-    const state = coinToss.createInitialState({
+    const state = coinTossLogic.createInitialState({
       players: [player('p1', 'Ada'), player('p2', 'Grace')],
       settings: { tosses: '3' },
     });
 
-    expect(coinToss.reduce(state, { playerId: 'p1', call: 'heads' })).toEqual({
+    expect(coinTossLogic.reduce(state, { playerId: 'p1', call: 'heads' })).toEqual({
       tossesLeft: 3,
       calls: { p1: 'heads' },
     });
+  });
+
+  it('keeps the rules off the client module', () => {
+    // The seam 5.9 turns on: a `GameModule` is metadata, schema and screens, and
+    // no `createInitialState` — so no game a client mounts can deal from a pack.
+    // A `@ts-expect-error` here is the real assertion; the runtime line only
+    // gives the test something to load.
+    // @ts-expect-error - the rules live on GameLogic, never on the module a client holds
+    const dealFromClient = coinToss.createInitialState;
+
+    expect(dealFromClient).toBeUndefined();
   });
 
   it('holds games of unrelated shapes in one registry', () => {
@@ -164,8 +193,9 @@ describe('the Game Module interface', () => {
 
   it('lets a game declare no clock at all', () => {
     // Optional, so a game where nothing expires says nothing. The hub asks
-    // every game and takes silence for an answer.
-    expect(coinToss.deadline).toBeUndefined();
+    // every game and takes silence for an answer. Asked of the logic, since a
+    // deadline is a rule and the rules are where it lives.
+    expect(coinTossLogic.deadline).toBeUndefined();
   });
 
   it('rejects an event whose player is not the room’s idea of one', () => {
@@ -176,8 +206,8 @@ describe('the Game Module interface', () => {
   });
 
   it('rejects a reducer that returns something other than the game state', () => {
-    const drifting: GameModule<CoinTossState, CoinTossEvent, CoinTossSettings> = {
-      ...coinToss,
+    const drifting: GameLogic<CoinTossState, CoinTossEvent, CoinTossSettings> = {
+      ...coinTossLogic,
       // @ts-expect-error - a reducer returns the next state, not a fresh shape
       reduce: () => ({ flips: 1 }),
     };
@@ -186,7 +216,7 @@ describe('the Game Module interface', () => {
   });
 
   it('rejects a screen that draws a state its own game never produces', () => {
-    const mismatched: GameModule<CoinTossState, CoinTossEvent, CoinTossSettings> = {
+    const mismatched: GameModule<CoinTossState, CoinTossEvent> = {
       ...coinToss,
       screens: {
         // @ts-expect-error - the TV screen is handed this game's state, no other
