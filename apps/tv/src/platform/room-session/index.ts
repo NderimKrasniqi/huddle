@@ -2,4 +2,5 @@
 export * from '../../room-opening';
 export * from '../../room';
 export * from '../../tv-session';
+export * from '../../tv-session-native';
 export * from '../../tv-presence';

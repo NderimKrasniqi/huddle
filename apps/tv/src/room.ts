@@ -2,6 +2,7 @@ import { api } from '@huddle/convex';
 
 import { convexClient } from './convex-client';
 import { ensureTvSessionToken } from './tv-session';
+import { nativeTvSessionUuid, secureTvSessionStore } from './tv-session-native';
 import { keepTvPresent } from './tv-presence';
 import { type OpenRoom, roomOpener } from './room-opening';
 
@@ -25,7 +26,7 @@ export const { openRoom, closeExpiredRoom } = roomOpener(
     if (convexClient === undefined) {
       throw new Error('Huddle TV has no Convex deployment to open a room on');
     }
-    const token = await ensureTvSessionToken();
+    const token = await ensureTvSessionToken(secureTvSessionStore, nativeTvSessionUuid);
     // Set only after the credential has been durably persisted. A storage
     // failure therefore leaves no in-memory identity that could open a room.
     activeTvSessionToken = token;
