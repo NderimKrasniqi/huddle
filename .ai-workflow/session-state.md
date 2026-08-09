@@ -103,6 +103,104 @@ longest-connected seat still beating as each earlier one falls silent.
 Screenshots from the run are in this session's scratchpad and are **not** in the
 repo. Re-take them rather than hunting for them.
 
+## Visual defects found by looking at the running app
+
+The user reviewed the running TV screen and named six. All six are real; five
+have root causes established below, and one (the AWAY colour) is a reasoned
+decision rather than a bug. **These were found by looking, after every test passed — which is the point.**
+
+### 1. The background does not cover the television
+
+Confirmed in pixels: on the 1920×1080 render the flat `colors.screen` fill runs
+x 0–95 and the artwork starts at x 96 — exactly 5% on every edge.
+
+**Cause:** `apps/tv/src/tv-stage.tsx` puts the screen's children *inside* the
+`ImageBackground` and applies `tvSafeStageScale` to that whole node, so the
+title-safe inset shrinks the canvas along with the content. Its own comment
+argues this is correct ("the artwork is inset with the content and its edges
+stay where the composition puts them").
+
+**That reasoning is worth reversing.** Overscan crops the outer ~5% of a
+television, and a background is precisely the thing you want sacrificed to it —
+inset it and you guarantee a visible border on every set instead of avoiding one.
+The fix is to render the artwork at full window size and scale only the content.
+Note the letterbox comment in the same file also depends on this, so both need
+rewriting together.
+
+### 2. The avatars have a ring around them — the cause is in the assets
+
+Each avatar PNG is a square containing a **pale outer field with a darker disc
+painted inside it**. `borderRadius: size / 2` rounds the square, which keeps the
+pale field as a ring around the artist's disc — two concentric circles where the
+board draws one.
+
+The inset is different for every character, so the ring's thickness is too:
+
+| Avatar | Outer field | Disc begins |
+|---|---|---|
+| `pink-bunny` | `#FDFDFE` | 1.2% |
+| `green-alien` | `#D9F2C8` | 9.7% |
+| `teal-bear` | `#D4EBE4` | 10.2% |
+| `mint-cat` | `#DCF1EA` | 11.1% |
+| `fox` | `#FDE1D1` | 11.7% |
+| `yellow-robot` | `#FAF5F1` | 12.8% |
+
+**This falsifies a claim in `packages/ui/assets/README.md`**, which says the
+square's background "is already the character's own colour family, so the
+circular avatar is just the square under `borderRadius`". It is not a flat
+field. Fix in `tools/prepare-avatars.py` — crop each square to its baked disc so
+the disc *is* the frame — rather than in the component, so a later batch is
+handled too. That also explains the README's separate `yellow-robot` complaint:
+its outer field is `#FAF5F1`, which is essentially the canvas, so what reads as
+"no disc" is really the ring having swallowed it.
+
+### 3. The code tiles are pure white; the board's are warm
+
+App tile interior is `#FFFFFF`, the board's is `#FDFAF9`. The tiles take
+`colors.surface`, which is defined as pure `#FFFFFF` in
+`packages/ui/src/colors.ts:24`. Against a `#FFF7F2` warm canvas a pure-white card
+reads cold and cut out. The board's cards are warm off-white — close to the
+canvas, not a different temperature from it.
+
+Check before fixing whether `surface` is used anywhere the phone needs true
+white; if so this wants a new warm-card token rather than a redefinition.
+
+### 4. The caption's colour is blue, and `Huddle` cannot be bold
+
+Two separate faults in one line.
+
+**Colour:** the caption renders `colors.mutedText`, `#64748B` — a blue slate.
+The board's caption is a neutral grey, sampled at `#8A8E95`. On a warm canvas the
+slate reads distinctly cool.
+
+**Weight:** the board sets **Huddle** in bold inside the sentence. The app cannot
+— `RoomCaption` (`apps/tv/app/index.tsx:641`) renders `caption.text` as a single
+flat string, so no word inside it can be styled.
+
+The fix has a precedent in this codebase: `RoomCountLine` in
+`apps/tv/src/roster.ts` deliberately returns its parts separately rather than a
+finished sentence, with the comment that a screen forced to find the number
+inside a finished string "would be parsing its own copy". `roomOpeningCaption()`
+should return parts the same way.
+
+### 5. The wordmark is too small
+
+`roomLayout.wordmark` is 39; the board draws 47. This is one row of the geometry
+table above, but the user identified it independently by eye — which is a point
+in favour of the board's sizes being right where they differ.
+
+### 6. The pills — mixed, and one is not a defect
+
+- **`AWAY` grey vs the board's blue is deliberate and reasoned.** See the comment
+  at `apps/tv/app/index.tsx:365`: blue is the system's one informational colour
+  and `JUST JOINED!` already owns it; the two share a slot, so both in blue would
+  make the loudest thing on the grid ambiguous. **Do not "fix" this without
+  answering that argument** — take it to the user as a design question.
+- **`HOST` is bare orange text; the board draws a gold crown above the disc.**
+  And `packages/ui/src/icons.ts:31` says the crown is kept because it is "a glyph
+  *inside* the HOST chip" — a third account. At least one of the three is wrong.
+- **The count line has no people glyph**, which the board leads with.
+
 ## How to run the TV app (the traps, in order)
 
 ```bash
@@ -150,10 +248,20 @@ red on eight consecutive commits once.
 
 The user's call, in this order of confidence:
 
-1. **Fix the three non-geometry deltas** — crown, count-line glyph, AWAY colour.
-   These are unambiguous: the board, the code and `icons.ts`'s own comment
-   disagree with each other, so at least one is wrong regardless of which board
-   wins.
+1. **The two with established root causes**, in this order — both are
+   independent of the geometry decision:
+   - **The avatar ring**, fixed in `tools/prepare-avatars.py` by cropping each
+     square to its baked disc, plus the correction to
+     `packages/ui/assets/README.md`. Highest confidence of anything here: the
+     cause is measured per-file, not inferred.
+   - **The background not reaching the screen edges**, fixed in `tv-stage.tsx`
+     by scaling content rather than canvas. This one reverses an argument the
+     file currently makes, so rewrite the comment rather than leaving it
+     contradicting the code.
+2. **The crown and the count-line glyph** — the board, the code and
+   `icons.ts:31` give three different accounts of the crown, so at least one is
+   wrong whichever board wins. `AWAY`'s colour is **not** in this group; it is a
+   reasoned decision and needs the user, not a fix.
 2. **Decide the geometry.** The suggested test is to build the Room screen at
    the board's numbers on a branch and compare the two on the user's actual
    television — a 75" Philips Android TV, which they have. A 70pt disc against
