@@ -7,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
+import {
+  roomFixture,
+  runningState as typedRunningState,
+  type TestRunningState,
+} from './test/fixtures';
 
 /**
  * The hub, run through the *second* game.
@@ -35,18 +40,8 @@ import schema from './schema';
 // default module lookup, so the function modules are handed over explicitly.
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 
-function runningState(response: unknown): any {
-  if (
-    typeof response === 'object' &&
-    response !== null &&
-    'kind' in response &&
-    response.kind === 'running' &&
-    'state' in response
-  ) {
-    return response.state;
-  }
-
-  return undefined;
+function runningState(response: unknown): TestRunningState {
+  return typedRunningState<TestRunningState>(response);
 }
 
 type Backend = ReturnType<typeof convexTest>;
@@ -65,7 +60,7 @@ async function roomVotingOn(
   settings: GameSettings | undefined,
   ...nicknames: readonly string[]
 ): Promise<{ roomId: Id<'rooms'>; tokens: Record<string, string> }> {
-  const room = await t.mutation(api.rooms.createRoom, {});
+  const room = await roomFixture(t);
   const tokens: Record<string, string> = {};
 
   for (const [at, nickname] of nicknames.entries()) {
@@ -172,7 +167,7 @@ describe('the Host starting Voting', () => {
 
   it('refuses a party below Voting’s declared minimum', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     // One phone in the room, and the hub gates the start on the range Voting's
     // own metadata declares (2–10) — read from the module, not written in the
     // hub, which is the whole of the hub naming no game.
@@ -188,7 +183,7 @@ describe('the Host starting Voting', () => {
 
   it('refuses a phone that is not the Host', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
@@ -217,7 +212,7 @@ describe('the Host starting Voting', () => {
 
   it('refuses a value Voting’s schema does not offer', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
@@ -238,7 +233,7 @@ describe('the Host starting Voting', () => {
 
   it('refuses a setting Voting does not declare', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
@@ -381,7 +376,7 @@ describe('a vote in the running game', () => {
 
   it('leaves a mid-game joiner in the room but out of the game', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
     await t.mutation(api.games.startGame, { sessionToken: ada.sessionToken, gameId: 'voting' });

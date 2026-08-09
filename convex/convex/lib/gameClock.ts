@@ -1,6 +1,14 @@
-import type { GameDeadline } from '@huddle/game-core';
+import type { GameDeadline, GameLogic } from '@huddle/game-core';
 
-import type { Id } from '../_generated/dataModel';
+import { internal } from '../_generated/api';
+import type { Doc, Id } from '../_generated/dataModel';
+import type { MutationCtx } from '../_generated/server';
+import {
+  decodeStoredRuntime,
+  type DeadlineResult,
+  type StoredGame,
+  validatedDeadline,
+} from './gameRuntime';
 
 /** A scheduler clock kept alongside the room's game document. */
 export type RoomClock = {
@@ -13,13 +21,89 @@ export function remainingMs(deadlineAt: number | undefined, now: number): number
   return deadlineAt === undefined ? undefined : Math.max(0, deadlineAt - now);
 }
 
-/** Validate the time fields before they reach a Convex scheduler. */
-export function isValidDeadline(deadline: GameDeadline | undefined): deadline is GameDeadline {
-  return (
-    deadline !== undefined &&
-    typeof deadline.beat === 'string' &&
-    deadline.beat.length > 0 &&
-    Number.isFinite(deadline.afterMs) &&
-    deadline.afterMs >= 0
+/** Read a live clock without clamping; reducers decide what overdue means. */
+export function clockRemainingMs(clock: RoomClock, now: number): number | undefined {
+  return clock.deadlineAt === undefined ? undefined : clock.deadlineAt - now;
+}
+
+/** Cancel a scheduled deadline when its room lifecycle stops owning it. */
+export async function cancelDeadline(
+  ctx: MutationCtx,
+  deadline: Id<'_scheduled_functions'> | undefined,
+): Promise<void> {
+  if (deadline !== undefined) await ctx.scheduler.cancel(deadline);
+}
+
+/** Stop the current game clock, if the room has one. */
+export async function stopGameClock(ctx: MutationCtx, room: Doc<'rooms'>): Promise<void> {
+  await cancelDeadline(ctx, room.game?.deadline);
+}
+
+async function scheduleDeadline(
+  ctx: MutationCtx,
+  roomId: Id<'rooms'>,
+  gameId: string,
+  deadline: GameDeadline,
+  afterMs: number,
+  now: number,
+): Promise<RoomClock> {
+  const scheduled = await ctx.scheduler.runAfter(afterMs, internal.games.reachDeadline, {
+    roomId,
+    gameId,
+    event: deadline.event,
+  });
+  return { deadline: scheduled, deadlineAt: now + afterMs };
+}
+
+/** Stop the prior beat and arm the validated deadline for the next one. */
+export async function windGameClock(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  running: StoredGame,
+  game: GameLogic,
+  state: unknown,
+  candidate?: GameDeadline,
+): Promise<RoomClock | undefined> {
+  const checked =
+    candidate === undefined
+      ? validatedDeadline(room._id, running, game, state)
+      : ({ ok: true, deadline: candidate } satisfies DeadlineResult);
+  if (!checked.ok) return undefined;
+
+  await stopGameClock(ctx, room);
+  if (checked.deadline === undefined) return {};
+
+  return await scheduleDeadline(
+    ctx,
+    room._id,
+    game.metadata.id,
+    checked.deadline,
+    checked.deadline.afterMs,
+    Date.now(),
+  );
+}
+
+/** Re-arm a paused room from the exact remainder captured at TV disconnect. */
+export async function resumeGameClock(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  remaining: number,
+  now: number,
+): Promise<RoomClock | undefined> {
+  const running = room.game;
+  if (running === undefined) return {};
+
+  const runtime = decodeStoredRuntime(room._id, running);
+  if (runtime === undefined) return undefined;
+  const checked = validatedDeadline(room._id, running, runtime.game, runtime.state);
+  if (!checked.ok || checked.deadline === undefined) return undefined;
+
+  return await scheduleDeadline(
+    ctx,
+    room._id,
+    running.gameId,
+    checked.deadline,
+    remaining,
+    now,
   );
 }

@@ -144,7 +144,7 @@ export default defineSchema({
     // stored deadline here would be a second copy of that, refreshed on every
     // beat — ten phones writing the one row a whole party shares.
   })
-    // `createRoom` reads this index before it mints a code, and joining a room
+    // `openRoom` reads this index before it mints a code, and joining a room
     // is a lookup by the code someone typed on their phone.
     .index('by_code', ['code']),
 

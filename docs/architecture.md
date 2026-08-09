@@ -65,18 +65,18 @@ shared package are explicitly out of scope.
 
 ## Target Convex boundaries
 
-Public modules keep their generated paths and function names stable except for
-the intentional `rooms.createRoom` → `rooms.openRoom` replacement and the new
-TV APIs. Private helpers are plain functions and never register Convex
+Public modules keep their generated paths and function names stable. The
+obsolete `rooms.createRoom` mutation is retired; `rooms.openRoom` is the sole
+room-opening API. Private helpers are plain functions and never register Convex
 functions:
 
 ```text
 convex/convex/lib/
-  authorization.ts  # member/host/session-token gates
-  room-lifecycle.ts # open, pause, resume, expiry, deletion
-  presence.ts       # player and TV presence transitions
-  game-clock.ts     # deadline scheduling and cancellation
-  game-runtime.ts   # decode, version, projection, unavailable responses
+  authorization.ts # member/host/session-token gates
+  roomLifecycle.ts # room-owned-row and deadline deletion
+  presence.ts      # roster and player presence reads
+  gameClock.ts     # deadline scheduling, pause, resume, cancellation
+  gameRuntime.ts   # decode, version, projection, unavailable reporting
 ```
 
 `tvSessions` carries high-churn TV heartbeat data (`roomId`, `sessionToken`,
@@ -139,3 +139,8 @@ mutation. The purge must never be run against production without separate
 approval. Every implementation task receives a code review; runtime,
 credential, authorization, migration, rate-limit, and TV-presence tasks also
 receive a security review.
+
+Retiring `rooms.createRoom` does not itself authorize a Convex deployment. A
+read-only orphan-room audit must precede deployment; if it finds cleanup work,
+that cleanup is a separately approved migration and never part of this
+behavior-preserving refactor.

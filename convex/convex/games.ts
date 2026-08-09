@@ -4,16 +4,12 @@ import {
   settingsFrom,
   settingsRefusal,
   type GameEvent,
-  type GameDeadline,
   type GameLifecycleRejection,
-  type GameLogic,
-  type GamePlayer,
   type GamePlayerId,
 } from '@huddle/game-core';
 import { browsingIndex, gameLogicById } from '@huddle/game-registry/logic';
 import { ConvexError, v } from 'convex/values';
 
-import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import {
   internalMutation,
@@ -22,9 +18,19 @@ import {
   query,
   type QueryCtx,
 } from './_generated/server';
-import { playerForSession, requireRoomHost } from './lib/authorization';
-import { projectRuntime } from './lib/gameRuntime';
-import { awayPlayerIds, playersInRoom } from './lib/presence';
+import {
+  playerForSession,
+  requirePlayerSession,
+  requireRoomHost,
+} from './lib/authorization';
+import { clockRemainingMs, stopGameClock, windGameClock } from './lib/gameClock';
+import {
+  decodeStoredRuntime,
+  projectRuntime,
+  runtimeFailure,
+  validatedDeadline,
+} from './lib/gameRuntime';
+import { awayPlayerIds, gamePlayersInRoom } from './lib/presence';
 
 /**
  * The game lifecycle: the Host starting a game, and the Host ending it.
@@ -39,245 +45,6 @@ import { awayPlayerIds, playersInRoom } from './lib/presence';
  * the module answers what its state begins as, so trivia being the only entry
  * today is a fact about `@huddle/game-registry` and not about the hub.
  */
-
-/**
- * The room this phone runs, or the refusal that says why it does not.
- *
- * Both mutations below are Host-only, and both have to answer two questions to
- * know it: which player is holding this phone, and whether the room points at
- * them. The Session Token is the only thing a phone presents — a phone never
- * names itself and is never believed when it does — so the lookup starts there.
- */
-async function seatThisPhoneHolds(
-  ctx: MutationCtx,
-  sessionToken: string,
-): Promise<{ player: Doc<'players'>; room: Doc<'rooms'> }> {
-  const player = await playerForSession(ctx, sessionToken);
-
-  // Refused rather than ignored, as with a color claim: a phone whose seat has
-  // gone would otherwise sit on a screen the room is not in.
-  if (player === null) {
-    throw new ConvexError<GameLifecycleRejection>({ kind: 'notInRoom' });
-  }
-
-  const room = await ctx.db.get(player.roomId);
-
-  // The room expired between this phone's last read and this tap.
-  if (room === null) {
-    throw new ConvexError<GameLifecycleRejection>({ kind: 'notInRoom' });
-  }
-
-  return { player, room };
-}
-
-/**
- * The room this phone *runs*, or the refusal that says why it does not.
- *
- * The seat lookup above plus the one question the lifecycle adds: does the room
- * point at this player? Playing a game asks only for the seat, which is why the
- * two are separate — `sendEvent` is open to everybody at the table.
- */
-async function roomThisPhoneRuns(
-  ctx: MutationCtx,
-  sessionToken: string,
-): Promise<Doc<'rooms'>> {
-  return (await requireRoomHost(ctx, sessionToken)).room;
-}
-
-/** Everyone in a room, in join order, as a game is given them. */
-async function playersFor(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePlayer[]> {
-  const seated = await playersInRoom(ctx, roomId);
-
-  // The `roster` projection minus `host`: a game must not be able to tell who
-  // is running the room, or it would eventually treat them differently.
-  return seated.map((player) => ({
-    playerId: player._id,
-    nickname: player.nickname,
-    away: player.away,
-    avatar: player.avatar,
-  }));
-}
-
-/**
- * Who in the room has gone Away, for the rules that are about to be handed an
- * event.
- *
- * Read at the event rather than kept anywhere, because presence changes on its
- * own beat — a phone goes quiet and `markAway` writes it, with no game event in
- * sight — so a game handed a list it was told about earlier would be waiting
- * for a phone the room stopped hearing from ten seconds ago. It is the same
- * seats `playersFor` collects, which is a game's whole view of the roster.
- *
- * The cost, written down so it is not rediscovered: this puts the room's whole
- * `players` range in the read set of *every* game event, and `heartbeat` writes
- * a row in that range every three seconds per phone. So an answer can now lose
- * an OCC race it could not lose before, and the odds scale with the roster
- * rather than with how hard the room is playing — ten phones is about three
- * writes a second against a read set held for the length of one mutation.
- * Convex retries the loser and the reducer is pure, so a retried answer is the
- * same answer; the alternative is presence the rules cannot see.
- */
-async function awayPlayersIn(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<GamePlayerId[]> {
-  return await awayPlayerIds(ctx, roomId);
-}
-
-/**
- * The room's clock as the room stores it: what will fire, and when it is due.
- *
- * The two travel together — one is how a clock is stopped and the other is how
- * what is left of it is read — so they are wound, kept and cleared as one value
- * rather than as two fields anybody could set apart. Empty is a beat with no
- * clock on it.
- */
-type RoomClock = {
-  readonly deadline?: Id<'_scheduled_functions'>;
-  readonly deadlineAt?: number;
-};
-
-type StoredGame = NonNullable<Doc<'rooms'>['game']>;
-
-type Runtime = {
-  readonly game: GameLogic;
-  readonly state: unknown;
-};
-
-type DeadlineResult =
-  | { readonly ok: true; readonly deadline?: GameDeadline }
-  | { readonly ok: false };
-
-/** Log only identifiers and a category; never include tokens, events, or state. */
-function runtimeFailure(roomId: Id<'rooms'>, running: StoredGame, category: string): void {
-  console.warn('Huddle game runtime unavailable', {
-    roomId,
-    gameId: running.gameId,
-    stateVersion: running.stateVersion ?? null,
-    category,
-  });
-}
-
-/** Decode a persisted state and resolve its exact installed runtime. */
-function decodeRuntime(roomId: Id<'rooms'>, running: StoredGame): Runtime | undefined {
-  const game = gameLogicById(running.gameId);
-  if (game === undefined) {
-    runtimeFailure(roomId, running, 'unknownGame');
-    return undefined;
-  }
-
-  if (running.stateVersion !== game.stateVersion) {
-    runtimeFailure(roomId, running, 'stateVersion');
-    return undefined;
-  }
-
-  try {
-    const state = game.decodeState(running.state);
-    if (state === undefined) throw new Error('decoder returned undefined');
-    return { game, state };
-  } catch {
-    runtimeFailure(roomId, running, 'stateDecode');
-    return undefined;
-  }
-}
-
-/** Validate a module deadline before it is persisted or scheduled. */
-function validatedDeadline(
-  roomId: Id<'rooms'>,
-  running: StoredGame,
-  game: GameLogic,
-  state: unknown,
-): DeadlineResult {
-  try {
-    const deadline = game.deadline?.(state);
-    if (deadline === undefined) return { ok: true };
-    if (
-      !deadline.beat ||
-      !Number.isFinite(deadline.afterMs) ||
-      deadline.afterMs < 0
-    ) {
-      runtimeFailure(roomId, running, 'deadline');
-      return { ok: false };
-    }
-    const event = game.decodeEvent(deadline.event);
-    if (event === undefined) throw new Error('deadline event decoder returned undefined');
-    return { ok: true, deadline: { ...deadline, event } };
-  } catch {
-    runtimeFailure(roomId, running, 'deadline');
-    return { ok: false };
-  }
-}
-
-/**
- * How much of the room's clock is left, for the rules that are about to be
- * handed an event.
- *
- * `undefined` where the room cannot say, which is a beat with no clock and a
- * room dealt its beat before `deadlineAt` existed. Never clamped here: what a
- * clock reading past its beat or already overdue is worth is the game's
- * judgement and not the hub's, and the hub does not know what it is timing.
- */
-function clockRemaining(clock: RoomClock): number | undefined {
-  return clock.deadlineAt === undefined ? undefined : clock.deadlineAt - Date.now();
-}
-
-/**
- * Stops whatever clock the room had running.
- *
- * A deadline that has already fired is past cancelling, and Convex says so by
- * doing nothing.
- */
-async function stopGameClock(ctx: MutationCtx, room: Doc<'rooms'>): Promise<void> {
-  const pending = room.game?.deadline;
-
-  if (pending !== undefined) {
-    await ctx.scheduler.cancel(pending);
-  }
-}
-
-/**
- * Winds the room's clock for the beat it is entering: stops the last beat's,
- * and schedules this beat's deadline if the module declares one.
- *
- * This is the whole of how a countdown runs in a room the hub knows nothing
- * about. The module says how long to wait and what to raise
- * (`GameDeadline`), the scheduler does the waiting, and `reachDeadline` puts
- * the event back through the same rules a phone's tap goes through.
- *
- * It has to be the server's clock and not a phone's: a beat ended from a
- * Controller is a beat that stalls when every phone in the room is face-down on
- * a table, which is exactly what the reveal still does.
- */
-async function windGameClock(
-  ctx: MutationCtx,
-  room: Doc<'rooms'>,
-  running: StoredGame,
-  game: GameLogic,
-  state: unknown,
-  candidate?: GameDeadline,
-): Promise<RoomClock | undefined> {
-  const checked =
-    candidate === undefined
-      ? validatedDeadline(room._id, running, game, state)
-      : ({ ok: true, deadline: candidate } satisfies DeadlineResult);
-
-  if (!checked.ok) return undefined;
-
-  await stopGameClock(ctx, room);
-
-  const deadline = checked.deadline;
-
-  if (deadline === undefined) {
-    return {};
-  }
-
-  const scheduled = await ctx.scheduler.runAfter(deadline.afterMs, internal.games.reachDeadline, {
-    roomId: room._id,
-    gameId: game.metadata.id,
-    event: deadline.event,
-  });
-
-  // The module answers in milliseconds from now — no part of a game reads the
-  // time — so the room is what turns that into a moment to time events against.
-  return { deadline: scheduled, deadlineAt: Date.now() + deadline.afterMs };
-}
 
 /**
  * Puts an event to the running game's rules, keeps whatever they make of it,
@@ -307,7 +74,7 @@ async function playGameEvent(
     return;
   }
 
-  const runtime = decodeRuntime(room._id, running);
+  const runtime = decodeStoredRuntime(room._id, running);
   if (runtime === undefined) return;
   const { game, state } = runtime;
 
@@ -319,8 +86,8 @@ async function playGameEvent(
   try {
     decodedEvent = game.decodeEvent({
       ...event,
-      msRemaining: clockRemaining(running),
-      awayPlayerIds: await awayPlayersIn(ctx, room._id),
+      msRemaining: clockRemainingMs(running, Date.now()),
+      awayPlayerIds: await awayPlayerIds(ctx, room._id),
     });
     if (decodedEvent === undefined) throw new Error('event decoder returned undefined');
   } catch {
@@ -417,7 +184,7 @@ export const startGame = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const room = await roomThisPhoneRuns(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
 
     if (room.tvAway === true) {
       throw new ConvexError({ kind: 'tvUnavailable' });
@@ -435,7 +202,7 @@ export const startGame = mutation({
       });
     }
 
-    const players = await playersFor(ctx, room._id);
+    const players = await gamePlayersInRoom(ctx, room._id);
     // The room's own refusals first, then the settings': a party too small to
     // play hears that before it hears about a setting, whatever it sent.
     const refusal =
@@ -495,7 +262,7 @@ export const endGame = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const room = await roomThisPhoneRuns(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
 
     // The game's clock stops with the game. A deadline left pending would fire
     // into whatever the room did next, and a Host who starts the same game
@@ -530,7 +297,7 @@ export const browseGame = mutation({
   args: { sessionToken: v.string(), index: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const room = await roomThisPhoneRuns(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
 
     if (room.tvAway === true) return null;
 
@@ -555,7 +322,7 @@ export const sendEvent = mutation({
   args: { sessionToken: v.string(), event: v.any() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { player, room } = await seatThisPhoneHolds(ctx, args.sessionToken);
+    const { player, room } = await requirePlayerSession(ctx, args.sessionToken);
 
     // The TV is the shared clock/display. While it is away, accepting input
     // would advance a beat nobody can see and break exact recovery.
@@ -672,10 +439,7 @@ async function viewerIn(
     return undefined;
   }
 
-  const player = await ctx.db
-    .query('players')
-    .withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken))
-    .first();
+  const player = await playerForSession(ctx, sessionToken);
 
   return player !== null && player.roomId === roomId ? player._id : undefined;
 }
@@ -720,7 +484,7 @@ export const running = query({
     }
 
     const running = room.game;
-    const runtime = decodeRuntime(args.roomId, running);
+    const runtime = decodeStoredRuntime(args.roomId, running);
     if (runtime === undefined) {
       return { kind: 'unavailable' as const, gameId: running.gameId };
     }

@@ -13,23 +13,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
+import {
+  roomFixture,
+  runningState as typedRunningState,
+  type TriviaTestState,
+} from './test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 
-function runningState(response: unknown): any {
-  if (
-    typeof response === 'object' &&
-    response !== null &&
-    'kind' in response &&
-    response.kind === 'running' &&
-    'state' in response
-  ) {
-    return response.state;
-  }
-
-  return undefined;
+function runningState(response: unknown): TriviaTestState {
+  return typedRunningState<TriviaTestState>(response);
 }
 
 type Backend = ReturnType<typeof convexTest>;
@@ -46,7 +41,7 @@ async function roomWithParty(t: Backend): Promise<{
   host: string;
   guest: string;
 }> {
-  const room = await t.mutation(api.rooms.createRoom, {});
+  const room = await roomFixture(t);
   const host = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
   const guest = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
@@ -72,7 +67,7 @@ async function roomPlayingOn(
   settings: GameSettings,
   ...nicknames: readonly string[]
 ): Promise<{ roomId: Id<'rooms'>; tokens: Record<string, string> }> {
-  const room = await t.mutation(api.rooms.createRoom, {});
+  const room = await roomFixture(t);
   const tokens: Record<string, string> = {};
 
   for (const [at, nickname] of nicknames.entries()) {
@@ -337,7 +332,7 @@ describe('the Host starting a game', () => {
 
   it('refuses a party smaller than the game is playable by', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     // One phone in the room, and trivia declares itself 2–10.
     const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
@@ -354,7 +349,7 @@ describe('the Host starting a game', () => {
 
   it('lets the same room start once somebody else joins', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
@@ -513,7 +508,7 @@ describe('the Host starting a game', () => {
 
   it('tells a party too small that, before it tells them about a setting', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
     expect(
@@ -559,7 +554,7 @@ describe('the Host ending the game', () => {
 
   it('brings a played-out game back to the same roster, and leaves its scores behind', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const tokens: Record<string, string> = {};
 
     for (const [nickname, avatar] of [
@@ -585,7 +580,7 @@ describe('the Host ending the game', () => {
     // is about to leave, which is what makes the assertions below mean anything.
     const played = await t.query(api.games.running, { roomId: room.roomId });
     expect(runningState(played).phase).toBe('finished');
-    expect(runningState(played).standings[0].score).toBeGreaterThan(0);
+    expect(runningState(played).standings[0]!.score).toBeGreaterThan(0);
 
     await t.mutation(api.games.endGame, { sessionToken: host });
 
@@ -828,7 +823,7 @@ describe('a player’s event in the running game', () => {
       expect(correctIndexes).not.toHaveLength(0);
       expect(correctIndexes.every((index: number) => index < 0)).toBe(true);
       // And the questions the room has not reached carry no text to read ahead.
-      expect(runningState(seen).questions[1].text).toBe('');
+      expect(runningState(seen).questions[1]!.text).toBe('');
     });
 
     it('keeps the rest of the game off the wire at the reveal too', async () => {
@@ -852,9 +847,9 @@ describe('a player’s event in the running game', () => {
       expect(runningState(seen).phase).toBe('reveal');
       // The question just revealed gives up its answer, because that is what a
       // reveal is; the ones the room has not reached give up nothing.
-      expect(runningState(seen).questions[0].correctIndex).toBeGreaterThanOrEqual(0);
-      expect(runningState(seen).questions[1].text).toBe('');
-      expect(runningState(seen).questions[1].correctIndex).toBeLessThan(0);
+      expect(runningState(seen).questions[0]!.correctIndex).toBeGreaterThanOrEqual(0);
+      expect(runningState(seen).questions[1]!.text).toBe('');
+      expect(runningState(seen).questions[1]!.correctIndex).toBeLessThan(0);
     });
 
     it('reveals every answer once the question is over', async () => {
@@ -909,7 +904,7 @@ describe('a player’s event in the running game', () => {
         (standing: { playerId: string }) => standing.playerId === grace,
       );
 
-      expect(scored.score).toBeGreaterThan(0);
+      expect(scored?.score).toBeGreaterThan(0);
     });
   });
 

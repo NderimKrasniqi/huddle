@@ -2,7 +2,6 @@ import {
   AWAY_AFTER_MS,
   generateRoomCode,
   ROOM_EXPIRY_MS,
-  type GameDeadline,
 } from '@huddle/game-core';
 import { MINUTE, RateLimiter } from '@convex-dev/rate-limiter';
 import { ConvexError, v } from 'convex/values';
@@ -10,13 +9,12 @@ import { ConvexError, v } from 'convex/values';
 import { components, internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { deleteRoomChildren } from './lib/roomLifecycle';
-import { isValidDeadline } from './lib/gameClock';
-import { decodeStoredRuntime } from './lib/gameRuntime';
+import { cancelDeadline, remainingMs, resumeGameClock } from './lib/gameClock';
 import { playersInRoom, roomSilenceMs } from './lib/presence';
+import { deleteRoom } from './lib/roomLifecycle';
 
 /**
- * What `createRoom` rejects with when it cannot find a free Room Code. A
+ * What `openRoom` rejects with when it cannot find a free Room Code. A
  * `ConvexError` rather than a plain `Error` because Convex redacts the message
  * of anything else to "Server Error" before the client sees it; `data` crosses
  * the wire intact, so the TV pairing screen can match on `kind` and tell the
@@ -28,7 +26,7 @@ export type RoomCodeExhausted = {
 };
 
 /**
- * How many codes `createRoom` draws before it gives up. With 456,976 codes and
+ * How many codes `openRoom` draws before it gives up. With 456,976 codes and
  * a scope of roughly ten concurrent rooms, a single collision is already a
  * ~1-in-46,000 event, so ten collisions in a row means something is wrong
  * (the alphabet, the randomness, or a table that never expires rooms) and the
@@ -52,7 +50,7 @@ const tvRateLimiter = new RateLimiter(components.rateLimiter, {
  *
  * The read-then-insert this performs is safe because Convex mutations are
  * serializable transactions: the index read below joins the transaction's read
- * set, so a concurrent `createRoom` that inserts the same code invalidates this
+ * set, so a concurrent `openRoom` that inserts the same code invalidates this
  * one, and Convex re-runs it against the committed row — where the code now
  * reads as taken and another is drawn. Uniqueness among live rooms is therefore
  * a guarantee, not a probability.
@@ -81,31 +79,12 @@ async function drawUnusedRoomCode(ctx: MutationCtx): Promise<string> {
 }
 
 /**
- * Opens a room. The TV app calls this on launch and shows the returned code;
- * phones join by typing it or by scanning the QR that encodes it.
- *
- * A TV-owned room is kept alive by its durable TV session even before a phone
- * joins. There is intentionally no separate unjoined-room timer: the TV
- * heartbeat is the lifecycle authority, and a failed launch never creates a
- * room in the first place.
- */
-export const createRoom = mutation({
-  args: {},
-  returns: v.object({ roomId: v.id('rooms'), code: v.string() }),
-  handler: async (ctx) => {
-    const code = await drawUnusedRoomCode(ctx);
-    const roomId = await ctx.db.insert('rooms', { code, tvAway: false });
-    return { roomId, code };
-  },
-});
-
-/**
  * Open (or recover) the one room owned by a durable TV credential.
  *
- * `createRoom` remains as a compatibility shim for development callers; the TV
- * uses this mutation so a process restart cannot strand a second room behind
- * the same screen. The token lookup and room insert are in one transaction,
- * which also makes concurrent cold-start calls idempotent.
+ * This is the sole production room-opening API. A process restart cannot
+ * strand a second room behind the same screen: the token lookup and room insert
+ * are in one transaction, which also makes concurrent cold-start calls
+ * idempotent.
  */
 export const openRoom = mutation({
   args: { tvSessionToken: v.string() },
@@ -140,7 +119,7 @@ export const openRoom = mutation({
       replacingStaleSession = true;
     }
 
-    if (!replacingStaleSession) await consumeTvOpenToken(ctx, now);
+    if (!replacingStaleSession) await consumeTvOpenToken(ctx);
     const code = await drawUnusedRoomCode(ctx);
     const roomId = await ctx.db.insert('rooms', { code, tvAway: false });
     const sessionId = await ctx.db.insert('tvSessions', {
@@ -158,7 +137,7 @@ export const openRoom = mutation({
 });
 
 /** Token-bucket admission for *new* TV credentials only. */
-async function consumeTvOpenToken(ctx: MutationCtx, _now: number): Promise<void> {
+async function consumeTvOpenToken(ctx: MutationCtx): Promise<void> {
   const status = await tvRateLimiter.limit(ctx, 'tvNewRooms', { key: 'global' });
   if (!status.ok) {
     throw new ConvexError<TvRateLimitRejection>({
@@ -188,39 +167,17 @@ async function restoreTvRoom(
     return;
   }
 
-  const runtime = decodeStoredRuntime(running);
   const remaining = Math.max(0, running.pausedRemainingMs ?? 0);
-  let deadline: GameDeadline | undefined;
-  try {
-    if (runtime === undefined) {
-      deadline = undefined;
-    } else {
-      const candidate = runtime.game.deadline?.(runtime.state);
-      if (isValidDeadline(candidate)) {
-        deadline = { ...candidate, event: runtime.game.decodeEvent(candidate.event) };
-      }
-    }
-  } catch {
-    // A malformed/removed runtime is resumed without a scheduler clock; the
-    // fail-closed running projection will surface it as unavailable.
-    deadline = undefined;
-  }
-  const clock =
-    deadline === undefined
-      ? { deadline: undefined, deadlineAt: undefined, pausedRemainingMs: undefined }
-      : {
-          deadline: await ctx.scheduler.runAfter(remaining, internal.games.reachDeadline, {
-            roomId: room._id,
-            gameId: running.gameId,
-            event: deadline.event,
-          }),
-          deadlineAt: now + remaining,
-          pausedRemainingMs: undefined,
-        };
+  const clock = await resumeGameClock(ctx, room, remaining, now);
 
   await ctx.db.patch(room._id, {
     tvAway: false,
-    game: { ...running, ...clock },
+    game: {
+      ...running,
+      deadline: clock?.deadline,
+      deadlineAt: clock?.deadlineAt,
+      pausedRemainingMs: undefined,
+    },
   });
 }
 
@@ -267,8 +224,8 @@ export const markTvAway = internalMutation({
       return null;
     }
     const game = room.game;
-    if (game?.deadline !== undefined) await ctx.scheduler.cancel(game.deadline);
-    const remaining = Math.max(0, (game?.deadlineAt ?? Date.now()) - Date.now());
+    await cancelDeadline(ctx, game?.deadline);
+    const remaining = remainingMs(game?.deadlineAt, Date.now()) ?? 0;
     await ctx.db.patch(session._id, { away: true });
     await ctx.db.patch(room._id, {
       tvAway: true,
@@ -303,9 +260,7 @@ export const expireTvRoom = internalMutation({
       await ctx.db.delete('tvSessions', session._id);
       return null;
     }
-    if (room.game?.deadline !== undefined) await ctx.scheduler.cancel(room.game.deadline);
-    await deleteRoomChildren(ctx, room._id);
-    await ctx.db.delete('rooms', room._id);
+    await deleteRoom(ctx, room);
     return null;
   },
 });
@@ -340,11 +295,6 @@ export const connection = query({
     return { away: room.tvAway === true || session?.away === true };
   },
 });
-
-/** Everyone in a room, in join order. */
-async function seatedIn(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<Doc<'players'>[]> {
-  return await playersInRoom(ctx, roomId);
-}
 
 /**
  * How long it has been since the room last heard from *anybody* — the age of the
@@ -381,7 +331,7 @@ function roomSilence(seated: readonly Doc<'players'>[]): number {
  * checks the clock again when it runs instead.
  */
 export async function watchForDesertion(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<void> {
-  const seated = await seatedIn(ctx, roomId);
+  const seated = await playersInRoom(ctx, roomId);
 
   // "Every player is away" is vacuously true of no players, and that reading
   // would expire the room a television is showing to a party that has not
@@ -413,7 +363,7 @@ export async function watchForDesertion(ctx: MutationCtx, roomId: Id<'rooms'>): 
  * Deleting the players is what makes the expiry complete rather than cosmetic:
  * their Session Tokens stop answering (`players.session`), so the phones that
  * held them come back to a Join Screen, and the room's code returns to the pool
- * `createRoom` draws from. The away checks still pending against those rows find
+ * `openRoom` draws from. The away checks still pending against those rows find
  * nothing and do nothing.
  *
  * Internal, because it is the room ending itself: no phone gets to close a room
@@ -431,7 +381,7 @@ export const expireRoom = internalMutation({
       return null;
     }
 
-    const seated = await seatedIn(ctx, args.roomId);
+    const seated = await playersInRoom(ctx, args.roomId);
 
     // Somebody has beaten since this check was scheduled, so the room is not
     // deserted and this check has nothing to do but leave it standing. Nothing
@@ -461,15 +411,7 @@ export const expireRoom = internalMutation({
     // would fire into a room that no longer exists: harmless, since
     // `reachDeadline` finds nothing, but it is the room's own scheduled work and
     // the room ending is where it stops, however the room comes to end.
-    const pending = room.game?.deadline;
-
-    if (pending !== undefined) {
-      await ctx.scheduler.cancel(pending);
-    }
-
-    await deleteRoomChildren(ctx, room._id);
-
-    await ctx.db.delete('rooms', room._id);
+    await deleteRoom(ctx, room);
     return null;
   },
 });

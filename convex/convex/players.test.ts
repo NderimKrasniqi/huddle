@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import schema from './schema';
 import type { Id } from './_generated/dataModel';
+import { registerRateLimiter, roomFixture } from './test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
@@ -20,9 +21,9 @@ const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']
 
 type Backend = ReturnType<typeof convexTest>;
 
-/** A room to join, opened the way the TV opens one. */
+/** A room row for player behavior that does not exercise TV opening. */
 async function openRoom(t: Backend) {
-  return await t.mutation(api.rooms.createRoom, {});
+  return await roomFixture(t);
 }
 
 /**
@@ -294,7 +295,7 @@ describe('joinRoom', () => {
  * and it pins the outcome the room must produce. What it cannot exercise is two
  * transactions committing in parallel — against that, the guarantee is Convex's
  * serializable OCC and the read set `joinRoom` deliberately builds (see
- * players.ts), the same property `createRoom` leans on for code uniqueness.
+ * players.ts), the same property `openRoom` leans on for code uniqueness.
  */
 describe('joinRoom under simultaneous joins', () => {
   it('seats ten of twelve players who all join at once', async () => {
@@ -1352,7 +1353,7 @@ describe('host controls', () => {
  * emptied room to linger until expiry. It cannot: `expireRoom` refuses an empty
  * room by design and `watchForDesertion` never schedules one for it, so the
  * only thing that would ever collect it is `expireUnjoinedRoom` — armed once at
- * `createRoom` and never re-armed. A party outlasting that check and then
+ * the removed legacy opener and never re-armed. A party outlasting that check and then
  * leaving would strand its room and its Room Code for good. See `leaveRoom`.
  */
 describe('leaveRoom', () => {
@@ -1415,14 +1416,18 @@ describe('leaveRoom', () => {
 
   it('frees the Room Code the moment the room closes, rather than in two hours', async () => {
     const t = convexTest(schema, modules);
-    const room = await openRoom(t);
+    const room = await roomFixture(t, 'AAAA');
     const only = (await join(t, room.code, 'Ada')) as { sessionToken: string };
 
     await t.mutation(api.players.leaveRoom, { sessionToken: only.sessionToken });
 
     // The point of deleting rather than leaving it to a clock. Nothing holds
-    // the code, so the pool `createRoom` draws from has it back.
-    const next = await t.mutation(api.rooms.createRoom, {});
+    // the code, so the production `openRoom` draw can claim it again.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    registerRateLimiter(t);
+    const next = await t.mutation(api.rooms.openRoom, { tvSessionToken: 'after-last-leave' });
+    vi.restoreAllMocks();
+    expect(next.code).toBe(room.code);
     expect(await t.query(api.rooms.stillOpen, { roomId: next.roomId })).toBe(true);
     expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(false);
   });

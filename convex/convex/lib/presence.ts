@@ -1,9 +1,13 @@
+import type { GamePlayer } from '@huddle/game-core';
+
 import type { Doc, Id } from '../_generated/dataModel';
-import type { MutationCtx } from '../_generated/server';
+import type { QueryCtx } from '../_generated/server';
+
+type DatabaseContext = Pick<QueryCtx, 'db'>;
 
 /** Read all phone presence rows for a room in join order. */
 export async function playersInRoom(
-  ctx: MutationCtx,
+  ctx: DatabaseContext,
   roomId: Id<'rooms'>,
 ): Promise<Doc<'players'>[]> {
   return await ctx.db
@@ -12,9 +16,23 @@ export async function playersInRoom(
     .collect();
 }
 
+/** Project room seats into the only roster shape game logic may observe. */
+export async function gamePlayersInRoom(
+  ctx: DatabaseContext,
+  roomId: Id<'rooms'>,
+): Promise<GamePlayer[]> {
+  const players = await playersInRoom(ctx, roomId);
+  return players.map((player) => ({
+    playerId: player._id,
+    nickname: player.nickname,
+    away: player.away,
+    avatar: player.avatar,
+  }));
+}
+
 /** Return the room's current away seats without exposing any session token. */
 export async function awayPlayerIds(
-  ctx: MutationCtx,
+  ctx: DatabaseContext,
   roomId: Id<'rooms'>,
 ): Promise<Id<'players'>[]> {
   const players = await playersInRoom(ctx, roomId);

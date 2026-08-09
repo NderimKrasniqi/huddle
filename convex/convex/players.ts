@@ -12,11 +12,13 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { hostSeatAndRoom } from './hostControl';
+import { playerForSession, requireRoomHost } from './lib/authorization';
+import { playersInRoom } from './lib/presence';
+import { deleteRoom } from './lib/roomLifecycle';
 import { watchForDesertion } from './rooms';
 import { avatarValidator } from './schema';
 
-// A join is refused with a `ConvexError` for the reason `createRoom` throws one
+// A join is refused with a `ConvexError` for the reason `openRoom` throws one
 // (see rooms.ts): Convex redacts the message of anything else to "Server
 // Error", while `data` crosses the wire intact. `JoinRejection` itself lives in
 // game-core, because the Controller reads every one of these.
@@ -156,10 +158,7 @@ async function handOverRoom(
     return;
   }
 
-  const seated = await ctx.db
-    .query('players')
-    .withIndex('by_room', (q) => q.eq('roomId', departing.roomId))
-    .collect();
+  const seated = await playersInRoom(ctx, departing.roomId);
   // The departing player is excluded by id rather than by their own silence,
   // which is a number this very call was prompted by: the point is that a host
   // cannot succeed themselves, and that should not rest on arithmetic.
@@ -209,7 +208,7 @@ const playerSessionFields = {
  * The two rules it enforces against the room — the ten-player cap and one
  * nickname per room — are read-then-write, and both hold exactly rather than
  * probably for the reason
- * `createRoom`'s code draw does (rooms.ts): Convex mutations are serializable
+ * `openRoom`'s code draw does (rooms.ts): Convex mutations are serializable
  * transactions, and the index read below joins this transaction's read set. A
  * concurrent `joinRoom` inserting into the same room writes into the range this
  * one read, which invalidates it, so Convex re-runs this mutation against the
@@ -263,10 +262,7 @@ export const joinRoom = mutation({
       throw new ConvexError<JoinRejection>({ kind: 'roomNotFound', code });
     }
 
-    const seated = await ctx.db
-      .query('players')
-      .withIndex('by_room', (q) => q.eq('roomId', room._id))
-      .collect();
+    const seated = await playersInRoom(ctx, room._id);
 
     // The cap is checked before the nickname on purpose: when both rules bite,
     // "name taken" would send someone off to think of another name for a room
@@ -336,10 +332,7 @@ export const session = query({
   args: { sessionToken: v.string() },
   returns: v.union(v.null(), v.object(playerSessionFields)),
   handler: async (ctx, args) => {
-    const player = await ctx.db
-      .query('players')
-      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
-      .first();
+    const player = await playerForSession(ctx, args.sessionToken);
 
     if (player === null) {
       return null;
@@ -381,10 +374,7 @@ export const heartbeat = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const player = await ctx.db
-      .query('players')
-      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
-      .first();
+    const player = await playerForSession(ctx, args.sessionToken);
 
     if (player === null) {
       return null;
@@ -501,7 +491,7 @@ export const transferHost = mutation({
   args: { sessionToken: v.string(), playerId: v.id('players') },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { actor, room } = await hostSeatAndRoom(ctx, args.sessionToken);
+    const { player: actor, room } = await requireRoomHost(ctx, args.sessionToken);
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
     if (silenceOf(target) >= AWAY_AFTER_MS) {
@@ -538,7 +528,7 @@ export const removePlayer = mutation({
   args: { sessionToken: v.string(), playerId: v.id('players') },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { actor, room } = await hostSeatAndRoom(ctx, args.sessionToken);
+    const { player: actor, room } = await requireRoomHost(ctx, args.sessionToken);
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
     await ctx.db.delete(target._id);
@@ -552,7 +542,7 @@ export const removePlayer = mutation({
  *
  * It is nobody's power over anybody: a phone leaves its own seat, named by the
  * Session Token it already holds, and there is no target argument to get wrong.
- * That is the whole reason it needs none of `hostControl`'s gating. The Host
+ * That is the whole reason it needs none of Host authorization. The Host
  * leaves the same way everybody else does, and the room goes with them only in
  * the sense that `handOverRoom` hands it on — the same succession `markAway`
  * already uses when a host's phone goes quiet, so a departing host is a room
@@ -590,10 +580,7 @@ export const leaveRoom = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const player = await ctx.db
-      .query('players')
-      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
-      .first();
+    const player = await playerForSession(ctx, args.sessionToken);
 
     if (player === null) {
       return null;
@@ -615,10 +602,7 @@ export const leaveRoom = mutation({
       return null;
     }
 
-    const remaining = await ctx.db
-      .query('players')
-      .withIndex('by_room', (q) => q.eq('roomId', player.roomId))
-      .collect();
+    const remaining = await playersInRoom(ctx, player.roomId);
 
     if (remaining.length > 0) {
       // The room lives on, and this is where it is handed back to its clock.
@@ -640,19 +624,7 @@ export const leaveRoom = mutation({
       return null;
     }
 
-    const pending = room.game?.deadline;
-
-    if (pending !== undefined) {
-      await ctx.scheduler.cancel(pending);
-    }
-
-    const tvSessions = await ctx.db
-      .query('tvSessions')
-      .withIndex('by_room', (q) => q.eq('roomId', room._id))
-      .collect();
-    for (const tvSession of tvSessions) await ctx.db.delete('tvSessions', tvSession._id);
-
-    await ctx.db.delete('rooms', room._id);
+    await deleteRoom(ctx, room);
     return null;
   },
 });
@@ -690,10 +662,7 @@ export const roster = query({
   ),
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
-    const seated = await ctx.db
-      .query('players')
-      .withIndex('by_room', (q) => q.eq('roomId', args.roomId))
-      .collect();
+    const seated = await playersInRoom(ctx, args.roomId);
 
     return seated.map((player) => ({
       playerId: player._id,
