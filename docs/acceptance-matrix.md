@@ -37,7 +37,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 
 | Workflow (scope) | Trivia | Voting | Evidence |
 |---|---|---|---|
-| TV launch creates a room with a 4-char code | 🔁 | 🔁 | `rooms.test.ts` › createRoom; codes unique, redraw-on-collision |
+| TV launch creates a room with a 4-char code | 🔁 | 🔁 | `rooms.test.ts` › openRoom code generation; unique, redraw-on-collision/exhaustion |
 | Room persists across games; ending returns to the same room | ✅ | ✅ | `games.test.ts` › ending (roster/host/code intact); `voting-lifecycle.test.ts` › "returns the room to its lobby with roster, host and code intact" |
 | Switching games returns to the room, no state carried | ✅ | ✅ | `voting-lifecycle.test.ts` › "switches between the two games, carrying nothing across" (Voting→Trivia→Voting) |
 | Empty room stays open while TV holds; next joiner hosts | 🔁 | 🔁 | `players.test.ts` › host ("leaves the room with an away host when nobody is there to take it"); `rooms.test.ts` › unjoined-room window |

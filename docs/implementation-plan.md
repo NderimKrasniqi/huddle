@@ -248,9 +248,9 @@ the existing public room/game contracts except for the intentional TV APIs and
 `createRoom` → `openRoom` replacement.
 
 **Current feature:** F-007 Full-Codebase Behavior-Preserving Refactor
-**Current phase:** 7.4 Convex consolidation
-**Current task:** 7.4.1 Finish private helper extraction and retire `createRoom`
-**Last completed task:** 7.3.1 Split TV composition into owned features
+**Current phase:** 7.5 Full review closeout
+**Current task:** 7.5.1 Re-audit packages, reconcile truth, and run release verification
+**Last completed task:** 7.4.1 Finish private helper extraction and retire `createRoom`
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -415,9 +415,19 @@ approved Soft Minimal visuals/assets.
 
 ## Phase 7.4 — Convex consolidation
 
-- [ ] **7.4.1 — Finish private helper extraction and retire `createRoom`**
+- [x] **7.4.1 — Finish private helper extraction and retire `createRoom`**
   - Make `openRoom` the only public room opener, consolidate authorization,
     runtime, clock, presence, and deletion helpers, and keep other APIs stable.
+  - Evidence: `rooms.createRoom` and the redundant `hostControl` module are
+    removed; `openRoom` collision/exhaustion tests exercise the production
+    token, rate-limit, and code-draw path. Shared typed database fixtures replace
+    unrelated opener calls, and running-state helpers no longer return `any`.
+    Authorization, presence, runtime decode/reporting, deadline pause/resume,
+    and full room deletion now have one private owner. Typecheck, lint, 71 files
+    / 794 tests, pack/workflow validation, and `git diff --check` pass. No Convex
+    deployment or data mutation was performed; the required read-only orphan
+    audit remains a deployment prerequisite, with cleanup requiring separately
+    approved migration work.
   - **Depends on:** 7.3.1
 
 ## Phase 7.5 — Full review closeout

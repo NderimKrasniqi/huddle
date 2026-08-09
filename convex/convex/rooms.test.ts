@@ -13,18 +13,28 @@ import { api, internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import type { RoomCodeExhausted } from './rooms';
+import { registerRateLimiter, roomFixture } from './test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 
 type Backend = ReturnType<typeof convexTest>;
+let nextTvSession = 0;
+
+async function openTvRoom(t: Backend) {
+  registerRateLimiter(t);
+  nextTvSession += 1;
+  return await t.mutation(api.rooms.openRoom, {
+    tvSessionToken: `room-code-test-${nextTvSession}`,
+  });
+}
 
 /**
  * The `Math.random()` draw that lands on a given letter, aimed at the middle of
  * the letter's slice of [0, 1) so no rounding can push it into a neighbour.
  *
- * A letter the alphabet does not hold is a test pinning a code `createRoom`
+ * A letter the alphabet does not hold is a test pinning a code `openRoom`
  * could never mint, so it fails here rather than pinning a different code than
  * the one it names.
  */
@@ -37,18 +47,22 @@ function drawFor(letter: string): number {
 }
 
 /**
- * Pins `Math.random()` so that `createRoom` draws exactly these codes, in this
- * order — the only way a uniqueness test proves anything: two real random draws
- * differ by luck, not by design.
+ * Pins the rate-limiter shard draw followed by each `openRoom` code attempt.
+ * Each argument is one mutation; an array represents its collision redraws.
  */
-function pinDrawsTo(...codes: readonly string[]): void {
-  const values = codes.flatMap((code) => [...code].map(drawFor));
+function pinOpenRoomDraws(
+  ...calls: readonly (string | readonly string[])[]
+): void {
+  const values = calls.flatMap((call) => [
+    0,
+    ...(typeof call === 'string' ? [call] : call).flatMap((code) => [...code].map(drawFor)),
+  ]);
   let next = 0;
 
   vi.spyOn(Math, 'random').mockImplementation(() => {
     const value = values[next];
     if (value === undefined) {
-      throw new Error(`createRoom drew past the pinned codes [${codes.join(', ')}]`);
+      throw new Error('openRoom drew past the pinned rate-limit and code draws');
     }
     next += 1;
     return value;
@@ -59,12 +73,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('createRoom', () => {
+describe('openRoom code generation', () => {
   it('can mint a Room Code holding I after the tvOS tile fix', async () => {
     const t = convexTest(schema, modules);
-    pinDrawsTo('RIJI');
+    pinOpenRoomDraws('RIJI');
 
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await openTvRoom(t);
 
     expect(room.code).toBe('RIJI');
     // `convex-test` uses Math.random for its snapshot runner too; the pin is
@@ -78,7 +92,7 @@ describe('createRoom', () => {
   it('returns a room whose Room Code is minted from the minting alphabet', async () => {
     const t = convexTest(schema, modules);
 
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await openTvRoom(t);
 
     // Driven off the product alphabet rather than /^[A-Z]{4}$/, so this test
     // stays coupled to the Room Code decision, including the restored I.
@@ -92,8 +106,8 @@ describe('createRoom', () => {
   it('gives two rooms different codes', async () => {
     const t = convexTest(schema, modules);
 
-    const first = await t.mutation(api.rooms.createRoom, {});
-    const second = await t.mutation(api.rooms.createRoom, {});
+    const first = await openTvRoom(t);
+    const second = await openTvRoom(t);
 
     expect(second.code).not.toBe(first.code);
   });
@@ -102,10 +116,10 @@ describe('createRoom', () => {
     const t = convexTest(schema, modules);
     // The second room draws KWRD again — the code its predecessor holds — and
     // must not settle for it.
-    pinDrawsTo('KWRD', 'KWRD', 'ZEBU');
+    pinOpenRoomDraws('KWRD', ['KWRD', 'ZEBU']);
 
-    const first = await t.mutation(api.rooms.createRoom, {});
-    const second = await t.mutation(api.rooms.createRoom, {});
+    const first = await openTvRoom(t);
+    const second = await openTvRoom(t);
 
     expect(first.code).toBe('KWRD');
     expect(second.code).toBe('ZEBU');
@@ -114,13 +128,13 @@ describe('createRoom', () => {
   it('fails rather than hand out a code a live room already holds', async () => {
     const t = convexTest(schema, modules);
     // Every draw collides with the first room's code. More codes are pinned
-    // than `createRoom` may ever draw, so the run also proves the redraw loop
+    // than `openRoom` may ever draw, so the run also proves the redraw loop
     // is bounded: an unbounded one exhausts the pin and fails on that instead.
-    pinDrawsTo(...Array<string>(100).fill('KWRD'));
+    pinOpenRoomDraws('KWRD', Array<string>(100).fill('KWRD'));
 
-    await t.mutation(api.rooms.createRoom, {});
+    await openTvRoom(t);
     const rejection: unknown = await t
-      .mutation(api.rooms.createRoom, {})
+      .mutation(api.rooms.openRoom, { tvSessionToken: 'room-code-exhaustion' })
       .then(() => undefined)
       .catch((error: unknown) => error);
 
@@ -250,7 +264,7 @@ describe('room expiry', () => {
 
   it('deletes the room and its players ten minutes after the last phone goes quiet', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     await seatPlayer(t, room.code, 'Ada');
     await seatPlayer(t, room.code, 'Grace');
 
@@ -268,7 +282,7 @@ describe('room expiry', () => {
 
   it('leaves a room alone for as long as one phone is still beating', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     await seatPlayer(t, room.code, 'Ada');
     const grace = await seatPlayer(t, room.code, 'Grace');
 
@@ -282,7 +296,7 @@ describe('room expiry', () => {
 
   it('starts the ten minutes again when somebody comes back', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const ada = await seatPlayer(t, room.code, 'Ada');
 
     // Five minutes of nothing, and then Ada's phone says one word and goes
@@ -301,7 +315,7 @@ describe('room expiry', () => {
 
   it('gives an expired room’s code back to the pool', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     await seatPlayer(t, room.code, 'Ada');
 
     await elapse(t, TEN_MINUTES);
@@ -310,14 +324,14 @@ describe('room expiry', () => {
     // `drawUnusedRoomCode` checking *live* rooms means. Nothing but expiry ever
     // made that true before now. The draw is pinned only after the party, since
     // minting a Session Token draws from the same `Math.random`.
-    pinDrawsTo(room.code);
-    const next = await t.mutation(api.rooms.createRoom, {});
+    pinOpenRoomDraws(room.code);
+    const next = await openTvRoom(t);
     expect(next.code).toBe(room.code);
   });
 
   it('answers nothing to the Session Token of a player whose room expired', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const ada = await seatPlayer(t, room.code, 'Ada');
 
     await elapse(t, TEN_MINUTES);
@@ -329,7 +343,7 @@ describe('room expiry', () => {
 
   it('goes on running after the away checks of players it has deleted come due', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const ada = await seatPlayer(t, room.code, 'Ada');
 
     // Ada's phone beats until the last minute, so her away check is still
@@ -343,8 +357,8 @@ describe('room expiry', () => {
 
   it('takes only its own room down with it', async () => {
     const t = convexTest(schema, modules);
-    const ended = await t.mutation(api.rooms.createRoom, {});
-    const carryingOn = await t.mutation(api.rooms.createRoom, {});
+    const ended = await roomFixture(t);
+    const carryingOn = await roomFixture(t);
     await seatPlayer(t, ended.code, 'Ada');
     const grace = await seatPlayer(t, carryingOn.code, 'Grace');
 
@@ -361,7 +375,7 @@ describe('room expiry', () => {
 
   it('watches a deserted room with one expiry check, not one per player', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     await seatPlayer(t, room.code, 'Ada');
     await seatPlayer(t, room.code, 'Grace');
     await seatPlayer(t, room.code, 'Linus');
@@ -378,7 +392,7 @@ describe('room expiry', () => {
 
   it('stops a running game’s clock as it deletes the room', async () => {
     const t = convexTest(schema, modules);
-    const room = await t.mutation(api.rooms.createRoom, {});
+    const room = await roomFixture(t);
     const host = await seatPlayer(t, room.code, 'Ada');
     await seatPlayer(t, room.code, 'Grace');
 
@@ -415,17 +429,11 @@ describe('room expiry', () => {
   });
 
   /**
-   * The room's other clock: the one for a room that has never had a player, and
-   * so has no last heartbeat for the ten minutes above to run from.
-   *
-   * The first two are one sentence read in both directions: a television showing
-   * a Room Code to a party that has not arrived keeps it, and a room nobody ever
-   * arrives at is eventually let go. The fourth is the one a naive fix breaks —
-   * a party that *did* arrive keeps their room however late they walked in, and
-   * a Room Code taken off a working television mid-party is the failure this
-   * clock risks and the only one it can cause.
+   * Legacy rows created before durable TV sessions existed have no lifecycle
+   * credential. They stay readable and joinable until a party uses and leaves
+   * them; deployment cleanup, if an audit finds any, is a separate migration.
    */
-  describe('a room nobody has joined', () => {
+  describe('a legacy room without a TV credential', () => {
     /** Every scheduled function this backend gave up on. */
     async function failedChecks(t: Backend): Promise<readonly string[]> {
       return await t.run(async (ctx) => {
@@ -437,12 +445,10 @@ describe('room expiry', () => {
 
     it('keeps its Room Code for the whole of the window', async () => {
       const t = convexTest(schema, modules);
-      const room = await t.mutation(api.rooms.createRoom, {});
+      const room = await roomFixture(t);
 
-      // A television switched on before the guests arrive. Nobody has left this
-      // room, so nothing has expired — and taking its code away while somebody
-      // across the room is reading it off the screen is the one thing expiry
-      // must never do.
+      // No scheduled lifecycle owns this historical row, so merely advancing
+      // the clock cannot mutate it.
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS - 1_000);
 
       expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
@@ -450,11 +456,10 @@ describe('room expiry', () => {
 
     it('stays owned by the TV even when no phone has joined', async () => {
       const t = convexTest(schema, modules);
-      const room = await t.mutation(api.rooms.createRoom, {});
+      const room = await roomFixture(t);
 
-      // There is no legacy unjoined-room timer. A production TV owns this room
-      // through its durable heartbeat, including the empty-before-first-join
-      // interval.
+      // There is no legacy unjoined-room timer. Production rows instead carry a
+      // durable TV session and are covered by tv-recovery.test.ts.
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
 
       expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
@@ -462,29 +467,27 @@ describe('room expiry', () => {
 
     it('does not recycle a code while its owner is still live', async () => {
       const t = convexTest(schema, modules);
-      const room = await t.mutation(api.rooms.createRoom, {});
+      const room = await roomFixture(t);
 
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
 
       // The code remains held until the TV session expires, so a collision is
       // still rejected rather than silently handing it to a second room.
-      pinDrawsTo(...Array<string>(20).fill(room.code));
+      registerRateLimiter(t);
+      pinOpenRoomDraws(Array<string>(20).fill(room.code));
       const rejection: unknown = await t
-        .mutation(api.rooms.createRoom, {})
+        .mutation(api.rooms.openRoom, { tvSessionToken: 'held-code-collision' })
         .then(() => undefined)
         .catch((error: unknown) => error);
       expect(rejection).toBeInstanceOf(ConvexError);
     });
 
-    it('stops being one the moment somebody joins', async () => {
+    it('remains joinable until a party claims it', async () => {
       const t = convexTest(schema, modules);
-      const room = await t.mutation(api.rooms.createRoom, {});
+      const room = await roomFixture(t);
 
-      // A television on all afternoon, and the guests walk in a minute before
-      // the window comes due — the latest they can, and so the tightest version
-      // of the case this clock must never break. The check fires in the middle
-      // of their evening and has to find nothing to do: a Room Code taken off a
-      // television mid-party is the failure a naive fix here produces.
+      // A pre-session row may still be held by a deployed client. Joining it
+      // must keep working until an explicitly approved migration removes it.
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS - 60_000);
       const ada = await seatPlayer(t, room.code, 'Ada');
       await elapseBeating(t, [ada.sessionToken], 5 * 60_000);
@@ -495,7 +498,7 @@ describe('room expiry', () => {
 
     it('does not trip over a room its party has already ended', async () => {
       const t = convexTest(schema, modules);
-      const room = await t.mutation(api.rooms.createRoom, {});
+      const room = await roomFixture(t);
       await seatPlayer(t, room.code, 'Ada');
 
       // A party arrives, plays, and goes home: desertion takes the room long
