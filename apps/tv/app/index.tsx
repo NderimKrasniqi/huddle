@@ -1,2 +1,2 @@
-/** Expo Router adapter. TV composition lives under src/app. */
-export { default } from '../src/app/tv-screen';
+/** Expo Router adapter. TV composition lives under src/screens. */
+export { default } from '../src/screens/tv-screen';

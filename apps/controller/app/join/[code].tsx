@@ -13,4 +13,4 @@
  * The phone's own camera opens the link; the Controller never asks for a camera
  * of its own, which is a permission prompt Huddle does not have to spend.
  */
-export { default } from '../../src/app/controller-screen';
+export { default } from '../../src/screens/controller-screen';
