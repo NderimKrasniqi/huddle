@@ -2,137 +2,111 @@
 
 ## Current task
 
-**Soft Minimal screen replacement, Phase 4 — the phone screens.** Complete on
-branch `feat/soft-minimal-design-assets`. The approved plan is
-`~/.claude/plans/make-a-plan-to-enchanted-boole.md`; Phase 4 is marked DONE
-there, with the four things the plan did not anticipate recorded against it.
+**Soft Minimal screen replacement, Phase 5 — Leave.** The last phase. Complete on
+branch `feat/leave-room`, cut from `main` after PR #25 merged. The approved plan
+is `~/.claude/plans/make-a-plan-to-enchanted-boole.md`.
 
-Phases 1–3 are committed and pushed (`6cb2b48`, `cd12570`, `8654088`).
+Phases 1–4 are merged to `main` (PR #25). Every feature branch was deleted after
+that merge, so this branch is the only one.
 
 ## What this change did
 
-**An icon layer, delivered mid-phase.** The user handed over a fifteen-glyph set
-and the rule that goes with it: room-code tiles, buttons, cards, chips, status
-dots, shadows, borders, page dots, player slots and swatches stay React Native
-components so they scale across phones and TVs, and the QR is generated (it
-already was). So the icons are **geometry, not artwork** — SVG sources in
-`packages/ui/assets/icons/`, transcribed into `packages/ui/src/icons.ts`, drawn
-by `Icon` with `react-native-svg`, coloured from a token at the call site.
-`icons.test.ts` parses the sources and fails if the transcription drifts. The
-delivered badge and status-dot PNGs were deliberately **not** wired, and the
-dark/white PNG pairs were not taken at all.
+**`players.leaveRoom`.** A phone gives up its own seat, named by the Session
+Token it already holds. No target argument, and deliberately *not* behind
+`hostControl.ts`'s host gate: a phone leaving its own seat is nobody's power
+over anybody. A departing Host hands the room on through the existing
+`handOverRoom`.
 
-**The four screens, against the boards.** Join gains a deterministic 4-column
-avatar grid and a check badge; `YoureInScreen` becomes a chooser over
-`YourRoomScreen`, `PickAGameScreen` and `WaitingScreen`; the roster row is
-borderless with hairline rules and a four-state right slot (HOST + crown / JUST
-JOINED / online dot / Away + clock); the manage sheet stacks its target and
-draws Remove as the one orange bar.
+**`rooms.endRoom` is deleted**, with its tests. It lost its caller, and a
+Host-only power to close a room other people are in is not one to leave lying
+around unreachable.
 
-**`just-joined.ts` moved to `packages/game-core`** and became generic over the
-seat id, because the phone roster now draws the chip and an app cannot import
-another app.
+**The last player out deletes the room** — a deliberate departure from the plan,
+which expected an emptied room to linger until expiry "the same shape as
+everyone force-quitting today, so no new leak". It is not the same shape:
+force-quitting keeps the rows, and rows going away are the only thing that ever
+arms `expireRoom`. Leaving deletes them, and `expireRoom` refuses an empty room
+by design. See the mutation's own comment.
 
-**Phase 3's owed escape hatch is closed.** `YourRoomScreen` takes `stranded` and
-draws Back to lobby instead of the picker when the room reports a game this
-build lacks.
+**The phone that leaves returns to the join form with no notice.**
+`seat-loss.ts` used to say outright that a seat is never given up on purpose;
+that claim is retracted. A `leaving` ref set *before* the mutation keeps the
+seat subscription's `null` from racing it into "The host removed you".
 
-**Dead code removed:** `lobbyStatusText`, `browsedGameMeta`, `HostPill`,
-`LobbyGameControls`, `HostRoster`, `HostGamePicker`, `NowViewing`, and ten dead
-styles — seven of them left over from the colour picker Phase 1 deleted.
+**Copy:** `END_ROOM` → `LEAVE_ROOM` plus `leaveConsequence`, which says one of
+two true things depending on who is leaving. The header pill finally says
+`Leave` — Phase 4 drew it labelled `End room` because that is what it still did.
+
+**Leave is on the waiting screen too**, which board 05 does not draw. The board
+predates the decision that leaving is everybody's.
 
 ## Checks
 
-The five steps `.github/workflows` actually runs, by name: `pnpm typecheck`,
-`pnpm lint`, `pnpm test:unit` (**587 passed, 59 files**), `pnpm test:integration`
-(**166 passed, 5 files**), `pnpm validate:packs`. All clean. `expo export
---platform ios` succeeds in both apps.
+The five steps CI runs, by name: `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`
+(**591**), `pnpm test:integration` (**173**), `pnpm validate:packs`. All clean.
+`expo export --platform ios` succeeds in both apps.
 
-**Run those, not hand-assembled equivalents.** `pnpm typecheck` is `tsc --noEmit
-&& pnpm -r typecheck`, and the recursive half alone — which is what every
-session ran from the palette swap onward — covers only the workspace packages.
-The bare root `tsc` is the sole thing that typechecks files belonging to no
-package: `eslint-rules/`, `test/`. CI was red on fourteen consecutive commits
-over one error nobody saw locally (`colors.punch`, deleted by the palette swap,
-still referenced by `boardwalk-tokens-only.test.ts`). Fixed in `5c85d72`; that
-was the branch's first green run.
+## Reviews
 
-## Review
+**Code review** (`workflow-code-reviewer`): two blocking, five non-blocking, all
+fixed. The blocking pair are worth carrying:
 
-`workflow-code-reviewer`, fresh context. Four blocking findings and ten
-non-blocking; all fixed. Three are worth carrying:
+1. **The room-deletion reasoning was right but stopped one step short.** Leaving
+   a room whose *remaining* seats are all away strands it exactly as an emptied
+   one would — `markAway` returns early on an away player and never re-reaches
+   `watchForDesertion`, the last call that did reach it found the leaver still
+   beating, and `expireUnjoinedRoom` refuses a room with seats in it. At an
+   `AWAY_AFTER_MS` of 13 seconds that is one person with a phone in a pocket —
+   *more* reachable than the >2h leak the deletion was written for. Fixed by
+   calling `watchForDesertion` on the non-empty path. **The test for it was
+   verified to fail without the fix** before being kept.
+2. **The `leaving` ref leaked past its attempt.** It cannot lose its race — that
+   part held — but nothing reset it, so a *failed* leave left the suppression
+   standing for the life of the mount, and the next genuine seat loss would
+   produce no notice *and no navigation*, stranding the phone on a room it was
+   no longer in. Fixed with `onLeaveFailed` in the `catch` (not `finally`, which
+   also runs on success and would reopen the race).
 
-1. **`expo export` does not run CocoaPods, so it cannot prove a native
-   dependency.** `react-native-svg` is native, and `apps/controller` aliases
-   `react-native` to `react-native-tvos` exactly as the TV does — so it needed
-   the TV's `REACT_NATIVE_NODE_MODULES_DIR` escape hatch or `pod install` dies
-   on `File.join(nil, ...)`. Every check in the plan's Verification list passed
-   while the phone could not be built at all. **Verified the mechanism directly**
-   with a Ruby probe of the podspec's own resolution: without the variable the
-   sibling lookup and the fallback are both `nil`; with it, the fallback
-   resolves. Adding a native module is a `prebuild` gate, not an `export` one.
-2. **The phone copied the TV's arrival hooks and dropped half of each.**
-   `useRoomRoster` flattened the in-flight roster to `[]`, which made the
-   baseline snapshot empty and greeted everybody already in the room on a cold
-   start. And `RosterRow`'s timer cleanup cancelled the greeting without
-   spending it, so stepping to the picker and back inside four seconds
-   re-announced the arrival, every time. Both fixed the way the television
-   already does it; both of the TV's comments explain exactly why, and neither
-   was read.
-3. **`picking` survived a game and was checked before `stranded`.** A game now
-   ends onto Your room, and the picker guard reads `stranded` first, which is
-   what makes `game-rejection.ts`'s "no correct Controller offers to start a
-   room already playing" true again.
+**Security review** (`workflow-security-reviewer`): **PASS**, no blocking
+findings. It confirmed the no-host-gate argument is sound — `leaveRoom` takes no
+target, derives the room from the row the token resolved to, and its only
+cross-player write is `handOverRoom`, which no-ops unless the departing player
+is the host. Net it *reduces* attack surface: nothing client-reachable can now
+delete a room full of other people, which `endRoom` could.
+
+Its one substantive finding (NB-1) is fixed rather than accepted: a Host leaving
+while everybody else was merely quiet left the room pointing at a deleted row,
+which every host control reads as `notHost` — a party stuck in a lobby nobody
+can start, repairable only by somebody new joining. `handOverRoom` now takes
+`departingIsLeaving` and hands a leaver's room to the longest-connected
+remaining seat even if the room is not currently hearing from it. `markAway`
+keeps its original rule, where the row survives and being away is not resigning.
+
+That fix made `leaveConsequence`'s "nobody to take over" branch unreachable, so
+it was deleted — the backend now always keeps the sentence the client shows.
 
 ## Not verified
 
-**Nothing has been run on a simulator this phase, and no pixel pass was done
-against the boards.** Structure and content follow the five boards; sizes and
-gaps are judged, not measured, unlike Phase 2's Room. The plan's Verification
-step 2 (boot a TV sim and a phone sim and walk the flow) and step 3 (screenshot
-each screen beside its board) are both outstanding and are the natural next
-move — and step 2 now also has to cover `pnpm --filter @huddle/controller
-prebuild`, which is the check that would have caught finding 1.
+**Nothing has been run on a simulator since Phase 2.** The plan's Verification
+step 2 names the two-phone walk as "the one worth doing twice: host leaves with
+players present, host leaves alone", and neither has been watched. Also
+outstanding: `pnpm --filter @huddle/controller prebuild` (the `react-native-svg`
+CocoaPods path from Phase 4, verified only by probing the podspec's own
+resolution), and the pixel pass against the boards.
 
-Also unproven, as before: real TV hardware.
+The user has said they will verify everything together on `main` once this
+lands, rather than per-phase.
 
 ## Where the plan stands
 
-Phases 1–4 of the screen replacement are done. **Phase 5 is next** — Leave:
-`leaveRoom` in `convex/convex/players.ts`, `endRoom` losing its caller, the
-phone clearing its own session with no notice, and the header pill's label
-finally moving from `End room` to `Leave`.
+**All five phases of the screen replacement are done.** The MVP roadmap in
+`docs/implementation-plan.md` is fully checked.
 
-Two things recorded in the handoff as outstanding rather than done: greying
-taken avatars on the join picker (a live roster subscription on a form that
-deliberately has none), and the End Room sheet's Soft Minimal treatment.
-
-From the MVP roadmap: every task is checked, 5.9 included (PR #24). Nothing
-substantive remains in `docs/implementation-plan.md`.
-
-## `origin/main` is merged in
-
-The branch had drifted six commits behind while this work ran, and PR #25 was
-`CONFLICTING`. `origin/main` is now merged, six conflicts resolved:
-
-- **`apps/tv/src/tv-stage.tsx` — both sides kept.** Main's PR #23 insets the
-  stage into the title-safe 90% (real televisions crop ~5% of every edge without
-  saying so); this branch made the background artwork the canvas and deleted the
-  About Panel. The resolution takes all three. They compose rather than collide:
-  the inset *scales* the stage instead of cropping it, so the artwork is inset
-  with the content and its composition holds.
-- **Three game modules — main's structure, this branch's palette.** 5.9 moved
-  each game's metadata into its own `metadata.ts` so a client bundle stops
-  carrying the rules; the palette swap had changed the `keyArt` colour in the
-  old location. Taking main's side alone would have restored `punch`,
-  `tangerine` and `yellow` — three tokens Soft Minimal deleted — so each moved
-  value was re-applied in its new home. Trivia is `ink`, Hot Takes is `accent`:
-  the only two card fills one accent leaves, and a third game is where that
-  stops working.
-- **`trivia.test.ts`** — main's side; the helper's callers moved to
-  `logic.test.ts` in the same split, so keeping it would have been dead code.
-- **This file** — this branch's side; main's copy describes 5.9, which is done.
+Recorded in the handoff as outstanding rather than done: greying taken avatars
+on the join picker, a Soft Minimal treatment for the confirm sheet, both game
+frames needing design, `yellow-robot`'s re-art and two more avatars, and game
+art coverage.
 
 ## Next action
 
-Phase 5 — Leave.
+Open a PR for `feat/leave-room` and leave it for the user to merge.

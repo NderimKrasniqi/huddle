@@ -110,12 +110,15 @@ The host can:
 - pause/resume where supported;
 - remove players;
 - manually transfer host status;
-- end the active game;
-- end the room.
+- end the active game.
+
+The host cannot end the room. That power was removed with `rooms.endRoom`: a
+room now ends when its **last player leaves**, and leaving is something every
+player can do, not a power one player holds over the rest.
 
 The host cannot inspect information that a game defines as private to another player.
 
-If the host deliberately leaves, host ownership transfers to the longest-connected remaining eligible player before the old host is removed. If no players remain, the room becomes hostless until the next player joins.
+If the host deliberately leaves, host ownership transfers to the longest-connected remaining player before the old host is removed — preferring one the room is still hearing from, but taking a currently-silent one over leaving the room hostless, since a room whose host pointer names nobody is one the remaining players cannot start a game in or repair. If **no** players remain, the room is deleted outright and its Room Code returns to the pool: an empty room has nobody to become its host, and nothing else in the system would ever collect it (see `players.leaveRoom`).
 
 If a host is permanently lost after a disconnect/recovery period, the longest-connected eligible connected player becomes host automatically.
 

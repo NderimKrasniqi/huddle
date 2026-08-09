@@ -135,22 +135,61 @@ export function backToLobbyLabel(returning: boolean): string {
 }
 
 /**
- * What the Host's way out of the *room* says, and what it warns before doing it
- * (the scope's "end the room").
+ * What a phone's way out of the room says (the scope's "leave").
  *
- * Deliberately not a second "Back to lobby": that one returns a room to its
- * lobby with every seat intact, and this one deletes the room and every seat in
- * it. So the confirm names what is actually lost — the party has to rejoin from
- * a new code — rather than asking "are you sure?", which tells a Host nothing
- * they did not already know.
+ * It replaced "End room", and the change is more than a word. End room was the
+ * Host's alone and took every seat with it; leaving is everybody's and takes
+ * exactly one — the reader's. So the confirm no longer warns about what is done
+ * to other people, and what it says instead depends on who is leaving, which is
+ * `leaveConsequence` below.
  *
- * The room is what ends here, not the app: the phone that tapped goes back to
- * the Join Screen along with everybody else's, because its own seat is gone too.
+ * Deliberately not a second "Back to lobby": that one ends a *game* and leaves
+ * the room standing with every seat intact. This gives up a seat.
  */
-export const END_ROOM = {
-  label: 'End room',
-  busyLabel: 'Ending…',
-  title: 'End the room?',
-  body: 'Everyone is sent back to the join screen and the room code stops working. This cannot be undone.',
-  confirmLabel: 'End room',
+export const LEAVE_ROOM = {
+  label: 'Leave',
+  busyLabel: 'Leaving…',
+  title: 'Leave the room?',
+  confirmLabel: 'Leave',
 } as const;
+
+/**
+ * What leaving actually costs this phone, which is three different things.
+ *
+ * A confirm that said the same sentence to all three would be wrong twice. The
+ * last player out closes the room — nobody is left to hold it, so the code stops
+ * working; a Host with somebody still here hands it on rather than ending it;
+ * and everybody else is simply giving up a seat they can retake. Each is worth
+ * a second tap for a different reason, and only the first is irreversible.
+ *
+ * It does not have to ask whether there *is* a successor. `handOverRoom` hands
+ * a leaver's room to the longest-connected remaining seat whether or not the
+ * room is currently hearing from it — precisely so that "someone else takes
+ * over" is a sentence the backend always keeps. The only room that ends up
+ * without a host is one with nobody left in it, and that room is deleted.
+ *
+ * ## The stale-roster case, which is a false sentence and stays
+ *
+ * `joined` is the room as this phone last saw it, so it can be a round trip
+ * behind — and it is `0` for as long as the roster query is in flight, during
+ * which every phone including the Host draws the waiting screen. Opening the
+ * sheet in that window tells a member of a six-person room that they are the
+ * last one here.
+ *
+ * That is a false sentence and it is kept deliberately. Both directions have a
+ * wrong case, and this is the one that errs toward not leaving: a player who is
+ * told the room will close and hesitates has lost nothing, where a player told
+ * they can rejoin a room that is about to close acts on it and cannot. The
+ * window is a round trip wide, and the server does not read any of this — it
+ * decides on rows, so the worst case is a stale sentence rather than a wrong
+ * act.
+ */
+export function leaveConsequence(joined: number, youAreHost: boolean): string {
+  if (joined <= 1) {
+    return 'You’re the last one here, so the room closes and its code stops working.';
+  }
+
+  return youAreHost
+    ? 'Someone else takes over the room. You can rejoin with the same code.'
+    : 'You can rejoin with the same code while the room is open.';
+}

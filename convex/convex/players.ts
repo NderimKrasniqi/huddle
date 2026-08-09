@@ -86,12 +86,15 @@ function silenceOf(player: Doc<'players'>): number {
  * Whether this room has nobody running it — no host named, or one whose player
  * row is gone.
  *
- * The second half is not reachable today: the only thing that deletes players
- * is room expiry, which takes the room and its pointer with it. It is asked
- * anyway because the cost of being wrong is not symmetric — a room left holding
- * a dangling host can never be started by anybody, and no join afterwards would
- * fix it, whereas the guard is one read on a mutation that happens at most ten
- * times a room.
+ * The second half became reachable with `leaveRoom`. It used to be unreachable
+ * — the only thing that deleted a player was room expiry, which took the room
+ * and its pointer with it — and it was asked anyway because the cost of being
+ * wrong is not symmetric: a room left holding a dangling host can never be
+ * started by anybody, and no join afterwards would fix it, whereas the guard is
+ * one read on a mutation that happens at most ten times a room. That defensive
+ * read is now load-bearing: a host who leaves a room where nobody else is still
+ * beating hands it to nobody (`handOverRoom`), and this is what puts a host
+ * back in it at the next join.
  */
 async function needsHost(ctx: MutationCtx, room: Doc<'rooms'>): Promise<boolean> {
   return room.hostPlayerId === undefined || (await ctx.db.get(room.hostPlayerId)) === null;
@@ -121,8 +124,32 @@ async function needsHost(ctx: MutationCtx, room: Doc<'rooms'>): Promise<boolean>
  * would leave a room that cannot start a game once its players come back —
  * being away is not resigning, and a party backgrounding their phones between
  * rounds must not cost the room its host.
+ *
+ * **That last paragraph is `markAway`'s alone**, and `departingIsLeaving` is
+ * what says so. It holds there because the departing row survives: the room
+ * keeps a host who may yet come back, and a party backgrounding their phones
+ * between rounds loses nothing. Under `leaveRoom` the row is deleted, so
+ * "keeps the host it has" would degenerate into keeping nobody — a pointer at a
+ * deleted row, which every host control reads as `notHost`. That is a room the
+ * remaining players cannot start a game in, cannot hand over, and cannot repair
+ * without somebody new joining, and it is reachable by one person having their
+ * phone in a pocket for thirteen seconds.
+ *
+ * So a leaver hands on to the longest-connected seat left even if the room is
+ * not currently hearing from it. Being away is not resigning — but it is not a
+ * reason to strand everybody else either, and an away player who comes back to
+ * find themselves host is exactly what `needsHost` would have produced at the
+ * next join anyway.
  */
-async function handOverRoom(ctx: MutationCtx, departing: Doc<'players'>): Promise<void> {
+async function handOverRoom(
+  ctx: MutationCtx,
+  departing: Doc<'players'>,
+  /**
+   * Whether the departing row is about to be *deleted*, which changes what
+   * "nobody is beating" is allowed to mean — see the last paragraph above.
+   */
+  departingIsLeaving = false,
+): Promise<void> {
   const room = await ctx.db.get(departing.roomId);
 
   if (room === null || room.hostPlayerId !== departing._id) {
@@ -136,9 +163,14 @@ async function handOverRoom(ctx: MutationCtx, departing: Doc<'players'>): Promis
   // The departing player is excluded by id rather than by their own silence,
   // which is a number this very call was prompted by: the point is that a host
   // cannot succeed themselves, and that should not rest on arithmetic.
-  const successor = seated.find(
-    (player) => player._id !== departing._id && silenceOf(player) < AWAY_AFTER_MS,
-  );
+  const others = seated.filter((player) => player._id !== departing._id);
+  const beating = others.find((player) => silenceOf(player) < AWAY_AFTER_MS);
+  // A leaver's room must come away with *a* host. `beating` is still preferred
+  // — a phone the room is hearing from can act on the handover now — but when
+  // there is none, the longest-connected remaining seat takes it anyway rather
+  // than the room keeping a pointer to a row that is about to be deleted. The
+  // `by_room` index reads in join order, so `others[0]` is that seat.
+  const successor = beating ?? (departingIsLeaving ? others[0] : undefined);
 
   if (successor === undefined) {
     return;
@@ -430,8 +462,8 @@ export const markAway = internalMutation({
  * A phone sends a `playerId` the roster handed every client, so the id itself is
  * public and proves nothing: the guard is that it names a seat *in this room*
  * (not a stale id, and not a seat in someone else's room) and not the Host's own
- * (there is no room to hand oneself, and no self to remove — a host leaves by
- * ending the room, or transfers first).
+ * (there is no room to hand oneself, and no self to remove — a host who wants
+ * out uses `leaveRoom`, which hands the room on for them).
  */
 async function targetSeatIn(
   ctx: MutationCtx,
@@ -510,6 +542,120 @@ export const removePlayer = mutation({
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
     await ctx.db.delete(target._id);
+    return null;
+  },
+});
+
+/**
+ * A player gives up their seat on purpose — the scope's "leave", and the
+ * control every phone now carries.
+ *
+ * It is nobody's power over anybody: a phone leaves its own seat, named by the
+ * Session Token it already holds, and there is no target argument to get wrong.
+ * That is the whole reason it needs none of `hostControl`'s gating. The Host
+ * leaves the same way everybody else does, and the room goes with them only in
+ * the sense that `handOverRoom` hands it on — the same succession `markAway`
+ * already uses when a host's phone goes quiet, so a departing host is a room
+ * that changes hands rather than a room that ends.
+ *
+ * A token no seat answers to is accepted and ignored, as in `heartbeat`: the
+ * seat may have gone with an expired room, and a phone leaving a room that is
+ * no longer there has got what it wanted.
+ *
+ * ## The last player out deletes the room
+ *
+ * This is a departure from the plan, which expected an emptied room to linger
+ * until expiry "the same shape as everyone force-quitting today, so no new
+ * leak". It is not the same shape, and it would be a new leak:
+ *
+ * - A party that force-quits **keeps its rows**. Every seat goes `away`, which
+ *   is what arms `watchForDesertion` → `expireRoom`, and the room is collected
+ *   ten minutes later.
+ * - A party that *leaves* deletes its rows. `expireRoom` refuses an empty room
+ *   by design — "an empty room is a television waiting for guests" — and
+ *   `watchForDesertion` refuses to schedule one at all for the same reason.
+ *
+ * That leaves `expireUnjoinedRoom`, which does handle an empty room and says so
+ * outright: *"Should a room ever be able to lose its last player without being
+ * deleted, this would find an empty room hours later and take it."* But it is
+ * armed once by `createRoom` and never re-armed, so it only catches a room
+ * emptied inside `UNJOINED_ROOM_EXPIRY_MS` of being minted. **A party that runs
+ * longer than that and then leaves would strand its room, and its Room Code,
+ * for good** — the same code leak a hundred unjoined rooms on the dev
+ * deployment already cost once.
+ *
+ * Deleting here closes it without a clock. It is also the honest reading:
+ * an empty *unjoined* room is a television waiting for guests, but a room whose
+ * whole party has walked out is a party that is over, and every one of them
+ * said so. Nobody is coming back to be surprised by it, the television notices
+ * within a round trip and re-opens on a fresh code (`stillOpen` → `onExpired`),
+ * and the old code returns to the pool immediately rather than in two hours.
+ *
+ * A running game's deadline is cancelled with the room, as `expireRoom` and
+ * `expireRoom` does: it is the room's own scheduled work and the room ending is
+ * where it stops, however the room comes to end.
+ */
+export const leaveRoom = mutation({
+  args: { sessionToken: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const player = await ctx.db
+      .query('players')
+      .withIndex('by_session_token', (q) => q.eq('sessionToken', args.sessionToken))
+      .first();
+
+    if (player === null) {
+      return null;
+    }
+
+    // Before the row goes, so the successor is chosen from a roster this player
+    // is still on and excluded from it by id — which is exactly what
+    // `handOverRoom` does, and why it takes the departing row rather than an id.
+    //
+    // `true` is "this row is being deleted", which is what licenses handing the
+    // room to a seat that has gone quiet. `markAway` passes nothing and keeps
+    // its host; a leaver has no host to keep.
+    await handOverRoom(ctx, player, true);
+    await ctx.db.delete('players', player._id);
+
+    const room = await ctx.db.get(player.roomId);
+
+    if (room === null) {
+      return null;
+    }
+
+    const remaining = await ctx.db
+      .query('players')
+      .withIndex('by_room', (q) => q.eq('roomId', player.roomId))
+      .collect();
+
+    if (remaining.length > 0) {
+      // The room lives on, and this is where it is handed back to its clock.
+      //
+      // Not optional, and not belt-and-braces. Leaving a room whose remaining
+      // seats have *all* gone quiet strands it exactly as an emptied one would:
+      // `markAway` has already run for those seats and returns early on an
+      // away player, so it never re-reaches this watcher; the last call that
+      // did reach it found the leaver still beating and so scheduled nothing;
+      // and `expireUnjoinedRoom` refuses a room with seats in it. Nothing would
+      // be left watching a room that is, in every sense that matters, deserted.
+      //
+      // At `AWAY_AFTER_MS` of 13 seconds that is not an exotic case — it is one
+      // other person with their phone in their pocket. `watchForDesertion`
+      // self-guards on "not every player is away", so calling it unconditionally
+      // costs a read and says exactly what is true: somebody just left, look
+      // again at whether anyone is still here.
+      await watchForDesertion(ctx, player.roomId);
+      return null;
+    }
+
+    const pending = room.game?.deadline;
+
+    if (pending !== undefined) {
+      await ctx.scheduler.cancel(pending);
+    }
+
+    await ctx.db.delete('rooms', room._id);
     return null;
   },
 });

@@ -59,9 +59,10 @@ import {
   BACK_TO_ROOM,
   backToLobbyLabel,
   CHOOSE_A_GAME,
-  END_ROOM,
   gameToStart,
   hostChoosingLine,
+  leaveConsequence,
+  LEAVE_ROOM,
   NOW_VIEWING_CAPTION,
   nowViewingLine,
   startControl,
@@ -223,6 +224,9 @@ export default function JoinScreen() {
           setNotice(reason);
           setSession(null);
         }}
+        // No notice. A phone that tapped Leave knows why it is here, and
+        // `seatLossNotice` has no true sentence for a departure nobody imposed.
+        onLeft={() => setSession(null)}
       />
     );
   }
@@ -582,9 +586,12 @@ function BlinkingCaret() {
 function YoureInScreen({
   session,
   onSeatLost,
+  onLeft,
 }: {
   readonly session: PlayerSession;
   readonly onSeatLost: (reason: string) => void;
+  /** This phone gave up its seat on purpose, so it goes back with no notice. */
+  readonly onLeft: () => void;
 }) {
   const { code } = session;
   useHeartbeat();
@@ -632,9 +639,8 @@ function YoureInScreen({
   // token and again with it. The arguments are what a subscription is keyed by,
   // so asking twice means an `undefined` between the two answers — and an
   // `undefined` here reads as the lobby (`runningGameScreen`). A phone that cold
-  // starts into a room mid-game would flash that lobby, which on the Host's
-  // phone is the one carrying End room. One subscription, with its final
-  // arguments, cannot.
+  // starts into a room mid-game would flash that lobby, which is the screen
+  // carrying Leave. One subscription, with its final arguments, cannot.
   const sessionToken = useSessionToken();
   const running = useQuery(
     api.games.running,
@@ -653,8 +659,31 @@ function YoureInScreen({
     sessionToken === undefined ? 'skip' : { sessionToken },
   );
 
+  // Whether this phone is giving up its seat on purpose. The seat subscription
+  // reports `null` either way, and this is the only thing that tells the two
+  // apart — so `seatLossNotice` is never asked about a departure it cannot
+  // explain, which is the case it says outright it must not speak for.
+  //
+  // A ref rather than state: it is read by an effect that must see the newest
+  // value, and it must not schedule a render of its own. `LeaveRoomSheet` sets
+  // it before the mutation goes out, so the race with the subscription cannot
+  // be lost.
+  const leaving = useRef(false);
+  const noteLeaving = useCallback(() => {
+    leaving.current = true;
+  }, []);
+  // Scoped to the attempt, not to the mount. A leave that fails leaves this
+  // phone seated, and a suppression left standing would eat the *next* seat
+  // loss — and with it the `setSession(null)` that `onSeatLost` performs, which
+  // would strand the phone on a room it is no longer in, drawing a roster that
+  // has stopped updating. That is the exact failure `seat-loss.ts` exists to
+  // prevent, arrived at from the other direction.
+  const noteStillHere = useCallback(() => {
+    leaving.current = false;
+  }, []);
+
   useEffect(() => {
-    if (seat === null) {
+    if (seat === null && !leaving.current) {
       // The roster read in the same render is the room as it was the instant the
       // seat vanished — still peopled if the Host removed this one player, empty
       // if the room itself ended — which is how the notice tells the two apart.
@@ -706,7 +735,16 @@ function YoureInScreen({
 
   // Everybody who is not running the room gets one screen and no controls.
   if (!standing.youAreHost) {
-    return <WaitingScreen standing={standing} browsing={browsing} />;
+    return (
+      <WaitingScreen
+        standing={standing}
+        browsing={browsing}
+        roster={roster}
+        onLeaving={noteLeaving}
+        onLeaveFailed={noteStillHere}
+        onLeft={onLeft}
+      />
+    );
   }
 
   // The room says it is playing something and `runningGameScreen` still sent
@@ -741,6 +779,9 @@ function YoureInScreen({
       greeting={(playerId) => isGreeting(arrivals, greeted, playerId)}
       onGreeted={noteGreeted}
       onChooseGame={() => setPicking(true)}
+      onLeaving={noteLeaving}
+      onLeaveFailed={noteStillHere}
+      onLeft={onLeft}
     />
   );
 }
@@ -769,6 +810,9 @@ function YourRoomScreen({
   greeting,
   onGreeted,
   onChooseGame,
+  onLeaving,
+  onLeaveFailed,
+  onLeft,
 }: {
   readonly code: string;
   readonly roster: readonly RosterSeat[];
@@ -792,6 +836,9 @@ function YourRoomScreen({
   readonly greeting: (playerId: RosterSeat['playerId']) => boolean;
   readonly onGreeted: (playerId: RosterSeat['playerId']) => void;
   readonly onChooseGame: () => void;
+  readonly onLeaving: () => void;
+  readonly onLeaveFailed: () => void;
+  readonly onLeft: () => void;
 }) {
   // Which player's row the Host has opened to manage, if any. Held as the id
   // rather than the seat so the sheet always reads the *current* row off the
@@ -803,7 +850,17 @@ function YourRoomScreen({
 
   return (
     <PhoneScreen>
-      <RoomHeader />
+      <RoomHeader
+        trailing={
+          <LeaveControl
+            roster={roster}
+            youAreHost
+            onLeaving={onLeaving}
+            onLeaveFailed={onLeaveFailed}
+            onLeft={onLeft}
+          />
+        }
+      />
 
       <View style={styles.roomTitleRow}>
         <Text style={styles.title}>Your room</Text>
@@ -907,7 +964,7 @@ function PickAGameScreen({
 
   return (
     <PhoneScreen>
-      <RoomHeader onBack={onBack} />
+      <RoomHeader trailing={<OutlinePill label={BACK_TO_ROOM} onPress={onBack} />} />
 
       <Text style={styles.pickingLabel}>YOU’RE THE HOST — PICK A GAME</Text>
 
@@ -965,20 +1022,45 @@ function PickAGameScreen({
  * two different people. Their own avatar is on the television, at the size the
  * room is actually looking at.
  *
- * There is nothing to press here, which is the whole screen, and the card at the
- * foot is what says so out loud rather than leaving it as an absence.
+ * There is nothing to press here *about the game*, which is most of the screen,
+ * and the card at the foot is what says so out loud rather than leaving it as
+ * an absence. The one control is Leave, in the header, where it is on every
+ * other seated screen too.
  */
 function WaitingScreen({
   standing,
   browsing,
+  roster,
+  onLeaving,
+  onLeaveFailed,
+  onLeft,
 }: {
   readonly standing: LobbyStanding;
   /** The card the room is on; `undefined` only in a build with no games. */
   readonly browsing: CarouselWindow | undefined;
+  readonly roster: readonly RosterSeat[];
+  readonly onLeaving: () => void;
+  readonly onLeaveFailed: () => void;
+  readonly onLeft: () => void;
 }) {
   return (
     <PhoneScreen>
-      <Wordmark height={20} />
+      {/* The board draws a bare wordmark here, and this adds the Leave pill to
+          it. The board predates the decision that Leave is everybody's — it was
+          drawn while the only way out was the Host's End room — and a player
+          with no way to leave the room would make that decision false on the
+          one screen most of the party is looking at. */}
+      <RoomHeader
+        trailing={
+          <LeaveControl
+            roster={roster}
+            youAreHost={false}
+            onLeaving={onLeaving}
+            onLeaveFailed={onLeaveFailed}
+            onLeft={onLeft}
+          />
+        }
+      />
 
       {/* No label. The name is in the line directly under it, and an avatar
           that announced itself would make a screen reader say it twice. */}
@@ -1004,21 +1086,24 @@ function WaitingScreen({
 }
 
 /**
- * The header both of the Host's screens wear: the wordmark, and a pill at the
- * far end that is either the way out of the room or the way back from the
- * picker.
+ * The header every seated screen wears: the wordmark, and one pill at the far
+ * end.
  *
- * The board draws `Leave` in that pill. **This says `End room`, because that is
- * what it still does** — Leave is a new mutation and it is Phase 5's, and a
- * button labelled Leave that in fact deletes every seat in the room is the one
- * mistake in this rebuild that would cost somebody their party. The label moves
- * when the behaviour behind it does.
+ * The pill is the caller's, because the three screens put different things
+ * there — Leave on the room and on the waiting screen, the way back on the
+ * picker — and a header that branched on which screen it was drawing would be
+ * the screens' business written in the wrong place.
+ *
+ * `Leave` is finally the word it says. Phase 4 drew this pill and labelled it
+ * `End room`, because that is what it still did then and a pill saying Leave
+ * that deleted every seat in the room would have cost somebody their party.
+ * `players.leaveRoom` is what made the board's own label true.
  */
-function RoomHeader({ onBack }: { readonly onBack?: () => void }) {
+function RoomHeader({ trailing }: { readonly trailing: ReactNode }) {
   return (
     <View style={styles.seatedHeader}>
       <Wordmark height={20} />
-      {onBack === undefined ? <EndRoomControl /> : <OutlinePill label={BACK_TO_ROOM} onPress={onBack} />}
+      {trailing}
     </View>
   );
 }
@@ -1079,34 +1164,49 @@ function GameCardChip({ icon, label }: { readonly icon: IconName; readonly label
 }
 
 /**
- * The Host ends the party (the scope's "end the room").
+ * This phone gives up its seat (the scope's "leave").
  *
- * The room's counterpart to "Back to lobby": that one ends a game and leaves the
- * room standing, this ends the room itself — every seat deleted, every phone
- * back on the Join Screen, the Room Code returned to the pool. It is offered in
- * the lobby rather than mid-game because a Host who wants out of a game has the
- * other control, and the room outlives games by design.
+ * It replaced End room, and it is a different kind of control: End room was the
+ * Host's alone and deleted every seat in the room, where this deletes exactly
+ * one — the reader's. So it is on every seated screen rather than the Host's,
+ * and the confirm it stands behind warns about what the reader is giving up
+ * instead of what is being done to everybody else.
  *
- * It moved from the foot of the lobby to the header's far end, where the board
- * draws a pill, and shrank with the move. That is not a demotion of a
- * destructive control: it is behind the same confirm sheet it always was, and
- * the old placement — a full-width orange button directly under Start — put the
- * room's one irreversible act in the same shape and colour as its most ordinary
- * one. An outlined pill in the corner is harder to hit by accident than a
- * thumb-width bar at the bottom of a scroll.
- *
- * The confirm shows its failure rather than swallowing it — a Host who taps and
- * sees nothing happen has no way to make sense of it — though the ordinary
- * success of this control is the screen disappearing, since this phone's own
- * seat goes with the room.
+ * It keeps the header slot and the outlined pill the board draws, and it keeps
+ * the confirm. A tap that costs a seat is still worth a second one — the room
+ * has no undo, only a rejoin — but it is no longer the room's irreversible act,
+ * because for everybody but the last player out it is not irreversible at all.
  */
-function EndRoomControl() {
+function LeaveControl({
+  roster,
+  youAreHost,
+  onLeaving,
+  onLeaveFailed,
+  onLeft,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly youAreHost: boolean;
+  /** Called before the mutation — see `leaving` in `YoureInScreen`. */
+  readonly onLeaving: () => void;
+  /** Called if it fails, so the suppression lasts only as long as the attempt. */
+  readonly onLeaveFailed: () => void;
+  readonly onLeft: () => void;
+}) {
   const [confirming, setConfirming] = useState(false);
 
   return (
     <>
-      <OutlinePill label={END_ROOM.label} onPress={() => setConfirming(true)} />
-      {confirming ? <EndRoomSheet onDismiss={() => setConfirming(false)} /> : null}
+      <OutlinePill label={LEAVE_ROOM.label} onPress={() => setConfirming(true)} />
+      {confirming ? (
+        <LeaveRoomSheet
+          roster={roster}
+          youAreHost={youAreHost}
+          onLeaving={onLeaving}
+          onLeaveFailed={onLeaveFailed}
+          onLeft={onLeft}
+          onDismiss={() => setConfirming(false)}
+        />
+      ) : null}
     </>
   );
 }
@@ -1232,19 +1332,38 @@ function ConfirmSheet({
 }
 
 /**
- * The confirm sheet for ending the room: what is lost, and the two ways out.
+ * The confirm sheet for leaving: what this phone is giving up, and the two ways
+ * out.
  *
- * The Manage Sheet's surface — a centred Boardwalk card over an ink scrim,
- * dismissed by the scrim or by Cancel — because this is the same kind of act it
- * confirms, one step further: it takes every seat rather than one.
+ * The Manage Sheet's surface — a centred card over an ink scrim, dismissed by
+ * the scrim or by Cancel — because it confirms the same kind of act, pointed the
+ * other way: that one takes somebody else's seat, this one takes the reader's.
+ *
+ * What it warns depends on who is leaving (`leaveConsequence`), because leaving
+ * is three different acts. Only the last player out is doing something
+ * irreversible.
  */
-function EndRoomSheet({ onDismiss }: { readonly onDismiss: () => void }) {
-  const endRoom = useMutation(api.rooms.endRoom);
-  const [ending, setEnding] = useState(false);
+function LeaveRoomSheet({
+  roster,
+  youAreHost,
+  onLeaving,
+  onLeaveFailed,
+  onLeft,
+  onDismiss,
+}: {
+  readonly roster: readonly RosterSeat[];
+  readonly youAreHost: boolean;
+  readonly onLeaving: () => void;
+  readonly onLeaveFailed: () => void;
+  readonly onLeft: () => void;
+  readonly onDismiss: () => void;
+}) {
+  const leaveRoom = useMutation(api.players.leaveRoom);
+  const [leaving, setLeaving] = useState(false);
   const [failure, setFailure] = useState<string>();
 
   async function confirm() {
-    setEnding(true);
+    setLeaving(true);
     setFailure(undefined);
 
     try {
@@ -1255,37 +1374,48 @@ function EndRoomSheet({ onDismiss }: { readonly onDismiss: () => void }) {
         return;
       }
 
-      await endRoom({ sessionToken });
-      // Nothing to dismiss on success: this phone's seat went with the room, so
-      // the seat subscription on the screen behind this sheet reads `null` and
-      // takes the whole thing — this sheet included — back to the Join Screen.
-      // Every other phone in the room gets there the same way, which is what
-      // makes `END_ROOM.body` true rather than merely reassuring.
+      // Marked *before* the mutation, not after it. The seat subscription is
+      // about to report `null` and there is no ordering guarantee that this
+      // sheet's `onLeft` runs first — see `leaving` in `YoureInScreen`. Setting
+      // it here means the race cannot be lost; `onLeaveFailed` in the catch is
+      // what keeps the suppression scoped to this attempt rather than to the
+      // life of the screen.
+      onLeaving();
+      await leaveRoom({ sessionToken });
+      // The phone takes itself back to the form. It knows why it is going, so
+      // it goes with no notice — the one thing `seatLossNotice` must never be
+      // asked to speak for.
+      onLeft();
     } catch (error) {
+      // In the catch and not in `finally`: `finally` runs on the way out of a
+      // *successful* leave too, and clearing the flag there would re-open the
+      // race it exists to close — the parent has not unmounted yet, and the
+      // subscription's `null` is still on its way.
+      onLeaveFailed();
       setFailure(hostControlFailureMessage(error));
     } finally {
-      setEnding(false);
+      setLeaving(false);
     }
   }
 
   return (
     <ConfirmSheet onDismiss={onDismiss}>
-      <Text style={styles.sheetTitle}>{END_ROOM.title}</Text>
-      <Text style={styles.sheetBody}>{END_ROOM.body}</Text>
+      <Text style={styles.sheetTitle}>{LEAVE_ROOM.title}</Text>
+      <Text style={styles.sheetBody}>{leaveConsequence(roster.length, youAreHost)}</Text>
 
       <Pressable
         style={styles.stretch}
-        disabled={ending}
+        disabled={leaving}
         onPress={() => void confirm()}
         accessibilityRole="button"
-        accessibilityState={{ disabled: ending }}
+        accessibilityState={{ disabled: leaving }}
       >
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneSmall}
-            style={[styles.stretch, [styles.button, styles.endRoomButton, pressed && styles.buttonPressed]]}>
+            style={[styles.stretch, [styles.button, pressed && styles.buttonPressed]]}>
             <Text style={styles.buttonLabel}>
-              {ending ? END_ROOM.busyLabel : END_ROOM.confirmLabel}
+              {leaving ? LEAVE_ROOM.busyLabel : LEAVE_ROOM.confirmLabel}
             </Text>
           </Surface>
         )}
@@ -2645,11 +2775,6 @@ const styles = StyleSheet.create({
   backToLobbyButton: {
     backgroundColor: colors.accent,
   },
-  // The confirm sheet's own bar: ending the room deletes every seat in it, and
-  // the accent is what every irreversible control in Huddle wears.
-  endRoomButton: {
-    backgroundColor: colors.accent,
-  },
   waitingFor: {
     alignSelf: 'stretch',
     color: colors.mutedText,
@@ -2726,7 +2851,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  // The header's outlined pill — End room on the room, Your room on the picker.
+  // The header's outlined pill — Leave on the room and the waiting screen, the
+  // way back on the picker.
   outlinePill: {
     paddingHorizontal: 16,
     paddingVertical: 8,

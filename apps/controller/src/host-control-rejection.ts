@@ -68,7 +68,13 @@ export function hostControlRejectionMessage(rejection: HostControlRejection): st
 
 /**
  * What to show when a Host control throws, whatever it threw — `transferHost`,
- * `removePlayer`, or `endRoom`, which share the gate and so share the refusals.
+ * or `removePlayer`, which share the gate and so share the refusals.
+ *
+ * `LeaveRoomSheet` routes its failures through here too, and it is the one
+ * caller that does *not* share that gate: `players.leaveRoom` is a phone acting
+ * on its own seat and throws no `HostControlRejection` at all, so every failure
+ * of it lands on the generic line below. If it ever gains a refusal kind, this
+ * is where it has to be taught one rather than being silently generic.
  */
 export function hostControlFailureMessage(error: unknown): string {
   return error instanceof ConvexError && isHostControlRejection(error.data)

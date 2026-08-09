@@ -4,7 +4,6 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { hostSeatAndRoom } from './hostControl';
 
 /**
  * What `createRoom` rejects with when it cannot find a free Room Code. A
@@ -209,7 +208,7 @@ export const expireRoom = internalMutation({
     }
 
     // A running game's clock, stopped before the room goes — the same tidy-up
-    // `endRoom` does when a Host closes the room by hand. A deadline left pending
+    // `players.leaveRoom` does when the last player walks out. A deadline left pending
     // would fire into a room that no longer exists: harmless, since
     // `reachDeadline` finds nothing, but it is the room's own scheduled work and
     // the room ending is where it stops, however the room comes to end.
@@ -228,58 +227,12 @@ export const expireRoom = internalMutation({
   },
 });
 
-/**
- * The Host ends the party: the room is deleted with its players, and every
- * phone in it comes back to a Join Screen.
- *
- * The scope's "end the room" (docs/project-scope.md), and the deliberate
- * counterpart to the two clocks above — those are a room nobody is using being
- * let go, this is a room somebody is using being closed on purpose. It is the
- * one way a party ends at the moment it is actually over, rather than ten
- * minutes later.
- *
- * Host-only and gated on the Session Token, like the rest of the host controls
- * (`players.transferHost`): a phone naming itself is never believed, and a room
- * other people are in is not something any guest gets to close. `notInRoom` and
- * `notHost` are the same refusals those controls throw, so the Host's phone
- * tells the two apart by `kind` exactly as it already does.
- *
- * The teardown is `expireRoom`'s, minus its clock check — the Host asking is the
- * whole of the decision, so there is no silence to measure — and it deletes the
- * players for the same reason: their Session Tokens stop answering, which is
- * what actually sends the phones home and returns the Room Code to the pool.
- * Whatever checks are pending against those rows find nothing and do nothing.
- *
- * A running game's clock is cancelled first. A deadline left pending would fire
- * into a room that no longer exists — harmless, since `reachDeadline` finds
- * nothing, but it is the room's own scheduled work and ending the room is where
- * it stops.
- */
-export const endRoom = mutation({
-  args: { sessionToken: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    // The same gate `transferHost` and `removePlayer` stand behind, so what it
-    // means to be the Host is decided in exactly one place. It also answers the
-    // two ways this can arrive too late — a token whose seat is gone, and a room
-    // that ended under this phone — as `notInRoom`, which is what the Host's own
-    // screen already knows how to say.
-    const { room } = await hostSeatAndRoom(ctx, args.sessionToken);
-
-    const pending = room.game?.deadline;
-
-    if (pending !== undefined) {
-      await ctx.scheduler.cancel(pending);
-    }
-
-    for (const player of await seatedIn(ctx, room._id)) {
-      await ctx.db.delete('players', player._id);
-    }
-
-    await ctx.db.delete('rooms', room._id);
-    return null;
-  },
-});
+// `endRoom` was here: the Host's control that deleted the room and every seat
+// in it at once. `players.leaveRoom` replaced it. The scope's "end the room"
+// became "leave", available to everybody rather than to the Host alone, and a
+// room now ends when its last player walks out rather than when one player
+// decides for the rest — so there was no caller left, and a Host-only power to
+// close a room other people are in is not one to keep lying around unreachable.
 
 /**
  * The other end of a room: one that never seated anybody at all, let go
