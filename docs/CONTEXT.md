@@ -6,8 +6,9 @@
 - **Player / seat**: a participant's server-side identity, nickname, avatar, and presence state.
 - **Host**: the player who may select, configure, start, pause, resume, end, transfer, or manage the active game.
 - **Session Token**: the SecureStore credential that reconnects a phone to its existing seat.
-- **Game Module**: the metadata, settings, screens, state, and rules for one installed game.
-- **Game Registry**: the ordered client module list and the separate server-only logic list.
+- **Game Module**: the client-safe metadata, settings, screens, and shared state types for one installed game.
+- **Game Logic**: one game's server-only validation, initial state, reducer, and privacy projection.
+- **Game Registry**: the ordered client module list and its separate server-only logic list.
 - **Room phase**: lobby/configuring/active/paused/finished state derived from the room's game record.
 - **Presence**: heartbeat/away state with grace periods for temporary phone backgrounding.
 - **Room background**: the static TV artwork behind the title-safe 1280×720 content stage.

@@ -26,27 +26,13 @@ describe('room expiry timing', () => {
   });
 });
 
-/**
- * The other clock: how long a room nobody has joined is held for the television
- * showing its code.
- *
- * A deserted room's ten minutes cannot answer this one — a room with no players
- * has no last heartbeat to count from — so it is a second number and not a reuse
- * of the first. Spelled out here for the reason the ten minutes are: this is the
- * product decision, and the constant is its implementation.
- */
-describe('unjoined room expiry timing', () => {
-  it('gives a television showing a code to nobody two hours of it', () => {
+/** The retired value remains stable for callers that still import it. */
+describe('legacy unjoined-room expiry export', () => {
+  it('preserves its two-hour package value', () => {
     expect(UNJOINED_ROOM_EXPIRY_MS).toBe(2 * 60 * 60 * 1_000);
   });
 
-  it('holds an unjoined room far longer than a room whose party has left', () => {
-    // The two answer opposite questions. Ten minutes is how long a room waits
-    // for a party it has already met to come back; this is how long it waits for
-    // one that has never arrived, and getting it wrong takes a Room Code off a
-    // screen somebody is reading it from. So it is not merely longer — it is
-    // longer by an order of magnitude, which is what makes it a window only a
-    // television nobody is playing on can reach.
+  it('remains distinct from the active deserted-room lifetime', () => {
     expect(UNJOINED_ROOM_EXPIRY_MS).toBeGreaterThan(10 * ROOM_EXPIRY_MS);
   });
 });

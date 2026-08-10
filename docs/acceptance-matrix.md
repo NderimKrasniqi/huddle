@@ -7,9 +7,9 @@
 ## Method
 
 - **Automated** rows cite a passing test suite by file and, where it helps,
-  `describe`/`it`. The whole suite is `pnpm test` — **69 files, 782 tests, 0
-  failures** in the current Feature 6 verification run (the historical Phase 5
-  baseline was 62 files / 721 tests).
+  `describe`/`it`. The whole suite is `pnpm test` — **71 files, 803 tests, 0
+  failures** in the Feature 7 closeout run (the historical Phase 5 baseline was
+  62 files / 721 tests).
 - The hub (`convex/convex/{rooms,players,games}.ts`) is game-independent: it
   never names a game and dispatches to whatever the Registry installs. So a
   workflow that runs *through* the hub without touching game rules (host
@@ -40,8 +40,8 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | TV launch creates a room with a 4-char code | 🔁 | 🔁 | `rooms.test.ts` › openRoom code generation; unique, redraw-on-collision/exhaustion |
 | Room persists across games; ending returns to the same room | ✅ | ✅ | `games.test.ts` › ending (roster/host/code intact); `voting-lifecycle.test.ts` › "returns the room to its lobby with roster, host and code intact" |
 | Switching games returns to the room, no state carried | ✅ | ✅ | `voting-lifecycle.test.ts` › "switches between the two games, carrying nothing across" (Voting→Trivia→Voting) |
-| Empty room stays open while TV holds; next joiner hosts | 🔁 | 🔁 | `players.test.ts` › host ("leaves the room with an away host when nobody is there to take it"); `rooms.test.ts` › unjoined-room window |
-| Room closes when its recovery/expiry window lapses; state discarded | 🔁 | 🔁 | `rooms.test.ts` › room expiry ("deleted once the window passes", "gives its Room Code back to the pool") |
+| Empty room stays open while TV holds; next joiner hosts | 🔁 | 🔁 | `tv-recovery.test.ts` › repeated heartbeats retain one room; `players.test.ts` › the first/next eligible joiner becomes Host |
+| Room closes when its recovery/expiry window lapses; state discarded | 🔁 | 🔁 | `tv-recovery.test.ts` › "expires after ten minutes silent" (room, players, TV session, and game removed; code reusable) |
 
 ## Joining and identity
 
@@ -123,7 +123,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 |---|---|---|---|
 | Room/game state ephemeral; discarded when the room closes | 🔁 | 🔁 | `rooms.test.ts` › `expireRoom` deletes room + players |
 | No score carried between games | ✅ | ✅ | `games.test.ts` › "leaves its scores behind"; `voting-lifecycle.test.ts` › switching carries nothing across |
-| Only convenience prefs (last name/avatar) may persist locally | n/a | n/a | Optional per scope; not yet implemented (tracked in 5.8) |
+| Only convenience prefs (last name/avatar) may persist locally | n/a | n/a | Implemented in `features/join/identity.ts` through `platform/storage`; Session Tokens remain in SecureStore under `platform/session` |
 
 ---
 
@@ -136,7 +136,7 @@ Now implemented as the host-authorized `transferHost` mutation
 refuses a non-host caller / stale token / out-of-room target / the host's own
 seat / an away target. Covered by `players.test.ts` › host controls; independent
 security review PASS. **Wired into the UI (task 3.7):** the Host Roster's manage
-sheet (`apps/controller/src/app/controller-screen.tsx`) — a non-Host row opens a Soft Minimal
+sheet (`apps/controller/src/features/room/seated-screen.tsx`) — a non-Host row opens a Soft Minimal
 confirm dialog whose "Make host" runs `transferHost`, dimmed for an away target;
 `docs/design/legacy/boardwalk-handoff.md` §5 now specifies the affordance. Row-offer logic is `host-controls.ts` (Vitest);
 the RN screen is not unit-tested per the stack, but the sheet was exercised
@@ -171,8 +171,9 @@ row. Malformed runtimes remain unavailable rather than being resumed blindly.
 ## Manual checks to run per release
 
 The rows marked 🧪 have no repo automation and are the documented manual matrix,
-last exercised in 5.3 (real-device verification, see git history). Re-run before
-release:
+last exercised in 5.3 (real-device verification, see git history). No physical
+Android TV or mixed phone hardware was available during the Feature 7 closeout;
+re-run before release:
 
 1. iOS phone + Android phone + Android TV in one room, both games played.
 2. QR scanned by each phone OS camera opens the join deep link.

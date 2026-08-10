@@ -319,16 +319,17 @@ export const controllerStyles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 20,
   },
-  // The end-room sheet's own title: `sheetName` is a row item beside an avatar
-  // and stretches to fill it, which is not what a heading on its own line does.
+  // A confirmation sheet's own title: `sheetName` is a row item beside an
+  // avatar and stretches to fill it, which is not what a heading on its own
+  // line does.
   sheetTitle: {
     alignSelf: 'stretch',
     color: colors.ink,
     fontFamily: fontFamily.semibold,
     fontSize: 20,
   },
-  // What ending the room costs, said before it is done. Body text, so it is read
-  // at the phone floor rather than at the heading's size.
+  // The consequence being confirmed. Body text, so it is read at the phone
+  // floor rather than at the heading's size.
   sheetBody: {
     alignSelf: 'stretch',
     color: colors.mutedText,

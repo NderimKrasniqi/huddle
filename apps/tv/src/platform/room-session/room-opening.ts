@@ -36,20 +36,18 @@ export type RoomOpener = {
 /**
  * Holds the one room a television is showing.
  *
- * `openRoom` is memoised because `createRoom` is a mutation and mutations are
- * not idempotent: calling it twice mints two rooms and the screen can only show
- * one code, so every phone that read the other one is typing at a room nobody is
- * showing. A `useEffect` cannot promise "once" by itself — StrictMode runs
- * effects twice on purpose, and Fast Refresh and expo-router both remount
- * screens — which is why the memo lives out here rather than in a render.
+ * `openRoom` is memoised so StrictMode, Fast Refresh, and expo-router remounts
+ * share one in-flight request and one resolved value. The backend mutation is
+ * independently idempotent for the durable TV token; this local memo avoids
+ * duplicate network work and keeps the screen's lifecycle explicit.
  *
- * Room expiry is what makes it a memo per *room* rather than per launch. A room
- * whose party has gone is deleted ten minutes later, and the television is still
- * on and still showing its code; a code that belongs to no room is the worst
- * thing this screen can display, because it fails silently in somebody's hands
- * across the room. So the pairing screen says the room is gone and this mints
- * the next one — the only moment a second room is the right answer, since the
- * first no longer exists to be confused with it.
+ * Backend deletion is what makes this a memo per *room* rather than per launch.
+ * The last player leaving deletes the room while the television can still be on
+ * and showing its code; a code that belongs to no room is the worst thing this
+ * screen can display, because it fails silently in somebody's hands across the
+ * room. So the pairing screen says the room is gone and this opens the next one
+ * — the only moment a second room is the right answer, since the first no longer
+ * exists to be confused with it.
  *
  * `closeExpiredRoom` ignores any room other than the one being shown, which is
  * what makes it safe to say twice. The screen learns of an expiry from a live

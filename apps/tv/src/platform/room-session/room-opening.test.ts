@@ -10,7 +10,7 @@ import {
   roomOpeningCaption,
 } from './room-opening';
 
-/** The room `createRoom` hands back, as the TV receives it. */
+/** The room `openRoom` hands back, as the TV receives it. */
 const room: OpenRoom = { roomId: 'room-KWRD' as OpenRoom['roomId'], code: 'KWRD' };
 
 /** A promise plus the handles to settle it, so an attempt can be held mid-flight. */
@@ -252,7 +252,7 @@ describe('roomOpeningAtLaunch', () => {
 });
 
 describe('roomOpener', () => {
-  /** A `createRoom` that mints a different room every time it is called. */
+  /** A room-opening dependency that returns a different room on every call. */
   function mintRooms() {
     let minted = 0;
     return vi.fn(() => {

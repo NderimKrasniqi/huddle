@@ -9,8 +9,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_NAMES = ("controller", "tv")
-IMPORT = re.compile(r"\bfrom\s+['\"](?P<path>[^'\"]+)['\"]")
-IMPORT_LINE = re.compile(r"^\s*import\b", re.MULTILINE)
+MODULE_REFERENCE = re.compile(
+    r"(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['\"](?P<path>[^'\"]+)['\"]"
+)
+ROUTE_EXPORT = re.compile(
+    r"^\s*export\s*\{\s*default\s*\}\s*from\s*['\"](?P<path>[^'\"]+)['\"];?\s*$",
+    re.MULTILINE,
+)
+COMMENTS = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
 
 
 def fail(message: str) -> None:
@@ -23,10 +29,20 @@ def validate_route_adapters(app: Path) -> None:
             continue
 
         source = route.read_text(encoding="utf-8")
-        if IMPORT_LINE.search(source):
-            fail(f"route adapter imports implementation: {route.relative_to(ROOT)}")
-        if "export { default } from" not in source:
-            fail(f"route adapter must only re-export its screen: {route.relative_to(ROOT)}")
+        exports = list(ROUTE_EXPORT.finditer(source))
+        if len(exports) != 1:
+            fail(f"route adapter must re-export exactly one screen: {route.relative_to(ROOT)}")
+
+        authored = COMMENTS.sub("", ROUTE_EXPORT.sub("", source))
+        if authored.strip():
+            fail(f"route adapter contains implementation: {route.relative_to(ROOT)}")
+
+        target = (route.parent / exports[0].group("path")).resolve()
+        screens = (app / "src" / "screens").resolve()
+        if not target.is_relative_to(screens):
+            fail(f"route adapter bypasses screens: {route.relative_to(ROOT)}")
+        if not target.is_file() and not target.with_suffix(".tsx").is_file():
+            fail(f"route adapter screen is missing: {route.relative_to(ROOT)}")
 
 
 def validate_public_entrypoints(app: Path) -> None:
@@ -43,7 +59,7 @@ def validate_public_entrypoints(app: Path) -> None:
 
     for screen in sorted((src / "screens").glob("*.tsx")):
         source = screen.read_text(encoding="utf-8")
-        for match in IMPORT.finditer(source):
+        for match in MODULE_REFERENCE.finditer(source):
             imported = match.group("path")
             if imported.startswith("../features/"):
                 parts = imported.split("/")
@@ -68,7 +84,7 @@ def validate_cross_boundary_imports(app: Path) -> None:
     for source in sorted((*src.rglob("*.ts"), *src.rglob("*.tsx"))):
         source_owner = next((owner for owner in owners if source.is_relative_to(owner)), None)
 
-        for match in IMPORT.finditer(source.read_text(encoding="utf-8")):
+        for match in MODULE_REFERENCE.finditer(source.read_text(encoding="utf-8")):
             imported = match.group("path")
             if not imported.startswith("."):
                 continue

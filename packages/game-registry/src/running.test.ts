@@ -36,13 +36,22 @@ describe('what a client draws for the room’s running game', () => {
     expect(screen.kind === 'game' && screen.clockRemainingMs).toBe(1250);
   });
 
-  it('falls back to the lobby when the room is playing something this build lacks', () => {
-    // An un-updated phone walking into a room whose TV has been updated. It
-    // waits on the lobby with everyone else rather than being told to update:
-    // there is no screen for the news any more, and the wait is the same wait.
+  it('fails closed when the room is playing something this build lacks', () => {
+    // An un-updated phone walking into a room whose TV has been updated receives
+    // no opaque state and mounts no game controls.
     expect(runningGameScreen({ kind: 'running', gameId: 'charades', state: {} })).toEqual({
       kind: 'unavailable',
       gameId: 'charades',
+    });
+  });
+
+  it('keeps the legacy running envelope as a package compatibility input', () => {
+    const state = { phase: 'question' };
+
+    expect(runningGameScreen({ gameId: 'trivia', state })).toEqual({
+      kind: 'game',
+      module: trivia,
+      state,
     });
   });
 

@@ -24,7 +24,8 @@ Record only choices this project actually needs.
 - Convex is the authoritative source of room and game state.
 - Clients send intentions through validated mutations; clients do not decide authoritative state.
 - Reactive queries expose only the state each surface needs.
-- Games depend on a platform game contract; platform/session infrastructure does not depend on Trivia-specific logic.
+- Client game modules and server game logic meet through separate registry entrypoints; platform/session infrastructure does not depend on Trivia-specific logic.
+- Expo route adapters contain no implementation, and app features/platform owners expose explicit entrypoints; cross-owner deep imports are rejected by workflow validation.
 - Private player state is returned only to the participant entitled to see it.
 - The room code locates a room; it is never sufficient authorization.
 - Participant/session credentials are stored in SecureStore and validated server-side.
@@ -45,6 +46,9 @@ unit tests:           pnpm test:unit            # packages + apps + lint-rules
 backend/integration:  pnpm test:integration     # convex (edge-runtime)
 pack validation:      pnpm validate:packs
 workflow/architecture: pnpm validate:workflow
+controller export:     pnpm --filter @huddle/controller exec expo export --platform ios --output-dir <temporary-directory>
+tv export:             pnpm --filter @huddle/tv exec expo export --platform ios --output-dir <temporary-directory>
+tv native generation: pnpm --filter @huddle/tv prebuild --platform android --no-install
 android tv:           pnpm --filter @huddle/tv android
 android phone:        pnpm --filter @huddle/controller android
 ios phone:            pnpm --filter @huddle/controller ios

@@ -42,8 +42,8 @@ import { awayPlayerIds, gamePlayersInRoom } from './lib/presence';
  * (docs/implementation-plan.md).
  *
  * Nothing in this file names a game. The Registry answers what is installed and
- * the module answers what its state begins as, so trivia being the only entry
- * today is a fact about `@huddle/game-registry` and not about the hub.
+ * each module answers what its state begins as, so the installed list can grow
+ * without changing the hub.
  */
 
 /**

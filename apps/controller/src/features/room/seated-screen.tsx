@@ -103,9 +103,9 @@ export function SeatedScreen({
 
   // Whether this phone still holds the seat it is drawing. A subscription and
   // not the one-shot that seated it (`resumeSession`): a seat ends for reasons
-  // nobody on this phone caused — the Host ends the room or removes this
-  // player, or a room everybody walked away from expires — and until this was
-  // watched, none of them took the phone off a lobby that no longer existed.
+  // nobody on this phone caused — the Host removes this player, or the TV stays
+  // away until the room expires — and until this was watched, neither took the
+  // phone off a lobby that no longer existed.
   // `null` is the room's word that the seat is gone; `undefined` is the
   // question still in flight, which is not an answer and moves nobody.
   const seat = useQuery(

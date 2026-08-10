@@ -11,9 +11,9 @@ import { type QuestionPack, questionPackSchema } from './question-pack';
  * It is a JSON file under `packs/` rather than a TypeScript literal because a
  * pack is data — the same thing an importer or an AI-generated themed pack will
  * one day write out — and `pnpm validate:packs` checks that directory, not this
- * module. Parsing it here is what turns that data into a `QuestionPack`: a raw
- * JSON import types `options` as `string[]`, and the schema is the only thing
- * that can honestly narrow it to the four the TV draws. The check costs a
- * fraction of a millisecond, once, when a client loads.
+ * server module. Parsing it here is what turns that data into a `QuestionPack`:
+ * a raw JSON import types `options` as `string[]`, and the schema is the only
+ * thing that can honestly narrow it to the four the TV draws. The check costs a
+ * fraction of a millisecond, once, when the server rules load.
  */
 export const CURATED_PACK: QuestionPack = questionPackSchema.parse(huddleClassics);

@@ -65,10 +65,8 @@ describe('the Registry', () => {
   });
 
   it('would say so if a game did', () => {
-    // The rule above passes over trivia's empty schema without looking at
-    // anything, and will until Phase 4 gives trivia its settings. This is what
-    // makes it a rule in the meantime rather than a formality: the same check,
-    // against a game that breaks it.
+    // Aim the same rule at a deliberately broken declaration so this test proves
+    // the guard itself, independently of the currently installed schemas.
     expect(
       settingsDefaultingOutsideTheirOptions([
         {

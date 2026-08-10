@@ -1,24 +1,20 @@
-A second card in the carousel, as a patch (Phase 5).
+A historical second-card carousel patch from Phase 5.
 
-The Registry ships one game, so `browsingGameIndex` has nothing to move
-between and the Card Transition — the 250ms ease-out §6 asks for — has nothing
-to animate on a shipped build. This installs a second entry (trivia's own
-module and logic under another id, title and key art) so the transition can be
-driven and watched.
+Do not apply this patch to the current repository: Voting now supplies the
+second installed card naturally. It is retained only with the historical
+design-fidelity evidence it produced. At the time, the Registry shipped one
+game, so `browsingGameIndex` had nothing to move between and the Card Transition
+— the 250ms ease-out §6 asked for — had nothing to animate on a shipped build.
+This patch temporarily installed a second Trivia entry so the transition could
+be driven and watched.
 
 Both lists have to grow, and the server's is the one that is easy to forget:
 `browseGame` clamps the index against `GAME_LOGIC_REGISTRY` in the Convex
 deployment, so a patched client alone leaves the index pinned at 0 and the
 television perfectly still.
 
-    git apply tools/carousel-transition-repro.patch
-    (cd convex && npx convex dev --once)      # the clamp lives on the server
-    # drive it: convex run games:browseGame '{"sessionToken":"…","index":1}'
-    git apply -R tools/carousel-transition-repro.patch
-    (cd convex && npx convex dev --once)      # put the deployment back
-
-It is a patch and not a fixture because a second game is a Registry decision
-(docs/CONTEXT.md), and a hub that ships a fake one to make its animations
+It was a patch and not a fixture because a second game is a Registry decision
+(`docs/CONTEXT.md`), and a hub that ships a fake one to make its animations
 visible is a hub lying about what it installs.
 
 diff --git a/packages/game-registry/src/logic.ts b/packages/game-registry/src/logic.ts

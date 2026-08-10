@@ -31,10 +31,10 @@
   - Done: `convex/convex/rooms.ts` + `schema.ts` model rooms/players with room-code and membership indexes; 4-char codes; transactional creation; `rooms.test.ts` covers lookup and uniqueness.
 
 - [x] **1.3 — Build the TV lobby**
-  - Done: `apps/tv/src/app/tv-screen.tsx` + `src/tv-stage.tsx` show room code, QR join payload, and lobby; QR destination is native-app-only; invalid-room/restoration handled.
+  - Done: `apps/tv/src/features/room/` + `src/ui/tv-stage.tsx` show room code, QR join payload, and lobby; QR destination is native-app-only; invalid-room/restoration handled.
 
 - [x] **1.4 — Build native phone joining and participant identity**
-  - Done: `apps/controller/app/join/[code].tsx` join-by-code + deep link; display name and built-in avatar/color selection; Session Token issued and stored in SecureStore (`src/session-store.ts`); 10-player ceiling (`ROOM_PLAYER_CAP`); first joiner becomes host.
+  - Done: the thin `apps/controller/app/join/[code].tsx` route feeds the Controller screen and `src/features/join/`; display name and built-in avatar/color selection; Session Token issued and stored through `src/platform/session/`; 10-player ceiling (`ROOM_PLAYER_CAP`); first joiner becomes host.
   - Note: QR is scanned by the phone OS camera, which opens the join deep link (no in-app camera dependency). Local persistence of the *last-used* name/avatar (AsyncStorage) shipped in 5.8.
 
 - [x] **1.5 — Complete the reactive room lobby**
@@ -102,7 +102,7 @@
     review: PASS** (token-first authorization complete, cross-room/self-target
     guards hold, credential invalidation total, no mid-game deadlock).
   - **Done (host-roster UI):** both controls are wired into the Host's roster
-    screen (`apps/controller/src/app/controller-screen.tsx`) as a **manage sheet** — the
+    screen (`apps/controller/src/features/room/seated-screen.tsx`) as a **manage sheet** — the
     design decision, since `docs/design/legacy/boardwalk-handoff.md` §5 drew the roster
     but not the act of managing a player; §5 now specifies it. Every non-Host row gains a
     disclosure chevron and opens a centred Soft Minimal confirm dialog offering
@@ -110,7 +110,7 @@
     nothing (`targetIsSelf`), transfer is disabled for an away target
     (`targetAway`), and each refusal is surfaced through
     `hostControlFailureMessage`. Which controls a row offers and their live
-    state is the pure `apps/controller/src/host-controls.ts` (`rosterRowControls`,
+    state is the pure `apps/controller/src/features/room/host-controls.ts` (`rosterRowControls`,
     `rosterRowIsManageable`) with 7 Vitest tests, matching the `host-roster.ts`
     pattern; the RN screen itself is not unit-tested per the stack.
   - **Verify:** backend — happy paths + every refusal in `players.test.ts`; a
@@ -202,8 +202,8 @@
   - **Also closed, found by the follow-up security review:** the dealt questions carried `correctIndex` for every question and all future question text, so a client reading its own socket had the whole game — first at the opening payload, then (after an incomplete first fix) at every five-second reveal. The projection now withholds unplayed questions on *every* beat and releases an answer only for a question the room has been shown.
   - **Also closed, found by the follow-up code review:** the phones never actually returned to the Join Screen — `players.session` was a one-shot read, so nothing noticed a seat ending, and the end-room copy promised what did not happen. The seated screen now subscribes to its seat, which also covers `removePlayer` and room expiry.
   - **Verify:** `pnpm typecheck` clean (9 workspaces); `pnpm lint` clean; `pnpm test` green — **771 passed, 64 files**. Independent code review and security review both **PASS** on the final tree, each having re-verified the redaction against a real payload.
-  - **Not verified on hardware:** that both phones reach the Join Screen after a Host ends the room, and that the TV opens a fresh room afterwards. Reviewed by reading only, per the stack's no-RN-render-tests rule.
-  - Residuals recorded here: **5.9** below (the pack ships in the Controller bundle, so a *modified* client can still reproduce the deal) was closed by the follow-up bundle-boundary task. The three smaller ones have since been closed on branch `fix/5.6-residuals`: `expireRoom` now cancels a pending game deadline exactly as `endRoom` does; a player who loses a seat lands on the join form with a line saying why — "The host removed you from the room." when the room is still standing, "This room has closed." when it is not (told apart by the roster on the same Convex snapshot, `apps/controller/src/seat-loss.ts`); and the two host-confirm sheets now share one `ConfirmSheet` shell (surface, scrim, Cancel) rather than duplicating it.
+  - **Historical hardware gap:** the then-current Host-only end-room flow was reviewed by reading rather than exercised. That API and flow were later removed; current hardware coverage follows the leave/TV-recovery checklist in `docs/acceptance-matrix.md`.
+  - Residuals recorded here: **5.9** below (the pack ships in the Controller bundle, so a *modified* client can still reproduce the deal) was closed by the follow-up bundle-boundary task. The three smaller ones have since been closed on branch `fix/5.6-residuals`: `expireRoom` now cancels a pending game deadline exactly as the retired `endRoom` did; a player who loses a seat lands on the join form with a line saying why — "The host removed you from the room." when the room is still standing, "This room has closed." when it is not (told apart by the roster on the same Convex snapshot, `apps/controller/src/features/room/seat-loss.ts`); and the confirmation flows share one `ConfirmSheet` shell (surface, scrim, Cancel) rather than duplicating it.
 
 - [x] **5.7 — Align the Controller to the `react-native-tvos` fork**
   - Done: `apps/controller/package.json` now uses `react-native: npm:react-native-tvos@~0.86.0-2`, matching the TV. `pnpm install` re-resolved the controller's whole tree onto the fork and deduped the redundant plain-RN dependency tree (lockfile −442/+27; `--frozen-lockfile` clean). Both apps now resolve one RN fork.
@@ -212,7 +212,7 @@
 
 - [x] **5.8 — (Optional) Remember last-used name and avatar locally**
   - Persist the last-used display name and avatar in AsyncStorage so returning players are prefilled; scope treats this as optional ("the app *may* remember").
-  - Done: a pure, unit-tested seam mirroring `session.ts` — `apps/controller/src/identity.ts` (parse/recall/remember, injectable store) with `identity-store.ts` as the `AsyncStorage` platform half. The name is remembered on a successful `joinRoom` and prefills the join field (seed-only; a `touched` latch never overwrites what the player is typing). The color is remembered on a successful `claimColor` and re-taken on the seated screen the first time a player sits down colorless — gated on the roster having landed, only if the swatch is still free, and silent on refusal. Nothing sensitive leaves SecureStore: only the nickname and a color *name* go to `AsyncStorage`; the Session Token stays in the keystore (`session-store.ts`). 16 new Vitest tests (787 total).
+  - Done: a pure, unit-tested seam mirroring session parsing — `apps/controller/src/features/join/identity.ts` (parse/recall/remember, injectable store) with `platform/storage/identity-store.ts` as the `AsyncStorage` half. The name is remembered on a successful `joinRoom` and prefills the join field (seed-only; a `touched` latch never overwrites what the player is typing). The color is remembered on a successful `claimColor` and re-taken on the seated screen the first time a player sits down colorless — gated on the roster having landed, only if the swatch is still free, and silent on refusal. Nothing sensitive leaves SecureStore: only the nickname and a color *name* go to `AsyncStorage`; the Session Token stays under `platform/session/`. 16 new Vitest tests (787 total).
   - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore. Typecheck/lint/tests green; not yet exercised on hardware.
 
 - [x] **5.9 — (Follow-up) Keep the question pack out of the Controller bundle**
@@ -247,10 +247,10 @@ It preserves Expo, Convex, the game registry, Soft Minimal assets/palette, and
 the existing public room/game contracts except for the intentional TV APIs and
 `createRoom` → `openRoom` replacement.
 
-**Current feature:** F-007 Full-Codebase Behavior-Preserving Refactor
-**Current phase:** 7.5 Full review closeout
-**Current task:** 7.5.1 Re-audit packages, reconcile truth, and run release verification
-**Last completed task:** 7.4.1 Finish private helper extraction and retire `createRoom`
+**Current feature:** —
+**Current phase:** —
+**Current task:** —
+**Last completed task:** 7.5.1 Re-audit packages, reconcile truth, and run release verification
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -432,7 +432,32 @@ approved Soft Minimal visuals/assets.
 
 ## Phase 7.5 — Full review closeout
 
-- [ ] **7.5.1 — Re-audit packages, reconcile truth, and run release verification**
+- [x] **7.5.1 — Re-audit packages, reconcile truth, and run release verification**
   - Recheck package seams and tooling, record dependency advisories separately,
     reconcile active docs, and run the complete automated/native evidence set.
+  - Evidence: game-core, both Registry halves, Trivia, Voting, packs, shared UI,
+    custom ESLint rules, and tools were re-audited. Cohesive rules/renderers were
+    retained instead of split for line count. Stale room-opening, room-ending,
+    one-game, bundle-seam, expiry, and moved-path comments were corrected across
+    source, tests, tooling, architecture, acceptance, and design evidence.
+  - Boundaries: architecture validation now accepts only one-screen Expo route
+    re-exports and detects side-effect/dynamic cross-owner imports. The Registry
+    seam test covers default, namespace, side-effect, dynamic, `require`, and
+    inline-type value edges into server logic/questions. A non-bytecode
+    production Controller export contains none of the sampled pack title or
+    question text.
+  - Verification: typecheck and lint pass; 71 files / 803 tests pass; pack,
+    workflow/architecture, avatar-source, and `git diff --check` validation pass;
+    Controller and TV iOS exports pass; Android TV prebuild regenerates required
+    Leanback launcher metadata plus the shipped icon/banner; and a tvOS
+    simulator build links `ExpoCrypto` and `ExpoSecureStore`. No runtime, schema,
+    package-export, design-token, asset, or dependency change was introduced.
+  - Dependency audit: eight transitive findings (seven high, one moderate, zero
+    critical) are isolated in [GitHub issue #34](https://github.com/NderimKrasniqi/huddle/issues/34)
+    with exposure and remediation notes. No dependency upgrade is mixed into
+    this refactor.
+  - Hardware: no physical Android TV or mixed iOS/Android controller set was
+    connected, so the documented checklist in `docs/acceptance-matrix.md`
+    remains a release check. PR 3's native TV Room simulator comparison remains
+    the visual evidence and showed no Soft Minimal delta except its room code.
   - **Depends on:** 7.4.1
