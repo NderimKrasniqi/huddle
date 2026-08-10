@@ -3,3 +3,17 @@ packages:
   - convex
   - packages/*
   - packages/games/*
+
+auditConfig:
+  ignoreCves:
+    - CVE-2025-71329
+    - CVE-2025-71330
+
+overrides:
+  brace-expansion@>=4.0.0 <5.0.9: 5.0.9
+  js-yaml@>=4.0.0 <4.3.1: 4.3.1
+  nanoid@<3.3.17: 3.3.18
+  uuid@<11.1.1: 11.1.1
+
+patchedDependencies:
+  image-size@1.2.1: patches/image-size@1.2.1.patch
