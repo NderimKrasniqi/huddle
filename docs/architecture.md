@@ -2,7 +2,7 @@
 
 > Reconciled 2026-08-10 for **F-007 Full-Codebase Behavior-Preserving Refactor**.
 > Phases 1–5 remain the frozen product baseline. This document records the
-> repository-informed target boundaries for Feature 6 without changing Expo,
+> repository's current boundaries through Feature 7 without changing Expo,
 > Convex, pnpm workspaces, the game registry, shared UI primitives, or the
 > approved Soft Minimal palette and TV assets.
 
@@ -38,7 +38,7 @@ only deep-link/session composition, while the TV root screen owns room opening,
 live subscriptions, and pure surface selection. Both apps keep rendering,
 styles, feature hooks, and platform lifecycle code behind explicit entrypoints.
 
-## Target app boundaries
+## Current app boundaries
 
 ```text
 apps/controller/src/
@@ -54,7 +54,7 @@ apps/tv/src/
   ui/                          # TV-only primitives
 ```
 
-Expo Router files in `apps/*/app` become thin adapters that mount a root
+Expo Router files in `apps/*/app` are thin adapters that mount a root
 coordinator. Features own screens, styles, pure models/helpers, and adjacent
 tests. Platform folders own Convex bindings, credentials, secure storage, and
 presence. Cross-feature deep imports are prohibited; each feature exposes a
@@ -63,7 +63,7 @@ Only genuinely cross-app tokens and primitives live
 in `@huddle/ui`. Redux, Zustand, Nx, Turborepo, a second API server, and a new
 shared package are explicitly out of scope.
 
-## Target Convex boundaries
+## Current Convex boundaries
 
 Public modules keep their generated paths and function names stable. The
 obsolete `rooms.createRoom` mutation is retired; `rooms.openRoom` is the sole
@@ -87,13 +87,16 @@ after ten minutes of TV silence. The old unjoined-room timer is removed.
 
 ## Versioned game runtime
 
-`GameLogic` is a server/client contract with `stateVersion`, strict
-`decodeState`, strict `decodeEvent`, and required `redactStateFor`. Trivia and
-Voting keep their Zod 4 schemas behind server-only `/logic` entry points. The
-Convex layer validates initial state, overwritten events, reducer output, and
-deadlines before storage or scheduling. Any missing module, wrong version,
-invalid value, projection failure, or thrown runtime produces an unavailable
-projection and never exposes raw state.
+`GameModule` is the client-safe metadata/settings/screens contract;
+`GameLogic` is its separate server-only rules contract with `stateVersion`,
+strict `decodeState`, strict `decodeEvent`, and required `redactStateFor`.
+Trivia and Voting keep their Zod 4 schemas behind server-only `/logic` entry
+points. Static boundary tests reject value imports from the client registry or
+Trivia client sources into server logic/questions. The Convex layer validates
+initial state, overwritten events, reducer output, and deadlines before storage
+or scheduling. Any missing module, wrong version, invalid value, projection
+failure, or thrown runtime produces an unavailable projection and never exposes
+raw state.
 
 The running projection is one of:
 
@@ -131,7 +134,8 @@ return to the lobby.
 
 ## Delivery and migration constraints
 
-Feature 6 is delivered in the ordered tasks in `docs/implementation-plan.md`.
+Features 6 and 7 are delivered in the ordered tasks in
+`docs/implementation-plan.md`.
 Convex schema rollout is staged: add optional fields and a development-only
 internal cleanup mutation, purge ephemeral development rows, verify zero legacy
 rooms/players/sessions, then deploy required fields and remove the cleanup

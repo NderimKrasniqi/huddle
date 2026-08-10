@@ -65,8 +65,8 @@ export default function JoinScreen() {
   }
 
   if (state.kind === 'seated') {
-    // A seat can end without this phone doing anything: the Host ends the room
-    // or removes this player, or the room expires under a party that went quiet.
+    // A seat can end without this phone doing anything: the Host removes this
+    // player, or the room expires after its TV has stayed away.
     // Forgetting the seat here is what sends the phone back to the form — the
     // screen below watches the room for it.
     return (

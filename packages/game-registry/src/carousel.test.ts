@@ -72,15 +72,13 @@ describe('where the Host’s arrows go', () => {
   });
 
   it('has nowhere to go on from the last card', () => {
-    // With one game installed this is also the first card, and both arrows are
-    // dead — which is correct: a list of one that wrapped would give the Host
-    // two buttons that changed nothing.
+    // The last installed card never wraps to the first.
     expect(nextIndex(LAST)).toBeUndefined();
   });
 
   it('steps one card at a time when there is somewhere to step', () => {
-    // Vacuous at one installed game, and the arithmetic that has to be right
-    // the first time a second one lands.
+    // Generic over the registry length even though the current build installs
+    // both Trivia and Hot Takes.
     if (GAME_REGISTRY.length > 1) {
       expect(nextIndex(0)).toBe(1);
       expect(previousIndex(1)).toBe(0);

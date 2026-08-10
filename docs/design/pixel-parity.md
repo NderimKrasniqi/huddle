@@ -139,8 +139,8 @@ was put out of scope so the phone and TV "stay in step at the treatment they bot
 currently have". Closing this is the parity work.
 
 Note the art covers a **drawing** game and a **word** game that do not exist as
-modules, while **Hot Takes** — which does — has no art. Wiring what exists buys
-Trivia only.
+modules, while **Hot Takes** — which does — has no art. Wiring what exists would
+improve Trivia without solving the installed catalog's treatment as a whole.
 
 The rest, independent of the art:
 
@@ -208,10 +208,10 @@ comparison the measurements in this file were taken from.
 
 Symptom: "Can't reach Huddle — reconnecting…", empty code tiles, empty QR, and
 **zero rooms ever created**. It was never the deployment: the phone joined the
-same deployment end-to-end in the same session, and `rooms:createRoom` works
+same deployment end-to-end in the same session, and `rooms:openRoom` works
 from the CLI.
 
-Cause: `apps/tv/src/tv-session.ts` reached its keystore and UUID source through
+Cause: the former TV session module reached its keystore and UUID source through
 dynamic `await import('expo-secure-store')` / `await import('expo-crypto')`. A
 dynamic import compiles to a lazily loaded split bundle, and when one arrives
 Metro calls `HMRClient.registerBundle()`, which opens with `assertHMRClient()`.
@@ -220,18 +220,17 @@ tvOS never sets the HMR client up, so that assert threw
 first thing `openRoom` awaits. Every attempt therefore failed before reaching
 the network, and `openRoom`'s catch reported any throw as an unreachable backend.
 
-Fix: `tv-session.ts` is now pure and imports nothing native; the Keychain store
-and UUID source moved to `apps/tv/src/tv-session-native.ts` with **static**
-imports, and `room.ts` passes them in. Static imports directly in `tv-session.ts`
+Fix: `apps/tv/src/platform/room-session/tv-session.ts` is pure and imports
+nothing native; the Keychain store and UUID source live in adjacent
+`tv-session-native.ts` with **static** imports, and `room.ts` passes them in.
+Static imports directly in `tv-session.ts`
 were tried first and broke its unit test — `expo-crypto` pulls in
 `expo-modules-core`, which reads `__DEV__` at import time under Node. Keeping the
 native pair in a module no test imports is the only arrangement that serves both.
 
-Two things worth fixing separately, both surfaced by this bug:
+One follow-up remains from this bug:
 
 - **`openRoom` misclassifies every throw as "can't reach Huddle".** A client-side
   crash was reported for 20 minutes as a network problem, which is what made this
   expensive to find. A thrown programming error and an unreachable backend
   deserve different copy.
-- **`tvSafeStageScale`/`tvDesignSize` vs the board scale** is recorded above; the
-  stale "148×176 code tile" comment in `tv-stage.tsx` is still wrong.

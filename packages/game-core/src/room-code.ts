@@ -47,7 +47,7 @@ export type RandomSource = () => number;
 /**
  * One random Room Code. Says nothing about whether the code is free — codes
  * are only unique because the room that mints one checks it against the rooms
- * that already exist (see `createRoom`).
+ * that already exist (see `rooms.openRoom`).
  */
 export function generateRoomCode(random: RandomSource = Math.random): string {
   let code = '';

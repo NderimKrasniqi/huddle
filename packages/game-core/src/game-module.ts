@@ -4,21 +4,19 @@ import type { KeyArtColorName } from './key-art';
 import type { AvatarId } from './avatar';
 
 /**
- * The Game Module interface: everything the hub knows about a game, and the
- * only thing it knows.
+ * The game contracts: everything the hub knows about a game, split by runtime.
  *
  * The hub — the TV app, the Controller, and the Convex mutations between them —
- * contains no game logic and no game names. It renders a Registry, holds a
- * state it cannot read, and hands events to a `reduce` it did not write. That
- * is what makes a second game an entry rather than a change
+ * contains no game logic and no game names. Clients render a `GameModule`; the
+ * Convex server runs a `GameLogic`; both share metadata and settings while game
+ * state remains opaque to the hub. That split is what makes another game an
+ * entry rather than a change
  * (docs/project-scope.md: "adding a hypothetical game #2 requires no hub
  * changes").
  *
- * Every part of the interface is here because the hub needs it from *outside*
- * the game: the metadata is what the carousel draws, the settings schema is
- * what the Host's settings screen draws, the initial-state factory is what a
- * starting room calls, `reduce` is what a mutation wraps, and the screens are
- * what the two clients mount once the game is running.
+ * Every field is here because the hub needs it from *outside* the game. The
+ * separate client/server contracts are deliberate: putting rules back on the
+ * client module would also put Trivia's answer pack back in client bundles.
  */
 
 /** A player, as the room identifies them (`players._id`). */

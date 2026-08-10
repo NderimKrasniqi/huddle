@@ -1306,8 +1306,8 @@ describe('host controls', () => {
       const room = await openRoom(t);
       const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
-      // A host leaves by ending the room, not by removing their own seat — which
-      // would drop the room's host and leave nobody named to run it.
+      // A Host exits through `leaveRoom`; this management control targets other
+      // seats. Letting it remove the caller would bypass Host succession.
       expect(
         await refusalOf(
           t.mutation(api.players.removePlayer, {
@@ -1352,9 +1352,8 @@ describe('host controls', () => {
  * That last one is a deliberate departure from the plan, which expected an
  * emptied room to linger until expiry. It cannot: `expireRoom` refuses an empty
  * room by design and `watchForDesertion` never schedules one for it, so the
- * only thing that would ever collect it is `expireUnjoinedRoom` — armed once at
- * the removed legacy opener and never re-armed. A party outlasting that check and then
- * leaving would strand its room and its Room Code for good. See `leaveRoom`.
+ * retired unjoined-room timer is no longer armed at all. Leaving an empty room
+ * standing would therefore strand its Room Code for good. See `leaveRoom`.
  */
 describe('leaveRoom', () => {
   /** A room with a Host and a guest, and the token each phone holds. */
@@ -1434,7 +1433,10 @@ describe('leaveRoom', () => {
 
   it('does not schedule a legacy unjoined-room expiry for a TV-owned room', async () => {
     const t = convexTest(schema, modules);
-    const room = await openRoom(t);
+    registerRateLimiter(t);
+    const room = await t.mutation(api.rooms.openRoom, {
+      tvSessionToken: 'tv-owned-no-legacy-expiry',
+    });
     await join(t, room.code, 'Ada');
 
     // TV presence owns an empty room's lifetime. The old unjoined timer must

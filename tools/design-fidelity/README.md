@@ -17,7 +17,7 @@ Taken on 2026-07-31 against the Convex cloud dev deployment
 | `01-tv-pairing.png` | §1 TV — Pairing | empty room, code `HBMJ` |
 | `02-phone-join-empty.png` | §2 Phone — Join | first launch, nothing typed |
 | `03-phone-join-ready.png` | §2 Phone — Join | code from a scanned Join Link, name typed, Join enabled |
-| `04-tv-carousel.png` | §6 TV — Game carousel | one player seated, one game installed |
+| `04-tv-carousel.png` | §6 TV — Game carousel | historical capture: one player seated, one game installed at the time |
 | `05-phone-host-lobby.png` | §4 + §5 Phone — Host in the lobby | the Host's half of the merged seated screen |
 | `06-phone-host-picker-before.png` | §7 Phone — Host game picker | before this task |
 | `06-phone-host-picker-after.png` | §7 Phone — Host game picker | after: the game's meta, and the handoff's cobalt primary button |
