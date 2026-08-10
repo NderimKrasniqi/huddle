@@ -51,7 +51,7 @@ function Option({ option }: { readonly option: WatchedOption }) {
 }
 
 /**
- * A player's name in their claimed color.
+ * A player's name in the color derived from their avatar.
  *
  * Deliberately not called a Seat: a Seat is the TV roster's place in the lobby,
  * a dashed circle until somebody takes it. This is a name on
@@ -96,9 +96,9 @@ function VerdictRow({ verdict }: { readonly verdict: PlayerVerdict }) {
  * The dot alone: the handoff specifies presence as the dot and nothing else,
  * and the treatments the TV's seats add around it do not carry here. A seat
  * dims the avatar circle and mutes a nickname set in ink on the screen color;
- * this name is set on the player's own color, where muting the ink would leave
+ * this name is set on the player's avatar color, where muting the ink would leave
  * text on a fill it was never checked against and dimming the pill would take
- * the player's color down with it — the one thing on the row that says who it
+ * that identifying color down with it — the one thing on the row that says who it
  * belongs to.
  */
 function StatusDot({ away }: { readonly away: boolean }) {

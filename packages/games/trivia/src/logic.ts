@@ -119,18 +119,15 @@ export type TriviaState = {
  * own speed is a claim, and the hub writes the field over whatever arrived.
  *
  * `advance` is the room finishing a beat — a reveal ending, or a question the
- * room stops waiting on. Its `playerId` is optional because both kinds of
- * sender exist: a phone's timer at the end of a reveal names the phone, and the
- * Question Timer names nobody, because the room's own clock running out is not
- * something anybody did.
+ * room stops waiting on. Both advances come from the server-owned game clock,
+ * so neither names a player. `playerId` remains optional in the wire shape
+ * because the hub attaches it to every phone event; the reducer rejects that
+ * form, which prevents a phone from impersonating the clock and skipping a
+ * beat.
  *
- * It is addressed the same way, and has to be: it is the room's only "move on"
- * signal and nothing owns it, so every source of it races every other — the
- * question's countdown, a Host skipping ahead, and a "next" on any of ten
- * phones. It names both the question it is ending and the beat of it, because
- * a bare "move on" arriving a beat late lands on the next question and reveals
- * it to a room that has not read it yet, losing a whole question and the scores
- * from it. Naming both makes the second of two thumbs a beat apart do nothing.
+ * It names both the question it is ending and its phase because a callback
+ * arriving one beat late must do nothing. A bare "move on" could otherwise
+ * land on the next question and reveal it before the room has read it.
  */
 export type TriviaEvent =
   | {
@@ -156,7 +153,7 @@ export type TriviaEvent =
     }
   | {
       readonly kind: 'advance';
-      /** Absent when the room's own clock raised it: see `questionTimer`. */
+      /** Must be absent: only the room's own clock may raise this event. */
       readonly playerId?: GamePlayerId;
       readonly questionIndex: number;
       /** The beat being ended: the question on screen, or its reveal. */
@@ -357,6 +354,12 @@ function advanced(
   state: TriviaState,
   event: Extract<TriviaEvent, { kind: 'advance' }>,
 ): TriviaState {
+  // The hub names every event sent by a phone. An advance with that identity is
+  // therefore not the internal deadline event and cannot move the room's beat.
+  if (event.playerId !== undefined) {
+    return state;
+  }
+
   // Already moved on: this is a second "next" for a beat the room has left, and
   // acting on it would end the beat that replaced it — revealing a question
   // nobody has been given the chance to answer.
@@ -593,10 +596,8 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
  * The Question Timer: the twenty seconds a question runs, and the `advance`
  * that ends it when they are up.
  *
- * This is trivia's Game Deadline, so unlike the Reveal Beat above it is the
- * *room's* clock and not the phones'. The hub schedules it server-side, which
- * is what makes it the one beat in trivia that ends for a room whose every
- * phone is face-down on a table. Whoever has not answered when it fires scores
+ * This is trivia's Game Deadline: the hub schedules it server-side, just like
+ * the Reveal Timer. Whoever has not answered when it fires scores
  * what a wrong answer scores, which is nothing — `revealed` does not ask how a
  * question ended, only what was answered before it did.
  *

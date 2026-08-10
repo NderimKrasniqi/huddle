@@ -8,7 +8,7 @@ import { lifecycleFailureMessage, rejectionMessage } from './game-rejection';
  * What the Host's phone says when starting or ending a game does not happen.
  *
  * Held to the same shape as `join-rejection.test.ts` and
- * `color-rejection.test.ts`, because the module is: a `kind` off
+ * `host-control-rejection.test.ts`, because the module is: a `kind` off
  * `ConvexError.data`, never a message somebody may reword.
  */
 

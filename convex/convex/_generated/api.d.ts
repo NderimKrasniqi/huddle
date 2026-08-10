@@ -9,7 +9,6 @@
  */
 
 import type * as games from "../games.js";
-import type * as hostControl from "../hostControl.js";
 import type * as lib_authorization from "../lib/authorization.js";
 import type * as lib_gameClock from "../lib/gameClock.js";
 import type * as lib_gameRuntime from "../lib/gameRuntime.js";
@@ -26,7 +25,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   games: typeof games;
-  hostControl: typeof hostControl;
   "lib/authorization": typeof lib_authorization;
   "lib/gameClock": typeof lib_gameClock;
   "lib/gameRuntime": typeof lib_gameRuntime;

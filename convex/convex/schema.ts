@@ -39,9 +39,10 @@ export default defineSchema({
      * transfer half-done.
      *
      * Optional because a room is minted by a television before anybody is in
-     * it: the first join fills it (see `joinRoom`), and it stays filled from
-     * then on — an away Host with nobody active to take over keeps it, since a
-     * room with no host is a room that cannot start a game.
+     * it, and becomes empty again after the last player deliberately leaves.
+     * The first join into either empty state fills it (see `joinRoom`). An away
+     * Host with seats still present keeps the pointer when nobody active can
+     * take over, since a seated room with no host cannot recover its controls.
      */
     hostPlayerId: v.optional(v.id('players')),
     /**
@@ -110,8 +111,10 @@ export default defineSchema({
          * room could not time, and never as an event that arrived instantly.
          */
         deadlineAt: v.optional(v.number()),
-        /** Remaining time captured when the TV goes away. */
+        /** Remaining time captured while either the TV or a player pause is active. */
         pausedRemainingMs: v.optional(v.number()),
+        /** A confirmed player disconnect is holding the game for the Host's choice. */
+        playerPaused: v.optional(v.literal(true)),
       }),
     ),
     /**
@@ -202,6 +205,8 @@ export default defineSchema({
     sessionToken: v.string(),
     lastSeenAt: v.number(),
     away: v.boolean(),
+    /** Generation of the one scheduled silence-check chain, absent on legacy rows. */
+    awayCheckGeneration: v.optional(v.number()),
   })
     .index('by_session_token', ['sessionToken'])
     .index('by_room', ['roomId']),

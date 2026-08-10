@@ -230,7 +230,8 @@ export type SeatSlot = 'justJoined' | 'host' | 'away' | 'present';
  * somebody is here at all. That is the precedence Soft Minimal's carousel footer
  * line gave an arrival over the browsing sentence, kept as the surface moved.
  *
- * After that the order is the Host roster's (`apps/controller/src/host-roster.ts`)
+ * After that the order is the Host roster's
+ * (`apps/controller/src/features/room/host-roster.ts`)
  * rather than a second opinion about the same question: the Host's slot wins
  * over their own away-ness, so away-ness is never what a slot gives up on a row
  * that could meaningfully be away.

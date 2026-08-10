@@ -18,6 +18,17 @@
 > bundle, and 5.10 reconciled the approved Soft Minimal TV visuals and assets.
 > The monorepo apps are `apps/tv` + `apps/controller` (the "mobile" naming in
 > the original draft mapped to the controller).
+>
+> **2026-08-10 audit resolution:** Product direction resolved F4–F6. A
+> TV-created room now survives an empty roster until TV-session expiry; every
+> confirmed in-game player disconnect pauses the exact server clock for the
+> current Host's Wait/Continue choice; and player ranges gate start only, so
+> Continue is valid below the declared minimum. Regression coverage spans
+> `games.test.ts`, `players.test.ts`, `tv-recovery.test.ts`, and both client
+> projections. A fresh
+> `pnpm audit --prod` reports six transitive Expo tooling findings (five high,
+> one moderate, zero critical); dependency upgrades remain separate from this
+> refactor, and `image-size` currently has no patched release in the advisory.
 
 ## Phase 1 — Create and Join a Live Room
 
@@ -34,7 +45,7 @@
   - Done: `apps/tv/src/features/room/` + `src/ui/tv-stage.tsx` show room code, QR join payload, and lobby; QR destination is native-app-only; invalid-room/restoration handled.
 
 - [x] **1.4 — Build native phone joining and participant identity**
-  - Done: the thin `apps/controller/app/join/[code].tsx` route feeds the Controller screen and `src/features/join/`; display name and built-in avatar/color selection; Session Token issued and stored through `src/platform/session/`; 10-player ceiling (`ROOM_PLAYER_CAP`); first joiner becomes host.
+  - Done: the thin `apps/controller/app/join/[code].tsx` route feeds the Controller screen and `src/features/join/`; display name and built-in avatar selection; Session Token issued and stored through `src/platform/session/`; 10-player ceiling (`ROOM_PLAYER_CAP`); first joiner becomes host.
   - Note: QR is scanned by the phone OS camera, which opens the join deep link (no in-app camera dependency). Local persistence of the *last-used* name/avatar (AsyncStorage) shipped in 5.8.
 
 - [x] **1.5 — Complete the reactive room lobby**
@@ -67,16 +78,16 @@
   - Done: `players.ts` heartbeat + `lastSeenAt` + `away`; scheduled `markAway`; grace period so brief backgrounding is not an immediate disconnect; fake-time tested.
 
 - [x] **3.2 — Recover ordinary players**
-  - Done: disconnected identity/state preserved for the recovery window; reconnect with the valid SecureStore token restores the same participant; host may wait or continue (a game never waits for an away player). Host-initiated *removal* (which invalidates the old participant) landed later as `removePlayer` — see **3.7**, since it did not exist when this task was first marked done.
+  - Done: confirmed in-game silence cancels the server deadline and preserves its exact remainder; the Host may wait (automatic resume when all seats return) or continue without away seats, including below the starting minimum. Reconnect with the valid SecureStore token restores the same participant. Host-initiated *removal* (which invalidates the old participant) landed later as `removePlayer` — see **3.7**.
 
 - [x] **3.3 — Handle host transfer and loss**
-  - Done: automatic loss handling — `handOverRoom` promotes the longest-connected eligible player on unrecovered disconnect; hostless empty-room behavior preserved. *Manual* transfer landed later as `transferHost` — see **3.7**, since it did not exist when this task was first marked done.
+  - Done: on confirmed Host disconnect, `handOverRoom` promotes the longest-connected eligible player before publishing the player-held pause, so the successor receives the same Wait/Continue choice. The first returning seat repairs an all-away room's Host pointer. *Manual* transfer is `transferHost` — see **3.7**.
 
 - [x] **3.4 — Recover the TV or close the room**
-  - Done: TV-disconnect pause; room/game state preserved for a recovery window; restore on return; `expireRoom` cleans up and frees the code when the window lapses.
+  - Done: TV-disconnect pause; room/game state preserved for a recovery window; restore on return; `expireTvRoom` cleans up and frees the code when the TV window lapses.
 
 - [x] **3.5 — Enforce game rules during membership changes**
-  - Done: late-join policy and below-minimum handling in the runtime; Trivia away-players-in-game behavior shipped (see git history); covered by tests.
+  - Done: player ranges gate start only; active games may continue below minimum after the Host's recovery choice. Late-join and away-player reducer behavior remain module-owned and are covered across Trivia/Voting.
 
 - [x] **3.6 — Run lifecycle regression tests with fake time**
   - Done: player/host/TV timeouts, scheduled transitions, cleanup, and reconnect races covered deterministically under fake timers in the convex suite.
@@ -103,10 +114,9 @@
     guards hold, credential invalidation total, no mid-game deadlock).
   - **Done (host-roster UI):** both controls are wired into the Host's roster
     screen (`apps/controller/src/features/room/seated-screen.tsx`) as a **manage sheet** — the
-    design decision, since `docs/design/legacy/boardwalk-handoff.md` §5 drew the roster
-    but not the act of managing a player; §5 now specifies it. Every non-Host row gains a
+    design decision captured in `docs/design/soft-minimal-handoff.md`. Every non-Host row gains a
     disclosure chevron and opens a centred Soft Minimal confirm dialog offering
-    "Make host" (cobalt) and "Remove" (punch); the Host's own row offers
+    "Make host" and "Remove"; the Host's own row offers
     nothing (`targetIsSelf`), transfer is disabled for an away target
     (`targetAway`), and each refusal is surfaced through
     `hostControlFailureMessage`. Which controls a row offers and their live
@@ -159,7 +169,7 @@
 **Outcome:** The complete MVP runs reliably on Android TV + iOS/Android phones and is checked against the approved scope. **— Complete; 5.6, the 5.7 stack correction, the 5.9 bundle boundary, and the 5.10 TV visual reconciliation are all done.**
 
 - [x] **5.1 — Handle join and network failure UX**
-  - Done: invalid/expired code, full room, and rejection states (`join-rejection.ts`, `game-rejection.ts`, `color-rejection.ts`); duplicate-submission guards; tested.
+  - Done: invalid/expired code, full room, and rejection states (`join-rejection.ts`, `game-rejection.ts`, `host-control-rejection.ts`); duplicate-submission guards; tested.
 
 - [x] **5.2 — Harden the Android TV shared display**
   - Done: large-screen layout, safe-area, typography floors, and the two handoff animations landed in Phase 5 design-fidelity work; every flow is driven from phones with the TV as display only.
@@ -198,7 +208,7 @@
   - Done: the review ran as an independent reviewer and returned **CHANGES REQUIRED** on two findings, both since implemented and re-reviewed.
   - **Architecture discipline passed unchanged:** no separate API server, WebSocket gateway, Postgres/Redis, EAS, Docker/K8s or auth provider; no client-side duplication of Convex state; both apps on the `react-native-tvos` fork; the hub still depends on no game module.
   - **B1 — private player state was broadcast.** `games.running` returned the game state whole, so every phone *and the TV* received each player's chosen option before the reveal — against the scope's "private player state stays private" and "the TV never receives player-private game information". Fixed with a module-owned projection: optional `redactStateFor(state, viewer)` on `GameLogic`, implemented by trivia, applied by `running`, which resolves the viewer from the Session Token server-side (`viewerIn`) and never from client-supplied identity. It is a read-only view: `reduce` always runs on the stored row, so a hidden answer still scores in full.
-  - **B2 — no "end the room" control**, though the scope listed it as a Host power. Added `rooms.endRoom` (Session-Token gated through the shared `hostControl.ts`, cancels the game clock, deletes players then the room) and a confirm sheet on the Host's lobby. **Superseded 2026-08-09:** the Soft Minimal screen replacement removed `endRoom` entirely and replaced it with `players.leaveRoom`, which every player has. A room now ends when its *last player leaves* rather than when one player closes it on the rest, and the scope was amended to match. Left here as the record of what 5.6 shipped, not as a description of the code.
+  - **B2 — no "end the room" control**, though the scope listed it as a Host power. Added `rooms.endRoom` (Session-Token gated through the shared `hostControl.ts`, cancels the game clock, deletes players then the room) and a confirm sheet on the Host's lobby. **Superseded 2026-08-09:** the Soft Minimal screen replacement removed `endRoom` entirely and replaced it with `players.leaveRoom`, which every player has. **Superseded again by the 2026-08-10 lifecycle decision:** the TV credential owns the production room, so the final player leaves an empty lobby and TV-session expiry closes it. Left here only as the record of what 5.6 shipped.
   - **Also closed, found by the follow-up security review:** the dealt questions carried `correctIndex` for every question and all future question text, so a client reading its own socket had the whole game — first at the opening payload, then (after an incomplete first fix) at every five-second reveal. The projection now withholds unplayed questions on *every* beat and releases an answer only for a question the room has been shown.
   - **Also closed, found by the follow-up code review:** the phones never actually returned to the Join Screen — `players.session` was a one-shot read, so nothing noticed a seat ending, and the end-room copy promised what did not happen. The seated screen now subscribes to its seat, which also covers `removePlayer` and room expiry.
   - **Verify:** `pnpm typecheck` clean (9 workspaces); `pnpm lint` clean; `pnpm test` green — **771 passed, 64 files**. Independent code review and security review both **PASS** on the final tree, each having re-verified the redaction against a real payload.
@@ -212,7 +222,7 @@
 
 - [x] **5.8 — (Optional) Remember last-used name and avatar locally**
   - Persist the last-used display name and avatar in AsyncStorage so returning players are prefilled; scope treats this as optional ("the app *may* remember").
-  - Done: a pure, unit-tested seam mirroring session parsing — `apps/controller/src/features/join/identity.ts` (parse/recall/remember, injectable store) with `platform/storage/identity-store.ts` as the `AsyncStorage` half. The name is remembered on a successful `joinRoom` and prefills the join field (seed-only; a `touched` latch never overwrites what the player is typing). The color is remembered on a successful `claimColor` and re-taken on the seated screen the first time a player sits down colorless — gated on the roster having landed, only if the swatch is still free, and silent on refusal. Nothing sensitive leaves SecureStore: only the nickname and a color *name* go to `AsyncStorage`; the Session Token stays under `platform/session/`. 16 new Vitest tests (787 total).
+  - Done: a pure, unit-tested seam mirroring session parsing — `apps/controller/src/features/join/identity.ts` (parse/recall/remember, injectable store) with `platform/storage/identity-store.ts` as the `AsyncStorage` half. The name and avatar are remembered after a successful `joinRoom` and prefill the join form (seed-only; a `touched` latch never overwrites what the player is entering). Nothing sensitive leaves SecureStore: only the nickname and avatar id go to `AsyncStorage`; the Session Token stays under `platform/session/`. The historical 16-test evidence was later consolidated with the avatar migration.
   - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore. Typecheck/lint/tests green; not yet exercised on hardware.
 
 - [x] **5.9 — (Follow-up) Keep the question pack out of the Controller bundle**
@@ -305,6 +315,15 @@ the existing public room/game contracts except for the intentional TV APIs and
     unavailable states.
   - **Traceability:** J-006, C-006.2, BR-006, BR-008.
   - **Depends on:** 6.3.1, 6.2.3
+
+- [x] **6.3.2a — Compose TV and player recovery boundaries** *(audit resolution F4–F6)*
+  - Add durable `playerPaused`, exact shared-remainder preservation across
+    overlapping pauses, automatic reconnect resume, Host Continue, Host
+    succession, and Controller/TV player-disconnect surfaces. Keep TV-owned
+    rooms alive as empty lobbies and cancel/discard their departed game.
+  - **Evidence:** `games.test.ts`, `players.test.ts`, `tv-recovery.test.ts`,
+    `packages/game-registry/src/running.test.ts`; typecheck, lint, and 71 files /
+    823 tests pass.
 
 - [x] **6.3.3 — Purge legacy development rooms and tighten the final schema**
   - Deploy optional compatibility fields, run a development-only internal

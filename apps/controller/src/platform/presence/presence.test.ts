@@ -76,6 +76,29 @@ describe('keepPresent', () => {
     expect(beat).toHaveBeenCalledTimes(4);
   });
 
+  it('keeps at most one heartbeat in flight while the network is silent', async () => {
+    let settle: (() => void) | undefined;
+    const beat = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    const app = appInForeground();
+
+    keepPresent(phoneRemembering('adastoken'), beat, app.watch, BEAT);
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(BEAT * 3);
+
+    // Convex queues a disconnected mutation instead of rejecting it. Starting
+    // another on every interval would build an offline heartbeat backlog.
+    expect(beat).toHaveBeenCalledTimes(1);
+
+    settle?.();
+    await vi.advanceTimersByTimeAsync(BEAT);
+    expect(beat).toHaveBeenCalledTimes(2);
+  });
+
   it('goes quiet the moment the app does, which is what being away is', async () => {
     const beat = vi.fn().mockResolvedValue(null);
     const app = appInForeground();

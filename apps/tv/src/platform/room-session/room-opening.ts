@@ -41,13 +41,13 @@ export type RoomOpener = {
  * independently idempotent for the durable TV token; this local memo avoids
  * duplicate network work and keeps the screen's lifecycle explicit.
  *
- * Backend deletion is what makes this a memo per *room* rather than per launch.
- * The last player leaving deletes the room while the television can still be on
- * and showing its code; a code that belongs to no room is the worst thing this
- * screen can display, because it fails silently in somebody's hands across the
- * room. So the pairing screen says the room is gone and this opens the next one
- * — the only moment a second room is the right answer, since the first no longer
- * exists to be confused with it.
+ * Backend expiry is what makes this a memo per *room* rather than per launch.
+ * Player departures never delete a TV-owned room; a room disappears only after
+ * its TV session has outlived the recovery window (or administrative cleanup).
+ * If that happens while a stale screen is still mounted, a code that belongs to
+ * no room is the worst thing it could display. So the pairing screen says the
+ * room is gone and this opens the next one — the only moment a second room is
+ * the right answer, since the first no longer exists to be confused with it.
  *
  * `closeExpiredRoom` ignores any room other than the one being shown, which is
  * what makes it safe to say twice. The screen learns of an expiry from a live

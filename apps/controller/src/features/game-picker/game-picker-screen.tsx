@@ -164,8 +164,8 @@ function GameCardChip({ icon, label }: { readonly icon: IconName; readonly label
  *
  * It keeps the header slot and the outlined pill the board draws, and it keeps
  * the confirm. A tap that costs a seat is still worth a second one — the room
- * has no undo, only a rejoin — but it is no longer the room's irreversible act,
- * because for everybody but the last player out it is not irreversible at all.
+ * has no undo, only a rejoin — but it is no longer the room's irreversible act.
+ * Even the last seat leaves the TV-owned room and code open.
  */
 
 function SettingsControls({
@@ -214,11 +214,9 @@ function SettingsControls({
 
 /**
  * One value of one setting, as Soft Minimal draws a choice: the chosen chip is
- * cobalt and sits on its own shadow, the rest are white and flat.
- *
- * The same treatment the color picker gives a claimed swatch, for the same
- * reason — the sticker shadow is what Soft Minimal uses to lift the thing that is
- * currently true off the ones that merely could be.
+ * accented and sits on its own shadow, while the rest are white and flat. The
+ * sticker shadow lifts the thing that is currently true off the ones that
+ * merely could be.
  */
 
 function SettingOption({
@@ -255,8 +253,8 @@ function SettingOption({
             </Text>
           </Surface>
         ) : (
-          // No press travel on the flat chip, as with an unclaimed swatch:
-          // Soft Minimal's press is a sticker going down onto its own shadow, and
+          // No press travel on the flat chip. Soft Minimal's press is a sticker
+          // going down onto its own shadow, and
           // a chip that has no shadow to meet would just slide 3px sideways.
           <View style={styles.settingOption}>
             <Text style={styles.settingOptionLabel}>{label}</Text>

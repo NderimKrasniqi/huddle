@@ -59,6 +59,9 @@ describe('what a client draws for the room’s running game', () => {
     expect(
       runningGameScreen({ kind: 'paused', gameId: 'trivia', reason: 'tvDisconnected' }),
     ).toEqual({ kind: 'paused', gameId: 'trivia', reason: 'tvDisconnected' });
+    expect(
+      runningGameScreen({ kind: 'paused', gameId: 'trivia', reason: 'playerDisconnected' }),
+    ).toEqual({ kind: 'paused', gameId: 'trivia', reason: 'playerDisconnected' });
     expect(runningGameScreen({ kind: 'unavailable', gameId: 'trivia' })).toEqual({
       kind: 'unavailable',
       gameId: 'trivia',

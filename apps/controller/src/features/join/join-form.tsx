@@ -242,7 +242,7 @@ export function JoinForm({
 
 /**
  * The Room Code, one tile per letter, per the handoff: the typed letters in
- * their Soft Minimal colors, a cobalt cell with a blinking caret where the next
+ * their Soft Minimal colors, an accented cell with a blinking caret where the next
  * letter goes, and dashed cells for the rest.
  *
  * One invisible field sits over the whole row rather than one per tile. The row
@@ -331,7 +331,7 @@ function CodeTiles({
   );
 }
 
-/** The caret in the active cell — cobalt, and blinking, as the handoff draws it. */
+/** The blinking accent caret in the active cell, as the handoff draws it. */
 
 function BlinkingCaret() {
   const [shown, setShown] = useState(true);

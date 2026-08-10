@@ -80,10 +80,12 @@ convex/convex/lib/
 ```
 
 `tvSessions` carries high-churn TV heartbeat data (`roomId`, `sessionToken`,
-`lastSeenAt`, `away`) indexed by token and room. `rooms.tvAway` is the stable
-room lifecycle flag. Heartbeats update only `tvSessions`; pause/resume touches
-the room/game atomically. A room is deleted with players and its TV-session row
-after ten minutes of TV silence. The old unjoined-room timer is removed.
+`lastSeenAt`, `away`, and the silence-check generation) indexed by token and
+room. `rooms.tvAway` is the stable room lifecycle flag. Heartbeats update only
+`tvSessions`; one self-rearming silence-check chain observes them, and duplicate
+legacy callbacks fold into that generation. Pause/resume touches the room/game
+atomically. A room is deleted with players and its TV-session row after ten
+minutes of TV silence. The old unjoined-room timer is removed.
 
 ## Versioned game runtime
 
@@ -103,14 +105,19 @@ The running projection is one of:
 ```ts
 null
 | { kind: "running"; gameId: string; state: unknown; clockRemainingMs?: number }
-| { kind: "paused"; gameId: string; reason: "tvDisconnected" }
+| { kind: "paused"; gameId: string; reason: "tvDisconnected" | "playerDisconnected" }
 | { kind: "unavailable"; gameId: string }
 ```
 
-Paused and unavailable values contain no game state. A paused game resumes with
-the exact stored `pausedRemainingMs`, while a valid running game reports the
-authoritative remainder for TV countdown display. Hosts retain a Back to lobby
-control, but game controls never mount for paused/unavailable projections.
+Paused and unavailable values contain no game state. TV and player loss share
+one exact `pausedRemainingMs`; overlapping pauses never replace that remainder
+with zero. `playerPaused` records the durable Host-decision boundary. The game
+auto-resumes when every seat reconnects, or the current Host may call
+`continueAfterDisconnect` at any connected player count. TV loss takes display
+precedence and must recover before the clock can run. A valid running game
+reports the authoritative remainder for TV countdown display. Hosts retain a
+Back to lobby control, but game controls never mount for paused/unavailable
+projections.
 
 ## TV session lifecycle
 
@@ -131,6 +138,12 @@ game events and carousel movement are inert and starting a game returns
 available. A returning heartbeat restores the room and exact beat, unless the
 runtime is invalid, in which case the unavailable projection lets the Host
 return to the lobby.
+
+The TV credential owns room lifetime independently of the roster. When the last
+player deliberately leaves, the game clock is cancelled and the same room/code
+returns to an empty lobby. Only TV-session expiry deletes a production room;
+this keeps an open TV ready for the next party while still collecting a room
+after the TV app has remained closed through the recovery window.
 
 ## Delivery and migration constraints
 

@@ -5,8 +5,8 @@ import { ConvexError } from 'convex/values';
  * What the Host's phone says when transferring the room or removing a player
  * does not happen.
  *
- * Built exactly like `game-rejection.ts`, `color-rejection.ts` and
- * `join-rejection.ts`: the failure is told apart by `kind` off
+ * Built exactly like `game-rejection.ts` and `join-rejection.ts`: the failure
+ * is told apart by `kind` off
  * `ConvexError.data`, never by matching a message somebody may reword.
  */
 

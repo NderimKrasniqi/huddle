@@ -1,5 +1,7 @@
 import {
   AVATAR_IDS,
+  AWAY_AFTER_MS,
+  HEARTBEAT_INTERVAL_MS,
   type GameSettings,
   settingsFrom,
   type GameLifecycleRejection,
@@ -10,14 +12,14 @@ import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import {
   roomFixture,
   runningState as typedRunningState,
   type TriviaTestState,
-} from './test/fixtures';
+} from '../test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
@@ -105,9 +107,7 @@ async function playToTheFinalScores(
   tokens: Record<string, string>,
 ): Promise<void> {
   const phones = Object.values(tokens);
-  const [firstPhone] = phones;
-
-  if (firstPhone === undefined) {
+  if (phones.length === 0) {
     throw new Error('a room with nobody in it has no game to play');
   }
 
@@ -139,11 +139,14 @@ async function playToTheFinalScores(
         });
       }
     } else {
-      // The Reveal Beat, which in a real room comes from whichever phone's timer
-      // fires first.
-      await t.mutation(api.games.sendEvent, {
-        sessionToken: firstPhone,
-        event: { kind: 'advance', questionIndex: state.questionIndex, phase: state.phase },
+      // Fire the room's own deadline directly. Other clock behavior is tested
+      // against the scheduler below; this helper only needs to play each beat.
+      const deadline = gameLogicById('trivia')?.deadline?.(state);
+      if (deadline === undefined) throw new Error('the reveal has no room clock');
+      await t.mutation(internal.games.reachDeadline, {
+        roomId,
+        gameId: 'trivia',
+        event: deadline.event,
       });
     }
   }
@@ -202,6 +205,27 @@ async function elapse(t: Backend, ms: number): Promise<void> {
   await t.finishInProgressScheduledFunctions();
 }
 
+/** Let time pass while only the named phones keep telling the room they are present. */
+async function elapseBeating(
+  t: Backend,
+  sessionTokens: readonly string[],
+  ms: number,
+): Promise<void> {
+  let elapsed = 0;
+
+  while (elapsed < ms) {
+    const step = Math.min(HEARTBEAT_INTERVAL_MS, ms - elapsed);
+    await vi.advanceTimersByTimeAsync(step);
+
+    for (const sessionToken of sessionTokens) {
+      await t.mutation(api.players.heartbeat, { sessionToken });
+    }
+
+    await t.finishInProgressScheduledFunctions();
+    elapsed += step;
+  }
+}
+
 /** The room's own id for the player it knows by this nickname. */
 async function playerIdOf(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<string> {
   const roster = await t.query(api.players.roster, { roomId });
@@ -245,6 +269,149 @@ describe('a room’s phase', () => {
 
     await t.mutation(api.games.endGame, { sessionToken: host });
     expect(await t.query(api.games.running, { roomId })).toBeNull();
+  });
+});
+
+describe('a running game when a player disconnects', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('pauses when an ordinary player stops heartbeating', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await elapseBeating(t, [tokens.Ada ?? ''], AWAY_AFTER_MS + 1);
+
+    expect(await t.query(api.games.running, { roomId })).toEqual({
+      kind: 'paused',
+      gameId: 'trivia',
+      reason: 'playerDisconnected',
+    });
+  });
+
+  it('transfers Host before pausing when the disconnected player was Host', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await elapseBeating(t, [tokens.Grace ?? ''], AWAY_AFTER_MS + 1);
+
+    expect(await t.query(api.players.roster, { roomId })).toContainEqual(
+      expect.objectContaining({ nickname: 'Grace', host: true, away: false }),
+    );
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'paused',
+      reason: 'playerDisconnected',
+    });
+
+    await t.mutation(api.games.continueAfterDisconnect, {
+      sessionToken: tokens.Grace ?? '',
+    });
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({ kind: 'running' });
+  });
+
+  it('makes the first returning player Host when the whole party disconnected', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await elapse(t, AWAY_AFTER_MS + 1);
+    await t.mutation(api.players.heartbeat, { sessionToken: tokens.Grace ?? '' });
+
+    expect(await t.query(api.players.roster, { roomId })).toContainEqual(
+      expect.objectContaining({ nickname: 'Grace', host: true, away: false }),
+    );
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'paused',
+      reason: 'playerDisconnected',
+    });
+  });
+
+  it('ignores game input until the Host makes a recovery choice', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const before = await stateOf(t, roomId);
+
+    await elapseBeating(t, [tokens.Ada ?? ''], AWAY_AFTER_MS + 1);
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+    });
+
+    expect(await stateOf(t, roomId)).toEqual(before);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'paused',
+      reason: 'playerDisconnected',
+    });
+  });
+
+  it('resumes the exact remainder when the Host continues below the starting minimum', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await elapseBeating(t, Object.values(tokens), 1_000);
+    await elapseBeating(t, [tokens.Ada ?? ''], AWAY_AFTER_MS + 1);
+    const paused = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    const remainder = paused?.pausedRemainingMs;
+    expect(remainder).toBeGreaterThan(0);
+
+    await t.mutation(api.games.continueAfterDisconnect, {
+      sessionToken: tokens.Ada ?? '',
+    });
+
+    const continued = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    expect(continued?.playerPaused).toBeUndefined();
+    expect((continued?.deadlineAt ?? 0) - Date.now()).toBe(remainder);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({ kind: 'running' });
+
+    await elapseBeating(t, [tokens.Ada ?? ''], Math.max(0, (remainder ?? 0) - 1));
+    expect((await stateOf(t, roomId)).phase).toBe('question');
+    await elapseBeating(t, [tokens.Ada ?? ''], 1);
+    expect((await stateOf(t, roomId)).phase).toBe('reveal');
+  });
+
+  it('resumes the exact remainder automatically when everyone returns', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    await elapseBeating(t, [tokens.Ada ?? ''], AWAY_AFTER_MS + 1);
+    const remainder = await t.run(
+      async (ctx) => (await ctx.db.get(roomId))?.game?.pausedRemainingMs,
+    );
+
+    await t.mutation(api.players.heartbeat, { sessionToken: tokens.Grace ?? '' });
+
+    const recovered = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    expect(recovered?.playerPaused).toBeUndefined();
+    expect(recovered?.pausedRemainingMs).toBeUndefined();
+    expect((recovered?.deadlineAt ?? 0) - Date.now()).toBe(remainder);
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({ kind: 'running' });
+  });
+
+  it('refuses Continue from a player who is not the Host', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace', 'Linus');
+
+    await elapseBeating(
+      t,
+      [tokens.Ada ?? '', tokens.Grace ?? ''],
+      AWAY_AFTER_MS + 1,
+    );
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.continueAfterDisconnect, {
+          sessionToken: tokens.Grace ?? '',
+        }),
+      ),
+    ).toEqual({ kind: 'notHost' });
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'paused',
+      reason: 'playerDisconnected',
+    });
   });
 });
 
@@ -587,7 +754,7 @@ describe('the Host ending the game', () => {
     expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
     // "The same roster" is the AC's own words, and this is the whole of what one
     // holds: the same seats in the same order, with the nicknames and the
-    // claimed colors they had in the lobby, and the same Host among them.
+    // avatars they had in the lobby, and the same Host among them.
     expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual(lobby);
     // The scores do not follow anybody back. They were only ever in
     // `game.state`, which is the field ending clears — so the next game starts
@@ -613,10 +780,8 @@ describe('the Host ending the game', () => {
       });
     }
 
-    // The room is on a Reveal, whose `advance` comes from the phones themselves
-    // — so a room with every phone backgrounded stalls here and nothing in it
-    // can move. This is why the control is on every beat of a game and not only
-    // on the last one: it is the only way out of this one.
+    // The room is on a Reveal. Ending the game here proves the Host control is
+    // available throughout play, not only from the final standings.
     expect(runningState(await t.query(api.games.running, { roomId })).phase).toBe('reveal');
 
     await t.mutation(api.games.endGame, { sessionToken: tokens.Ada ?? '' });
@@ -699,6 +864,20 @@ describe('a player’s event in the running game', () => {
     expect(runningState(running).answers).toEqual({ [grace]: 1 });
   });
 
+  it('cannot forge the room clock to skip a beat', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+    const before = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'advance', questionIndex: 0, phase: 'question' },
+    });
+
+    const after = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    expect(after).toEqual(before);
+  });
+
   it('lets a second tap change nothing', async () => {
     const t = convexTest(schema, modules);
     const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
@@ -718,6 +897,32 @@ describe('a player’s event in the running game', () => {
       sessionToken: tokens.Grace ?? '',
     });
     expect(runningState(running).answers).toEqual({ [grace]: 2 });
+  });
+
+  it('does not restart a missing clock for an event the rules refuse', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
+
+    // Model a valid game written before its scheduler fields landed. A stale
+    // event is a reducer no-op and must not turn into the write that repairs the
+    // clock: only a state transition may arm the next beat.
+    await t.run(async (ctx) => {
+      const room = await ctx.db.get(roomId);
+      if (room?.game === undefined) throw new Error('expected a running game');
+      if (room.game.deadline !== undefined) await ctx.scheduler.cancel(room.game.deadline);
+      await ctx.db.patch(roomId, {
+        game: { ...room.game, deadline: undefined, deadlineAt: undefined },
+      });
+    });
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Grace ?? '',
+      event: { kind: 'answer', questionIndex: 99, optionIndex: 0 },
+    });
+
+    const stored = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    expect(stored?.deadline).toBeUndefined();
+    expect(stored?.deadlineAt).toBeUndefined();
   });
 
   /**
@@ -1085,12 +1290,12 @@ describe('the clock a question runs on', () => {
       event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
     });
 
-    // A second short of the deadline: the room is still waiting on Grace,
-    // whose phone is in her pocket.
-    await elapse(t, clockOn(asked) - 1000);
+    // A second short of the deadline: the room is still waiting on connected
+    // but idle Grace.
+    await elapseBeating(t, Object.values(tokens), clockOn(asked) - 1000);
     expect((await stateOf(t, roomId)).phase).toBe('question');
 
-    await elapse(t, 1000);
+    await elapseBeating(t, Object.values(tokens), 1000);
 
     const revealed = await stateOf(t, roomId);
 
@@ -1124,7 +1329,7 @@ describe('the clock a question runs on', () => {
     expect(revealed.phase).toBe('reveal');
     expect(revealed.questionIndex).toBe(0);
 
-    await elapse(t, clockOn(revealed));
+    await elapseBeating(t, Object.values(tokens), clockOn(revealed));
 
     const next = await stateOf(t, roomId);
     expect(next.phase).toBe('question');
@@ -1139,12 +1344,12 @@ describe('the clock a question runs on', () => {
     // A thumb landing with a second to spare. The countdown belongs to the
     // question, not to the last thing that happened during it — a clock re-armed
     // on every answer would be a question a party could keep alive forever.
-    await elapse(t, clockOn(asked) - 1000);
+    await elapseBeating(t, Object.values(tokens), clockOn(asked) - 1000);
     await t.mutation(api.games.sendEvent, {
       sessionToken: tokens.Ada ?? '',
       event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
     });
-    await elapse(t, 1000);
+    await elapseBeating(t, Object.values(tokens), 1000);
 
     expect((await stateOf(t, roomId)).phase).toBe('reveal');
   });
@@ -1153,23 +1358,18 @@ describe('the clock a question runs on', () => {
     const t = convexTest(schema, modules);
     const { roomId, tokens } = await roomPlaying(t, 'Ada', 'Grace');
 
-    await elapse(t, clockOn(await stateOf(t, roomId)));
-
-    // The Reveal Beat, which still comes from a phone.
-    await t.mutation(api.games.sendEvent, {
-      sessionToken: tokens.Ada ?? '',
-      event: { kind: 'advance', questionIndex: 0, phase: 'reveal' },
-    });
+    await elapseBeating(t, Object.values(tokens), clockOn(await stateOf(t, roomId)));
+    await elapseBeating(t, Object.values(tokens), clockOn(await stateOf(t, roomId)));
 
     const second = await stateOf(t, roomId);
 
     expect(second.questionIndex).toBe(1);
     expect(second.phase).toBe('question');
 
-    await elapse(t, clockOn(second) - 1000);
+    await elapseBeating(t, Object.values(tokens), clockOn(second) - 1000);
     expect((await stateOf(t, roomId)).phase).toBe('question');
 
-    await elapse(t, 1000);
+    await elapseBeating(t, Object.values(tokens), 1000);
 
     const revealed = await stateOf(t, roomId);
 
@@ -1204,7 +1404,7 @@ describe('the clock a question runs on', () => {
       sessionToken: tokens.Ada ?? '',
       event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
     });
-    await elapse(t, clockOn(asked));
+    await elapseBeating(t, Object.values(tokens), clockOn(asked));
 
     expect((await stateOf(t, roomId)).phase).toBe('reveal');
   });
@@ -1227,13 +1427,13 @@ describe('the clock a question runs on', () => {
 
       // Five seconds of thinking, so fifteen of the twenty are left: trivia
       // prices that at 100 + 75, and it can only know it from the hub.
-      await elapse(t, 5_000);
+      await elapseBeating(t, Object.values(tokens), 5_000);
       await t.mutation(api.games.sendEvent, {
         sessionToken: tokens.Ada ?? '',
         event: { kind: 'answer', questionIndex: 0, optionIndex: correctAnswerTo(asked) },
       });
-      // Grace's phone is in her pocket; the room ends the question itself.
-      await elapse(t, clockOn(asked) - 5_000);
+      // Grace remains connected but sends no answer; the room ends the question itself.
+      await elapseBeating(t, Object.values(tokens), clockOn(asked) - 5_000);
 
       const revealed = await stateOf(t, roomId);
 
@@ -1247,7 +1447,7 @@ describe('the clock a question runs on', () => {
       const ada = await playerIdOf(t, roomId, 'Ada');
       const asked = await stateOf(t, roomId);
 
-      await elapse(t, 15_000);
+      await elapseBeating(t, Object.values(tokens), 15_000);
       // A phone claiming the whole question was still on the clock. The hub
       // writes this field over whatever arrived, exactly as it does the player,
       // so the answer is scored on the five seconds that were really left.
@@ -1260,7 +1460,7 @@ describe('the clock a question runs on', () => {
           msRemaining: clockOn(asked),
         },
       });
-      await elapse(t, clockOn(asked) - 15_000);
+      await elapseBeating(t, Object.values(tokens), clockOn(asked) - 15_000);
 
       expect((await stateOf(t, roomId)).standings).toContainEqual({ playerId: ada, score: 125 });
     });

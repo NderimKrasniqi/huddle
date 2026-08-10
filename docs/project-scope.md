@@ -88,9 +88,12 @@ Each game declares its own:
 - minimum player count;
 - maximum player count;
 - late-join behavior;
-- whether it can continue after players leave.
 
 A game can start only when the room player count is within that game's declared range. The MVP does not include benching, participant selection, or pre-game spectator assignment.
+
+The declared player range gates **starting only**. After a game has started, the
+current host may continue it with fewer connected players, including below the
+declared minimum.
 
 ## Host
 
@@ -112,15 +115,15 @@ The host can:
 - manually transfer host status;
 - end the active game.
 
-The host cannot end the room. That power was removed with `rooms.endRoom`: a
-room now ends when its **last player leaves**, and leaving is something every
-player can do, not a power one player holds over the rest.
+The host cannot end the room. The TV app owns the room session; players may
+leave their own seats, but no phone can close the room for everyone.
 
 The host cannot inspect information that a game defines as private to another player.
 
-If the host deliberately leaves, host ownership transfers to the longest-connected remaining player before the old host is removed — preferring one the room is still hearing from, but taking a currently-silent one over leaving the room hostless, since a room whose host pointer names nobody is one the remaining players cannot start a game in or repair. If **no** players remain, the room is deleted outright and its Room Code returns to the pool: an empty room has nobody to become its host, and nothing else in the system would ever collect it (see `players.leaveRoom`).
+If the host deliberately leaves, host ownership transfers to the longest-connected remaining player before the old host is removed — preferring one the room is still hearing from, but taking a currently-silent one over leaving a seated room hostless. If no players remain, the active game is discarded and the TV keeps the same room and Room Code as an empty lobby; the next joiner becomes host.
 
-If a host is permanently lost after a disconnect/recovery period, the longest-connected eligible connected player becomes host automatically.
+Once the host's connection is classified as lost after the grace period, the
+longest-connected eligible connected player becomes host automatically.
 
 ## TV Responsibilities
 
@@ -253,19 +256,21 @@ If an active player is then considered disconnected:
 3. The player's identity, avatar, session credential, and relevant game state are preserved for a recovery period.
 4. The host can:
    - wait for reconnection;
-   - continue without the player if the game permits it and minimum player requirements remain satisfied;
-   - remove the player.
+   - continue without the player, even if connected membership is now below the game's starting minimum.
 5. Reconnecting with the valid participant/session credential restores the same participant.
 
 If the host removes a player, the old participant state is invalidated. The removed person may join the room again as a fresh participant. The MVP has no ban/block system.
 
-If a departure leaves the active game below its declared minimum player count, the game cannot continue. The host can wait for recovery or end the game and return to the room.
+Player-count requirements are not re-applied after start. If a departure leaves
+the active game below its declared minimum, the host still chooses between
+waiting and continuing; Back to lobby remains available as a separate choice.
 
 ## Host Disconnection
 
-A temporary host disconnect pauses the active game and allows recovery.
-
-If the host cannot recover before the applicable recovery period, the longest-connected eligible connected player becomes host automatically.
+A confirmed host disconnect pauses the active game and immediately transfers
+host ownership to the longest-connected eligible connected player. The new
+host receives the same Wait/Continue choice. If every player is disconnected,
+the first returning player becomes host and receives that choice.
 
 The host may manually transfer host ownership while connected.
 
@@ -278,7 +283,7 @@ If it disconnects:
 1. Active gameplay pauses.
 2. Room and game state are preserved for a recovery window.
 3. Reconnecting the TV restores the existing room and game.
-4. If the TV does not recover before the recovery window expires, the room closes and the session ends.
+4. Closing the TV app stops its heartbeat; if it does not return before the recovery window expires, the room closes and the session ends.
 
 ## Scoring
 

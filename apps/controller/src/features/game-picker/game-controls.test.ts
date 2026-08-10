@@ -117,19 +117,17 @@ describe('leaving the room', () => {
     expect(LEAVE_ROOM.label).not.toBe(backToLobbyLabel(false));
   });
 
-  it('warns the last player out that the room goes with them', () => {
-    // The only irreversible case, and the only one that costs anybody else
-    // anything — because there is nobody else.
+  it('tells the last player that the TV keeps the room and code', () => {
     const alone = leaveConsequence(1, true);
 
-    expect(alone).toContain('room closes');
-    expect(alone).toContain('code stops working');
+    expect(alone).toContain('TV keeps this room open');
+    expect(alone).toContain('same code');
   });
 
   it('treats an empty roster as the last player out', () => {
     // A count of zero is a roster that has not landed rather than a room with
     // nobody in it — the reader is in it. The cautious sentence is the right
-    // one to show while the phone does not know.
+    // one to show while the phone does not know, and remains true either way.
     expect(leaveConsequence(0, false)).toBe(leaveConsequence(1, false));
   });
 

@@ -9,7 +9,7 @@ import { ConvexError, v } from 'convex/values';
 import { components, internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { cancelDeadline, remainingMs, resumeGameClock } from './lib/gameClock';
+import { pauseGameClock, resumePausedGameClock } from './lib/gameClock';
 import { playersInRoom, roomSilenceMs } from './lib/presence';
 import { deleteRoom } from './lib/roomLifecycle';
 
@@ -44,6 +44,28 @@ export type TvRateLimitRejection = {
 const tvRateLimiter = new RateLimiter(components.rateLimiter, {
   tvNewRooms: { kind: 'token bucket', rate: 10, period: MINUTE, capacity: 20 },
 });
+
+/**
+ * Keep exactly one silence check pending for a present TV.
+ *
+ * The check re-arms itself against the latest heartbeat until it marks the TV
+ * away. Heartbeats therefore start a new chain only when the previous chain
+ * ended in that away state; arming on every beat would accumulate one
+ * scheduled function every three seconds for the lifetime of the room.
+ */
+async function watchTvForSilence(
+  ctx: MutationCtx,
+  tvSessionId: Id<'tvSessions'>,
+  generation: number | undefined,
+  after: number = TV_SESSION_MAX_SILENCE_MS,
+): Promise<void> {
+  const nextGeneration = (generation ?? 0) + 1;
+  await ctx.scheduler.runAfter(after, internal.rooms.markTvAway, {
+    tvSessionId,
+    generation: nextGeneration,
+  });
+  await ctx.db.patch(tvSessionId, { awayCheckGeneration: nextGeneration });
+}
 
 /**
  * A Room Code no live room holds.
@@ -107,9 +129,9 @@ export const openRoom = mutation({
       if (room !== null) {
         await ctx.db.patch(existing._id, { lastSeenAt: now, away: false });
         await restoreTvRoom(ctx, room, existing._id, now);
-        await ctx.scheduler.runAfter(TV_SESSION_MAX_SILENCE_MS, internal.rooms.markTvAway, {
-          tvSessionId: existing._id,
-        });
+        if (existing.away || existing.awayCheckGeneration === undefined) {
+          await watchTvForSilence(ctx, existing._id, existing.awayCheckGeneration);
+        }
         return { roomId: room._id, code: room.code };
       }
       // A stale session row is not an identity failure. Clean it and let this
@@ -128,9 +150,7 @@ export const openRoom = mutation({
       lastSeenAt: now,
       away: false,
     });
-    await ctx.scheduler.runAfter(TV_SESSION_MAX_SILENCE_MS, internal.rooms.markTvAway, {
-      tvSessionId: sessionId,
-    });
+    await watchTvForSilence(ctx, sessionId, undefined);
 
     return { roomId, code };
   },
@@ -166,18 +186,17 @@ async function restoreTvRoom(
     await ctx.db.patch(room._id, { tvAway: false });
     return;
   }
-
-  const remaining = Math.max(0, running.pausedRemainingMs ?? 0);
-  const clock = await resumeGameClock(ctx, room, remaining, now);
+  // The TV is back, but a player disconnect still holds the game. Clear only
+  // the TV boundary and leave the shared remainder for the Host's decision or
+  // the final player's return.
+  if (running.playerPaused === true) {
+    await ctx.db.patch(room._id, { tvAway: false });
+    return;
+  }
 
   await ctx.db.patch(room._id, {
     tvAway: false,
-    game: {
-      ...running,
-      deadline: clock?.deadline,
-      deadlineAt: clock?.deadlineAt,
-      pausedRemainingMs: undefined,
-    },
+    game: await resumePausedGameClock(ctx, room, running, now),
   });
 }
 
@@ -199,23 +218,44 @@ export const tvHeartbeat = mutation({
     const now = Date.now();
     await ctx.db.patch(session._id, { lastSeenAt: now, away: false });
     await restoreTvRoom(ctx, room, session._id, now);
-    await ctx.scheduler.runAfter(TV_SESSION_MAX_SILENCE_MS, internal.rooms.markTvAway, {
-      tvSessionId: session._id,
-    });
+    if (session.away || session.awayCheckGeneration === undefined) {
+      await watchTvForSilence(ctx, session._id, session.awayCheckGeneration);
+    }
     return null;
   },
 });
 
 /** Scheduled silence check for the TV's high-churn session row. */
 export const markTvAway = internalMutation({
-  args: { tvSessionId: v.id('tvSessions') },
+  args: {
+    tvSessionId: v.id('tvSessions'),
+    // Optional so callbacks scheduled by the previous deployment can land and
+    // fold themselves into the new single-chain protocol.
+    generation: v.optional(v.number()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.tvSessionId);
     if (session === null || session.away) return null;
+
+    // A modern callback owns the generation stored on the row. A legacy
+    // callback owns it only until one callback has established that field;
+    // every duplicate that follows then becomes inert.
+    if (
+      (args.generation === undefined && session.awayCheckGeneration !== undefined) ||
+      (args.generation !== undefined && args.generation !== session.awayCheckGeneration)
+    ) {
+      return null;
+    }
+
     const silence = Date.now() - session.lastSeenAt;
     if (silence < TV_SESSION_MAX_SILENCE_MS) {
-      await ctx.scheduler.runAfter(TV_SESSION_MAX_SILENCE_MS - silence, internal.rooms.markTvAway, args);
+      await watchTvForSilence(
+        ctx,
+        session._id,
+        session.awayCheckGeneration,
+        TV_SESSION_MAX_SILENCE_MS - silence,
+      );
       return null;
     }
     const room = await ctx.db.get(session.roomId);
@@ -223,21 +263,11 @@ export const markTvAway = internalMutation({
       await ctx.db.delete('tvSessions', session._id);
       return null;
     }
-    const game = room.game;
-    await cancelDeadline(ctx, game?.deadline);
-    const remaining = remainingMs(game?.deadlineAt, Date.now()) ?? 0;
+    const game = await pauseGameClock(ctx, room, Date.now());
     await ctx.db.patch(session._id, { away: true });
     await ctx.db.patch(room._id, {
       tvAway: true,
-      game:
-        game === undefined
-          ? undefined
-          : {
-              ...game,
-              deadline: undefined,
-              deadlineAt: undefined,
-              pausedRemainingMs: remaining,
-            },
+      game,
     });
     // Expiry is ten minutes from the last TV heartbeat, not ten minutes after
     // the 13-second away marker happens to run.
@@ -406,8 +436,7 @@ export const expireRoom = internalMutation({
       return null;
     }
 
-    // A running game's clock, stopped before the room goes — the same tidy-up
-    // `players.leaveRoom` does when the last player walks out. A deadline left pending
+    // A running game's clock, stopped before the room goes. A deadline left pending
     // would fire into a room that no longer exists: harmless, since
     // `reachDeadline` finds nothing, but it is the room's own scheduled work and
     // the room ending is where it stops, however the room comes to end.
@@ -418,7 +447,6 @@ export const expireRoom = internalMutation({
 
 // `endRoom` was here: the Host's control that deleted the room and every seat
 // in it at once. `players.leaveRoom` replaced it. The scope's "end the room"
-// became "leave", available to everybody rather than to the Host alone, and a
-// room now ends when its last player walks out rather than when one player
-// decides for the rest — so there was no caller left, and a Host-only power to
-// close a room other people are in is not one to keep lying around unreachable.
+// became "leave", available to everybody rather than to the Host alone. The TV
+// credential now owns production room lifetime, so there is still no caller for
+// a Host-only power to close a room other people are in.

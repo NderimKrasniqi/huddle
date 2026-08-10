@@ -161,6 +161,17 @@ describe('advancing the room', () => {
     expect(revealed.tally[0]).toBe(1);
   });
 
+  it('ignores an advance attributed to a player', () => {
+    const state = started(['a', 'b']);
+
+    expect(
+      votingGameLogic.reduce(state, {
+        ...advance(0, 'voting'),
+        playerId: 'a',
+      }),
+    ).toBe(state);
+  });
+
   it('opens the next prompt with a fresh tally once a reveal ends', () => {
     const revealed = votingGameLogic.reduce(started(['a', 'b'], 3), advance(0, 'voting'));
     const next = votingGameLogic.reduce(revealed, advance(0, 'reveal'));

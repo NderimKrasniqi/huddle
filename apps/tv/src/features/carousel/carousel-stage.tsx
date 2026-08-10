@@ -78,7 +78,7 @@ function CarouselCards({ window }: { readonly window: CarouselWindow }) {
 
 /**
  * The focused card: key art over the title and its chips (handoff §6 — 440×520,
- * 4px ink border, 10px cobalt offset shadow).
+ * 4px ink border, 10px accent offset shadow).
  */
 function FocusedGameCard({ game }: { readonly game: GameModule }) {
   const { title, keyArt, playerRange, estimatedMinutes, category } = game.metadata;

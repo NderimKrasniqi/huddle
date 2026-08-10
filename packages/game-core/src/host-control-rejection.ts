@@ -2,7 +2,7 @@
  * Why a host control — transferring the room, or removing a player — was
  * refused.
  *
- * Shaped like the join, color and lifecycle rejections before it and thrown the
+ * Shaped like the join and lifecycle rejections beside it and thrown the
  * same way: as the `data` of a `ConvexError`, the only part of a thrown error
  * Convex does not redact, so the Host's phone tells the cases apart by `kind`
  * rather than by a message someone may reword.
@@ -19,7 +19,7 @@
  * — a seat can leave between the render and the tap, and a phone that is not the
  * Host can call these functions, since Huddle authenticates by Session Token and
  * nothing else — so each carries a line the Host can read (see
- * `apps/controller/src/host-control-rejection.ts`).
+ * `apps/controller/src/features/room/host-control-rejection.ts`).
  */
 export type HostControlRejection =
   /** The acting phone is in no room: its seat expired, or its token is stale. */

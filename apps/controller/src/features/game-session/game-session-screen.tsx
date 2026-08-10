@@ -8,27 +8,113 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { RosterSeat } from '../room';
 import { phoneSessionTokenStore, type PlayerSession } from '../../platform/session';
-import { PhoneScreen, SeatedHeader, controllerStyles as styles } from '../../ui';
+import { PhoneScreen, PrimaryButton, SeatedHeader, controllerStyles as styles } from '../../ui';
 import { backToLobbyLabel } from './game-controls';
 import { lifecycleFailureMessage } from './game-rejection';
 
-export function GameRuntimeStatusScreen({ status, youAreHost, leaveControl }: {
+export function GameRuntimeStatusScreen({
+  status,
+  reason,
+  disconnectedPlayers,
+  youAreHost,
+  leaveControl,
+}: {
   readonly status: 'paused' | 'unavailable';
+  readonly reason?: 'tvDisconnected' | 'playerDisconnected';
+  readonly disconnectedPlayers: readonly string[];
   readonly youAreHost: boolean;
   readonly leaveControl: ReactNode;
 }) {
   const paused = status === 'paused';
+  const playerDisconnected = paused && reason === 'playerDisconnected';
+  const disconnected =
+    disconnectedPlayers.length === 1
+      ? `${disconnectedPlayers[0]} disconnected`
+      : disconnectedPlayers.length > 1
+        ? `${disconnectedPlayers.length} players disconnected`
+        : 'A player disconnected';
+  const title = playerDisconnected
+    ? disconnected
+    : paused
+      ? 'TV disconnected'
+      : 'Game unavailable';
+  const message = playerDisconnected
+    ? youAreHost
+      ? 'The game is paused. Wait for everyone to return, or continue without them.'
+      : 'The game is paused while the Host chooses whether to wait or continue.'
+    : paused
+      ? 'The game is paused while Huddle reconnects to the TV.'
+      : 'Huddle could not safely read this game. Return to the lobby to continue.';
+
   return (
     <PhoneScreen>
       <SeatedHeader trailing={leaveControl} />
-      <Text style={styles.title}>{paused ? 'TV disconnected' : 'Game unavailable'}</Text>
-      <Text style={[styles.waitingFor, styles.asideCentred]}>
-        {paused
-          ? 'The game is paused while Huddle reconnects to the TV.'
-          : 'Huddle could not safely read this game. Return to the lobby to continue.'}
-      </Text>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.waitingFor, styles.asideCentred]}>{message}</Text>
+      {youAreHost && playerDisconnected ? <DisconnectRecoveryControls /> : null}
       {youAreHost ? <BackToLobbyControl /> : null}
     </PhoneScreen>
+  );
+}
+
+/** The new Host's explicit choice after any player is confirmed disconnected. */
+function DisconnectRecoveryControls() {
+  const continueAfterDisconnect = useMutation(api.games.continueAfterDisconnect);
+  const [waiting, setWaiting] = useState(false);
+  const [continuing, setContinuing] = useState(false);
+  const [failure, setFailure] = useState<string>();
+
+  async function continueWithoutThem() {
+    setContinuing(true);
+    setFailure(undefined);
+
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+      if (sessionToken === null) {
+        setFailure('This phone has lost its seat — reopen the app to rejoin.');
+        return;
+      }
+      await continueAfterDisconnect({ sessionToken });
+    } catch (error) {
+      setFailure(lifecycleFailureMessage(error));
+    } finally {
+      setContinuing(false);
+    }
+  }
+
+  return (
+    <View style={styles.field}>
+      <Pressable
+        style={styles.stretch}
+        onPress={() => setWaiting(true)}
+        accessibilityRole="button"
+        accessibilityState={{ selected: waiting }}
+      >
+        {({ pressed }) => (
+          <Surface
+            elevation={elevation.phoneCard}
+            style={[
+              styles.stretch,
+              [styles.button, styles.buttonSecondary, pressed && styles.buttonPressed],
+            ]}
+          >
+            <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>
+              {waiting ? 'Waiting for everyone…' : 'Wait for everyone'}
+            </Text>
+          </Surface>
+        )}
+      </Pressable>
+      <PrimaryButton
+        label={continuing ? 'Continuing…' : 'Continue without them'}
+        enabled={!continuing}
+        onPress={() => void continueWithoutThem()}
+      />
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -86,8 +172,8 @@ export function InGameScreen({
  *
  * `sendEvent` is the phone's way of telling the room what its player did. It is
  * fire-and-forget on purpose: the answer a player just gave comes back through
- * the room's own subscription, the same round trip the color swatches wait for,
- * so there is nothing here for the screen to wait on and nothing local to keep
+ * the room's own subscription, so there is nothing here for the screen to wait
+ * on and nothing local to keep
  * in step. What the phone draws is always what the room says, never what this
  * phone hopes it said.
  *
@@ -142,14 +228,11 @@ function PlayerGameScreen({
  * Back to lobby: the Host's way out of a running game, with
  * the room and its roster intact.
  *
- * On every beat the Host can be on, and deliberately: the room's other way
- * forward is the Reveal Beat, which comes from the phones, so a room whose
- * phones have all gone quiet has nothing left that can move it. This is the only
- * thing that can, and a control that only appeared once the game was over would
- * not be there for the beat that needs it.
+ * Available on every beat deliberately: the server clock can move the game
+ * forward, but the Host may choose to abandon a game in progress at any point.
  *
- * It keeps the punch face it wore as "End game", because on all but the last
- * beat it is still throwing away a game in progress — what changed is the word,
+ * It keeps the destructive action treatment it wore as "End game", because on
+ * all but the last beat it is still throwing away a game in progress — what changed is the word,
  * which now says where the room goes rather than mis-stating what it is doing
  * (see `backToLobbyLabel`). The roster, the Host and the Room Code survive it;
  * only the game's own state, the scoreboard included, is left behind.

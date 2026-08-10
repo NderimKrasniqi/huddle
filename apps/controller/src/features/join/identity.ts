@@ -6,7 +6,7 @@ import { nicknameEntry } from './join-entry';
  * The two things a returning player should not have to say twice: the name they
  * go by and the avatar they picked last time.
  *
- * Neither is a secret — a nickname in a living room, and one of ten swatches —
+ * Neither is a secret — a nickname in a living room, and a built-in avatar —
  * so unlike the Session Token these live in plain device storage
  * (`identity-store.ts`) rather than the keystore. Losing them costs a returning
  * player a few taps, never their seat, which is why every read here falls back

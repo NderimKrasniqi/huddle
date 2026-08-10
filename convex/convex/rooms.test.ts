@@ -13,7 +13,7 @@ import { api, internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import type { RoomCodeExhausted } from './rooms';
-import { registerRateLimiter, roomFixture } from './test/fixtures';
+import { registerRateLimiter, roomFixture } from '../test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
