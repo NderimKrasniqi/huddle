@@ -103,7 +103,7 @@ export type VotingEvent =
     }
   | {
       readonly kind: 'advance';
-      /** Absent: the room's own clock raises both of this game's advances. */
+      /** Must be absent: the room's own clock raises both advances. */
       readonly playerId?: GamePlayerId;
       readonly promptIndex: number;
       /** The beat being ended: the prompt on screen, or its reveal. */
@@ -245,6 +245,12 @@ function advanced(
   state: VotingState,
   event: Extract<VotingEvent, { kind: 'advance' }>,
 ): VotingState {
+  // The hub names every event sent by a phone. Only its internal deadline omits
+  // that identity, so a player cannot impersonate the clock and skip a beat.
+  if (event.playerId !== undefined) {
+    return state;
+  }
+
   // Already moved on: this is a second advance for a beat the room has left, and
   // acting on it would end the beat that replaced it.
   if (event.promptIndex !== state.promptIndex || event.phase !== state.phase) {

@@ -39,6 +39,30 @@ export async function stopGameClock(ctx: MutationCtx, room: Doc<'rooms'>): Promi
   await cancelDeadline(ctx, room.game?.deadline);
 }
 
+/** Stop a running clock once and preserve the exact remainder for recovery. */
+export async function pauseGameClock(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  now: number,
+): Promise<StoredGame | undefined> {
+  const running = room.game;
+  if (running === undefined) return undefined;
+
+  // Another recovery boundary already owns the stopped clock. Its remainder is
+  // the one to keep: pausing again must not replace fifteen seconds with zero.
+  if (running.deadline === undefined && running.deadlineAt === undefined) {
+    return running;
+  }
+
+  await cancelDeadline(ctx, running.deadline);
+  return {
+    ...running,
+    deadline: undefined,
+    deadlineAt: undefined,
+    pausedRemainingMs: remainingMs(running.deadlineAt, now),
+  };
+}
+
 async function scheduleDeadline(
   ctx: MutationCtx,
   roomId: Id<'rooms'>,
@@ -83,7 +107,7 @@ export async function windGameClock(
   );
 }
 
-/** Re-arm a paused room from the exact remainder captured at TV disconnect. */
+/** Re-arm a paused room from the exact remainder captured at disconnect. */
 export async function resumeGameClock(
   ctx: MutationCtx,
   room: Doc<'rooms'>,
@@ -106,4 +130,22 @@ export async function resumeGameClock(
     remaining,
     now,
   );
+}
+
+/** Restore a stopped stored game and clear the pause-only clock fields. */
+export async function resumePausedGameClock(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  running: StoredGame,
+  now: number,
+): Promise<StoredGame> {
+  const remaining = Math.max(0, running.pausedRemainingMs ?? 0);
+  const clock = await resumeGameClock(ctx, { ...room, game: running }, remaining, now);
+
+  return {
+    ...running,
+    deadline: clock?.deadline,
+    deadlineAt: clock?.deadlineAt,
+    pausedRemainingMs: undefined,
+  };
 }

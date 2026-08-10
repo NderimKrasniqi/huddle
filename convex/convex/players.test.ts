@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import schema from './schema';
 import type { Id } from './_generated/dataModel';
-import { registerRateLimiter, roomFixture } from './test/fixtures';
+import { registerRateLimiter, roomFixture } from '../test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
@@ -954,6 +954,24 @@ describe('host transfer', () => {
     expect(await hostName(t, room.roomId)).toBe('Ada');
   });
 
+  it('hands an all-away room to the first connected player who comes back', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await seatPlayer(t, room.code, 'Ada');
+    const grace = await seatPlayer(t, room.code, 'Grace');
+
+    await elapse(t, 15_000);
+    expect(await hostName(t, room.roomId)).toBe('Ada');
+
+    // Ada is still away. Grace is now the room's only connected player, so
+    // leaving control on Ada would strand every Host action behind a silent
+    // phone until Ada happened to return.
+    await t.mutation(api.players.heartbeat, { sessionToken: grace.sessionToken });
+
+    expect(await hostName(t, room.roomId)).toBe('Grace');
+    expect(await hostCount(t, room.roomId)).toBe(1);
+  });
+
   it('makes an original host who comes back a regular player', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
@@ -1347,13 +1365,8 @@ describe('host controls', () => {
  * It replaced the Host-only `rooms.endRoom`, and the three things worth pinning
  * are the three ways it differs from what it replaced: it is nobody's power
  * over anybody, a departing Host hands the room on rather than closing it, and
- * the *last* player out is the one who ends it.
- *
- * That last one is a deliberate departure from the plan, which expected an
- * emptied room to linger until expiry. It cannot: `expireRoom` refuses an empty
- * room by design and `watchForDesertion` never schedules one for it, so the
- * retired unjoined-room timer is no longer armed at all. Leaving an empty room
- * standing would therefore strand its Room Code for good. See `leaveRoom`.
+ * the TV-owned room survives an empty roster. Legacy fixtures without a TV
+ * credential still delete on their last departure so they cannot leak a code.
  */
 describe('leaveRoom', () => {
   /** A room with a Host and a guest, and the token each phone holds. */
@@ -1402,7 +1415,7 @@ describe('leaveRoom', () => {
     expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(true);
   });
 
-  it('closes the room when the last player walks out', async () => {
+  it('deletes a legacy room when its last player walks out', async () => {
     const t = convexTest(schema, modules);
     const { roomId, host, guest } = await roomWithParty(t);
 
@@ -1413,7 +1426,61 @@ describe('leaveRoom', () => {
     expect(await t.query(api.rooms.stillOpen, { roomId })).toBe(false);
   });
 
-  it('frees the Room Code the moment the room closes, rather than in two hours', async () => {
+  it('keeps a TV-owned room open with the same code after the last player leaves', async () => {
+    const t = convexTest(schema, modules);
+    registerRateLimiter(t);
+    const room = await t.mutation(api.rooms.openRoom, {
+      tvSessionToken: 'tv-stays-after-last-player',
+    });
+    const only = (await join(t, room.code, 'Ada')) as { sessionToken: string };
+
+    await t.mutation(api.players.leaveRoom, { sessionToken: only.sessionToken });
+
+    expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([]);
+    expect(
+      await t.mutation(api.rooms.openRoom, {
+        tvSessionToken: 'tv-stays-after-last-player',
+      }),
+    ).toEqual(room);
+  });
+
+  it('returns an emptied TV-owned room to its lobby and cancels the game clock', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const t = convexTest(schema, modules);
+      registerRateLimiter(t);
+      const room = await t.mutation(api.rooms.openRoom, {
+        tvSessionToken: 'tv-returns-to-lobby-after-party',
+      });
+      const host = (await join(t, room.code, 'Ada')) as { sessionToken: string };
+      const guest = (await join(t, room.code, 'Grace')) as { sessionToken: string };
+      await t.mutation(api.games.startGame, {
+        sessionToken: host.sessionToken,
+        gameId: 'trivia',
+      });
+
+      await t.mutation(api.players.leaveRoom, { sessionToken: guest.sessionToken });
+      await t.mutation(api.players.leaveRoom, { sessionToken: host.sessionToken });
+
+      expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
+      expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
+      expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
+
+      const deadlines = await t.run(async (ctx) =>
+        (await ctx.db.system.query('_scheduled_functions').collect()).filter(
+          (job) => job.name === 'games:reachDeadline',
+        ),
+      );
+      expect(deadlines).toHaveLength(1);
+      expect(deadlines[0]?.state.kind).toBe('canceled');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('frees a legacy Room Code the moment its last player leaves', async () => {
     const t = convexTest(schema, modules);
     const room = await roomFixture(t, 'AAAA');
     const only = (await join(t, room.code, 'Ada')) as { sessionToken: string };
@@ -1481,7 +1548,7 @@ describe('leaveRoom', () => {
     }
   });
 
-  it('cancels a running game’s clock when the last player leaves', async () => {
+  it('cancels a running legacy room’s clock when the last player leaves', async () => {
     vi.useFakeTimers();
 
     try {

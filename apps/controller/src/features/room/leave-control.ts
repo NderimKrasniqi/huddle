@@ -8,7 +8,7 @@ export const LEAVE_ROOM = {
 /** Describes what this member gives up when leaving the room. */
 export function leaveConsequence(joined: number, youAreHost: boolean): string {
   if (joined <= 1) {
-    return 'You’re the last one here, so the room closes and its code stops working.';
+    return 'The TV keeps this room open. You can rejoin with the same code.';
   }
 
   return youAreHost

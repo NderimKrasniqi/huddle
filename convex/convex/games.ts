@@ -23,7 +23,12 @@ import {
   requirePlayerSession,
   requireRoomHost,
 } from './lib/authorization';
-import { clockRemainingMs, stopGameClock, windGameClock } from './lib/gameClock';
+import {
+  clockRemainingMs,
+  resumePausedGameClock,
+  stopGameClock,
+  windGameClock,
+} from './lib/gameClock';
 import {
   decodeStoredRuntime,
   projectRuntime,
@@ -63,9 +68,9 @@ async function playGameEvent(
 ): Promise<void> {
   const running = room.game;
 
-  // TV recovery owns the pause boundary. A scheduled callback racing the
+  // Recovery owns the pause boundary. A scheduled callback racing either
   // silence marker must not advance state after the room became unavailable.
-  if (room.tvAway === true) return;
+  if (room.tvAway === true || running?.playerPaused === true) return;
 
   // A thumb that landed just after the Host ended the game, or a phone that has
   // not heard yet. There is nothing to tell the person holding it — the screen
@@ -111,18 +116,19 @@ async function playGameEvent(
     return;
   }
 
+  // Rules refuse by returning the decoded state they were given. Check that
+  // identity before decoding the result again: Zod decoders return a fresh
+  // object, so comparing the twice-decoded result with the database value would
+  // turn every refusal into a write and could wind a clock for a stale event.
+  if (next === state) {
+    return;
+  }
+
   try {
     next = game.decodeState(next);
     if (next === undefined) throw new Error('reducer decoder returned undefined');
   } catch {
     runtimeFailure(room._id, running, 'reducerOutput');
-    return;
-  }
-
-  // The rules refuse by returning the state they were given, so an identical
-  // state means nothing happened — and writing it anyway would wake every
-  // subscription in the room to redraw what they are already showing.
-  if (next === running.state) {
     return;
   }
 
@@ -278,6 +284,34 @@ export const endGame = mutation({
   },
 });
 
+/** Resume after confirmed player loss when the current Host chooses to continue. */
+export const continueAfterDisconnect = mutation({
+  args: { sessionToken: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
+    const running = room.game;
+
+    // Idempotent for a duplicate tap or a choice that arrived after everybody
+    // reconnected and the room already resumed itself.
+    if (running?.playerPaused !== true) return null;
+
+    const continuing = { ...running, playerPaused: undefined };
+
+    // A TV pause has display precedence. Remember the Host's choice now, but
+    // leave its stopped clock for TV recovery to re-arm later.
+    if (room.tvAway === true) {
+      await ctx.db.patch(room._id, { game: continuing });
+      return null;
+    }
+
+    await ctx.db.patch(room._id, {
+      game: await resumePausedGameClock(ctx, room, continuing, Date.now()),
+    });
+    return null;
+  },
+});
+
 /**
  * The Host moves the carousel: the room remembers which card, and the TV
  * follows.
@@ -324,9 +358,9 @@ export const sendEvent = mutation({
   handler: async (ctx, args) => {
     const { player, room } = await requirePlayerSession(ctx, args.sessionToken);
 
-    // The TV is the shared clock/display. While it is away, accepting input
-    // would advance a beat nobody can see and break exact recovery.
-    if (room.tvAway === true) return null;
+    // Neither recovery boundary accepts input. `playGameEvent` repeats this
+    // guard because scheduled deadlines reach it without coming through here.
+    if (room.tvAway === true || room.game?.playerPaused === true) return null;
 
     // The player is named here and nowhere else. A phone may put whatever it
     // likes in the event — this overwrites it with the seat the Session Token
@@ -450,7 +484,7 @@ async function viewerIn(
  *
  * It is a query of its own rather than a field on the roster because the two
  * change on completely different beats: a roster redraws when somebody joins,
- * goes away or claims a color, and this changes twice a game. A phone answering
+ * leaves or goes away, and this changes twice a game. A phone answering
  * a question would otherwise re-render on every heartbeat in the room — see
  * `viewerIn` for the half of that this now gives back.
  *
@@ -473,7 +507,11 @@ export const running = query({
       state: v.any(),
       clockRemainingMs: v.optional(v.number()),
     }),
-    v.object({ kind: v.literal('paused'), gameId: v.string(), reason: v.literal('tvDisconnected') }),
+    v.object({
+      kind: v.literal('paused'),
+      gameId: v.string(),
+      reason: v.union(v.literal('tvDisconnected'), v.literal('playerDisconnected')),
+    }),
     v.object({ kind: v.literal('unavailable'), gameId: v.string() }),
   ),
   handler: async (ctx, args) => {
@@ -494,6 +532,14 @@ export const running = query({
         kind: 'paused' as const,
         gameId: running.gameId,
         reason: 'tvDisconnected' as const,
+      };
+    }
+
+    if (running.playerPaused === true) {
+      return {
+        kind: 'paused' as const,
+        gameId: running.gameId,
+        reason: 'playerDisconnected' as const,
       };
     }
 

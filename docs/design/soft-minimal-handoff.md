@@ -153,6 +153,7 @@ before it is trusted to the pixel.
 | Room | `RoomStage` | `01-room.png` | Code, QR and roster on one screen |
 | Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Games only — no roster, no code chip |
 | Game frame | `GameStage` | **none** | Needs design |
+| Recovery status | `TvRuntimeStatus` | **none** | Names disconnected players; says the Host may wait or continue |
 
 ### Phone
 
@@ -164,6 +165,7 @@ before it is trusted to the pixel.
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
 | Leave | `LeaveRoomSheet` | **none** | The board draws the pill, not the sheet |
 | Game frame | `InGameScreen` | **none** | Needs design |
+| Recovery status | `GameRuntimeStatusScreen` | **none** | Host gets secondary Wait + primary Continue; others see the pending Host decision |
 
 ## Icons
 
@@ -263,7 +265,7 @@ in. Every client that only wants a card writes `?? 0` and is unchanged.
 **The Room is measured off the board, at 1:1.** The mockup's pixels are square —
 its QR bitmap is 95×93, and a QR is square by construction — so a board pixel is
 a design point and every size and gap on that screen is the board's own number,
-not a reinterpretation. `apps/tv/src/roster.ts` holds the vertical stack as
+not a reinterpretation. `apps/tv/src/features/room/roster.ts` holds the vertical stack as
 `roomLayout` / `roomScreenHeight()` so the total is testable rather than
 described in a comment.
 
@@ -336,7 +338,7 @@ landing together are now both greeted.
 `screens/01-room.png` and `screens/02-game-carousel.png` were replaced with
 1672×941 exports of the screen alone. The originals were 1448×1086 renders of
 that screen inside a television mockup — bezel, stand, caption — and the layout
-constants in `apps/tv/src/roster.ts` were measured off the mockup, where a board
+constants in `apps/tv/src/features/room/roster.ts` were measured off the mockup, where a board
 pixel happened to be a design point.
 
 The replacement is a recomposition, not a rescale. At 1672 px across a 1280 pt

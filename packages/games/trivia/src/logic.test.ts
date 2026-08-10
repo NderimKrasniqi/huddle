@@ -133,16 +133,15 @@ function answeringWhileAway(
   });
 }
 
-/** The room moving on: the reveal ending, or a question nobody answered. */
-function advancing(state: TriviaState, playerId: string = ADA): TriviaState {
-  return triviaGameLogic.reduce(state, advanceOf(state, playerId));
+/** The room's clock moving on: a reveal ending, or a question timing out. */
+function advancing(state: TriviaState): TriviaState {
+  return triviaGameLogic.reduce(state, advanceOf(state));
 }
 
-/** The "move on" a phone looking at this state would send. */
-function advanceOf(state: TriviaState, playerId: string = ADA) {
+/** The deadline event addressed to the beat this state is on. */
+function advanceOf(state: TriviaState) {
   return {
     kind: 'advance',
-    playerId,
     questionIndex: state.questionIndex,
     phase: state.phase,
   } as const;
@@ -322,12 +321,24 @@ describe('a game of trivia', () => {
     expect(next.answers).toEqual({});
   });
 
+  it('ignores an advance attributed to a player', () => {
+    const asked = gameWith(ADA, GRACE);
+
+    expect(
+      triviaGameLogic.reduce(asked, {
+        kind: 'advance',
+        playerId: ADA,
+        questionIndex: asked.questionIndex,
+        phase: asked.phase,
+      }),
+    ).toBe(asked);
+  });
+
   it('ignores a second “move on” for a beat the room has left', () => {
     const revealed = advancing(gameWith(ADA, GRACE));
-    const endReveal = advanceOf(revealed, ADA);
+    const endReveal = advanceOf(revealed);
 
-    // Two thumbs a beat apart — the ordinary case, since `advance` is the
-    // room's only "move on" signal and every source of it races every other.
+    // A duplicate callback arriving after the first has already moved the room.
     const second = triviaGameLogic.reduce(triviaGameLogic.reduce(revealed, endReveal), endReveal);
 
     // The duplicate must not end the question it landed on: revealing question
@@ -339,10 +350,9 @@ describe('a game of trivia', () => {
 
   it('ignores a “move on” for a question the last answer already ended', () => {
     const asked = gameWith(ADA, GRACE);
-    // Sent while the question was still up — a Host skipping ahead, or Phase
-    // 4's countdown expiring — and landing just after the last player's answer
-    // had revealed it. Same question, a beat later.
-    const skip = advanceOf(asked, ADA);
+    // Sent while the question was still up and landing just after the last
+    // player's answer had revealed it. Same question, a beat later.
+    const skip = advanceOf(asked);
     const revealed = answering(
       answering(asked, ADA, rightAnswerTo(asked)),
       GRACE,
@@ -357,7 +367,7 @@ describe('a game of trivia', () => {
 
   it('ignores a “move on” aimed at an earlier question', () => {
     const asked = gameWith(ADA, GRACE);
-    const stale = advanceOf(asked, ADA);
+    const stale = advanceOf(asked);
     const second = advancing(advancing(asked));
 
     expect(triviaGameLogic.reduce(second, stale)).toBe(second);

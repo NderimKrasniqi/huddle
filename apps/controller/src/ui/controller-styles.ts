@@ -163,7 +163,7 @@ export const controllerStyles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // The seat-loss notice under the heading. Ink rather than punch: a removed or
+  // The seat-loss notice under the heading uses ink: a removed or
   // closed-out player is being told what happened, not warned off a mistake, so
   // it reads as the form's own line and not as the red a rejection wears.
   notice: {
@@ -438,8 +438,8 @@ export const controllerStyles = StyleSheet.create({
     fontFamily: fontFamily.semibold,
   },
 
-  // Soft Minimal's "this ends something" surface, and the only punch button on a
-  // phone screen — it is meant to be found, not stumbled into.
+  // Soft Minimal's "this ends something" surface. It is meant to be found, not
+  // stumbled into.
   backToLobbyButton: {
     backgroundColor: colors.accent,
   },

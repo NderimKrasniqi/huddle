@@ -23,7 +23,11 @@ export type RunningGameScreen =
       readonly clockRemainingMs?: number;
     }
   /** The room is paused and no game controls should mount. */
-  | { readonly kind: 'paused'; readonly gameId: string; readonly reason: 'tvDisconnected' }
+  | {
+      readonly kind: 'paused';
+      readonly gameId: string;
+      readonly reason: 'tvDisconnected' | 'playerDisconnected';
+    }
   /** The stored runtime failed closed and no state is available to clients. */
   | { readonly kind: 'unavailable'; readonly gameId: string };
 

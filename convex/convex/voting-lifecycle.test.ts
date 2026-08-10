@@ -1,4 +1,9 @@
-import { AVATAR_IDS, type GameSettings, type GameLifecycleRejection } from '@huddle/game-core';
+import {
+  AVATAR_IDS,
+  HEARTBEAT_INTERVAL_MS,
+  type GameSettings,
+  type GameLifecycleRejection,
+} from '@huddle/game-core';
 import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
@@ -11,7 +16,7 @@ import {
   roomFixture,
   runningState as typedRunningState,
   type TestRunningState,
-} from './test/fixtures';
+} from '../test/fixtures';
 
 /**
  * The hub, run through the *second* game.
@@ -116,10 +121,23 @@ function voteClockOn(state: unknown): number {
   return afterMs;
 }
 
-/** Lets `ms` of the party go by, and runs whatever the room had scheduled for it. */
-async function elapse(t: Backend, ms: number): Promise<void> {
-  await vi.advanceTimersByTimeAsync(ms);
-  await t.finishInProgressScheduledFunctions();
+/** Lets the server clock run while the seated phones remain connected but idle. */
+async function elapseBeating(
+  t: Backend,
+  sessionTokens: readonly string[],
+  ms: number,
+): Promise<void> {
+  let elapsed = 0;
+
+  while (elapsed < ms) {
+    const step = Math.min(HEARTBEAT_INTERVAL_MS, ms - elapsed);
+    await vi.advanceTimersByTimeAsync(step);
+    for (const sessionToken of sessionTokens) {
+      await t.mutation(api.players.heartbeat, { sessionToken });
+    }
+    await t.finishInProgressScheduledFunctions();
+    elapsed += step;
+  }
 }
 
 /** The room's own id for the player it knows by this nickname. */
@@ -313,6 +331,20 @@ describe('a vote in the running game', () => {
     expect((await stateOf(t, roomId)).voters).toEqual([grace]);
   });
 
+  it('cannot forge the room clock to skip a beat', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomVoting(t, 'Ada', 'Grace');
+    const before = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: tokens.Ada ?? '',
+      event: { kind: 'advance', promptIndex: 0, phase: 'voting' },
+    });
+
+    const after = await t.run(async (ctx) => (await ctx.db.get(roomId))?.game);
+    expect(after).toEqual(before);
+  });
+
   it('reveals as soon as everyone present has voted, without waiting for the clock', async () => {
     const t = convexTest(schema, modules);
     const { roomId, tokens } = await roomVoting(t, 'Ada', 'Grace');
@@ -415,30 +447,30 @@ describe('the room’s own clock, driving both of Voting’s beats', () => {
 
   it('closes a prompt when its vote timer runs out', async () => {
     const t = convexTest(schema, modules);
-    const { roomId } = await roomVoting(t, 'Ada', 'Grace');
+    const { roomId, tokens } = await roomVoting(t, 'Ada', 'Grace');
     const asked = await stateOf(t, roomId);
 
-    // Nobody votes — every phone is face-down. A second short of the deadline
-    // the prompt is still open; on it, the room closes the prompt itself.
-    await elapse(t, voteClockOn(asked) - 1000);
+    // Nobody votes, though both phones remain connected. A second short of the
+    // deadline the prompt is still open; on it, the room closes it itself.
+    await elapseBeating(t, Object.values(tokens), voteClockOn(asked) - 1000);
     expect((await stateOf(t, roomId)).phase).toBe('voting');
 
-    await elapse(t, 1000);
+    await elapseBeating(t, Object.values(tokens), 1000);
     expect((await stateOf(t, roomId)).phase).toBe('reveal');
   });
 
   it('moves to the next prompt when the reveal timer runs out, untouched by any phone', async () => {
     const t = convexTest(schema, modules);
-    const { roomId } = await roomVoting(t, 'Ada', 'Grace');
+    const { roomId, tokens } = await roomVoting(t, 'Ada', 'Grace');
 
     // Onto the reveal on the vote timer, then off it on the reveal timer — both
     // the room's own. This is where Voting departs from trivia, whose reveal the
     // Controllers time: a room can play a whole prompt of Voting with no phone
     // doing anything at all.
-    await elapse(t, voteClockOn(await stateOf(t, roomId)));
+    await elapseBeating(t, Object.values(tokens), voteClockOn(await stateOf(t, roomId)));
     expect((await stateOf(t, roomId)).phase).toBe('reveal');
 
-    await elapse(t, voteClockOn(await stateOf(t, roomId)));
+    await elapseBeating(t, Object.values(tokens), voteClockOn(await stateOf(t, roomId)));
 
     const next = await stateOf(t, roomId);
     expect(next.phase).toBe('voting');
@@ -447,9 +479,9 @@ describe('the room’s own clock, driving both of Voting’s beats', () => {
     expect(next.voters).toEqual([]);
   });
 
-  it('plays a whole game to finished on its own clock, with no phone awake', async () => {
+  it('plays a whole game to finished on its own clock, with no phone input', async () => {
     const t = convexTest(schema, modules);
-    const { roomId } = await roomVoting(t, 'Ada', 'Grace');
+    const { roomId, tokens } = await roomVoting(t, 'Ada', 'Grace');
 
     // The default three prompts, driven only by letting each beat's clock run
     // out. A bound rather than a limit: three prompts is six beats, and a game
@@ -461,7 +493,7 @@ describe('the room’s own clock, driving both of Voting’s beats', () => {
         break;
       }
 
-      await elapse(t, voteClockOn(state));
+      await elapseBeating(t, Object.values(tokens), voteClockOn(state));
     }
 
     const ended = await stateOf(t, roomId);

@@ -8,8 +8,7 @@ import type { TriviaState } from './logic';
  *
  * It is a function of the room's state and nothing else — the phone remembers
  * no tap of its own. A tap goes to the reducer and comes back as an answer in
- * the state, which is the same round trip the color picker's swatches wait for:
- * one truth about who answered what, drawn wherever it is needed. The screen's
+ * the state: one truth about who answered what, drawn wherever it is needed. The screen's
  * whole job is to offer exactly the taps the rules would accept, so that the
  * refusals in `logic.ts` are a floor nobody is standing on.
  *

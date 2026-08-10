@@ -4,7 +4,7 @@ import { ConvexError } from 'convex/values';
 /**
  * What the Host's phone says when starting or ending a game does not happen.
  *
- * Built exactly like `color-rejection.ts` and `join-rejection.ts`: the failure
+ * Built exactly like `host-control-rejection.ts` and `join-rejection.ts`: the failure
  * is told apart by `kind` off `ConvexError.data`, never by matching a message
  * somebody may reword.
  */

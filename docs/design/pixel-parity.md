@@ -76,7 +76,7 @@ renders ~**92 × 77**.
    tile. This also hurts scanning distance from a sofa.
 4. **Background artwork is ~11% larger relative to the content than the board's.**
    Not the wrong file — `huddle-tv-background-01.png` is correct and is exactly
-   the board's 1672×941 artwork. The cause is in `apps/tv/src/tv-stage.tsx`: the
+   the board's 1672×941 artwork. The cause is in `apps/tv/src/ui/tv-stage.tsx`: the
    `ImageBackground` fills the viewport at 100% while the content stage is scaled
    by `tvSafeStageScale` = fit × **0.9**. The board composes both at one scale;
    the app composes them at two, so the plants read as magnified. 1/0.9 = 1.111.
@@ -101,7 +101,7 @@ renders ~**92 × 77**.
 
 ### Stale comment found while measuring
 
-`apps/tv/src/tv-stage.tsx` claims "a 148×176 code tile is 148×176 here". It
+`apps/tv/src/ui/tv-stage.tsx` claims "a 148×176 code tile is 148×176 here". It
 cannot be: the stage is 1280×720 while the board is 1672×941, and the rendered
 tile is ~92×77 code units. Either the comment or the tile is wrong.
 

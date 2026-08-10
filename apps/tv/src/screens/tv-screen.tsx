@@ -65,7 +65,13 @@ function OpenRoomStage({
     surface === 'runtime-status' &&
     (runtime.kind === 'paused' || runtime.kind === 'unavailable')
   ) {
-    return <TvRuntimeStatus kind={runtime.kind} />;
+    return (
+      <TvRuntimeStatus
+        kind={runtime.kind}
+        reason={runtime.kind === 'paused' ? runtime.reason : undefined}
+        disconnectedPlayers={seats.filter((player) => player.away).map((player) => player.nickname)}
+      />
+    );
   }
 
   if (surface === 'carousel' && browsing !== undefined) {

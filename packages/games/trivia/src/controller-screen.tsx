@@ -60,8 +60,7 @@ function AnswerButton({
     <Surface
       elevation={elevation.phoneCard}
       // Dimmed rather than hidden or greyed, which is how Soft Minimal says
-      // "present, but not yours to take" everywhere else — the claimed color
-      // swatches on "You're in" are the same 30%.
+      // "present, but not yours to take" without removing the choice.
       style={[[styles.answerBlock, option.state === 'closed' && styles.answerClosed], [styles.answer, { backgroundColor: face.fill }]]}>
       <Pressable
         accessibilityRole="button"

@@ -37,7 +37,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.border,
     borderRadius: radius.pill,
   },
-  // The active dot is a cobalt pill with an ink border (§6).
+  // The active dot is an accent pill with an ink border (§6).
   pageDotActive: {
     width: 32,
     backgroundColor: colors.accent,
@@ -130,7 +130,7 @@ export const styles = StyleSheet.create({
   // The dots and the line side by side rather than stacked. §6 asks for "page
   // dots + '<Host> is browsing on their phone'" and does not say in which
   // direction, and one row is 28pt of content instead of 56: the footer goes
-  // 92 → 64, the card lands at 124→644 with its 10px cobalt shadow to 654, and
+  // 92 → 64, the card lands at 124→644 with its 10px accent shadow to 654, and
   // the dots sit at 664. Ten points of daylight under the shadow the active dot
   // used to disappear into, with every pinned §6 number left alone — the
   // arithmetic and the two nudges that did not work are in the plan.

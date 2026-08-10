@@ -41,7 +41,7 @@ export type RunningGameResponse =
   | {
       readonly kind: 'paused';
       readonly gameId: string;
-      readonly reason: 'tvDisconnected';
+      readonly reason: 'tvDisconnected' | 'playerDisconnected';
     }
   | {
       readonly kind: 'unavailable';
@@ -56,7 +56,7 @@ export function roomPhase(game: RunningGame | undefined | null): RoomPhase {
 /**
  * Why the room refused to start or end a game.
  *
- * A `ConvexError` payload, like the join and color rejections before it: Convex
+ * A `ConvexError` payload, like the join and host-control rejections beside it: Convex
  * redacts the message of anything that is not one, so the phone would otherwise
  * be told "Server Error" and have nothing to say to the person holding it.
  */

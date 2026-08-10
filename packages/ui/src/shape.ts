@@ -45,10 +45,9 @@ export const radius = {
 } as const;
 
 /**
- * Soft Minimal dims what a player cannot have rather than hiding or greying it —
- * the handoff sets claimed color swatches to "30% opacity", and anything else
- * that is present but not currently available (a Join button with no code in
- * the tiles yet) reads the same way.
+ * Soft Minimal dims what a player cannot use rather than hiding or greying it.
+ * Anything present but not currently available (a Join button with no complete
+ * code, for example) reads the same way.
  */
 export const opacity = {
   unavailable: 0.3,

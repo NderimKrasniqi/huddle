@@ -105,7 +105,6 @@ function playedToTheEnd(
 
     state = triviaGameLogic.reduce(state, {
       kind: 'advance',
-      playerId: players[0]?.playerId ?? '',
       questionIndex: state.questionIndex,
       phase: 'reveal',
     });
@@ -272,7 +271,6 @@ describe('the reveal on the television', () => {
     // Only Ada answers; the room moves on without waiting for Grace.
     const revealed = triviaGameLogic.reduce(answering(asked, ADA, right), {
       kind: 'advance',
-      playerId: ADA,
       questionIndex: 0,
       phase: 'question',
     });

@@ -55,19 +55,25 @@ export function keepPresent(
   let sessionToken: string | null = null;
   let inForeground = false;
   let beating: ReturnType<typeof setInterval> | undefined;
+  let pulsePending = false;
   let stopped = false;
 
   async function pulse(token: string): Promise<void> {
+    pulsePending = true;
     try {
       await beat(token);
     } catch {
       // A beat that does not land leaves the room hearing nothing, which is
-      // what "away" is for, and the next one is one interval behind it.
+      // what "away" is for; the interval retries once this call has settled.
+    } finally {
+      pulsePending = false;
     }
   }
 
   function beatNow(): void {
-    if (sessionToken !== null) {
+    // Convex keeps a disconnected mutation pending. One in flight is enough:
+    // queuing another every interval would retain an unbounded offline backlog.
+    if (sessionToken !== null && !pulsePending) {
       void pulse(sessionToken);
     }
   }

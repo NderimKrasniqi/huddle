@@ -13,6 +13,7 @@ import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { playerForSession, requireRoomHost } from './lib/authorization';
+import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/gameClock';
 import { playersInRoom } from './lib/presence';
 import { deleteRoom } from './lib/roomLifecycle';
 import { watchForDesertion } from './rooms';
@@ -125,7 +126,8 @@ async function needsHost(ctx: MutationCtx, room: Doc<'rooms'>): Promise<boolean>
  * A room with nobody still beating keeps the host it has. Handing it to nobody
  * would leave a room that cannot start a game once its players come back —
  * being away is not resigning, and a party backgrounding their phones between
- * rounds must not cost the room its host.
+ * rounds must not cost the room its host. The first returning heartbeat repairs
+ * that temporary pointer when somebody other than the old Host comes back.
  *
  * **That last paragraph is `markAway`'s alone**, and `departingIsLeaving` is
  * what says so. It holds there because the departing row survives: the room
@@ -176,6 +178,65 @@ async function handOverRoom(
   }
 
   await ctx.db.patch(room._id, { hostPlayerId: successor._id });
+}
+
+/**
+ * Give a room whose Host is still silent to its longest-connected live seat.
+ *
+ * This runs only when an away player returns. That is the one transition that
+ * can make a room with an intentionally retained away Host actionable again,
+ * and keeps the roster reads off ordinary three-second heartbeats.
+ */
+async function restoreConnectedHost(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<void> {
+  const room = await ctx.db.get(roomId);
+  if (room === null) return;
+
+  const host = room.hostPlayerId === undefined ? null : await ctx.db.get(room.hostPlayerId);
+  if (host !== null && silenceOf(host) < AWAY_AFTER_MS) return;
+
+  const seated = await playersInRoom(ctx, roomId);
+  const successor = seated.find((player) => silenceOf(player) < AWAY_AFTER_MS);
+  if (successor !== undefined && successor._id !== room.hostPlayerId) {
+    await ctx.db.patch(room._id, { hostPlayerId: successor._id });
+  }
+}
+
+/** Hold the running game on the exact clock remainder after confirmed silence. */
+async function pauseForDisconnectedPlayer(
+  ctx: MutationCtx,
+  roomId: Id<'rooms'>,
+): Promise<void> {
+  const room = await ctx.db.get(roomId);
+  if (room?.game === undefined || room.game.playerPaused === true) return;
+
+  const paused = await pauseGameClock(ctx, room, Date.now());
+  if (paused !== undefined) {
+    await ctx.db.patch(room._id, { game: { ...paused, playerPaused: true } });
+  }
+}
+
+/** Resume a player-held game once every remaining seat is truly present again. */
+async function resumeWhenEveryoneReturns(
+  ctx: MutationCtx,
+  roomId: Id<'rooms'>,
+): Promise<void> {
+  const room = await ctx.db.get(roomId);
+  const running = room?.game;
+  if (room === null || running?.playerPaused !== true) return;
+
+  const seated = await playersInRoom(ctx, roomId);
+  if (seated.length === 0 || seated.some((player) => silenceOf(player) >= AWAY_AFTER_MS)) return;
+
+  const recovered = { ...running, playerPaused: undefined };
+
+  if (room.tvAway === true) {
+    await ctx.db.patch(room._id, { game: recovered });
+    return;
+  }
+
+  await ctx.db.patch(room._id, {
+    game: await resumePausedGameClock(ctx, room, recovered, Date.now()),
+  });
 }
 
 /**
@@ -317,7 +378,8 @@ export const joinRoom = mutation({
  * changes: force-quitting an app does not give up a seat, so a phone coming
  * back is not asking for one — it is asking which one is already its own. That
  * is the whole reason the roster cannot grow a duplicate. The Controller reads
- * this before it will show anybody a join form (`apps/controller/src/session.ts`).
+ * this before it will show anybody a join form
+ * (`apps/controller/src/platform/session/session.ts`).
  *
  * The room is read too, and a token whose room is gone answers `null`: the
  * Controller cannot draw the Room Code chip without it, and a seat in a room
@@ -357,7 +419,7 @@ export const session = query({
 /**
  * "Still here" — the Controller's heartbeat, sent every `HEARTBEAT_INTERVAL_MS`
  * while the app is in front of its owner and not at all while it is not
- * (`apps/controller/src/presence.ts`). Backgrounding a phone is therefore the
+ * (`apps/controller/src/platform/presence/presence.ts`). Backgrounding a phone is therefore the
  * same event to a room as losing it: the beats stop, and the room finds out by
  * not being told.
  *
@@ -383,9 +445,13 @@ export const heartbeat = mutation({
     await ctx.db.patch(player._id, { lastSeenAt: Date.now(), away: false });
 
     // Coming back: the chain that had been watching them ended when it marked
-    // them away, so their return is what starts a new one.
+    // them away, so their return is what starts a new one. It also repairs the
+    // retained Host pointer when the whole room went quiet and this is the first
+    // connected player back.
     if (player.away) {
+      await restoreConnectedHost(ctx, player.roomId);
       await watchForSilence(ctx, player._id);
+      await resumeWhenEveryoneReturns(ctx, player.roomId);
     }
 
     return null;
@@ -436,6 +502,7 @@ export const markAway = internalMutation({
     // fifteen seconds are the ten-to-thirteen `AWAY_AFTER_MS` already spends,
     // with the rest left for the scheduler and the push to the clients.
     await handOverRoom(ctx, player);
+    await pauseForDisconnectedPlayer(ctx, player.roomId);
     // And if there is nobody left to hand it to at all, the room starts its own
     // ten minutes. This is where it belongs for the same reason the handover is
     // here: going quiet is the only thing a room ever learns about a phone, so
@@ -532,6 +599,7 @@ export const removePlayer = mutation({
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
     await ctx.db.delete(target._id);
+    await resumeWhenEveryoneReturns(ctx, room._id);
     return null;
   },
 });
@@ -552,29 +620,10 @@ export const removePlayer = mutation({
  * seat may have gone with an expired room, and a phone leaving a room that is
  * no longer there has got what it wanted.
  *
- * ## The last player out deletes the room
- *
- * This is a departure from the plan, which expected an emptied room to linger
- * until expiry "the same shape as everyone force-quitting today, so no new
- * leak". It is not the same shape, and it would be a new leak:
- *
- * - A party that force-quits **keeps its rows**. Every seat goes `away`, which
- *   is what arms `watchForDesertion` → `expireRoom`, and the room is collected
- *   ten minutes later.
- * - A party that *leaves* deletes its rows. `expireRoom` refuses an empty room
- *   by design — "an empty room is a television waiting for guests" — and
- *   `watchForDesertion` refuses to schedule one at all for the same reason.
- *
- * Deleting here closes it without a clock. It is also the honest reading:
- * an empty *unjoined* room is a television waiting for guests, but a room whose
- * whole party has walked out is a party that is over, and every one of them
- * said so. Nobody is coming back to be surprised by it, the television notices
- * within a round trip and re-opens on a fresh code (`stillOpen` → `onExpired`),
- * and the old code returns to the pool immediately rather than in two hours.
- *
- * A running game's deadline is cancelled with the room, as `expireRoom` and
- * `expireRoom` does: it is the room's own scheduled work and the room ending is
- * where it stops, however the room comes to end.
+ * The production room belongs to the TV, not to its current roster. Its last
+ * leaver clears Host, game and browsing state so the same code returns to an
+ * empty lobby; TV silence owns eventual deletion. Fixture/legacy rooms with no
+ * TV credential still delete here so an orphaned code cannot leak forever.
  */
 export const leaveRoom = mutation({
   args: { sessionToken: v.string() },
@@ -620,7 +669,25 @@ export const leaveRoom = mutation({
       // self-guards on "not every player is away", so calling it unconditionally
       // costs a read and says exactly what is true: somebody just left, look
       // again at whether anyone is still here.
+      await resumeWhenEveryoneReturns(ctx, player.roomId);
       await watchForDesertion(ctx, player.roomId);
+      return null;
+    }
+
+    const tvSession = await ctx.db
+      .query('tvSessions')
+      .withIndex('by_room', (q) => q.eq('roomId', room._id))
+      .first();
+
+    if (tvSession !== null) {
+      // The TV is still the room's owner. Stop anything the departed party was
+      // playing, then show the same empty Room screen to the next party.
+      await stopGameClock(ctx, room);
+      await ctx.db.patch(room._id, {
+        hostPlayerId: undefined,
+        game: undefined,
+        browsingGameIndex: undefined,
+      });
       return null;
     }
 

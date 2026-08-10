@@ -7,13 +7,19 @@ export function keepTvPresent(
 ): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setInterval> | undefined;
+  let heartbeatPending = false;
 
   const beat = () => {
-    if (stopped) return;
-    void heartbeat().catch(() => {
-      // Convex reconnects and the next beat retries. Presence is advisory; a
-      // transient network failure must not tear down the TV display.
-    });
+    if (stopped || heartbeatPending) return;
+    heartbeatPending = true;
+    void heartbeat()
+      .catch(() => {
+        // Convex reconnects and the next beat retries. Presence is advisory; a
+        // transient network failure must not tear down the TV display.
+      })
+      .finally(() => {
+        heartbeatPending = false;
+      });
   };
   beat();
   timer = setInterval(beat, intervalMs);

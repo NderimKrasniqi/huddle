@@ -8,8 +8,8 @@ import type { IdentityStore } from '../../features/join';
  * Token lives in (`session-store.ts`).
  *
  * The token is a credential — it is the only thing between a phone and somebody's
- * seat — so it earns the Keychain/Keystore. A nickname in a living room and one
- * of ten swatches are not: they are conveniences a returning player would type
+ * seat — so it earns the Keychain/Keystore. A nickname in a living room and a
+ * built-in avatar are not: they are conveniences a returning player would enter
  * again in seconds, and nothing about them is worth the encrypted store. Keeping
  * them out of it is also the point — the keystore holds the one thing that
  * matters, and nothing else rides along to dilute that.

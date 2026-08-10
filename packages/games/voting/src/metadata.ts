@@ -14,12 +14,9 @@ export const votingMetadata: GameMetadata = {
   id: 'voting',
   title: 'Hot Takes',
   /**
-   * The accent — the second poster on the carousel, set apart from trivia's
-   * ink. Soft Minimal had five accents to spread across the cards and Soft Minimal
-   * has one, so the two installed games take the only two fills the palette
-   * offers a card: navy and orange. A third game is the point at which that
-   * stops working, and the answer then is the real key art the design package
-   * calls for rather than a sixth colour invented here.
+   * The accent sets the second poster apart from Trivia's ink. The two installed
+   * games use the palette's two strong card fills; future games should bring
+   * real key art instead of inventing more brand colors.
    */
   keyArt: { color: 'accent' },
   /** 2 up to the room's whole capacity (`ROOM_PLAYER_CAP`): a poll wants everyone at the table in it. */

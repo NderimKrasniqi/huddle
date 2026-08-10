@@ -205,6 +205,10 @@ export function SeatedScreen({
     return (
       <GameRuntimeStatusScreen
         status={screen.kind}
+        reason={screen.kind === 'paused' ? screen.reason : undefined}
+        disconnectedPlayers={roster
+          .filter((player) => player.away)
+          .map((player) => player.nickname)}
         youAreHost={standing.youAreHost}
         leaveControl={
           <LeaveControl
@@ -559,9 +563,9 @@ function ConfirmSheet({
  * the scrim or by Cancel — because it confirms the same kind of act, pointed the
  * other way: that one takes somebody else's seat, this one takes the reader's.
  *
- * What it warns depends on who is leaving (`leaveConsequence`), because leaving
- * is three different acts. Only the last player out is doing something
- * irreversible.
+ * What it says depends on who is leaving (`leaveConsequence`): a Host hands on
+ * control when seats remain, while the last seat leaves the TV-owned code open
+ * for the next party.
  */
 
 function LeaveRoomSheet({
@@ -918,9 +922,9 @@ function ManagePlayerSheet({
  * One control in the manage sheet: a full-width Soft Minimal button that runs a
  * host power, or sits dimmed with the line saying why it cannot.
  *
- * Remove wears Soft Minimal's punch — the same "this ends something" face as Back
- * to lobby, and for the same reason: deleting a seat is not undone. Transfer is
- * the cobalt primary. A disabled transfer (an away target) keeps its place and
+ * Remove wears the same accent "this ends something" face as Back to lobby,
+ * because deleting a seat is not undone. Transfer uses the standard primary
+ * treatment. A disabled transfer (an away target) keeps its place and
  * says what to do instead rather than vanishing, the way the start control does
  * for a room it cannot start.
  */

@@ -1,13 +1,13 @@
 import { gameLogicById } from '@huddle/game-registry/logic';
 import type { TestConvexForDataModelAndIdentity } from 'convex-test';
-import rateLimiterSchema from '../../node_modules/@convex-dev/rate-limiter/dist/component/schema.js';
+import rateLimiterSchema from '../node_modules/@convex-dev/rate-limiter/dist/component/schema.js';
 
-import type { DataModel, Id } from '../_generated/dataModel';
+import type { DataModel, Id } from '../convex/_generated/dataModel';
 
 export type Backend = TestConvexForDataModelAndIdentity<DataModel>;
 
 const rateLimiterModules = import.meta.glob(
-  '../../node_modules/@convex-dev/rate-limiter/dist/component/**/*.js',
+  '../node_modules/@convex-dev/rate-limiter/dist/component/**/*.js',
 );
 const registeredBackends = new WeakSet<object>();
 

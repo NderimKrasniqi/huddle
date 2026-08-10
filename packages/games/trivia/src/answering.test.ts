@@ -38,11 +38,10 @@ function answering(state: TriviaState, playerId: string, optionIndex: number): T
   });
 }
 
-/** The room moving on from the beat on screen. */
-function advancing(state: TriviaState, playerId: string = ADA): TriviaState {
+/** The room clock moving on from the beat on screen. */
+function advancing(state: TriviaState): TriviaState {
   return triviaGameLogic.reduce(state, {
     kind: 'advance',
-    playerId,
     questionIndex: state.questionIndex,
     phase: state.phase,
   });
