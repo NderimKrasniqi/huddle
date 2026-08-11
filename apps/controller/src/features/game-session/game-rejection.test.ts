@@ -19,6 +19,7 @@ const EVERY_REJECTION: readonly GameLifecycleRejection[] = [
   { kind: 'gameNotInstalled', gameId: 'charades' },
   { kind: 'alreadyInGame' },
   { kind: 'notEnoughPlayers', need: 2, have: 1 },
+  { kind: 'tooManyPlayers', max: 4, have: 6 },
   { kind: 'settingRejected', key: 'questionCount', value: '7' },
 ];
 
@@ -40,6 +41,15 @@ describe('rejectionMessage', () => {
     // it gets the same answer.
     expect(rejectionMessage({ kind: 'settingRejected', key: 'questionCount', value: '7' })).toBe(
       'This room can’t play that game that way. Update Huddle and try again.',
+    );
+  });
+
+  it('counts the players a room has above the game maximum', () => {
+    expect(rejectionMessage({ kind: 'tooManyPlayers', max: 4, have: 5 })).toBe(
+      'This game supports up to 4 players. Remove one player first.',
+    );
+    expect(rejectionMessage({ kind: 'tooManyPlayers', max: 4, have: 6 })).toBe(
+      'This game supports up to 4 players. Remove 2 players first.',
     );
   });
 

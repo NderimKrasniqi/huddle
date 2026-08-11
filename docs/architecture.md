@@ -1,6 +1,6 @@
 # Huddle Architecture
 
-> Reconciled 2026-08-10 for **F-007 Full-Codebase Behavior-Preserving Refactor**.
+> Reconciled 2026-08-11 for **F-007 Full-Codebase Behavior-Preserving Refactor**.
 > Phases 1–5 remain the frozen product baseline. This document records the
 > repository's current boundaries through Feature 7 without changing Expo,
 > Convex, pnpm workspaces, the game registry, shared UI primitives, or the
@@ -24,8 +24,8 @@ The reliability journey is **J-006 Recover a TV-held session**. It requires:
 
 The governing rules are **BR-006** (one live room per TV token), **BR-007**
 (invalid runtimes expose no state), **BR-008** (gameplay cannot advance while
-the TV is away), and **BR-009** (legacy development rooms are discarded rather
-than migrated).
+the TV is away), and **BR-009** (legacy development rooms are discarded by an
+approved cleanup rather than interpreted or migrated).
 
 ## Current repository shape
 
@@ -149,13 +149,13 @@ after the TV app has remained closed through the recovery window.
 
 Features 6 and 7 are delivered in the ordered tasks in
 `docs/implementation-plan.md`.
-Convex schema rollout is staged: add optional fields and a development-only
-internal cleanup mutation, purge ephemeral development rows, verify zero legacy
-rooms/players/sessions, then deploy required fields and remove the cleanup
-mutation. The purge must never be run against production without separate
-approval. Every implementation task receives a code review; runtime,
-credential, authorization, migration, rate-limit, and TV-presence tasks also
-receive a security review.
+The repository intentionally retains optional compatibility fields. No cleanup
+mutation or schema-tightening deployment has been run as part of Features 6 or
+7. Before any deployment that removes compatibility, first run the read-only
+orphan/legacy audit. If it finds rows, cleanup is a separately approved
+migration; only after the audit is clean may fields become required and cleanup
+code be removed. BR-009 means those development rows are discarded, never
+decoded as or transformed into current runtime state.
 
 Retiring `rooms.createRoom` does not itself authorize a Convex deployment. A
 read-only orphan-room audit must precede deployment; if it finds cleanup work,

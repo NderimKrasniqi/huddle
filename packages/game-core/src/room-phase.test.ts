@@ -66,11 +66,12 @@ describe('whether the room may start a game', () => {
     expect(refusalToStart('in-game', 0, twoToTen)).toEqual({ kind: 'alreadyInGame' });
   });
 
-  it('does not refuse a room that has outgrown a game', () => {
-    // Deliberate: Huddle cannot remove a player, so refusing here would strand
-    // a party. The Host's picker is where a too-large room stops being offered
-    // the game — see `refusalToStart`.
-    expect(refusalToStart('lobby', 6, { min: 2, max: 4 })).toBeNull();
+  it('refuses a room that has outgrown a game', () => {
+    expect(refusalToStart('lobby', 6, { min: 2, max: 4 })).toEqual({
+      kind: 'tooManyPlayers',
+      max: 4,
+      have: 6,
+    });
   });
 });
 

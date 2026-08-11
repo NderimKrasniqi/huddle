@@ -91,14 +91,17 @@ as one language.
 
 1672×941 (16:9), no alpha, clear centre with decoration at the edges per §11.
 
-**This is the TV canvas**, on every TV screen — not decoration layered over one.
-`huddle-tv-background-01.png` renders full-viewport with `cover`, so the artwork
-reaches every edge. `TvStage` applies `tvSafeStageScale` only to its 1280×720
-content layer; `colors.screen` remains the loading fallback. On a non-16:9
-panel, `cover` crops decorative edges rather than stretching the composition.
+**This is the default canvas on every implemented TV screen** — not decoration
+layered over one. `huddle-tv-background-01.png` renders full-viewport with
+`cover`, so the artwork reaches every edge. `TvStage` applies
+`tvSafeStageScale` only to its 1280×720 content layer; `colors.screen` remains
+the loading fallback. On a non-16:9 panel, `cover` crops decorative edges rather
+than stretching the composition. The newly approved, dark Game setup reference
+is not implemented; adopting it requires the explicit per-screen exception
+recorded in `docs/design/soft-minimal-handoff.md`.
 
-`-01` is warmer, `-02` cooler and greyer. `-01` is the default for both screens
-until the assignment is settled — see the handoff.
+`-01` is warmer, `-02` cooler and greyer. `-01` is the default for the Room and
+carousel until the assignment is settled — see the handoff.
 
 Their base is `#FAF1E9` / `#F8F1EA` rather than the `#FFF7F2` canvas token,
 which is why nothing composites them over a fill: close enough to read as a

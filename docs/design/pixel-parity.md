@@ -1,8 +1,9 @@
-# Pixel parity: simulator vs approved boards
+# Pixel parity: 2026-08-09 simulator snapshot vs approved boards
 
-Every delta found by comparing a real simulator screenshot against the approved
-Soft Minimal reference for the same screen. The goal is pixel parity, so this
-records **measured** differences, not impressions.
+This is historical QA evidence from one simulator capture, not the current
+design backlog. It records **measured** differences rather than impressions;
+`docs/design/soft-minimal-handoff.md` is the current visual source of truth and
+includes references approved after this capture.
 
 Captured 2026-08-09 from `feat/huddle-reliability-refactor` on the Apple TV 4K
 (3rd gen, tvOS 26.5) and iPhone 17 (iOS 26.5) simulators.
@@ -21,10 +22,11 @@ parity work:
 
 Both remaining board-vs-app disagreements about capacity are therefore closed.
 
-**Trivia's duration and category are not parity items yet.** Board says 15 min /
-"Quiz", the app says ~5 min / "Knowledge", but the games themselves have not been
-worked on, so the app's values are placeholders rather than a position. Revisit
-when the game is built; do not "fix" the app to the board in the meantime.
+**Trivia's duration and category are product-metadata decisions, not automatic
+parity fixes.** The boards say 15 min / "Quiz" while the implemented module says
+~5 min / "Knowledge". The approved image text does not change runtime metadata
+by itself; reconcile the module and its question/settings scope together before
+changing either value.
 
 **Game key art stays deferred** by the same reasoning plus an explicit decision
 (2026-08-09): it will be picked up later. The gap is documented under *TV — Game
@@ -188,7 +190,7 @@ Reference: `docs/design/reference/screens/01-join-room.png`
 
 ## Phone — Your room (host)
 
-Reference: `docs/design/reference/screens/02-your-room-host-reference-crop.png`
+Reference: `docs/design/reference/screens/02-your-room-host.png`
 
 1. **A large empty region above the content.** The screen's content
    (wordmark, Leave, title, roster, CTA) starts roughly 60% of the way down;
@@ -197,12 +199,9 @@ Reference: `docs/design/reference/screens/02-your-room-host-reference-crop.png`
 
 ## Screenshots
 
-`docs/design/qa/side-by-side/` holds board-and-simulator composites at matched
-height — `tv-room.png`, `phone-join.png`, `phone-current.png`. The two halves of
-each are kept unscaled beside them as `<screen>-board.png` and
-`<screen>-simulator.png`, so any delta here can be re-measured rather than
-re-eyeballed. `tv-room-stacked-empty-room.png` is the original empty-room
-comparison the measurements in this file were taken from.
+`docs/design/qa/side-by-side/` holds the retained board-and-simulator composites:
+`tv-room.png`, `tv-game-carousel.png`, `phone-join.png`,
+`phone-your-room.png`, and `phone-pick-a-game.png`.
 
 ## Fixed during this pass — the TV could not open a room
 

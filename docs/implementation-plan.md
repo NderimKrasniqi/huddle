@@ -1,23 +1,22 @@
 # Implementation Plan
 
-> **Reconciled 2026-08-09 against the existing implementation.**
-> Huddle was built through a prior plan into Phase 5. This roadmap has been
-> rebaselined against the actual repository. Completed tasks are checked with a
-> one-line evidence note; unchecked tasks are the real remaining work.
+> **Reconciled 2026-08-11 against the existing implementation and design
+> inventory.** Huddle was built through a prior plan into Phase 5, then hardened
+> through Features 6 and 7. All numbered implementation tasks below are complete;
+> completed entries retain their closeout evidence, while the unnumbered backlog
+> at the end records real follow-up work without pretending it already shipped.
 >
-> **Evidence baseline:** `pnpm typecheck` clean; `pnpm test` green — 65 files,
-> 768 tests, 0 failures. Backend (`convex/convex/{rooms,players,games}.ts`),
+> **Current evidence:** `pnpm typecheck`, `pnpm lint`, and
+> `pnpm validate:workflow` clean; `pnpm test` green — 71 files, 825 tests, 0
+> failures. Backend (`convex/convex/{rooms,players,games}.ts`),
 > platform packages (`game-core`, `game-registry`, `packs`, `ui`), the Trivia
 > module (`packages/games/trivia`), and both apps (`apps/tv`, `apps/controller`)
 > are implemented and tested.
 >
-> **Remaining work (as of 2026-08-09):** no required implementation task is
-> open. 5.6 closed the MVP after finding and fixing two blocking issues (a
-> private-state broadcast and the missing end-room control), 5.8 (the optional
-> remember-me) shipped, 5.9 kept the question pack out of the Controller
-> bundle, and 5.10 reconciled the approved Soft Minimal TV visuals and assets.
-> The monorepo apps are `apps/tv` + `apps/controller` (the "mobile" naming in
-> the original draft mapped to the controller).
+> **Dependency evidence:** `pnpm audit:prod` is clean after explicitly excluding
+> only the two `image-size@1.2.1` CVEs fixed by the committed pnpm patch;
+> `pnpm verify:dependency-security` exercises those fixes and pinned transitive
+> remediations. See `docs/dependency-security.md`.
 >
 > **2026-08-10 audit resolution:** Product direction resolved F4–F6. A
 > TV-created room now survives an empty roster until TV-session expiry; every
@@ -25,10 +24,8 @@
 > current Host's Wait/Continue choice; and player ranges gate start only, so
 > Continue is valid below the declared minimum. Regression coverage spans
 > `games.test.ts`, `players.test.ts`, `tv-recovery.test.ts`, and both client
-> projections. A fresh
-> `pnpm audit --prod` reports six transitive Expo tooling findings (five high,
-> one moderate, zero critical); dependency upgrades remain separate from this
-> refactor, and `image-size` currently has no patched release in the advisory.
+> projections. `image-size` still has no upstream release marked patched for
+> its two advisories, so the local patch and narrow audit exclusions remain.
 
 ## Phase 1 — Create and Join a Live Room
 
@@ -252,8 +249,9 @@ against the approved Soft Minimal board.
 
 The Phase 1–5 sections above are a frozen historical baseline. Repository
 inspection reopened TV recovery and fail-closed runtime work that had been
-claimed complete, so Feature 6 is the active, resumable implementation stream.
-It preserves Expo, Convex, the game registry, Soft Minimal assets/palette, and
+claimed complete. Feature 6 was the resumable implementation stream and is now
+complete. It preserves Expo, Convex, the game registry, Soft Minimal
+assets/palette, and
 the existing public room/game contracts except for the intentional TV APIs and
 `createRoom` → `openRoom` replacement.
 
@@ -325,10 +323,13 @@ the existing public room/game contracts except for the intentional TV APIs and
     `packages/game-registry/src/running.test.ts`; typecheck, lint, and 71 files /
     823 tests pass.
 
-- [x] **6.3.3 — Purge legacy development rooms and tighten the final schema**
-  - Deploy optional compatibility fields, run a development-only internal
-    cleanup through `npx convex run`, verify zero legacy rows, then require
-    final fields and remove the cleanup mutation.
+- [x] **6.3.3 — Stage compatibility fields and define the deployment migration gate**
+  - Keep compatibility fields optional in repository code and document the
+    required deployment sequence: read-only orphan/legacy audit, separately
+    approved cleanup if needed, verification of zero legacy rows, and only then
+    schema tightening. No deployment or data mutation was performed. BR-009
+    means approved cleanup discards legacy development rows rather than
+    interpreting or migrating them into current runtime state.
   - **Traceability:** BR-009.
   - **Depends on:** 6.3.2
 
@@ -369,16 +370,17 @@ the existing public room/game contracts except for the intentional TV APIs and
 
 ## Phase 6.6 — Verification and release evidence
 
-- [x] **6.6.1 — Run complete automated, export, prebuild, and device verification**
+- [x] **6.6.1 — Run automated, export, prebuild, and native-generation verification**
   - Run workflow/task-state checks, typecheck, lint, all tests, pack/avatar
     validation, Expo export/prebuild, Android Leanback resource checks, and
-    manual 1920×1080/Philips Android TV recovery verification.
-  - Evidence so far: workflow validator/task-state tests PASS; typecheck and
-    lint PASS; full suite PASS (69 files, 782 tests); `pnpm validate:packs`
+    document the physical-device release matrix separately.
+  - Evidence: workflow validator/task-state tests PASS; typecheck and
+    lint PASS; full suite PASS; `pnpm validate:packs`
     PASS; avatar `--check` PASS for all ten IDs; Android TV prebuild generated
     Leanback `required=true`, `@drawable/tv_icon`, and `@drawable/tv_banner`;
-    Expo Android export PASS. Physical Philips verification remains a release
-    checklist because this environment has no connected TV.
+    Expo Android export PASS. Physical Philips and mixed-phone verification is
+    not claimed here; it remains the release checklist in
+    `docs/acceptance-matrix.md` because no connected hardware was available.
   - **Traceability:** F-006, J-006, BR-006, BR-007, BR-008, BR-009.
   - **Depends on:** 6.5.2
 
@@ -471,8 +473,9 @@ approved Soft Minimal visuals/assets.
     Leanback launcher metadata plus the shipped icon/banner; and a tvOS
     simulator build links `ExpoCrypto` and `ExpoSecureStore`. No runtime, schema,
     package-export, design-token, asset, or dependency change was introduced.
-  - Dependency audit: eight transitive findings (seven high, one moderate, zero
-    critical) are isolated in [GitHub issue #34](https://github.com/NderimKrasniqi/huddle/issues/34)
+  - Historical dependency audit at this task's closeout: eight transitive
+    findings (seven high, one moderate, zero critical) are isolated in
+    [GitHub issue #34](https://github.com/NderimKrasniqi/huddle/issues/34)
     with exposure and remediation notes. No dependency upgrade is mixed into
     this refactor.
   - Hardware: no physical Android TV or mixed iOS/Android controller set was
@@ -480,3 +483,28 @@ approved Soft Minimal visuals/assets.
     remains a release check. PR 3's native TV Room simulator comparison remains
     the visual evidence and showed no Soft Minimal delta except its room code.
   - **Depends on:** 7.4.1
+
+---
+
+# Deferred post-MVP and release work
+
+These are real follow-ups, not completed numbered tasks:
+
+- Adopt the newly approved TV Game setup, phone game-settings presets, and
+  phone finished-game references, reconciling their proposed navigation and
+  actions with the current generic runtime. The established 10-player cap and
+  module-owned metadata/settings remain authoritative over mock content.
+- Design the five implemented surfaces still missing approved treatment: TV
+  Game frame, TV recovery status, phone Leave sheet, phone Game frame, and
+  phone recovery status.
+- Complete game-art coverage and metadata wiring, replace the interim
+  `accent-face` treatment when game-screen designs land, and decide whether the
+  join form should subscribe early enough to dim already-taken avatars.
+- Distinguish client/runtime failures from network failures in the TV
+  `openRoom` error surface.
+- Before a Convex deployment that removes compatibility, run the read-only
+  orphan/legacy audit; any cleanup or schema tightening requires separately
+  approved migration work.
+- Re-run the physical Android TV plus mixed iOS/Android controller matrix,
+  including camera deep links, recovery, Host controls, late join, and
+  back-to-back Trivia/Voting, before release.

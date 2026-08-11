@@ -50,5 +50,17 @@ export function startControl(
     };
   }
 
+  const extra = seats.length - game.playerRange.max;
+  if (extra > 0) {
+    return {
+      label: `Select ${game.title}`,
+      enabled: false,
+      blockedBecause:
+        extra === 1
+          ? `${game.title} supports up to ${game.playerRange.max} players. Remove one player to start.`
+          : `${game.title} supports up to ${game.playerRange.max} players. Remove ${extra} players to start.`,
+    };
+  }
+
   return { label: `Select ${game.title}`, enabled: true, blockedBecause: undefined };
 }

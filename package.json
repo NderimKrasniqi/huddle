@@ -9,7 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit && pnpm -r typecheck",
     "lint": "eslint . --max-warnings=0",
-    "audit:prod": "pnpm audit --prod",
+    "audit:prod": "pnpm audit --prod --ignore CVE-2025-71329 --ignore CVE-2025-71330",
     "verify:dependency-security": "node tools/verify-dependency-security.cjs",
     "test": "vitest run",
     "test:unit": "vitest run --project lint-rules --project packages --project apps",

@@ -7,8 +7,8 @@
 ## Method
 
 - **Automated** rows cite a passing test suite by file and, where it helps,
-  `describe`/`it`. The whole suite is `pnpm test` — **71 files, 823 tests, 0
-  failures** in the 2026-08-10 full-codebase audit (the historical Phase 5
+  `describe`/`it`. The whole suite is `pnpm test` — **71 files, 825 tests, 0
+  failures** in the 2026-08-11 reconciliation (the historical Phase 5
   baseline was 62 files / 721 tests).
 - The hub (`convex/convex/{rooms,players,games}.ts`) is game-independent: it
   never names a game and dispatches to whatever the Registry installs. So a
@@ -60,7 +60,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | Workflow (scope) | Trivia | Voting | Evidence |
 |---|---|---|---|
 | Up to 10 players in a room (`ROOM_PLAYER_CAP`) | 🔁 | 🔁 | `players.test.ts` › joinRoom (roomFull at the cap); `packages/game-core/src/room-capacity.ts` = 10 |
-| Each game declares its own player range; start gated on it | ✅ | ✅ | Trivia 2–10 `games.test.ts` › "refuses a party smaller than the game is playable by"; Voting 2–10 `voting-lifecycle.test.ts` › "refuses a party below Voting's declared minimum" |
+| Each game declares its own player range; start gated on both minimum and maximum | ✅ | ✅ | Trivia 2–10 `games.test.ts` › "refuses a party smaller than the game is playable by"; Voting 2–10 `voting-lifecycle.test.ts` › "refuses a party below Voting's declared minimum"; shared maximum gate in `packages/game-core/src/room-phase.test.ts` and Host preflight in `apps/controller/src/features/game-picker/game-controls.test.ts` |
 
 ## Host controls
 
@@ -80,7 +80,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 
 | Workflow (scope) | Trivia | Voting | Evidence |
 |---|---|---|---|
-| Catalog + metadata (name, art, range, duration, modes) | ✅ | ✅ | `game-registry` browsing/carousel suites; both modules' metadata in `packages/games/*/src/logic.ts` |
+| Catalog + metadata (name, art, range, duration, modes) | ✅ | ✅ | `game-registry` browsing/carousel suites; both modules' client-safe metadata in `packages/games/*/src/metadata.ts` |
 | TV mirrors the host's selection/configuration | 🔁 | 🔁 | `games.test.ts` › browsing query; `apps/tv/src/features/carousel/carousel-footer.test.ts` |
 | Settings settled against the game's own schema (validate/default) | ✅ | ✅ | Trivia (3 settings) `games.test.ts`; Voting (1 setting) `voting-lifecycle.test.ts` › "starts on the rounds the Host chose…", "refuses a value…", "refuses a setting…" |
 | A game the build does not install is refused | 🔁 | 🔁 | `games.test.ts` › "refuses a game the Registry does not install" |
@@ -122,9 +122,9 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 
 | Workflow (scope) | Trivia | Voting | Evidence |
 |---|---|---|---|
-| Room/game state ephemeral; discarded when the room closes | 🔁 | 🔁 | `rooms.test.ts` › `expireRoom` deletes room + players |
+| Room/game state ephemeral; discarded when the room closes | 🔁 | 🔁 | `tv-recovery.test.ts` › "expires after ten minutes silent" deletes the production room, players, game, and TV-session row |
 | No score carried between games | ✅ | ✅ | `games.test.ts` › "leaves its scores behind"; `voting-lifecycle.test.ts` › switching carries nothing across |
-| Only convenience prefs (last name/avatar) may persist locally | n/a | n/a | Implemented in `features/join/identity.ts` through `platform/storage`; Session Tokens remain in SecureStore under `platform/session` |
+| Only convenience prefs (last name/avatar) may persist locally | n/a | n/a | Implemented in `apps/controller/src/features/join/identity.ts` through `apps/controller/src/platform/storage/`; player and TV Session Tokens remain in SecureStore under their respective platform session owners |
 
 ---
 
@@ -194,10 +194,10 @@ two-player game after one disconnect, proving active continuation at one player.
 
 ## Manual checks to run per release
 
-The rows marked 🧪 have no repo automation and are the documented manual matrix,
-last exercised in 5.3 (real-device verification, see git history). No physical
-Android TV or mixed phone hardware was available during this audit;
-re-run before release:
+The rows marked 🧪 have no repo automation and are the documented release
+matrix. Historical device evidence exists from 5.3, but no physical Android TV
+or mixed phone hardware was available during the 2026-08-11 reconciliation;
+re-run the complete matrix before release:
 
 1. iOS phone + Android phone + Android TV in one room, both games played.
 2. QR scanned by each phone OS camera opens the join deep link.

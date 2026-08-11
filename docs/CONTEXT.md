@@ -6,10 +6,12 @@
 - **Player / seat**: a participant's server-side identity, nickname, avatar, and presence state.
 - **Host**: the player who may select, configure, start, pause, resume, end, transfer, or manage the active game.
 - **Session Token**: the SecureStore credential that reconnects a phone to its existing seat.
+- **TV Session Token**: the durable SecureStore credential that restores one TV-owned room and authorizes TV heartbeats.
 - **Game Module**: the client-safe metadata, settings, screens, and shared state types for one installed game.
 - **Game Logic**: one game's server-only validation, initial state, reducer, and privacy projection.
 - **Game Registry**: the ordered client module list and its separate server-only logic list.
-- **Room phase**: lobby/configuring/active/paused/finished state derived from the room's game record.
+- **Room phase**: `lobby` or `in-game`, derived from whether the room holds a game record.
+- **Running-game status**: the client projection of that in-game record — `running`, `paused`, or `unavailable`; individual modules own their internal beats such as setup, answering, reveal, or finished.
 - **Presence**: heartbeat/away state with grace periods for temporary phone backgrounding.
 - **Room background**: the static TV artwork behind the title-safe 1280×720 content stage.
 - **Boardwalk / Soft Minimal**: Boardwalk is superseded; Soft Minimal is the current visual source of truth.

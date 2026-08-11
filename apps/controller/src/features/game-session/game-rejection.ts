@@ -24,6 +24,7 @@ const REJECTION_KINDS: Readonly<Record<GameLifecycleRejection['kind'], true>> = 
   notHost: true,
   notInRoom: true,
   settingRejected: true,
+  tooManyPlayers: true,
   tvUnavailable: true,
 };
 
@@ -43,9 +44,9 @@ function isGameLifecycleRejection(data: unknown): data is GameLifecycleRejection
 /**
  * A refusal in the words the Host reads.
  *
- * `notEnoughPlayers` is the only one a correct Controller produces, and it is
- * reachable: the roster this phone drew its count from is a subscription, so
- * somebody can leave between the render and the tap.
+ * Player-range refusals are the ones a correct Controller can still receive:
+ * the roster this phone drew its count from is a subscription, so somebody can
+ * join or leave between the render and the tap.
  *
  * `alreadyInGame` was briefly a second — deleting the unknown-game screen sent
  * a Host whose build lacks the running module to the ordinary lobby, Start
@@ -62,6 +63,12 @@ export function rejectionMessage(rejection: GameLifecycleRejection): string {
       return rejection.need - rejection.have === 1
         ? 'One more player needs to join first.'
         : `${rejection.need - rejection.have} more players need to join first.`;
+    case 'tooManyPlayers': {
+      const extra = rejection.have - rejection.max;
+      return extra === 1
+        ? `This game supports up to ${rejection.max} players. Remove one player first.`
+        : `This game supports up to ${rejection.max} players. Remove ${extra} players first.`;
+    }
     case 'alreadyInGame':
       return 'This room is already playing.';
     case 'gameNotInstalled':

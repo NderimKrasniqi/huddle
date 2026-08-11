@@ -8,7 +8,7 @@ Record only choices this project actually needs.
 |---|---|---|
 | Language | TypeScript | One language across phone, TV, shared game contracts, and backend. |
 | Mobile | Expo SDK 57 + React Native 0.86 | Native iOS/Android with shared implementation. |
-| TV | `react-native-tvos@0.86-stable` | Android TV support while remaining compatible with normal mobile targets. |
+| TV | `react-native-tvos@0.86.0-2` (`npm:react-native-tvos@~0.86.0-2`) | Android TV support while keeping both Expo apps on the same React Native fork. |
 | Navigation | Expo Router | Shared Expo-native navigation model. |
 | Styling | Soft Minimal design tokens + React Native `StyleSheet` | A shared design-token system in `@huddle/ui` (colors, typography, motion, shadows, shape) consumed through `StyleSheet`, verified for Android TV legibility through Phase 5. NativeWind was evaluated and not adopted; its v4 behavior on Android TV was an open risk and the token system already met the approved Soft Minimal handoff. |
 | Backend/realtime | Convex | Authoritative room/game state, reactive queries, transactional mutations, and scheduled functions without a separate API or realtime service. |
@@ -46,6 +46,8 @@ unit tests:           pnpm test:unit            # packages + apps + lint-rules
 backend/integration:  pnpm test:integration     # convex (edge-runtime)
 pack validation:      pnpm validate:packs
 workflow/architecture: pnpm validate:workflow
+production dependency audit: pnpm audit:prod
+patched dependency checks: pnpm verify:dependency-security
 controller export:     pnpm --filter @huddle/controller exec expo export --platform ios --output-dir <temporary-directory>
 tv export:             pnpm --filter @huddle/tv exec expo export --platform ios --output-dir <temporary-directory>
 tv native generation: pnpm --filter @huddle/tv prebuild --platform android --no-install
