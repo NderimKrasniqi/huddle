@@ -35,6 +35,42 @@ export const Pressable = (): null => null;
 export const Image = (): null => null;
 export const ScrollView = (): null => null;
 
+/**
+ * Animated is imported by shared loading primitives but never driven by Node
+ * tests. These inert shapes keep import-only package and Registry tests at the
+ * same renderer boundary as the components above.
+ */
+class AnimatedValue {
+  setValue(): void {}
+  stopAnimation(): void {}
+  interpolate(): number {
+    return 0;
+  }
+}
+
+const inertAnimation = {
+  start: (): void => {},
+  stop: (): void => {},
+};
+
+export const Animated = {
+  Value: AnimatedValue,
+  View,
+  delay: () => inertAnimation,
+  loop: () => inertAnimation,
+  sequence: () => inertAnimation,
+  timing: () => inertAnimation,
+};
+
+const identity = (value: number): number => value;
+export const Easing = {
+  quad: identity,
+  cubic: identity,
+  in: (easing: typeof identity) => easing,
+  out: (easing: typeof identity) => easing,
+  inOut: (easing: typeof identity) => easing,
+};
+
 export const Platform = { OS: 'node', select: (options: Record<string, unknown>) => options.default };
 export const Dimensions = { get: () => ({ width: 0, height: 0, scale: 1, fontScale: 1 }) };
 export const useWindowDimensions = () => ({ width: 0, height: 0, scale: 1, fontScale: 1 });

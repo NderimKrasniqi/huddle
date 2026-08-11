@@ -43,6 +43,15 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | Empty room stays open while TV holds; next joiner hosts | 🔁 | 🔁 | `players.test.ts` › "keeps a TV-owned room open with the same code after the last player leaves"; last-player game cleanup/cancel coverage beside it |
 | Room closes when its recovery/expiry window lapses; state discarded | 🔁 | 🔁 | `tv-recovery.test.ts` › "expires after ten minutes silent" (room, players, TV session, and game removed; code reusable) |
 
+## Platform startup and loading feedback
+
+| Workflow (scope) | Trivia | Voting | Evidence |
+|---|---|---|---|
+| TV and phone native launch use the Huddle symbol on the Soft Minimal canvas | 🔁 | 🔁 | `apps/{tv,controller}/app.json` splash config; fresh Android prebuild/resource inspection; both production Android exports; generated TV `:app:assembleRelease` APK |
+| TV startup/open/reconnect/configuration failure never shows empty Room Code or QR placeholders | 🔁 | 🔁 | `apps/tv/src/features/boot/boot-state.test.ts`; `TvRoomScreen` gates `RoomStage` behind `opening.kind === 'open'` |
+| Phone font startup and Session Token restoration show branded progress rather than returning `null` | 🔁 | 🔁 | `apps/controller/src/ui/loading-state.test.ts`; root layout and `ControllerScreen` loading branches |
+| Join, Start, Continue/Wait, Leave, Back to lobby, and Host-management pending actions show activity and expose accessibility busy state | 🔁 | 🔁 | Shared `LoadingIndicator` plus owning Controller controls; lifecycle authorization remains covered by the existing app/Convex suites |
+
 ## Joining and identity
 
 | Workflow (scope) | Trivia | Voting | Evidence |
@@ -66,7 +75,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 
 | Workflow (scope) | Trivia | Voting | Evidence |
 |---|---|---|---|
-| Browse / select / configure a game from the phone | ✅ | ✅ | `game-registry` carousel/registry/logic suites; `apps/controller/src/features/game-picker/settings-choice.test.ts`, `apps/controller/src/features/room/host.test.ts` |
+| Browse / select / draft settings for a game on the phone | ✅ | ✅ | `game-registry` carousel/registry/logic suites; `apps/controller/src/features/game-picker/settings-choice.test.ts`, `apps/controller/src/features/room/host.test.ts` |
 | Start a game; non-host start refused | ✅ | ✅ | `games.test.ts` + `voting-lifecycle.test.ts` › "refuses a phone that is not the Host" |
 | Settings locked at start (re-start refused mid-game) | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › "refuses to start a second game over the one being played" (`alreadyInGame`) |
 | End the active game; discard state, keep room | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › ending |
@@ -81,7 +90,10 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | Workflow (scope) | Trivia | Voting | Evidence |
 |---|---|---|---|
 | Catalog + metadata (name, art, range, duration, modes) | ✅ | ✅ | `game-registry` browsing/carousel suites; both modules' client-safe metadata in `packages/games/*/src/metadata.ts` |
-| TV mirrors the host's selection/configuration | 🔁 | 🔁 | `games.test.ts` › browsing query; `apps/tv/src/features/carousel/carousel-footer.test.ts` |
+| Host scrolls games on the phone; TV follows the highlighted carousel card | 🔁 | 🔁 | `games.test.ts` › browsing query; `apps/tv/src/features/carousel/carousel-footer.test.ts` |
+| Explicit game selection switches the TV from Browse Games to Game Setup | ⛔ | ⛔ | Approved TV flow/reference screen; dedicated shared setup surface is not implemented yet |
+| Host changes settings on the phone; TV Game Setup mirrors draft settings before Start | ⛔ | ⛔ | Approved TV/phone settings references; shared setup projection is not implemented yet |
+| Start is a phone action that locks settings and enters the game runtime | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › start validation and `alreadyInGame` lock |
 | Settings settled against the game's own schema (validate/default) | ✅ | ✅ | Trivia (3 settings) `games.test.ts`; Voting (1 setting) `voting-lifecycle.test.ts` › "starts on the rounds the Host chose…", "refuses a value…", "refuses a setting…" |
 | A game the build does not install is refused | 🔁 | 🔁 | `games.test.ts` › "refuses a game the Registry does not install" |
 
@@ -209,3 +221,6 @@ re-run the complete matrix before release:
    succession, Wait auto-recovery, and Continue below minimum.
 5. Late join during each game; TV app relaunch/recovery within the window.
 6. Back-to-back games including a Trivia↔Voting switch.
+7. Cold-launch both apps and confirm the static Huddle splash hands off without
+   a blank/default frame to the animated in-app startup surface; repeat while
+   restoring a phone session and recovering a TV room.

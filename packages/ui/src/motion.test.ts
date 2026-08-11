@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { motionDuration, popIn, springOf } from './motion';
+import { loadingMotion, motionDuration, popIn, springOf } from './motion';
 
 /** The damping ratio a spring config actually carries: ζ = c / (2√(km)). */
 function dampingRatioOf({
@@ -88,12 +88,34 @@ describe('the pop-in', () => {
 });
 
 describe('motionDuration', () => {
-  it('holds the handoff’s two durations, and they are not the same number', () => {
+  it('keeps the two handoff durations distinct', () => {
     // A card transition that took as long as a pop-in would be one token doing
     // two jobs — which is how one of them ends up changed by an edit meant for
     // the other, the same reason `stickerTilt` names a surface per entry.
     expect(motionDuration.popIn).not.toBe(motionDuration.cardTransition);
     expect(motionDuration.popIn).toBeGreaterThan(0);
     expect(motionDuration.cardTransition).toBeGreaterThan(0);
+  });
+
+  it('gives every platform feedback loop a finite positive duration', () => {
+    expect(motionDuration.screenTransition).toBeGreaterThan(0);
+    expect(motionDuration.loadingPulse).toBeGreaterThan(motionDuration.screenTransition);
+    expect(motionDuration.activityCycle).toBeGreaterThan(motionDuration.screenTransition);
+    expect(Object.values(motionDuration).every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe('loadingMotion', () => {
+  it('breathes around the resting scale without becoming a bounce', () => {
+    expect(loadingMotion.markFromScale).toBeLessThan(1);
+    expect(loadingMotion.markToScale).toBeGreaterThan(1);
+    expect(loadingMotion.markToScale - loadingMotion.markFromScale).toBeLessThan(0.1);
+  });
+
+  it('enters close enough to full scale to read as a transition', () => {
+    expect(loadingMotion.screenFromScale).toBeGreaterThan(0.95);
+    expect(loadingMotion.screenFromScale).toBeLessThan(1);
+    expect(loadingMotion.markFromOpacity).toBeGreaterThan(0.5);
+    expect(loadingMotion.markFromOpacity).toBeLessThan(1);
   });
 });

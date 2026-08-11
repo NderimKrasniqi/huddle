@@ -2,7 +2,7 @@ import { api } from '@huddle/convex';
 import { type Arrivals, isGreeting, JUST_JOINED_MS, noteArrivals } from '@huddle/game-core';
 import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/game-registry';
 import { colors, elevation } from '@huddle/ui';
-import { Avatar, Icon, Surface } from '@huddle/ui/native';
+import { AnimatedScreen, Avatar, Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
 import { useMutation, useQuery } from 'convex/react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -190,14 +190,16 @@ export function SeatedScreen({
 
   if (surface === 'game' && screen.kind === 'game') {
     return (
-      <InGameScreen
-        code={code}
-        module={screen.module}
-        state={screen.state}
-        roster={roster}
-        playerId={session.playerId}
-        youAreHost={standing.youAreHost}
-      />
+      <AnimatedScreen key="game">
+        <InGameScreen
+          code={code}
+          module={screen.module}
+          state={screen.state}
+          roster={roster}
+          playerId={session.playerId}
+          youAreHost={standing.youAreHost}
+        />
+      </AnimatedScreen>
     );
   }
 
@@ -221,37 +223,41 @@ export function SeatedScreen({
     (screen.kind === 'paused' || screen.kind === 'unavailable')
   ) {
     return (
-      <GameRuntimeStatusScreen
-        status={screen.kind}
-        reason={screen.kind === 'paused' ? screen.reason : undefined}
-        disconnectedPlayers={roster
-          .filter((player) => player.away)
-          .map((player) => player.nickname)}
-        youAreHost={standing.youAreHost}
-        leaveControl={
-          <LeaveControl
-            roster={roster}
-            youAreHost={standing.youAreHost}
-            onLeaving={noteLeaving}
-            onLeaveFailed={noteStillHere}
-            onLeft={onLeft}
-          />
-        }
-      />
+      <AnimatedScreen key="runtime-status">
+        <GameRuntimeStatusScreen
+          status={screen.kind}
+          reason={screen.kind === 'paused' ? screen.reason : undefined}
+          disconnectedPlayers={roster
+            .filter((player) => player.away)
+            .map((player) => player.nickname)}
+          youAreHost={standing.youAreHost}
+          leaveControl={
+            <LeaveControl
+              roster={roster}
+              youAreHost={standing.youAreHost}
+              onLeaving={noteLeaving}
+              onLeaveFailed={noteStillHere}
+              onLeft={onLeft}
+            />
+          }
+        />
+      </AnimatedScreen>
     );
   }
 
   // Everybody who is not running the room gets one screen and no controls.
   if (surface === 'waiting') {
     return (
-      <WaitingScreen
-        standing={standing}
-        browsing={browsing}
-        roster={roster}
-        onLeaving={noteLeaving}
-        onLeaveFailed={noteStillHere}
-        onLeft={onLeft}
-      />
+      <AnimatedScreen key="waiting">
+        <WaitingScreen
+          standing={standing}
+          browsing={browsing}
+          roster={roster}
+          onLeaving={noteLeaving}
+          onLeaveFailed={noteStillHere}
+          onLeft={onLeft}
+        />
+      </AnimatedScreen>
     );
   }
 
@@ -260,31 +266,35 @@ export function SeatedScreen({
   // their room, where the count line and the roster are still true.
   if (surface === 'picker' && browsing !== undefined) {
     return (
-      <PickAGameScreen
-        browsing={browsing}
-        roster={roster}
-        settingsChoice={settingsChoice}
-        setupDraft={setupDraft}
-        onChooseSetting={setSettingsChoice}
-        onBack={() => setPicking(false)}
-      />
+      <AnimatedScreen key="picker">
+        <PickAGameScreen
+          browsing={browsing}
+          roster={roster}
+          settingsChoice={settingsChoice}
+          setupDraft={setupDraft}
+          onChooseSetting={setSettingsChoice}
+          onBack={() => setPicking(false)}
+        />
+      </AnimatedScreen>
     );
   }
 
   return (
-    <YourRoomScreen
-      code={code}
-      roster={roster}
-      canStart={browsing !== undefined && startControl(roster, browsing.index).enabled}
-      canPick={browsing !== undefined}
-      stranded={stranded}
-      greeting={(playerId) => isGreeting(arrivals, greeted, playerId)}
-      onGreeted={noteGreeted}
-      onChooseGame={() => setPicking(true)}
-      onLeaving={noteLeaving}
-      onLeaveFailed={noteStillHere}
-      onLeft={onLeft}
-    />
+    <AnimatedScreen key="room">
+      <YourRoomScreen
+        code={code}
+        roster={roster}
+        canStart={browsing !== undefined && startControl(roster, browsing.index).enabled}
+        canPick={browsing !== undefined}
+        stranded={stranded}
+        greeting={(playerId) => isGreeting(arrivals, greeted, playerId)}
+        onGreeted={noteGreeted}
+        onChooseGame={() => setPicking(true)}
+        onLeaving={noteLeaving}
+        onLeaveFailed={noteStillHere}
+        onLeft={onLeft}
+      />
+    </AnimatedScreen>
   );
 }
 
@@ -652,12 +662,15 @@ function LeaveRoomSheet({
         disabled={leaving}
         onPress={() => void confirm()}
         accessibilityRole="button"
-        accessibilityState={{ disabled: leaving }}
+        accessibilityState={{ disabled: leaving, busy: leaving }}
       >
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneSmall}
             style={[styles.stretch, [styles.button, pressed && styles.buttonPressed]]}>
+            {leaving ? (
+              <LoadingIndicator size="small" color={colors.inverse} label="Leaving room" />
+            ) : null}
             <Text style={styles.buttonLabel}>
               {leaving ? LEAVE_ROOM.busyLabel : LEAVE_ROOM.confirmLabel}
             </Text>
@@ -996,13 +1009,17 @@ function ManageAction({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={spokenAs}
-        accessibilityState={{ disabled: !pressable }}
+        accessibilityState={{ disabled: !pressable, busy }}
       >
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneCard}
             style={[styles.stretch, [styles.button, face, pressed && styles.buttonPressed]]}>
-            <Icon name={remove ? 'trash' : 'crown'} size={18} color={glyph} />
+            {busy ? (
+              <LoadingIndicator size="small" color={glyph} label={spokenAs} />
+            ) : (
+              <Icon name={remove ? 'trash' : 'crown'} size={18} color={glyph} />
+            )}
             <Text style={[styles.buttonLabel, labelFace]}>
               {busy ? 'Working…' : control.label}
             </Text>

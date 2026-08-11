@@ -49,7 +49,7 @@ apps/controller/src/
 
 apps/tv/src/
   screens/                     # room opening, subscriptions, surface selection
-  features/{room,carousel,game-session}/
+  features/{boot,room,carousel,game-session}/
   platform/{convex,room-session}/
   ui/                          # TV-only primitives
 ```
@@ -62,6 +62,49 @@ small model entry point plus an explicit native UI entry point where required.
 Only genuinely cross-app tokens and primitives live
 in `@huddle/ui`. Redux, Zustand, Nx, Turborepo, a second API server, and a new
 shared package are explicitly out of scope.
+
+## Startup and loading boundary
+
+Native process startup is branded before React mounts: both Expo configs use
+the supplied orange Huddle symbol on `#FFF7F2`. Once JavaScript is
+available, `@huddle/ui/native` supplies the shared Animated entry transition,
+brand pulse, and activity indicator. The apps own the words and lifecycle state
+shown around those primitives.
+
+The TV `boot` feature is the only renderer used before a safe Room Code exists.
+It distinguishes font startup, room creation, automatic reconnection, and a
+configuration failure that cannot make progress. It retains the existing
+full-viewport TV background and never renders empty code tiles or a blank QR.
+The Controller similarly renders explicit font-startup and session-restoring
+surfaces; pending mutations remain on their owning screen with an activity
+indicator and an accessibility `busy` state. Platform screen transitions may
+fade/scale the whole surface, while gameplay animation remains module-owned.
+
+## Approved pre-game flow
+
+The pre-game TV experience has three distinct product states:
+
+1. **Room** — players join with the code or QR while the TV shows the roster.
+2. **Browse Games** — the Host scrolls on the phone and the TV follows the
+   highlighted game card.
+3. **Game Setup** — the Host explicitly selects a game, the TV leaves the
+   carousel, and the phone's draft settings are mirrored on the TV.
+
+Browsing and setup are different states. Moving the highlight while scrolling
+must not start setup; the explicit game-selection action does. The setup
+projection contains only shared game metadata and draft settings, so it is safe
+for the TV and other players to read.
+
+Start is a phone action, not a fourth screen. It validates the selected game's
+requirements, locks the draft settings, and creates the running-game record.
+The TV and controllers then mount the selected `GameModule` screens. The
+platform owns the room, browse/setup projection, and lifecycle transition; the
+module owns gameplay visuals, rules, scoring, and its finished beat.
+
+The current surface selectors already have Room, Carousel, Game, and recovery
+states. The approved Game Setup state is the remaining platform surface to
+implement, and it must be an explicit shared state rather than an inference
+from the Host phone's local settings state.
 
 ## Current Convex boundaries
 

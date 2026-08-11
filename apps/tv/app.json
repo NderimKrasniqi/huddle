@@ -6,8 +6,9 @@
     "version": "0.1.0",
     "orientation": "landscape",
     "userInterfaceStyle": "light",
-    "//backgroundColor": "Soft Minimal's `colors.screen`, retained as the native/loading fallback while the full-viewport TV background image resolves. Stated here so the native window is already right before any React view exists \u2014 otherwise a cold start flashes the platform default while the fonts resolve and TvLayout returns null. Kept honest by color-literals.test.ts, which is also why the value is written out: Expo transpiles app.config.ts and then requires it, so importing the token is not possible.",
+    "//backgroundColor": "Soft Minimal's `colors.screen`, retained as the native/loading fallback while the full-viewport TV background image resolves. Stated here so the native window is already right before any React view exists \u2014 otherwise a cold start flashes the platform default before the native splash and animated boot surface take over. Kept honest by color-literals.test.ts, which is also why the value is written out: Expo transpiles app.config.ts and then requires it, so importing the token is not possible.",
     "backgroundColor": "#FFF7F2",
+    "//splash": "The expo-splash-screen plugin below is the native source of truth. Expo 57 still accepts the legacy top-level splash field but prebuild ignores it and emits the grey target-grid placeholder, so the plugin is intentional and verified from generated Android resources.",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.hub",
@@ -31,6 +32,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "../../packages/ui/assets/logo/huddle-symbol-orange.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFF7F2"
+        }
+      ],
       [
         "@react-native-tvos/config-tv",
         {

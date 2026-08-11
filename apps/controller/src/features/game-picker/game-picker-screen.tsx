@@ -9,7 +9,7 @@ import type {
 import { settingsFrom } from '@huddle/game-core';
 import { type CarouselWindow, nextIndex, previousIndex } from '@huddle/game-registry';
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { GameKeyArt, Icon, Surface } from '@huddle/ui/native';
+import { GameKeyArt, Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -570,12 +570,15 @@ function StartGameControl({
         disabled={!pressable}
         onPress={() => void start()}
         accessibilityRole="button"
-        accessibilityState={{ disabled: !pressable }}
+        accessibilityState={{ disabled: !pressable, busy: starting }}
       >
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneCard}
             style={[[styles.stretch, !pressable && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
+            {starting ? (
+              <LoadingIndicator size="small" color={colors.inverse} label="Starting game" />
+            ) : null}
             <Text style={styles.buttonLabel}>
               {starting ? 'Starting…' : 'Start game'}
             </Text>

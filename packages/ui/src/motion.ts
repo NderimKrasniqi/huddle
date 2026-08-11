@@ -1,7 +1,9 @@
 /**
  * Soft Minimal's motion: the two animations the handoff pins a duration to
- * (docs/design/soft-minimal-handoff.md, "Interactions & Behavior") and the arithmetic
- * that turns one of them into something React Native's spring understands.
+ * (docs/design/soft-minimal-handoff.md, "Interactions & Behavior"), plus the
+ * platform feedback that carries Huddle through startup, recovery and pending
+ * actions. The arithmetic below turns the avatar pop-in into something React
+ * Native's spring understands.
  *
  * Durations live here for the same reason colors do — a number written at the
  * call site is a design decision nobody can find again — even though
@@ -16,9 +18,9 @@
  */
 
 /**
- * How long each of Soft Minimal's animations runs, per the handoff's own two
- * numbers. Both are approximate in the handoff ("~300ms", "~250ms") and exact
- * here, because a screen has to be given one number.
+ * How long each of Soft Minimal's animations runs. The first two are the
+ * handoff's own approximate numbers ("~300ms", "~250ms"); the rest are the
+ * shared platform timings for feedback the handoff did not specify.
  */
 export const motionDuration = {
   /**
@@ -32,6 +34,20 @@ export const motionDuration = {
    * the Browsing Game Index and the room's carousel follows.
    */
   cardTransition: 250,
+  /** A restrained fade/scale when one platform-owned screen replaces another. */
+  screenTransition: 220,
+  /** One full breath of the Huddle mark on startup and recovery surfaces. */
+  loadingPulse: 1_200,
+  /** One complete three-dot activity cycle inside a pending control. */
+  activityCycle: 900,
+} as const;
+
+/** The small amount of scale used by loading and screen-entry feedback. */
+export const loadingMotion = {
+  markFromScale: 0.96,
+  markToScale: 1.04,
+  markFromOpacity: 0.72,
+  screenFromScale: 0.985,
 } as const;
 
 /**

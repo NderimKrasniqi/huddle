@@ -1,5 +1,5 @@
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -63,20 +63,24 @@ export function PrimaryButton({
   label,
   trailingIcon,
   enabled,
+  loading = false,
   onPress,
 }: {
   readonly label: string;
   readonly trailingIcon?: IconName;
   readonly enabled: boolean;
+  readonly loading?: boolean;
   readonly onPress: () => void;
 }) {
+  const pressable = enabled && !loading;
+
   return (
     <Pressable
       style={styles.stretch}
-      disabled={!enabled}
+      disabled={!pressable}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !enabled }}
+      accessibilityState={{ disabled: !pressable, busy: loading }}
     >
       {({ pressed }) => (
         <Surface
@@ -84,8 +88,11 @@ export function PrimaryButton({
           // Dimming belongs to the whole surface: fading the face alone would
           // leave a solid shadow under a ghosted button.
           style={[[styles.stretch, !enabled && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
+          {loading ? (
+            <LoadingIndicator size="small" color={colors.inverse} label={label} />
+          ) : null}
           <Text style={styles.buttonLabel}>{label}</Text>
-          {trailingIcon === undefined ? null : (
+          {trailingIcon === undefined || loading ? null : (
             <Icon name={trailingIcon} size={20} color={colors.inverse} />
           )}
         </Surface>

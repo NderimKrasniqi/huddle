@@ -41,6 +41,19 @@ const APP_CONFIG = /^apps\/[^/]+\/app\.json$/;
 const HEX_COLOR = /#[0-9a-fA-F]{3,8}\b/g;
 const HEX_DIGIT_COUNTS = new Set([3, 4, 6, 8]);
 
+type ExpoConfig = {
+  readonly backgroundColor?: unknown;
+  readonly plugins?: readonly unknown[];
+};
+
+function expoConfig(app: string): ExpoConfig {
+  return (
+    JSON.parse(readFileSync(path.join(repoRoot, 'apps', app, 'app.json'), 'utf8')) as {
+      expo: ExpoConfig;
+    }
+  ).expo;
+}
+
 /**
  * Compared case-insensitively in both directions: the palette is written upper
  * case today, but a lower-case token would otherwise silently stop matching and
@@ -106,12 +119,32 @@ describe('hex color literals', () => {
   it('are what each app paints its own root screen with', () => {
     // The window background exists to pre-empt the root view, so drifting from
     // it would reintroduce exactly the flash it was added to remove.
-    const background = (app: string): unknown =>
-      JSON.parse(readFileSync(path.join(repoRoot, 'apps', app, 'app.json'), 'utf8')).expo
-        .backgroundColor;
+    const background = (app: string): unknown => expoConfig(app).backgroundColor;
 
     expect(background('tv')).toBe(colors.screen);
     expect(background('controller')).toBe(colors.canvas);
+  });
+
+  it.each(['tv', 'controller'])('generates a branded native splash for %s', (app) => {
+    // Expo 57 accepts the old top-level splash field but Android prebuild does
+    // not apply it. Pin the plugin tuple that generated the inspected native
+    // resources so a config cleanup cannot quietly restore the target grid.
+    const plugin = expoConfig(app).plugins?.find(
+      (candidate) => Array.isArray(candidate) && candidate[0] === 'expo-splash-screen',
+    );
+
+    expect(plugin).toEqual([
+      'expo-splash-screen',
+      {
+        image: '../../packages/ui/assets/logo/huddle-symbol-orange.png',
+        imageWidth: 160,
+        resizeMode: 'contain',
+        backgroundColor: colors.canvas,
+      },
+    ]);
+
+    const image = (plugin as readonly [string, { readonly image: string }])[1].image;
+    expect(existsSync(path.resolve(repoRoot, 'apps', app, image))).toBe(true);
   });
 
   it('are actually recognised by the matcher guarding them', () => {

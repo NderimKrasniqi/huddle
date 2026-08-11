@@ -56,7 +56,8 @@
   - Done: `packages/game-core/src/game-module.ts` + `game-settings.ts` + `room-phase.ts` define metadata, min/max, config, lifecycle/pause, commands, public vs participant-private state, late-join and continue-after-leave; kept independent of Trivia.
 
 - [x] **2.2 — Build the game catalog and host configuration flow**
-  - Done: `packages/game-registry` (`registry.ts`, `browsing.ts`, `carousel.ts`) + host picker; TV mirrors selection/config; min/max enforced before start; config locked on start; non-host start rejected (tested).
+  - Done: `packages/game-registry` (`registry.ts`, `browsing.ts`, `carousel.ts`) + host picker; TV mirrors the browsing selection; min/max enforced before start; config locked on start; non-host start rejected (tested).
+  - Deferred: the approved shared TV Game Setup surface and its live projection of the Host's draft settings are tracked under the post-MVP pre-game flow work below.
 
 - [x] **2.3 — Implement the generic game-session lifecycle**
   - Done: `convex/convex/games.ts` runs room → configuring → active/paused → finished → room; host-authorized start/pause/resume/end/replay/end-room; ending discards game state but preserves room/participants/host; `games.test.ts` covers no-leak and stable room identity.
@@ -258,7 +259,7 @@ the existing public room/game contracts except for the intentional TV APIs and
 **Current feature:** —
 **Current phase:** —
 **Current task:** —
-**Last completed task:** 7.5.1 Re-audit packages, reconcile truth, and run release verification
+**Last completed task:** 8.1.1 Add branded native and in-app startup/loading feedback
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -486,14 +487,59 @@ approved Soft Minimal visuals/assets.
 
 ---
 
+# Feature 8 — F-008 Platform Startup and Loading Feedback
+
+Feature 8 fills the platform-owned gap between process launch and the first
+actionable Room/Join surface. It does not change room/game protocols, pre-game
+state, or game-module screens.
+
+## Phase 8.1 — Native startup and platform activity states
+
+- [x] **8.1.1 — Add branded native and in-app startup/loading feedback**
+  - Configure both Expo apps with the supplied orange Huddle symbol on the exact
+    Soft Minimal canvas for their static native splash.
+  - Replace the TV's empty Room/code fallback with a dedicated animated boot
+    surface for font startup, room creation, reconnection, and a non-spinning
+    configuration failure state over the established TV background.
+  - Replace the Controller's font/session blank frames with branded startup and
+    session-restoring surfaces; add visible activity feedback to Join, Start,
+    Continue/Wait, Leave, Back to lobby, and Host-management mutations; and
+    identify TV reconnection explicitly on the paused phone surface.
+  - Extend `@huddle/ui` motion with shared fade/scale, brand pulse, activity-dot,
+    and screen-transition primitives implemented with React Native `Animated`.
+    No Lottie or animation asset/runtime was added.
+  - Add pure presentation tests for TV/phone loading states and motion-token
+    tests.
+  - Verification: typecheck and lint pass; 67 app/package/lint-rule files with
+    640 tests and 6 Convex files with 197 tests pass; workflow and pack
+    validation pass; production Android exports pass for TV and Controller; and
+    clean Android prebuilds emit `Theme.SplashScreen` with `#FFF7F2`, the orange
+    Huddle symbol, and the TV Leanback manifest/icon/banner requirements. The
+    generated TV project also completes `:app:assembleRelease` (568 tasks,
+    release APK produced). Generated splash artwork was inspected at source
+    resolution; physical-device cold launch remains in the release matrix.
+  - **Depends on:** 7.5.1
+
+---
+
 # Deferred post-MVP and release work
 
 These are real follow-ups, not completed numbered tasks:
 
-- Adopt the newly approved TV Game setup, phone game-settings presets, and
-  phone finished-game references, reconciling their proposed navigation and
-  actions with the current generic runtime. The established 10-player cap and
-  module-owned metadata/settings remain authoritative over mock content.
+- Implement the approved pre-game TV flow as an explicit platform state:
+  - keep the TV on Browse Games while the Host scrolls on the phone and follow
+    the highlighted card;
+  - switch the TV to Game Setup only after the Host explicitly selects a game;
+  - mirror the Host phone's draft setting changes in the shared TV setup
+    projection until Start;
+  - treat Start as the phone action that validates requirements, locks settings,
+    and enters the game-owned runtime.
+  The established 10-player cap and module-owned metadata/settings remain
+  authoritative over mock content.
+- Adopt the phone game-settings presets and phone finished-game references,
+  reconciling their proposed actions with the platform lifecycle. The game
+  screen itself remains module-owned work and is separate from this platform
+  task.
 - Design the five implemented surfaces still missing approved treatment: TV
   Game frame, TV recovery status, phone Leave sheet, phone Game frame, and
   phone recovery status.

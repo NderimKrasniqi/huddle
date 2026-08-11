@@ -6,5 +6,12 @@
 export { Avatar, type AvatarProps, avatarArtwork } from './avatar';
 export { GameKeyArt } from './game-key-art';
 export { Icon, type IconProps } from './icon';
+export {
+  AnimatedScreen,
+  HuddleLoadingSurface,
+  type HuddleLoadingPlatform,
+  LoadingIndicator,
+  type LoadingIndicatorSize,
+} from './loading';
 export { Surface, type SurfaceProps } from './surface';
 export { Wordmark, type WordmarkProps } from './wordmark';

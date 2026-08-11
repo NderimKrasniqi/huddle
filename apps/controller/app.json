@@ -8,6 +8,7 @@
     "userInterfaceStyle": "light",
     "//backgroundColor": "Soft Minimal's `colors.canvas`, the token phone-screen.tsx paints \u2014 see the note in apps/tv/app.json for why the value is written out rather than imported.",
     "backgroundColor": "#FFF7F2",
+    "//splash": "The expo-splash-screen plugin below is the native source of truth. Expo 57's legacy top-level splash field still parses but does not replace the generated grey target-grid placeholder.",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.controller",
@@ -27,7 +28,16 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "../../packages/ui/assets/logo/huddle-symbol-orange.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFF7F2"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
