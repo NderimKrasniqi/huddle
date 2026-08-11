@@ -1,7 +1,13 @@
 import { api } from '@huddle/convex';
-import { gamePlayersFrom, type GameEvent, type GameModule, type GamePlayer } from '@huddle/game-core';
+import {
+  gamePlayersFrom,
+  ROOM_PLAYER_CAP,
+  type GameEvent,
+  type GameModule,
+  type GamePlayer,
+} from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
-import { Avatar, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, GameKeyArt, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -176,7 +182,6 @@ export function InGameScreen({
 
 /** Finished-player/finished-Host shells shared by every game module. */
 export function FinishedScreen({
-  code,
   module,
   state,
   roster,
@@ -185,7 +190,6 @@ export function FinishedScreen({
   onChooseAnotherGame,
   onManagePlayers,
 }: {
-  readonly code: string;
   readonly module: GameModule;
   readonly state: unknown;
   readonly roster: readonly RosterSeat[];
@@ -204,6 +208,9 @@ export function FinishedScreen({
   const summary = module.finishedSummary?.(state);
   const results: readonly { readonly playerId: string; readonly score?: number }[] =
     summary?.standings ?? roster.map((seat) => ({ playerId: seat.playerId }));
+  const winner = results[0] === undefined ? undefined : roster.find((seat) => seat.playerId === results[0]?.playerId);
+  const host = roster.find((seat) => seat.host);
+  const winnerScore = results[0]?.score;
 
   async function run(action: 'replay' | 'choose' | 'manage') {
     setBusy(action);
@@ -226,78 +233,130 @@ export function FinishedScreen({
   }
 
   return (
-    <PhoneScreen>
-      <SeatedHeader trailing={<Surface elevation={elevation.phoneSmall} style={styles.codeChip}><Text style={styles.codeChipText}>{code}</Text></Surface>} />
-      {player?.avatar === undefined ? null : <Avatar avatar={player.avatar} size={96} />}
-      <Text style={styles.title}>{youAreHost ? `${module.metadata.title} complete` : 'You’re finished'}</Text>
-      <Text style={[styles.waitingFor, styles.asideCentred]}>
-        {youAreHost
-          ? `${roster.length} players are ready. Choose what happens next.`
-          : 'The Host is choosing what happens next.'}
-      </Text>
+    <PhoneScreen contentStyle={youAreHost ? styles.finishedHostContent : styles.finishedPlayerContent}>
+      <SeatedHeader trailing={null} />
 
       {youAreHost ? (
-        <View style={styles.field}>
-          <PrimaryButton
-            label={busy === 'replay' ? 'Starting…' : 'Replay with this roster'}
-            trailingIcon="arrow-right"
-            enabled={busy === undefined}
-            onPress={() => void run('replay')}
-          />
-          <Pressable
-            style={styles.stretch}
-            disabled={busy !== undefined}
-            onPress={() => void run('choose')}
-            accessibilityRole="button"
-          >
-            {({ pressed }) => (
-              <Surface
-                elevation={elevation.phoneCard}
-                style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
-              >
-                <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>
-                  {busy === 'choose' ? 'Returning…' : 'Choose another game'}
-                </Text>
-              </Surface>
-            )}
-          </Pressable>
-          <Pressable
-            style={styles.stretch}
-            disabled={busy !== undefined}
-            onPress={() => void run('manage')}
-            accessibilityRole="button"
-          >
-            {({ pressed }) => (
-              <Surface
-                elevation={elevation.phoneCard}
-                style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
-              >
-                <Icon name="players" size={18} color={colors.ink} />
-                <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>Manage players</Text>
-              </Surface>
-            )}
-          </Pressable>
-          <View style={styles.finishedRoster}>
-            <Text style={styles.settingLabel}>{summary?.title ?? 'RESULTS'}</Text>
-            {results.map((standing) => {
-              const seat = roster.find((candidate) => candidate.playerId === standing.playerId);
-              if (seat === undefined) return null;
-              return (
-              <View key={seat.playerId} style={styles.finishedRosterRow}>
-                <Avatar avatar={seat.avatar} size={28} />
-                <Text style={styles.rosterName}>{seat.nickname}</Text>
-                {standing.score === undefined ? null : <Text style={styles.presetValue}>{standing.score}</Text>}
-                {seat.host ? <Icon name="crown" size={16} color={colors.accent} /> : null}
-              </View>
-              );
-            })}
+        <>
+          <View style={styles.finishedHero}>
+            <GameKeyArt
+              gameId={module.metadata.id}
+              title={module.metadata.title}
+              color={module.metadata.keyArt.color}
+              style={styles.finishedHeroArt}
+            />
+            <View style={styles.finishedHeroCopy}>
+              <Text style={styles.finishedHeroTitle}>{module.metadata.title} finished</Text>
+              <Text style={styles.finishedHeroSubtitle}>Great game, everyone! 🎉</Text>
+            </View>
           </View>
-        </View>
+
+          <Surface elevation={elevation.phoneCard} style={styles.finishedSummaryCard}>
+            <Text style={styles.finishedSummaryLabel}>RESULT SUMMARY</Text>
+            <View style={styles.finishedSummaryStats}>
+              <View style={styles.finishedSummaryStat}>
+                <View style={[styles.finishedStatIcon, styles.finishedStatIconWinner]}>
+                  <Icon name="crown" size={24} color={colors.accent} />
+                </View>
+                <Text style={styles.finishedStatValue}>{winner?.nickname ?? '—'}</Text>
+                <Text style={styles.finishedStatLabel}>Winner</Text>
+              </View>
+              <View style={styles.finishedSummaryStat}>
+                <View style={[styles.finishedStatIcon, styles.finishedStatIconScore]}>
+                  <Text style={styles.finishedStatGlyph}>★</Text>
+                </View>
+                <Text style={styles.finishedStatValue}>{winnerScore ?? '—'}</Text>
+                <Text style={styles.finishedStatLabel}>Top score</Text>
+              </View>
+              <View style={styles.finishedSummaryStat}>
+                <View style={[styles.finishedStatIcon, styles.finishedStatIconPlayers]}>
+                  <Icon name="players" size={24} color={colors.justJoined} />
+                </View>
+                <Text style={styles.finishedStatValue}>{roster.length}</Text>
+                <Text style={styles.finishedStatLabel}>Players joined</Text>
+              </View>
+            </View>
+          </Surface>
+
+          <View style={styles.field}>
+            <PrimaryButton
+              label={busy === 'replay' ? 'Starting…' : 'Play again'}
+              enabled={busy === undefined}
+              onPress={() => void run('replay')}
+            />
+            <Pressable
+              style={styles.stretch}
+              disabled={busy !== undefined}
+              onPress={() => void run('choose')}
+              accessibilityRole="button"
+            >
+              {({ pressed }) => (
+                <Surface
+                  elevation={elevation.phoneCard}
+                  style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
+                >
+                  <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>
+                    {busy === 'choose' ? 'Returning…' : 'Choose another game'}
+                  </Text>
+                </Surface>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.stretch}
+              disabled={busy !== undefined}
+              onPress={() => void run('manage')}
+              accessibilityRole="button"
+            >
+              {({ pressed }) => (
+                <Surface
+                  elevation={elevation.phoneCard}
+                  style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
+                >
+                  <Icon name="players" size={18} color={colors.ink} />
+                  <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>Manage players</Text>
+                </Surface>
+              )}
+            </Pressable>
+          </View>
+
+          <View style={styles.finishedRoomFooter}>
+            <View style={styles.statusDot} />
+            <View style={styles.finishedRoomFooterCopy}>
+              <Text style={styles.finishedRoomTitle}>You’re back in your room</Text>
+              <Text style={styles.finishedRoomSubtitle}>
+                {roster.length} of {ROOM_PLAYER_CAP} players in the room
+              </Text>
+            </View>
+          </View>
+        </>
       ) : (
-        <View style={styles.explainer}>
-          <Icon name="tv" size={30} color={colors.mutedText} />
-          <Text style={styles.explainerText}>Stay here — the Host is waiting for the room.</Text>
-        </View>
+        <>
+          {player?.avatar === undefined ? null : <Avatar avatar={player.avatar} size={96} />}
+          <Text style={styles.title}>Nice game!</Text>
+          <Text style={styles.finishedPlayerGameLine}>🎉 {module.metadata.title} finished</Text>
+          <Text style={[styles.waitingFor, styles.asideCentred]}>
+            Waiting for {host?.nickname ?? 'the Host'} to choose what’s next.
+          </Text>
+
+          <Surface elevation={elevation.phoneCard} style={styles.finishedActiveCard}>
+            <View style={styles.statusDot} />
+            <View style={styles.finishedActiveCopy}>
+              <Text style={styles.finishedActiveTitle}>Room is still active</Text>
+              <Text style={styles.finishedActiveSubtitle}>{roster.length} players in the room</Text>
+            </View>
+            <View style={styles.finishedActiveBadge}>
+              <Text style={styles.finishedActiveBadgeText}>ACTIVE</Text>
+            </View>
+          </Surface>
+
+          <View style={styles.explainer}>
+            <Icon name="gamepad" size={30} color={colors.mutedText} />
+            <View style={styles.finishedPlayerExplainerCopy}>
+              <Text style={styles.finishedPlayerExplainerTitle}>{host?.nickname ?? 'The Host'} is the host</Text>
+              <Text style={styles.explainerText}>They can play again or choose another game.</Text>
+            </View>
+          </View>
+        </>
       )}
       {failure === undefined ? null : <Text style={styles.failure}>{failure}</Text>}
     </PhoneScreen>

@@ -173,7 +173,7 @@ before it is trusted to the pixel.
 | Lobby (host) | `SeatedScreen` | `02-your-room-host.png`, `04-pick-a-game-host.png` | Room and picker states |
 | Lobby (player) | `SeatedScreen` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
-| Game settings (host) | `SettingsControls` in the picker | `06`–`08-game-settings-host-*` | Host edits draft settings here; TV Game Setup mirrors them until Start |
+| Game settings (host) | `GameSettingsScreen` + `SettingsControls` | `06`–`08-game-settings-host-*` | Explicit selection opens a dedicated settings state; TV Game Setup mirrors the shared draft until Start |
 | Finished game | `FinishedScreen` + module summary | `09-game-finished-player.png`, `10-game-finished-host.png` | Host can replay, choose another game, or manage players; non-Hosts wait for that room-level decision |
 | Leave | `LeaveRoomSheet` | **none** | The board draws the pill, not the sheet |
 | Game frame | `InGameScreen` | **none** | Needs design |
@@ -253,15 +253,22 @@ This is also why the final board drops "You're in (player)". That screen existed
 to claim a color; with the choice made on the join form it has nothing left to
 do. The player lobby survives as `05-waiting-player.png`.
 
-**The lobby stays one component, and is now two states.** *(Settled; this entry
-used to read "stays one screen".)* The board draws "Your room" and "Pick a game"
-as separate screens and they now are — but as two states of `SeatedScreen`,
+**The lobby stays one component across distinct visual states.** *(Settled; this
+entry used to read "stays one screen".)* The board draws "Your room" and "Pick a
+game" as separate screens and they now are — but as states of `SeatedScreen`,
 not two routes. That distinction is the whole entry: the seat, the roster
 subscription, the running-game query and the Host's chosen settings all have to
 survive moving between them and a route would remount every one, which is the
 problem the original merge solved. What the merge got wrong was drawing both at
 once: the roster carries news nothing else in the product carries, and it was
 the section a Host scrolled past to reach the picker.
+
+An explicit game selection now replaces the carousel with a third visual state,
+the dedicated `GameSettingsScreen`, while remaining inside `SeatedScreen` for
+the same subscription-lifetime reason. The selected game is a compact summary
+there; the carousel itself is not retained above settings. Back/Change cancels
+the shared setup draft and returns to the picker, while Your room cancels it and
+returns to the Host roster.
 
 When the Host chooses **Back to lobby** after a game, it lands on **Your room**,
 not on the picker the Host left. The newly approved finished-state actions may

@@ -95,6 +95,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
           color={keyArt.color}
           style={StyleSheet.absoluteFill}
         />
+        {game.placeholder ? <PlaceholderBadge /> : null}
         <Text style={styles.keyArtTitle}>{title}</Text>
       </View>
 
@@ -129,8 +130,17 @@ function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
           color={game.metadata.keyArt.color}
           style={StyleSheet.absoluteFill}
         />
+        {game.placeholder ? <PlaceholderBadge /> : null}
         <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>
       </View>
+    </View>
+  );
+}
+
+function PlaceholderBadge() {
+  return (
+    <View style={styles.placeholderBadge}>
+      <Text style={styles.placeholderBadgeText}>COMING SOON</Text>
     </View>
   );
 }

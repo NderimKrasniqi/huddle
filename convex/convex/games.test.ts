@@ -6,7 +6,7 @@ import {
   settingsFrom,
   type GameLifecycleRejection,
 } from '@huddle/game-core';
-import { GAME_REGISTRY } from '@huddle/game-registry';
+import { CAROUSEL_REGISTRY } from '@huddle/game-registry';
 import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
@@ -1600,7 +1600,7 @@ describe('the carousel the Host browses', () => {
     // card, not an error on a television.
     await t.mutation(api.games.browseGame, { sessionToken: host, index: 99 });
 
-    expect(await t.query(api.games.browsing, { roomId })).toBe(GAME_REGISTRY.length - 1);
+    expect(await t.query(api.games.browsing, { roomId })).toBe(CAROUSEL_REGISTRY.length - 1);
   });
 
   it('refuses a phone that is not the Host', async () => {

@@ -126,6 +126,19 @@ export const styles = StyleSheet.create({
     lineHeight: 40,
     textAlign: 'center',
   },
+  placeholderBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: colors.ink,
+    borderRadius: radius.chip,
+    opacity: 0.9,
+  },
+  placeholderBadgeText: {
+    color: colors.inverse,
+    fontFamily: fontFamily.semibold,
+    fontSize: 16,
+    letterSpacing: 1.2,
+  },
 
   // The dots and the line side by side rather than stacked. §6 asks for "page
   // dots + '<Host> is browsing on their phone'" and does not say in which

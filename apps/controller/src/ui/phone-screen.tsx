@@ -1,6 +1,13 @@
 import { colors } from '@huddle/ui';
 import { type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -14,7 +21,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  * rather than typed behind, and a scroll for the short screens where a raised
  * keyboard leaves less room than the content needs.
  */
-export function PhoneScreen({ children }: { readonly children: ReactNode }) {
+export function PhoneScreen({
+  children,
+  contentStyle,
+}: {
+  readonly children: ReactNode;
+  readonly contentStyle?: StyleProp<ViewStyle>;
+}) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -25,7 +38,7 @@ export function PhoneScreen({ children }: { readonly children: ReactNode }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, contentStyle]}
           // So the first tap on Join lands on Join rather than being spent
           // dismissing the keyboard the player is still typing on.
           keyboardShouldPersistTaps="handled"
@@ -47,10 +60,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    // Centred while the content fits, scrollable the moment it does not.
+    // Screens begin below the safe area, as the approved phone boards do. The
+    // former vertical centring put short lobby states halfway down tall phones
+    // and made every first action look detached from its header.
     flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: 28,
     paddingHorizontal: 24,
     paddingVertical: 32,

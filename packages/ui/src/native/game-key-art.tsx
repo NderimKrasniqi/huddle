@@ -9,6 +9,7 @@ const artwork: Record<string, typeof triviaArt> = {
   trivia: triviaArt,
   voting: wordGameArt,
   'draw-battle': drawingArt,
+  'word-sneak': wordGameArt,
 };
 
 /** Shared key-art renderer with a palette fallback for future registry entries. */

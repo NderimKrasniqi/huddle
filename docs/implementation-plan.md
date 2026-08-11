@@ -547,6 +547,44 @@ platform.
     projection, session, dependency, or client-bundle boundaries.
   - **Depends on:** 8.1.1
 
+- [x] **9.1.2 — Separate game selection from Host settings**
+  - Replace the combined carousel-plus-settings column with a dedicated
+    `GameSettingsScreen` state after an explicit selection. Keep the state under
+    `SeatedScreen` so room/session subscriptions survive the transition, and
+    retain shared setup-draft mirroring on TV.
+  - Give the settings state its own compact selected-game summary, preset/custom
+    controls, joining notice, Start action, and Change game path. Cancelling a
+    selection returns to the carousel instead of leaving its hero above the
+    settings controls. Opening the picker publishes its initial card immediately
+    so the TV does not wait for the first arrow tap.
+  - Verification: Controller typecheck passes; the iPhone Simulator transitions
+    from Select Trivia to the dedicated Standard settings screen; Quick changes
+    the authoritative preset values; Custom exposes compact numeric, option, and
+    category controls; the visible Android TV emulator switches to Game Setup
+    and mirrors the selected Quick/Custom values and room code.
+  - **Depends on:** 9.1.1
+
+- [x] **9.1.3 — Tighten approved settings composition and startup continuity**
+  - Match the approved phone settings hierarchy with large mode tiles, an icon-led
+    preset summary, a green joining notice, compact custom rows, and a labelled
+    Start action. Keep the authoritative game schema and room-cap rules unchanged.
+  - Hold the native splash until the first branded, font-ready React frame on
+    Controller and TV; keep phone lobby content top-aligned so short states do not
+    float in the middle of a tall handset.
+  - Recompose the platform-owned finished phone states around the approved
+    result-summary Host board and active-room player board; keep module-owned
+    scores and the 2–10 room cap authoritative.
+  - Keep the two installed games startable while appending Draw Battle and Word
+    Sneak as reference-only carousel placeholders. They share the room's
+    browsing index so the Host can scroll through the reference treatment,
+    but their disabled Coming soon cards never enter game setup or Convex game
+    selection.
+  - Verification: cold iPhone launch captures the branded Huddle mark before the
+    restored settings screen; Android TV cold launch captures the branded room
+    creation surface; Controller/TV typechecks, ESLint, 26 app test files (235
+    tests), UI palette/icon tests (28 tests), and `git diff --check` pass.
+  - **Depends on:** 9.1.2
+
 ---
 
 # Deferred post-MVP and release work

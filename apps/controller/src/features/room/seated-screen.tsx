@@ -206,7 +206,6 @@ export function SeatedScreen({
   if (screen.kind === 'finished') {
     return (
       <FinishedScreen
-        code={code}
         module={screen.module}
         state={screen.state}
         roster={roster}

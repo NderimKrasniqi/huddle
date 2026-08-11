@@ -1,7 +1,14 @@
 import type { GameModule } from '@huddle/game-core';
 
 import { clampBrowsingIndex } from './browsing';
+import { CAROUSEL_PLACEHOLDERS } from './carousel-placeholders';
 import { GAME_REGISTRY } from './registry';
+
+/** The installed games followed by the reference-only cards. */
+export const CAROUSEL_REGISTRY: readonly GameModule[] = [
+  ...GAME_REGISTRY,
+  ...CAROUSEL_PLACEHOLDERS,
+];
 
 /**
  * The carousel, as both clients read it: which game is focused, and what sits
@@ -35,7 +42,7 @@ export type CarouselWindow = {
  * `undefined` is a room nobody has browsed in yet, which is the first card.
  */
 export function browsingIndex(stored: number | undefined | null): number {
-  return clampBrowsingIndex(stored, GAME_REGISTRY.length);
+  return clampBrowsingIndex(stored, CAROUSEL_REGISTRY.length);
 }
 
 /**
@@ -44,15 +51,16 @@ export function browsingIndex(stored: number | undefined | null): number {
  * `undefined` only if nothing is installed, which no build ships — it is here
  * so the screens have something to draw rather than an entry to assume.
  *
- * A card's neighbours are its real Registry siblings, and the list does not
+ * A card's neighbours are its carousel siblings, and the list does not
  * wrap: the first card's `previous` and the last card's `next` are `undefined`,
  * so the Host's arrows die at the ends rather than looping the focus back to a
- * card already on screen. With Trivia and Hot Takes installed the focused card
- * has exactly one neighbour at each end of the list.
+ * card already on screen. The installed games lead the list and the two
+ * reference-only cards keep the future carousel positions reachable without
+ * making those games selectable.
  */
 export function carouselWindow(index: number): CarouselWindow | undefined {
   const at = browsingIndex(index);
-  const focused = GAME_REGISTRY[at];
+  const focused = CAROUSEL_REGISTRY[at];
 
   if (focused === undefined) {
     return undefined;
@@ -61,9 +69,9 @@ export function carouselWindow(index: number): CarouselWindow | undefined {
   return {
     index: at,
     focused,
-    previous: GAME_REGISTRY[at - 1],
-    next: GAME_REGISTRY[at + 1],
-    total: GAME_REGISTRY.length,
+    previous: CAROUSEL_REGISTRY[at - 1],
+    next: CAROUSEL_REGISTRY[at + 1],
+    total: CAROUSEL_REGISTRY.length,
   };
 }
 
@@ -76,5 +84,5 @@ export function previousIndex(index: number): number | undefined {
 /** Where the Host's "next" button goes, or `undefined` if it cannot. */
 export function nextIndex(index: number): number | undefined {
   const at = browsingIndex(index);
-  return at < GAME_REGISTRY.length - 1 ? at + 1 : undefined;
+  return at < CAROUSEL_REGISTRY.length - 1 ? at + 1 : undefined;
 }

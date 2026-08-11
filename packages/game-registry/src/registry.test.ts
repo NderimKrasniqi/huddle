@@ -7,6 +7,8 @@ import { triviaGameModule } from '@huddle/game-trivia';
 import { votingGameModule } from '@huddle/game-voting';
 import { describe, expect, it } from 'vitest';
 
+import { CAROUSEL_REGISTRY } from './carousel';
+import { CAROUSEL_PLACEHOLDER_IDS } from './carousel-catalog';
 import { GAME_LOGIC_REGISTRY, gameLogicById } from './logic';
 import { GAME_REGISTRY } from './registry';
 
@@ -33,6 +35,16 @@ function settingsDefaultingOutsideTheirOptions(schema: GameSettingsSchema): stri
 describe('the Registry', () => {
   it('installs trivia and the voting game, in that order', () => {
     expect(GAME_REGISTRY).toEqual([triviaGameModule, votingGameModule]);
+  });
+
+  it('keeps the reference-only cards in the carousel without installing them', () => {
+    expect(CAROUSEL_REGISTRY.map((game) => game.metadata.id)).toEqual([
+      ...GAME_REGISTRY.map((game) => game.metadata.id),
+      ...CAROUSEL_PLACEHOLDER_IDS,
+    ]);
+    expect(CAROUSEL_REGISTRY.slice(GAME_REGISTRY.length).every((game) => game.placeholder)).toBe(
+      true,
+    );
   });
 
   it('gives every game a name of its own, since a room stores the id', () => {
@@ -119,5 +131,7 @@ describe('the Registry the server reads', () => {
     // "No such game" is what a room turns into its refusal, so it has to be a
     // value the caller can look at.
     expect(gameLogicById('charades')).toBeUndefined();
+    expect(gameLogicById(CAROUSEL_PLACEHOLDER_IDS[0])).toBeUndefined();
+    expect(gameLogicById(CAROUSEL_PLACEHOLDER_IDS[1])).toBeUndefined();
   });
 });
