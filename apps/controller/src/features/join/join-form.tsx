@@ -7,7 +7,7 @@ import { useMutation } from 'convex/react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { PhoneScreen, controllerStyles as styles } from '../../ui/native';
+import { PhoneScreen } from '../../ui/native';
 import { phoneSessionTokenStore, rememberSession, type PlayerSession } from '../../platform/session';
 import { phoneIdentityStore } from '../../platform/storage';
 import {
@@ -22,6 +22,7 @@ import {
   rememberName,
   shouldMoveToNickname,
 } from './index';
+import { styles } from './styles';
 
 const CARET_BLINK_MS = 530;
 const AVATAR_TILE = 64;
@@ -58,7 +59,7 @@ export function JoinForm({
   // field: `touched` latches the first keystroke, so a slow read that lands
   // after the player has started typing their own name is ignored rather than
   // allowed to overwrite it. Read once per mount — the form remounts on a new
-  // Join Link (see `JoinScreen`), which re-asks on its own.
+  // Join Link (see `ControllerScreen`), which re-asks on its own.
   const touched = useRef(false);
   useEffect(() => {
     let active = true;

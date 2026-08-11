@@ -18,7 +18,7 @@ import { keepRoomPresent, useRoomExpiry, useRoomOpening } from '../platform/room
 import { tvSurface } from './tv-surface';
 
 /**
- * Production counterpart to the standalone prototype's `HuddleTVRoot`.
+ * The TV route coordinator owns room opening, subscriptions, and surface selection.
  *
  * The real app owns the TV session and Convex subscriptions here instead of
  * accepting a demo view model: room, browse, setup, and runtime phases remain

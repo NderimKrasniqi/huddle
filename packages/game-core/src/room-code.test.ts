@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   generateRoomCode,
+  normalizeRoomCode,
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_MINT_ALPHABET,
   ROOM_CODE_LENGTH,
@@ -75,6 +76,13 @@ describe('generateRoomCode', () => {
 
     expect(everyLetter).toEqual(new Set(ROOM_CODE_MINT_ALPHABET));
     expect(everyLetter.has('I')).toBe(true);
+  });
+});
+
+describe('normalizeRoomCode', () => {
+  it('canonicalizes case and surrounding input whitespace without validating the code', () => {
+    expect(normalizeRoomCode('  kwrd  ')).toBe('KWRD');
+    expect(normalizeRoomCode('A 1')).toBe('A 1');
   });
 });
 

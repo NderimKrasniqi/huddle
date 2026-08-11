@@ -6,4 +6,3 @@ export {
   RoomCodeChip,
   SeatedHeader,
 } from './controller-components';
-export { controllerStyles } from './controller-styles';

@@ -4,7 +4,7 @@ import { HuddleLogo } from '@huddle/ui/kit';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { controllerStyles as styles } from './controller-styles';
+import { styles } from './styles';
 
 export function SeatedHeader({ trailing }: { readonly trailing: ReactNode }) {
   return (

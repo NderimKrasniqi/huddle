@@ -517,9 +517,9 @@ export const continueAfterDisconnect = mutation({
  * The index is clamped rather than refused (`browsingIndex`): it is a position
  * in a list that differs between builds, so a phone browsing past what this
  * deployment installs gets the nearest card instead of an error. Browsing is
- * also allowed mid-game and while the TV is away — the carousel is lobby
- * furniture, and retaining the Host's draft lets the TV resume on the same
- * selection when it reconnects.
+ * allowed mid-game, but while the TV is away the Host remains authorized and
+ * the mutation is a deliberate no-op so the carousel can resume from its last
+ * committed selection when the display reconnects.
  */
 export const browseGame = mutation({
   args: { sessionToken: v.string(), index: v.number() },
