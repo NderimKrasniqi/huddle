@@ -19,7 +19,7 @@ import { PickAGameScreen } from '../features/game-picker/native';
 import { BackToLobbyControl, FinishedScreen, GameRuntimeStatusScreen, InGameScreen } from '../features/game-session/native';
 import { useHeartbeat } from '../platform/presence';
 import { phoneSessionTokenStore, type PlayerSession, useSessionToken } from '../platform/session';
-import { OutlinePill, PhoneScreen, PrimaryButton, RoomCodeChip, SeatedHeader, controllerStyles as styles } from '../ui/native';
+import { OutlinePill, PhoneScreen, PrimaryButton, RoomCodeChip, SeatedHeader } from '../ui/native';
 import {
   hostControlFailureMessage,
   hostControlRejectionMessage,
@@ -39,6 +39,7 @@ import {
   type RosterRowSlot,
   type RosterSeat,
 } from '../features/room';
+import { styles } from './seated-controller-styles';
 
 const ROSTER_AVATAR = 36;
 const WAITING_AVATAR = 176;
@@ -169,7 +170,7 @@ export function SeatedController({
   // answer, and it is the same one the television gives — a game ending is the
   // moment a party takes stock of who is still in the room, and people have
   // come and gone during it. Adjusted during render, which is React's own way
-  // to reset state when an input changes, and the pattern `JoinScreen` already
+  // to reset state when an input changes, and the pattern `ControllerScreen` already
   // uses for its notice.
   const inGame = screen.kind === 'game';
   const [wasInGame, setWasInGame] = useState(inGame);

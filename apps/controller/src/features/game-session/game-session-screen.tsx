@@ -15,9 +15,10 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { RosterSeat } from '../../models';
 import { phoneSessionTokenStore, type PlayerSession } from '../../platform/session';
-import { PhoneScreen, PrimaryButton, SeatedHeader, controllerStyles as styles } from '../../ui/native';
+import { PhoneScreen, PrimaryButton, SeatedHeader } from '../../ui/native';
 import { backToLobbyLabel } from './game-controls';
 import { lifecycleFailureMessage } from './game-rejection';
+import { styles } from './styles';
 
 export function GameRuntimeStatusScreen({
   status,

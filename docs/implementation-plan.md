@@ -62,7 +62,7 @@
   - Done: `convex/convex/games.ts` runs room → configuring → active/paused → finished → room; host-authorized start/pause/resume/end/replay/end-room; ending discards game state but preserves room/participants/host; `games.test.ts` covers no-leak and stable room identity.
 
 - [x] **2.4 — Build the Voting/Test game as the second module**
-  - Done: `packages/games/voting` ("Hot Takes") is a `GameModule` built only against `@huddle/game-core`; registered by one entry in `GAME_REGISTRY` + `GAME_LOGIC_REGISTRY`, with **no** edits to `convex/convex/{rooms,players,games}.ts`. Vote privacy is structural — the state stores an anonymous per-option tally plus a set of who-has-voted, never attribution — so no payload can name a voter's choice even though the hub returns state whole. Both beats run on the room's own clock; away-aware early reveal mirrors Trivia. 36 new Vitest tests; typecheck/lint/tests green (702). Independent code-review and security-review both PASS.
+  - Done: `packages/games/voting` ("Hot Takes") is a `GameModule` built only against `@huddle/game-core`; registered by one matching entry in the client `GAME_REGISTRY` and server `GAME_LOGIC_REGISTRY`, with **no** edits to `convex/convex/{rooms,players,games}.ts`. Vote privacy is structural — the state stores an anonymous per-option tally plus a set of who-has-voted, never attribution — so no payload can name a voter's choice even though the hub returns state whole. Both beats run on the room's own clock; away-aware early reveal mirrors Trivia. 36 new Vitest tests; typecheck/lint/tests green (702). Independent code-review and security-review both PASS.
 
 - [x] **2.5 — Enforce authorization and privacy boundaries**
   - Done: public Convex functions validate input/return shapes; participant actions require the Session Token; host commands require host authority; private state is projected only to the entitled participant; `players.test.ts`/`games.test.ts` prove unauthorized commands and private-state reads are rejected.
@@ -550,7 +550,7 @@ platform.
 - [x] **9.1.2 — Separate game selection from Host settings**
   - Replace the combined carousel-plus-settings column with a dedicated
     `GameSettingsScreen` state after an explicit selection. Keep the state under
-    `SeatedScreen` so room/session subscriptions survive the transition, and
+    `SeatedController` so room/session subscriptions survive the transition, and
     retain shared setup-draft mirroring on TV.
   - Give the settings state its own compact selected-game summary, preset/custom
     controls, joining notice, Start action, and Change game path. Cancelling a
@@ -596,14 +596,14 @@ Soft Minimal visuals stable.
 
 ## Phase 10.1 — Contracts, documentation, and validation
 
-- [ ] **10.1.1 — Record F-010 architecture and naming truth**
+- [x] **10.1.1 — Record F-010 architecture and naming truth**
   - Add the scope, dependency direction, entrypoint policy, naming vocabulary,
     renderer-test strategy, and TV-away browse rule to the project documents.
-- [ ] **10.1.2 — Extend architecture validation**
+- [x] **10.1.2 — Extend architecture validation**
   - Add isolated fixture coverage for forbidden dependency directions, cycles,
     entrypoint contents, and filename conventions before enabling the checks on
     the repository. Preserve the client/server registry seam and parity tests.
-- [ ] **10.1.3 — Add the shared room-code contract**
+- [x] **10.1.3 — Add the shared room-code contract**
   - Export `normalizeRoomCode` from `@huddle/game-core`; use it from join,
     session, and Convex normalization without changing accepted codes.
   - Make host-authorized `games.browseGame` return `null` without changing the
@@ -611,12 +611,12 @@ Soft Minimal visuals stable.
 
 ## Phase 10.2 — Controller ownership and renderers
 
-- [ ] **10.2.1 — Introduce Controller models and seated coordinator**
+- [x] **10.2.1 — Introduce Controller models and seated coordinator**
   - Move `RosterSeat` and lifecycle rejection presentation into `models/`,
     rename the root to `ControllerScreen`, and move seated subscriptions,
     heartbeat/session composition, picker/setup persistence, surface selection,
     and transitions into `screens/seated-controller.tsx`.
-- [ ] **10.2.2 — Split Controller feature renderers and styles**
+- [x] **10.2.2 — Split Controller feature renderers and styles**
   - Separate Room waiting/room renderers, roster, greeting, manage/leave
     sheets, picker browsing/settings/cards/controls, and game-session
     running/recovery/finished/lifecycle controls. Remove the monolithic
@@ -624,11 +624,11 @@ Soft Minimal visuals stable.
 
 ## Phase 10.3 — TV ownership and layout
 
-- [ ] **10.3.1 — Introduce TV models and shared header layout**
+- [x] **10.3.1 — Introduce TV models and shared header layout**
   - Rename the root to `TvScreen`, move roster projection to `models/roster.ts`,
     and extract `ui/tv-layout.ts` plus `ui/tv-header.tsx` while Room retains
     only Room-specific geometry.
-- [ ] **10.3.2 — Split TV Room and lifecycle responsibilities**
+- [x] **10.3.2 — Split TV Room and lifecycle responsibilities**
   - Separate Room stage/code-QR/player-grid/greeting/roster/layout modules;
     rename generic room/session files by responsibility; split opening and
     expiry hooks; remove empty duplicate feature entrypoints and narrow the
@@ -636,29 +636,33 @@ Soft Minimal visuals stable.
 
 ## Phase 10.4 — Workspace and tooling structure
 
-- [ ] **10.4.1 — Move the UI kit and private backend helpers**
+- [x] **10.4.1 — Move the UI kit and private backend helpers**
   - Place the Huddle Kit implementation in `packages/ui/src/kit/` with stable
     `@huddle/ui/kit` exports, and rename private Convex helper files to
     kebab-case without changing public modules/functions.
-- [ ] **10.4.2 — Rehome evidence and visual fixtures**
+- [x] **10.4.2 — Rehome evidence and visual fixtures**
   - Keep executable scripts in `tools/`, move design/regression evidence to
     `docs/evidence/`, and move the visual-fixture manifest/inventory test to
     `test/visual-fixtures/` with updated Vitest paths and documentation.
 
 ## Phase 10.5 — Rendered tests and release gates
 
-- [ ] **10.5.1 — Add per-app Jest/RNTL projects**
+- [x] **10.5.1 — Add per-app Jest/RNTL projects**
   - Use Jest/jest-expo with RNTL 14.0.1 and the React 19.2 test-renderer line;
     name rendered tests `*.render.test.tsx`, exclude them from Vitest, and run
     both apps from root and CI with async accessibility-first queries.
-- [ ] **10.5.2 — Run the complete verification set**
+- [x] **10.5.2 — Run the complete verification set**
   - Cover Controller and TV surfaces, architecture fixtures, TV-away browse,
     room-code normalization, registry parity/isolation, typecheck, lint,
     Vitest/Jest, workflow/packs, dependency/security checks, Expo exports,
     Android TV prebuild metadata, simulator captures, and `git diff --check`.
 
-**Status:** in progress. The final closeout will replace these checkboxes with
-evidence and record any release-only hardware checks as deferred.
+**Status:** complete for repository automation. Evidence: `pnpm typecheck`,
+`pnpm lint`, 74 Vitest files / 858 tests, both Jest rendered suites, isolated
+architecture fixtures, `pnpm validate:workflow`, pack validation, and
+`git diff --check` pass. Expo exports, Android TV prebuild metadata, and
+physical mixed-hardware captures remain release checks because they require
+native/device state and are not replaced by rendered tests.
 
 # Reported QA findings — 2026-08-11
 
@@ -770,7 +774,7 @@ request to discard the current data, authorization, or game-module boundaries.
   `ControllerScreen`; it has no equivalent reference preview menu. Decide
   whether a dev-only parity harness is required so every reference state can be
   captured deterministically without live room data.
-- **TV root and preview shell** — `HuddleTVRoot`, `TVPreviewApp`, and the
+- **TV root and preview shell** — `TvScreen`, `TVPreviewApp`, and the
   reference `tv/types.ts` provide a demo view model plus Room/Browse/Setup phase
   cycling (including D-pad LEFT/RIGHT). The current `TvScreen` is a production
   Convex/session coordinator and does not expose that standalone preview shell.

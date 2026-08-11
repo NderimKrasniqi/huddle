@@ -170,8 +170,8 @@ before it is trusted to the pixel.
 |---|---|---|---|
 | Startup / session restore | `PhoneLoadingScreen` | Platform treatment | Supplied Huddle symbol/wordmark on the canvas; replaces font/session blank frames |
 | Join | `JoinForm` | `01-join-room.png` | Now carries avatar selection |
-| Lobby (host) | `SeatedScreen` | `02-your-room-host.png`, `04-pick-a-game-host.png` | Room and picker states |
-| Lobby (player) | `SeatedScreen` | `05-waiting-player.png` | — |
+| Lobby (host) | `SeatedController` | `02-your-room-host.png`, `04-pick-a-game-host.png` | Room and picker states |
+| Lobby (player) | `SeatedController` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
 | Game settings (host) | `GameSettingsScreen` + `SettingsControls` | `06`–`08-game-settings-host-*` | Explicit selection opens a dedicated settings state; TV Game Setup mirrors the shared draft until Start |
 | Finished game | `FinishedScreen` + module summary | `09-game-finished-player.png`, `10-game-finished-host.png` | Host can replay, choose another game, or manage players; non-Hosts wait for that room-level decision |
@@ -255,7 +255,7 @@ do. The player lobby survives as `05-waiting-player.png`.
 
 **The lobby stays one component across distinct visual states.** *(Settled; this
 entry used to read "stays one screen".)* The board draws "Your room" and "Pick a
-game" as separate screens and they now are — but as states of `SeatedScreen`,
+game" as separate screens and they now are — but as states of `SeatedController`,
 not two routes. That distinction is the whole entry: the seat, the roster
 subscription, the running-game query and the Host's chosen settings all have to
 survive moving between them and a route would remount every one, which is the
@@ -264,7 +264,7 @@ once: the roster carries news nothing else in the product carries, and it was
 the section a Host scrolled past to reach the picker.
 
 An explicit game selection now replaces the carousel with a third visual state,
-the dedicated `GameSettingsScreen`, while remaining inside `SeatedScreen` for
+the dedicated `GameSettingsScreen`, while remaining inside `SeatedController` for
 the same subscription-lifetime reason. The selected game is a compact summary
 there; the carousel itself is not retained above settings. Back/Change cancels
 the shared setup draft and returns to the picker, while Your room cancels it and

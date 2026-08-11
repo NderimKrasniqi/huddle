@@ -37,9 +37,9 @@ import {
   PhoneScreen,
   PrimaryButton,
   SeatedHeader,
-  controllerStyles as styles,
 } from '../../ui/native';
 import { CategoryPickerSheet } from './category-picker-sheet';
+import { styles } from './styles';
 import {
   BACK_TO_ROOM,
   settingChosen,
