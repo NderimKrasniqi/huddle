@@ -11,7 +11,7 @@
 - **Game Logic**: one game's server-only validation, initial state, reducer, and privacy projection.
 - **Game Registry**: the ordered client module list and its separate server-only logic list.
 - **Room phase**: `lobby` or `in-game`, derived from whether the room holds a game record.
-- **Running-game status**: the client projection of that in-game record — `running`, `paused`, or `unavailable`; individual modules own their internal beats such as setup, answering, reveal, or finished.
+- **Running-game status**: the client projection of that in-game record — `running`, `paused`, or `unavailable`; the platform owns the pre-game Game Setup surface, while individual modules own their internal gameplay beats such as answering, reveal, or finished.
 - **Presence**: heartbeat/away state with grace periods for temporary phone backgrounding.
 - **Room background**: the static TV artwork behind the title-safe 1280×720 content stage.
 - **Boardwalk / Soft Minimal**: Boardwalk is superseded; Soft Minimal is the current visual source of truth.

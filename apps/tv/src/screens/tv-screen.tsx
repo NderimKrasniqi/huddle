@@ -2,7 +2,9 @@ import { api } from '@huddle/convex';
 import { carouselWindow, runningGameScreen } from '@huddle/game-registry';
 import { useQuery } from 'convex/react';
 import { useEffect } from 'react';
+import { AnimatedScreen } from '@huddle/ui/native';
 
+import { TvBootScreen } from '../features/boot/native';
 import { CarouselStage } from '../features/carousel/native';
 import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage, useRoomGreetings } from '../features/room/native';
@@ -19,13 +21,19 @@ import { tvSurface } from './tv-surface';
 /** Opens a room, owns its subscriptions, and selects the TV surface. */
 export default function TvRoomScreen() {
   const { opening, reopen } = useRoomOpening();
-  const room = opening.kind === 'open' ? opening.room : undefined;
 
-  if (room === undefined) {
-    return <RoomStage opening={opening} code={undefined} roster={[]} />;
+  if (opening.kind !== 'open') {
+    return <TvBootScreen phase={opening.kind} />;
   }
 
-  return <OpenRoomStage key={room.roomId} room={room} opening={opening} onExpired={reopen} />;
+  return (
+    <OpenRoomStage
+      key={opening.room.roomId}
+      room={opening.room}
+      opening={opening}
+      onExpired={reopen}
+    />
+  );
 }
 
 function OpenRoomStage({
@@ -52,12 +60,14 @@ function OpenRoomStage({
 
   if (surface === 'game' && runtime.kind === 'game') {
     return (
-      <GameStage
-        module={runtime.module}
-        state={runtime.state}
-        clockRemainingMs={runtime.clockRemainingMs}
-        roster={seats}
-      />
+      <AnimatedScreen key="game">
+        <GameStage
+          module={runtime.module}
+          state={runtime.state}
+          clockRemainingMs={runtime.clockRemainingMs}
+          roster={seats}
+        />
+      </AnimatedScreen>
     );
   }
 
@@ -66,25 +76,33 @@ function OpenRoomStage({
     (runtime.kind === 'paused' || runtime.kind === 'unavailable')
   ) {
     return (
-      <TvRuntimeStatus
-        kind={runtime.kind}
-        reason={runtime.kind === 'paused' ? runtime.reason : undefined}
-        disconnectedPlayers={seats.filter((player) => player.away).map((player) => player.nickname)}
-      />
+      <AnimatedScreen key="runtime-status">
+        <TvRuntimeStatus
+          kind={runtime.kind}
+          reason={runtime.kind === 'paused' ? runtime.reason : undefined}
+          disconnectedPlayers={seats.filter((player) => player.away).map((player) => player.nickname)}
+        />
+      </AnimatedScreen>
     );
   }
 
   if (surface === 'carousel' && browsing !== undefined) {
-    return <CarouselStage window={browsing} roster={seats} />;
+    return (
+      <AnimatedScreen key="carousel">
+        <CarouselStage window={browsing} roster={seats} />
+      </AnimatedScreen>
+    );
   }
 
   return (
-    <RoomStage
-      opening={opening}
-      code={room.code}
-      roster={seats}
-      greeting={greeting}
-      onGreeted={onGreeted}
-    />
+    <AnimatedScreen key="room">
+      <RoomStage
+        opening={opening}
+        code={room.code}
+        roster={seats}
+        greeting={greeting}
+        onGreeted={onGreeted}
+      />
+    </AnimatedScreen>
   );
 }

@@ -19,7 +19,13 @@ export {
   tvTitleSafeFraction,
   type WindowSize,
 } from './layout';
-export { motionDuration, popIn, type SpringConfig, springOf } from './motion';
+export {
+  loadingMotion,
+  motionDuration,
+  popIn,
+  type SpringConfig,
+  springOf,
+} from './motion';
 export { elevation, type ElevationToken } from './shadows';
 export { borderWidth, opacity, radius } from './shape';
 export { fontFamily, letterSpacing, minBodyFontSize } from './typography';

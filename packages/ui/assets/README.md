@@ -144,6 +144,12 @@ The wordmark and symbol, transparent, in exact token colors:
 | `huddle-logo-dark.png` | 1327×360, orange symbol + `#FFF7F2` wordmark, for dark surfaces |
 | `huddle-symbol-orange.png` | 1200×1234, standalone `#FF6B4A` symbol |
 
+`huddle-symbol-orange.png` is also the static native splash image in both Expo
+app configs. After React mounts, the shared loading surface pulses that symbol
+with React Native `Animated` and renders the light-surface wordmark alongside
+it. There is deliberately no Lottie file or animation-assets folder: startup
+motion is applied to the supplied brand artwork at runtime.
+
 These replace the earlier drawn `HUDDLE.` wordmark Soft Minimal set in Bungee — §5 of the
 handoff is explicit that the wordmark should use supplied artwork rather than be
 recreated from a text font, which also means the wordmark does not depend on the

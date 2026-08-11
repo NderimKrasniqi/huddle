@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { convexClient } from '../src/platform/convex';
+import { PhoneLoadingScreen } from '../src/ui';
 
 export default function ControllerLayout() {
   // Soft Minimal is a typographic system, so hold the first frame until Inter
@@ -12,7 +13,7 @@ export default function ControllerLayout() {
   // font fails to load, render anyway — degraded type beats a blank screen.
   const [fontsLoaded, fontError] = useFonts(huddleFonts);
   if (!fontsLoaded && fontError === null) {
-    return null;
+    return <PhoneLoadingScreen phase="startup" />;
   }
 
   return (

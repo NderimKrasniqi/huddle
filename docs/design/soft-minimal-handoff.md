@@ -157,9 +157,10 @@ before it is trusted to the pixel.
 
 | Surface | Component | Design | Notes |
 |---|---|---|---|
+| Startup / room opening | `TvBootScreen` | Platform treatment | Existing TV background + supplied Huddle symbol/wordmark; pulse and activity dots use React Native `Animated` |
 | Room | `RoomStage` | `01-room.png` | Code, QR and roster on one screen |
-| Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Games only — no roster, no code chip |
-| Game setup | **none yet** | `03-game-setup.png` | Approved TV flow's third state; dedicated runtime surface still needs implementation |
+| Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Shown while the Host scrolls; TV follows the highlighted card |
+| Game setup | **none yet** | `03-game-setup.png` | Explicit game selection switches here; TV mirrors the Host's draft settings |
 | Game frame | `GameStage` | **none** | Needs design |
 | Recovery status | `TvRuntimeStatus` | **none** | Names disconnected players; says the Host may wait or continue |
 
@@ -167,11 +168,12 @@ before it is trusted to the pixel.
 
 | Surface | Component | Design | Notes |
 |---|---|---|---|
+| Startup / session restore | `PhoneLoadingScreen` | Platform treatment | Supplied Huddle symbol/wordmark on the canvas; replaces font/session blank frames |
 | Join | `JoinForm` | `01-join-room.png` | Now carries avatar selection |
 | Lobby (host) | `SeatedScreen` | `02-your-room-host.png`, `04-pick-a-game-host.png` | Room and picker states |
 | Lobby (player) | `SeatedScreen` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
-| Game settings (host) | `SettingsControls` in the picker | `06`–`08-game-settings-host-*` | New standalone Standard, Quick, and Custom layouts await navigation and visual adoption |
+| Game settings (host) | `SettingsControls` in the picker | `06`–`08-game-settings-host-*` | Host edits draft settings here; TV Game Setup mirrors them until Start |
 | Finished game | `InGameScreen` + module screen | `09-game-finished-player.png`, `10-game-finished-host.png` | New hub-level post-game actions await implementation; finished state currently remains module-owned until the Host chooses Back to lobby |
 | Leave | `LeaveRoomSheet` | **none** | The board draws the pill, not the sheet |
 | Game frame | `InGameScreen` | **none** | Needs design |
@@ -190,6 +192,11 @@ before it is trusted to the pixel.
   full-bleed treatment conflicts with the default warm image canvas above, so
   adopting it requires an explicit per-screen canvas exception or a revised
   approved export—not an implicit palette change across existing TV screens.
+- **The TV and phone pre-game states are connected.** The TV stays on the
+  carousel while the Host scrolls. An explicit game selection switches the TV
+  to Game Setup, where the Host's phone setting changes are mirrored live. The
+  Host's Start button is the transition action, not another screen; it locks
+  settings and hands control to the game module's own runtime screen.
 - **Finished-game actions need product wiring.** “Play again”, “Choose another
   game”, and “Manage players” are approved visual direction, but the current
   platform exposes one generic Back to lobby action and lets each game render
@@ -366,6 +373,11 @@ landing together are now both greeted.
    and phone finished-game actions are approved references, but remain explicit
    implementation work as described in the screen inventory and reconciliation
    notes above.
+9. **Platform loading uses existing brand art.** Native splashes use
+   `huddle-symbol-orange.png`; in-app loading pulses that supplied symbol and
+   uses shared activity dots/fades. No Lottie file or new animation asset ships.
+   The loading treatment does not stand in for the still-missing Game Setup,
+   recovery-status, Leave-sheet, or game-frame designs.
 
 ## The 2026-08-09 TV re-export
 
