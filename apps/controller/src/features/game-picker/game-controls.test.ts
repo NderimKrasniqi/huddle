@@ -1,6 +1,7 @@
 import type { RosterSeatForGame } from '@huddle/game-core';
 import { CAROUSEL_REGISTRY, GAME_REGISTRY } from '@huddle/game-registry';
 import { describe, expect, it } from 'vitest';
+import { backToLobbyLabel, leaveConsequence, LEAVE_ROOM } from '../../models';
 
 import {
   BACK_TO_ROOM,
@@ -11,8 +12,6 @@ import {
   nowViewingLine,
   startControl,
 } from './game-controls';
-import { backToLobbyLabel } from '../game-session';
-import { leaveConsequence, LEAVE_ROOM } from '../room';
 
 /** The installed game these tests read their expectations off. */
 const installed = GAME_REGISTRY[0]!.metadata;

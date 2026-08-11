@@ -10,10 +10,10 @@
 
 import type * as games from "../games.js";
 import type * as lib_authorization from "../lib/authorization.js";
-import type * as lib_gameClock from "../lib/gameClock.js";
-import type * as lib_gameRuntime from "../lib/gameRuntime.js";
+import type * as lib_game_clock from "../lib/game-clock.js";
+import type * as lib_game_runtime from "../lib/game-runtime.js";
 import type * as lib_presence from "../lib/presence.js";
-import type * as lib_roomLifecycle from "../lib/roomLifecycle.js";
+import type * as lib_room_lifecycle from "../lib/room-lifecycle.js";
 import type * as players from "../players.js";
 import type * as rooms from "../rooms.js";
 
@@ -26,10 +26,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   games: typeof games;
   "lib/authorization": typeof lib_authorization;
-  "lib/gameClock": typeof lib_gameClock;
-  "lib/gameRuntime": typeof lib_gameRuntime;
+  "lib/game-clock": typeof lib_game_clock;
+  "lib/game-runtime": typeof lib_game_runtime;
   "lib/presence": typeof lib_presence;
-  "lib/roomLifecycle": typeof lib_roomLifecycle;
+  "lib/room-lifecycle": typeof lib_room_lifecycle;
   players: typeof players;
   rooms: typeof rooms;
 }>;

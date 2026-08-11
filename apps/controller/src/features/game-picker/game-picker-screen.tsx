@@ -29,8 +29,8 @@ import { useMutation } from 'convex/react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { lifecycleFailureMessage } from '../game-session';
-import type { RosterSeat } from '../room';
+import { lifecycleFailureMessage } from '../../models';
+import type { RosterSeat } from '../../models';
 import { phoneSessionTokenStore } from '../../platform/session';
 import {
   OutlinePill,
@@ -38,7 +38,7 @@ import {
   PrimaryButton,
   SeatedHeader,
   controllerStyles as styles,
-} from '../../ui';
+} from '../../ui/native';
 import { CategoryPickerSheet } from './category-picker-sheet';
 import {
   BACK_TO_ROOM,

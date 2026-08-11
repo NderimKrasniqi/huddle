@@ -6,9 +6,9 @@ committed render used to lay out 0pt wide and paint nothing on tvOS. Change the
 900 to 60 for the other delivery timing; both blanked 4/4 before the fix and
 drew 4/4 after it.
 
-    git apply tools/blank-tile-repro.patch
+    git apply docs/evidence/regressions/blank-tile/blank-tile-repro.patch
     python3 tools/blank-tile-watch.py 4 --keep before-900
-    git apply -R tools/blank-tile-repro.patch
+    git apply -R docs/evidence/regressions/blank-tile/blank-tile-repro.patch
 
 It is a patch rather than a flag in the app because it is an experiment, and
 the product has no business carrying a pinned room code.
@@ -21,7 +21,7 @@ the product has no business carrying a pinned room code.
   */
 -function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
 +function RoomCodeTiles({ code: _serverCode }: { readonly code: string | undefined }) {
-+  // REPRO ONLY (tools/blank-tile-repro.patch): a pinned code containing an I,
++  // REPRO ONLY (docs/evidence/regressions/blank-tile/blank-tile-repro.patch): a pinned code containing an I,
 +  // delivered after mount, which is the deterministic blank-tile repro.
 +  const [code, setCode] = useState<string | undefined>(undefined);
 +  useEffect(() => {

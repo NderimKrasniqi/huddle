@@ -5,6 +5,7 @@ import {
   isAvatarId,
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
+  normalizeRoomCode,
   ROOM_PLAYER_CAP,
 } from '@huddle/game-core';
 import { ConvexError, v } from 'convex/values';
@@ -13,9 +14,9 @@ import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { playerForSession, requireRoomHost } from './lib/authorization';
-import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/gameClock';
+import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/game-clock';
 import { playersInRoom } from './lib/presence';
-import { deleteRoom } from './lib/roomLifecycle';
+import { deleteRoom } from './lib/room-lifecycle';
 import { watchForDesertion } from './rooms';
 import { avatarValidator } from './schema';
 
@@ -30,10 +31,6 @@ import { avatarValidator } from './schema';
  * hand-written deep link — so its case and padding are the phone's accident,
  * not a different room.
  */
-function normalizeRoomCode(code: string): string {
-  return code.trim().toUpperCase();
-}
-
 /**
  * Whether two nicknames are the same name. Case and surrounding spaces do not
  * count: two seats reading "Sam" and "sam" are one name to everyone looking at

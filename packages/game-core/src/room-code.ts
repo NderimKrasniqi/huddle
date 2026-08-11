@@ -39,6 +39,16 @@ export const ROOM_CODE_ACCEPTED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 export const ROOM_CODE_LENGTH = 4;
 
 /**
+ * Canonical room-code normalization shared by every protocol boundary.
+ * Whitespace is input decoration, while case is not part of a room's identity.
+ * Alphabet and length validation remain the responsibility of the caller that
+ * owns its input surface.
+ */
+export function normalizeRoomCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+/**
  * A source of randomness shaped like `Math.random`: uniform over [0, 1).
  * Injectable so that code generation is exactly reproducible under test.
  */

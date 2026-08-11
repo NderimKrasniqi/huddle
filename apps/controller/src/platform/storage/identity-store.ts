@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { IdentityStore } from '../../features/join';
+import type { IdentityStore } from '../../models';
 
 /**
  * Where this phone keeps the last-used name and avatar: `AsyncStorage`, the

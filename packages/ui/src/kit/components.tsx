@@ -2,13 +2,13 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Platform, Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { HuddleIcon, type HuddleIconName } from './huddle-kit-icon';
+import { HuddleIcon, type HuddleIconName } from './icon';
 import {
   huddleUIKitColors,
   huddleUIKitRadius,
   huddleUIKitShadow,
   huddleUIKitTypography,
-} from './huddle-kit-theme';
+} from './theme';
 
 type ButtonProps = {
   readonly label: string;

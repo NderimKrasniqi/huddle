@@ -1,4 +1,4 @@
-import type { RosterSeat } from '../room';
+import type { RosterSeat } from '../../models';
 
 /**
  * The carousel's footer line: the one sentence under the page dots

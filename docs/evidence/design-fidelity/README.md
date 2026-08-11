@@ -1,7 +1,7 @@
 # Design fidelity — the hub screens, side by side with the mock
 
 The captures the Phase 5 task "Design fidelity — hub screens against the mock"
-was decided on, kept here for the same reason `tools/blank-tile-ab/` is: the
+was decided on, kept here for the same reason `docs/evidence/regressions/blank-tile/` is: the
 finding should be readable by someone with no simulator to hand, and a claim
 about a screen is worth what the frame behind it is worth.
 
@@ -245,7 +245,7 @@ Session Token. The television takes no input.
 
 **The carousel frames needed a second game.** The Registry ships one, so the
 Browsing Game Index has nowhere to go; `16` was taken with
-`tools/carousel-transition-repro.patch` applied to both Registry lists *and
+`docs/evidence/regressions/carousel-transition/carousel-transition-repro.patch` applied to both Registry lists *and
 pushed to the Convex deployment*, since `browseGame` clamps the index
 server-side. Both were reverted afterwards. `17` was taken on the unpatched
 tree, which is why its footer shows a single page dot.

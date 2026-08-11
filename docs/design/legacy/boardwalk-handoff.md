@@ -114,7 +114,7 @@ The screen-colored gutter is what the TV crops, not the header or footer.
     YOUR ROOM, YOUR COLOR, SETTINGS, YOU'RE THE HOST — PICK A GAME — is 14.
     Measured on an iPhone 17 rather than argued: the longest of them grows from
     256.7pt to 272.0pt in a 354pt column, so nothing wraps, and the roster below
-    moves down 1.33pt. Frames in `tools/design-fidelity/`; written up against
+    moves down 1.33pt. Frames in `docs/evidence/design-fidelity/`; written up against
     "Design fidelity — the phone's 14px floor" in docs/implementation-plan.md.
   filled letters use Bungee 36px in the letter's color; active cell has cobalt
   border + blinking cobalt caret; empty cell dashed border.
@@ -161,7 +161,7 @@ The screen-colored gutter is what the TV crops, not the header or footer.
     so the rows land without scrolling. Every measurement above is drawn as
     pinned *except the new row's pink border and shadow*, which is the NEW! pill
     below; all of them are measured back off
-    `tools/design-fidelity/10-phone-host-roster.png`.
+    `docs/evidence/design-fidelity/10-phone-host-roster.png`.
   - Two decisions about the right slot. **Away is the fourth thing it says**,
     and it says it the way the system already decided a listed player's
     presence reads: the Status Dot mutes, the face dims to 30%, the nickname
@@ -252,7 +252,7 @@ The screen-colored gutter is what the TV crops, not the header or footer.
     and the §4 phone avatar was considered and refused, because a spring there
     would fire on a rejoin as well as an arrival and only its owner would see
     it. Measured on the tvOS simulator against
-    `tools/design-fidelity/17-tv-arrival-pop-in.png`; written up against "the
+    `docs/evidence/design-fidelity/17-tv-arrival-pop-in.png`; written up against "the
     two handoff animations" in docs/implementation-plan.md.
 - **Color picker**: tapping a swatch claims it (server-validated uniqueness);
   unavailable colors dimmed to 30%.
@@ -267,7 +267,7 @@ The screen-colored gutter is what the TV crops, not the header or footer.
     changes width as neighbours appear at the ends of the Registry.
     **A build that installs one game can never show it**: with a single card the
     index has nowhere to go, so it was watched against a patched Registry of two
-    (`tools/carousel-transition-repro.patch`), which is also the honest reading
+    (`docs/evidence/regressions/carousel-transition/carousel-transition-repro.patch`), which is also the honest reading
     of the animation's status until a second game ships.
 - **Start**: only the Host sees/can tap "Select …"; on select, all clients
   transition to the game.

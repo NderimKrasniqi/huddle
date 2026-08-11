@@ -3,7 +3,7 @@ import { SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 import { colors } from '../colors';
 
-import { HuddleLogo } from './huddle-kit-logo';
+import { HuddleLogo } from './logo';
 import {
   BottomSheetOptionRow,
   CategoryListRow,
@@ -25,8 +25,8 @@ import {
   SelectedBadge,
   StatusPill,
   StatusStrip,
-} from './huddle-kit-components';
-import { huddleUIKitColors, huddleUIKitTypography } from './huddle-kit-theme';
+} from './components';
+import { huddleUIKitColors, huddleUIKitTypography } from './theme';
 
 function Section({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
   return (

@@ -12,8 +12,8 @@ import { Avatar, Icon, Wordmark } from '@huddle/ui/native';
 import QRCode from 'react-native-qrcode-svg';
 import { Text, View } from 'react-native';
 
-import { TvStage } from '../../ui';
-import type { RosterSeat } from '../room';
+import { TvStage } from '../../ui/native';
+import type { RosterSeat } from '../../models';
 import background from '@huddle/ui/assets/tv-backgrounds/game-setup-background.png';
 import { styles } from './styles';
 

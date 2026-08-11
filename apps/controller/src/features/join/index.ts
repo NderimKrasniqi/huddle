@@ -9,9 +9,8 @@ export {
 } from './join-entry';
 export { joinFailureMessage } from './join-rejection';
 export {
-  type IdentityStore,
-  type PlayerIdentity,
   recallIdentity,
   rememberAvatar,
   rememberName,
 } from './identity';
+export type { IdentityStore, PlayerIdentity } from '../../models';

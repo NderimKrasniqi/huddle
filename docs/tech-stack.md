@@ -16,7 +16,8 @@ Record only choices this project actually needs.
 | Session credential storage | Expo SecureStore | Protect participant/session credentials used for reconnection and authorization. |
 | Workspace | pnpm workspaces | Simple monorepo sharing without Turborepo/Nx. |
 | Backend tests | Vitest + `convex-test` | Convex/domain tests, fake time, lifecycle and scheduled-function verification. |
-| Client tests | Vitest (node) over extracted logic modules | App behaviour is factored into pure modules (`apps/*/src/*.ts`) and tested with Vitest in a node environment. React Native Testing Library component-rendering tests are out of MVP scope. |
+| Pure client/tooling tests | Vitest (node) | App models, projections, registry seams, lint rules, visual-fixture inventory, and other renderer-free contracts stay fast and deterministic. |
+| Rendered app tests | Jest + `jest-expo` + `@testing-library/react-native` 14.0.1 + React 19.2 `test-renderer` 1.2 | Controller and TV component behavior is exercised through accessibility-first async queries in per-app `*.render.test.tsx` suites; no snapshots or implementation-detail assertions. |
 | Builds | Local Expo/native builds | MVP development and verification without EAS Build infrastructure. |
 
 ## Architecture
@@ -26,6 +27,10 @@ Record only choices this project actually needs.
 - Reactive queries expose only the state each surface needs.
 - Client game modules and server game logic meet through separate registry entrypoints; platform/session infrastructure does not depend on Trivia-specific logic.
 - Expo route adapters contain no implementation, and app features/platform owners expose explicit entrypoints; cross-owner deep imports are rejected by workflow validation.
+- App-local `models/` layers contain pure projections/types only. Routes point to
+  screens; screens point to features/platform/models/UI; feature-to-feature and
+  platform-to-feature imports are invalid. Authored names are kebab-case with
+  documented Expo/generated and conventional-entrypoint exceptions.
 - Private player state is returned only to the participant entitled to see it.
 - The room code locates a room; it is never sufficient authorization.
 - Participant/session credentials are stored in SecureStore and validated server-side.
@@ -33,6 +38,8 @@ Record only choices this project actually needs.
 - Presence uses heartbeat/last-seen state plus grace periods; brief backgrounding is not an immediate disconnect.
 - Do not duplicate Convex server state in Zustand or another client store without a demonstrated client-only need.
 - All Expo apps in the monorepo use the matching `react-native-tvos` React Native fork to avoid dependency conflicts.
+- The supported Node floor is `^22.13.0 || >=24.0.0`, matching Expo SDK 57 and
+  the RNTL 14.0.1 release guidance.
 - Do not add a separate API server, WebSocket gateway, PostgreSQL, Redis, EAS Build, Docker/Kubernetes, or authentication provider unless future requirements justify them.
 
 ## Verification
@@ -41,7 +48,8 @@ Record only choices this project actually needs.
 install:              pnpm install
 typecheck:            pnpm typecheck            # root tsc + every workspace
 lint:                 pnpm lint
-all tests:            pnpm test                 # convex + packages + apps + lint-rules (Vitest)
+all tests:            pnpm test                 # Vitest plus both rendered Jest suites
+rendered tests:       pnpm test:render          # Controller + TV Jest/jest-expo projects
 unit tests:           pnpm test:unit            # packages + apps + lint-rules
 backend/integration:  pnpm test:integration     # convex (edge-runtime)
 pack validation:      pnpm validate:packs

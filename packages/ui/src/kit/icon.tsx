@@ -23,7 +23,7 @@ import { Text as SvgText, Rect, Svg } from 'react-native-svg';
 
 import { colors } from '../colors';
 
-import { huddleUIKitColors } from './huddle-kit-theme';
+import { huddleUIKitColors } from './theme';
 
 export type HuddleIconName =
   | 'back'

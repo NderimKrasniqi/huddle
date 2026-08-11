@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { convexClient } from '../src/platform/convex';
-import { PhoneLoadingScreen } from '../src/ui';
+import { PhoneLoadingScreen } from '../src/ui/native';
 
 // Keep the native mark covering the window until the first branded React frame
 // can use the real typeface. Calling this at module scope is early enough for

@@ -4,13 +4,14 @@
   "private": true,
   "description": "Huddle TV app: the hub client on the television.",
   "main": "expo-router/entry",
-  "//scripts": "The Apple builds carry two environment variables the Controller does not need. REACT_NATIVE_NODE_MODULES_DIR is react-native-svg's documented escape hatch: its podspec resolves `react-native/package.json`, lands in `react-native-tvos/` because of the alias below, looks for a sibling `react-native/` that pnpm never created, and dies on `File.join(nil, ...)` with `no implicit conversion of nil into String`. Pointing it at this app's own node_modules \u2014 where pnpm does put a `react-native` symlink \u2014 is what lets `pod install` finish. LC_ALL is for CocoaPods 1.17 on Ruby 4, which crashes in `Pod::Config#installation_root` without a UTF-8 locale. This app keeps Metro's default 8081 and the Controller takes 8082, so both can run at once during a game; see that app's own note for what sharing a port does.",
+  "//scripts": "The Apple builds carry two environment variables the Controller does not need. REACT_NATIVE_NODE_MODULES_DIR is react-native-svg's documented escape hatch: its podspec resolves `react-native/package.json`, lands in `react-native-tvos/` because of the alias below, looks for a sibling `react-native/` that pnpm never created, and dies on `File.join(nil, ...)` with `no implicit conversion of nil into String`. Pointing it at this app's own node_modules — where pnpm does put a `react-native` symlink — is what lets `pod install` finish. LC_ALL is for CocoaPods 1.17 on Ruby 4, which crashes in `Pod::Config#installation_root` without a UTF-8 locale. This app keeps Metro's default 8081 and the Controller takes 8082, so both can run at once during a game; see that app's own note for what sharing a port does.",
   "scripts": {
     "start": "EXPO_TV=1 expo start",
     "android": "EXPO_TV=1 expo run:android",
     "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo run:ios",
     "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo prebuild",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:render": "jest --config jest.config.cjs --runInBand"
   },
   "dependencies": {
     "@huddle/convex": "workspace:*",
@@ -23,9 +24,9 @@
     "expo-crypto": "~57.0.1",
     "expo-font": "~57.0.1",
     "expo-linking": "~57.0.4",
+    "expo-router": "~57.0.8",
     "expo-secure-store": "~57.0.1",
     "expo-splash-screen": "~57.0.5",
-    "expo-router": "~57.0.8",
     "expo-system-ui": "~57.0.1",
     "react": "19.2.3",
     "react-native": "npm:react-native-tvos@~0.86.0-2",
@@ -36,7 +37,13 @@
   },
   "devDependencies": {
     "@react-native-tvos/config-tv": "^0.1.6",
+    "@react-native/jest-preset": "0.86.2",
+    "@testing-library/react-native": "14.0.1",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.2.17",
+    "jest": "^29.7.0",
+    "jest-expo": "~57.0.4",
+    "react-test-renderer": "19.2.3",
     "typescript": "~5.9.3"
   }
 }

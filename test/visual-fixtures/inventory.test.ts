@@ -5,7 +5,7 @@ import {
   PHONE_REFERENCE_FIXTURES,
   TV_FIXTURE_VIEWPORT,
   TV_REFERENCE_FIXTURES,
-} from '../../../../tools/visual-fixture-manifest';
+} from './manifest';
 
 describe('approved visual fixture inventory', () => {
   it('covers each phone state at the canonical interior viewport', () => {

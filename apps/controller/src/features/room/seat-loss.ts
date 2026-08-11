@@ -1,4 +1,4 @@
-import type { RosterSeat } from './host';
+import type { RosterSeat } from '../../models';
 
 /**
  * Why a phone that was seated is suddenly back at the Join Screen, in the words

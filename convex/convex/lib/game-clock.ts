@@ -8,7 +8,7 @@ import {
   type DeadlineResult,
   type StoredGame,
   validatedDeadline,
-} from './gameRuntime';
+} from './game-runtime';
 
 /** A scheduler clock kept alongside the room's game document. */
 export type RoomClock = {
