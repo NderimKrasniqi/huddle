@@ -3,7 +3,12 @@ import { z } from 'zod';
 
 import { triviaMetadata } from './metadata';
 import { questionsFor, type TriviaQuestion } from './questions';
-import { triviaSettings, TRIVIA_SETTINGS_SCHEMA, type ScoringMode } from './settings';
+import {
+  triviaSettings,
+  TRIVIA_SETTINGS_PRESENTATION,
+  TRIVIA_SETTINGS_SCHEMA,
+  type ScoringMode,
+} from './settings';
 // The pure reads over the state live in `./state`, so the screens can import
 // them without pulling this file — and the Question Pack `./questions` deals
 // from — into the client bundle (docs/implementation-plan.md 5.9). They are
@@ -86,6 +91,8 @@ export type TriviaState = {
   readonly questions: readonly TriviaQuestion[];
   /** Which question is up; the last one played once the game is finished. */
   readonly questionIndex: number;
+  /** Selected timer duration; absent on legacy games, which used 20 seconds. */
+  readonly questionSeconds?: number;
   readonly phase: TriviaPhase;
   /** The current question's answers: player → the option they locked in. */
   readonly answers: Readonly<Record<GamePlayerId, number>>;
@@ -187,6 +194,7 @@ export const triviaStateSchema = z.strictObject({
   // -1 is the redacted answer sentinel; the server's stored state only has 0–3.
   answers: z.record(playerIdSchema, z.number().int().min(-1).max(3)),
   answerSeconds: z.record(playerIdSchema, z.number().finite().nonnegative()).optional(),
+  questionSeconds: z.number().int().min(10).max(30).optional(),
   standings: z.array(
     z.strictObject({ playerId: playerIdSchema, score: z.number().finite() }),
   ),
@@ -556,6 +564,7 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
   decodeEvent: (value) => triviaEventSchema.parse(value) as TriviaEvent,
   metadata: triviaMetadata,
   settingsSchema: TRIVIA_SETTINGS_SCHEMA,
+  settingsPresentation: TRIVIA_SETTINGS_PRESENTATION,
   createInitialState: ({ players, settings }) => {
     const chosen = triviaSettings(settings);
 
@@ -563,8 +572,9 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
       // The whole game is dealt here and never again: the questions ride in the
       // state, so a room is asked what it was dealt at the moment it started,
       // whatever the pack does afterwards.
-      questions: questionsFor(chosen.category, chosen.questionCount),
+      questions: questionsFor(chosen.category, chosen.questionCount, chosen.difficulty ?? 'mixed'),
       questionIndex: 0,
+      questionSeconds: chosen.questionSeconds ?? 20,
       phase: 'question',
       answers: {},
       answerSeconds: {},
@@ -590,6 +600,7 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
   // A live answer is its player's until the Reveal: the hub broadcasts the state
   // each client is entitled to, and this is trivia's projection of it.
   redactStateFor: redactTriviaStateFor,
+  isFinished: (state) => state.phase === 'finished',
 };
 
 /**
@@ -617,7 +628,7 @@ export function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> |
 
   return {
     beat: beatOf(state),
-    afterMs: QUESTION_SECONDS * 1000,
+    afterMs: (state.questionSeconds ?? QUESTION_SECONDS) * 1000,
     event: {
       kind: 'advance',
       questionIndex: state.questionIndex,

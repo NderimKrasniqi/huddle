@@ -3,7 +3,13 @@ import { CURATED_PACK } from '@huddle/packs';
 import { describe, expect, it } from 'vitest';
 
 import { EVERY_CATEGORY } from './questions';
-import { QUESTION_COUNTS, SCORING_MODES, triviaSettings, TRIVIA_SETTINGS_SCHEMA } from './settings';
+import {
+  QUESTION_COUNTS,
+  SCORING_MODES,
+  triviaSettings,
+  TRIVIA_SETTINGS_PRESENTATION,
+  TRIVIA_SETTINGS_SCHEMA,
+} from './settings';
 
 /**
  * The settings trivia declares, and what it makes of the Host's answers.
@@ -34,9 +40,16 @@ describe('the settings trivia declares', () => {
     expect(setting('scoring').defaultValue).toBe('flat');
   });
 
-  it('offers 5, 10 or 20 questions, defaulting to 10', () => {
-    expect(valuesOf('questionCount')).toEqual(['5', '10', '20']);
+  it('offers 5, 10, 15, or 20 questions, defaulting to 10', () => {
+    expect(valuesOf('questionCount')).toEqual(['5', '10', '15', '20']);
     expect(setting('questionCount').defaultValue).toBe('10');
+  });
+
+  it('offers the four difficulty levels and custom timing without scoring controls', () => {
+    expect(valuesOf('difficulty')).toEqual(['easy', 'medium', 'hard', 'mixed']);
+    expect(valuesOf('questionSeconds')).toEqual(['10', '15', '20', '30']);
+    expect(TRIVIA_SETTINGS_PRESENTATION.customSettingKeys).not.toContain('scoring');
+    expect(TRIVIA_SETTINGS_PRESENTATION.customOptions?.questionSeconds).toEqual(['10', '20', '30']);
   });
 
   it('offers every category the pack uses, plus all of them, defaulting to all', () => {
@@ -94,6 +107,12 @@ describe('what trivia makes of the Host’s settings', () => {
       questionCount: 5,
       category: 'Movies',
     });
+  });
+
+  it('reads modern setup settings and keeps Speed as a legacy decode path', () => {
+    expect(
+      triviaSettings({ questionCount: '15', difficulty: 'hard', questionSeconds: '30', category: 'Movies' }),
+    ).toMatchObject({ questionCount: 15, difficulty: 'hard', questionSeconds: 30 });
   });
 
   it('falls back to a default rather than dealing a game it cannot run', () => {

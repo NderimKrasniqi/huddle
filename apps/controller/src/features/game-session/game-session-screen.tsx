@@ -1,7 +1,7 @@
 import { api } from '@huddle/convex';
 import { gamePlayersFrom, type GameEvent, type GameModule, type GamePlayer } from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
-import { Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -170,6 +170,136 @@ export function InGameScreen({
       )}
 
       {youAreHost ? <BackToLobbyControl /> : null}
+    </PhoneScreen>
+  );
+}
+
+/** Finished-player/finished-Host shells shared by every game module. */
+export function FinishedScreen({
+  code,
+  module,
+  state,
+  roster,
+  playerId,
+  youAreHost,
+  onChooseAnotherGame,
+  onManagePlayers,
+}: {
+  readonly code: string;
+  readonly module: GameModule;
+  readonly state: unknown;
+  readonly roster: readonly RosterSeat[];
+  readonly playerId: PlayerSession['playerId'];
+  readonly youAreHost: boolean;
+  /** Called after the authoritative end transitions the room to the picker. */
+  readonly onChooseAnotherGame: () => void;
+  /** Called after ending so the Host returns to the live roster controls. */
+  readonly onManagePlayers: () => void;
+}) {
+  const replayGame = useMutation(api.games.replayGame);
+  const endGame = useMutation(api.games.endGame);
+  const [busy, setBusy] = useState<'replay' | 'choose' | 'manage' | undefined>();
+  const [failure, setFailure] = useState<string>();
+  const player = roster.find((seat) => seat.playerId === playerId);
+  const summary = module.finishedSummary?.(state);
+  const results: readonly { readonly playerId: string; readonly score?: number }[] =
+    summary?.standings ?? roster.map((seat) => ({ playerId: seat.playerId }));
+
+  async function run(action: 'replay' | 'choose' | 'manage') {
+    setBusy(action);
+    setFailure(undefined);
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+      if (sessionToken === null) throw new Error('missing session');
+      if (action === 'replay') {
+        await replayGame({ sessionToken });
+      } else {
+        await endGame({ sessionToken });
+        if (action === 'choose') onChooseAnotherGame();
+        else onManagePlayers();
+      }
+    } catch (error) {
+      setFailure(lifecycleFailureMessage(error));
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  return (
+    <PhoneScreen>
+      <SeatedHeader trailing={<Surface elevation={elevation.phoneSmall} style={styles.codeChip}><Text style={styles.codeChipText}>{code}</Text></Surface>} />
+      {player?.avatar === undefined ? null : <Avatar avatar={player.avatar} size={96} />}
+      <Text style={styles.title}>{youAreHost ? `${module.metadata.title} complete` : 'You’re finished'}</Text>
+      <Text style={[styles.waitingFor, styles.asideCentred]}>
+        {youAreHost
+          ? `${roster.length} players are ready. Choose what happens next.`
+          : 'The Host is choosing what happens next.'}
+      </Text>
+
+      {youAreHost ? (
+        <View style={styles.field}>
+          <PrimaryButton
+            label={busy === 'replay' ? 'Starting…' : 'Replay with this roster'}
+            trailingIcon="arrow-right"
+            enabled={busy === undefined}
+            onPress={() => void run('replay')}
+          />
+          <Pressable
+            style={styles.stretch}
+            disabled={busy !== undefined}
+            onPress={() => void run('choose')}
+            accessibilityRole="button"
+          >
+            {({ pressed }) => (
+              <Surface
+                elevation={elevation.phoneCard}
+                style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
+              >
+                <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>
+                  {busy === 'choose' ? 'Returning…' : 'Choose another game'}
+                </Text>
+              </Surface>
+            )}
+          </Pressable>
+          <Pressable
+            style={styles.stretch}
+            disabled={busy !== undefined}
+            onPress={() => void run('manage')}
+            accessibilityRole="button"
+          >
+            {({ pressed }) => (
+              <Surface
+                elevation={elevation.phoneCard}
+                style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
+              >
+                <Icon name="players" size={18} color={colors.ink} />
+                <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>Manage players</Text>
+              </Surface>
+            )}
+          </Pressable>
+          <View style={styles.finishedRoster}>
+            <Text style={styles.settingLabel}>{summary?.title ?? 'RESULTS'}</Text>
+            {results.map((standing) => {
+              const seat = roster.find((candidate) => candidate.playerId === standing.playerId);
+              if (seat === undefined) return null;
+              return (
+              <View key={seat.playerId} style={styles.finishedRosterRow}>
+                <Avatar avatar={seat.avatar} size={28} />
+                <Text style={styles.rosterName}>{seat.nickname}</Text>
+                {standing.score === undefined ? null : <Text style={styles.presetValue}>{standing.score}</Text>}
+                {seat.host ? <Icon name="crown" size={16} color={colors.accent} /> : null}
+              </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.explainer}>
+          <Icon name="tv" size={30} color={colors.mutedText} />
+          <Text style={styles.explainerText}>Stay here — the Host is waiting for the room.</Text>
+        </View>
+      )}
+      {failure === undefined ? null : <Text style={styles.failure}>{failure}</Text>}
     </PhoneScreen>
   );
 }

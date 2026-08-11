@@ -1,7 +1,7 @@
 import { colors, tvDesignSize, tvSafeStageScale } from '@huddle/ui';
 import background from '@huddle/ui/assets/tv-backgrounds/huddle-tv-background-01.png';
 import { type ReactNode } from 'react';
-import { ImageBackground, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ImageBackground, StyleSheet, useWindowDimensions, View, type ImageSourcePropType } from 'react-native';
 
 /**
  * The fixed 1280×720 surface every TV screen is drawn on, scaled to fill
@@ -34,12 +34,18 @@ import { ImageBackground, StyleSheet, useWindowDimensions, View } from 'react-na
  * handed. Eyes up is total — see `huddle/tv-remote-surface`, which no longer
  * exempts anybody.
  */
-export function TvStage({ children }: { readonly children: ReactNode }) {
+export function TvStage({
+  children,
+  backgroundSource,
+}: {
+  readonly children: ReactNode;
+  readonly backgroundSource?: ImageSourcePropType;
+}) {
   const window = useWindowDimensions();
 
   return (
     <ImageBackground
-      source={background}
+      source={backgroundSource ?? background}
       // The artwork reaches the screen edges at every panel size. `cover`
       // preserves its ratio while allowing a non-16:9 viewport to crop the
       // decorative edges instead of scaling the content with the image.

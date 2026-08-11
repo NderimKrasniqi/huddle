@@ -13,8 +13,11 @@ describe('a room’s phase', () => {
     expect(roomPhase({ gameId: 'trivia', state: { playerIds: [] } })).toBe('in-game');
   });
 
-  it('has exactly the two the plan names', () => {
-    expect([...ROOM_PHASES]).toEqual(['lobby', 'in-game']);
+  it('has the lobby, configuring, and in-game phases', () => {
+    expect([...ROOM_PHASES]).toEqual(['lobby', 'configuring', 'in-game']);
+    expect(roomPhase(undefined, { gameId: 'trivia', settings: {}, mode: 'standard' })).toBe(
+      'configuring',
+    );
   });
 });
 

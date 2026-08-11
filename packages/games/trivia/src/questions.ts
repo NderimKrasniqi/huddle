@@ -1,4 +1,4 @@
-import { CURATED_PACK, type PackQuestion, RESERVED_CATEGORY } from '@huddle/packs';
+import { CURATED_PACK, type Difficulty, type PackQuestion, RESERVED_CATEGORY } from '@huddle/packs';
 
 /**
  * Where a game of trivia's questions come from: the Curated Pack, filtered and
@@ -103,6 +103,27 @@ function dealtByTurns(questions: readonly PackQuestion[]): readonly PackQuestion
 }
 
 /**
+ * Deal the requested difficulty first, then deterministic fallbacks. A sparse
+ * curated pack must still make every setting playable, but a fallback may not
+ * repeat a question or reorder the chosen difficulty behind another level.
+ */
+function dealtByDifficulty(
+  questions: readonly PackQuestion[],
+  difficulty: 'easy' | 'medium' | 'hard' | 'mixed',
+): readonly PackQuestion[] {
+  if (difficulty === 'mixed') return dealtByTurns(questions);
+
+  const order: readonly Difficulty[] =
+    difficulty === 'easy'
+      ? ['easy', 'medium', 'hard']
+      : difficulty === 'medium'
+        ? ['medium', 'easy', 'hard']
+        : ['hard', 'medium', 'easy'];
+  const prioritized = order.flatMap((level) => dealtByTurns(questions.filter((q) => q.difficulty === level)));
+  return prioritized;
+}
+
+/**
  * The questions a game started on these settings is dealt.
  *
  * Deterministic, and the same every game: a pack is a list, this takes the front
@@ -117,11 +138,15 @@ function dealtByTurns(questions: readonly PackQuestion[]): readonly PackQuestion
  * rather than a refusal or a repeated question. The pack ships twenty in every
  * category and the longest game asks for twenty, so nothing today reaches it.
  */
-export function questionsFor(category: string, count: number): readonly TriviaQuestion[] {
+export function questionsFor(
+  category: string,
+  count: number,
+  difficulty: 'easy' | 'medium' | 'hard' | 'mixed' = 'mixed',
+): readonly TriviaQuestion[] {
   const inCategory =
     category === EVERY_CATEGORY
       ? CURATED_PACK.questions
       : CURATED_PACK.questions.filter((question) => question.category === category);
 
-  return dealtByTurns(inCategory).slice(0, count).map(asked);
+  return dealtByDifficulty(inCategory, difficulty).slice(0, count).map(asked);
 }

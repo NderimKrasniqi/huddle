@@ -9,7 +9,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CHOOSE_A_GAME, hostChoosingLine, NOW_VIEWING_CAPTION, nowViewingLine, startControl, type SettingsChoice } from '../game-picker';
 import { PickAGameScreen } from '../game-picker/native';
-import { BackToLobbyControl, GameRuntimeStatusScreen, InGameScreen } from '../game-session/native';
+import { BackToLobbyControl, FinishedScreen, GameRuntimeStatusScreen, InGameScreen } from '../game-session/native';
 import { useHeartbeat } from '../../platform/presence';
 import { phoneSessionTokenStore, type PlayerSession, useSessionToken } from '../../platform/session';
 import { OutlinePill, PhoneScreen, PrimaryButton, RoomCodeChip, SeatedHeader, controllerStyles as styles } from '../../ui';
@@ -154,6 +154,7 @@ export function SeatedScreen({
   // what lets the Host move between them without re-asking.
   const browsingAt = useQuery(api.games.browsing, { roomId: session.roomId });
   const browsing = carouselWindow(browsingAt ?? 0);
+  const setupDraft = useQuery(api.games.setup, { roomId: session.roomId });
 
   // A game ends by returning the Host to their *room*, not to the picker they
   // were on when it started. Phase 2 left "which screen does a room land on
@@ -177,10 +178,12 @@ export function SeatedScreen({
   // A host can inherit a room running a game this build cannot decode. That
   // recovery case must remain on the room surface, where Back to lobby exists.
   const stranded = running !== null && running !== undefined && screen.kind === 'lobby';
+  const showingPicker =
+    picking || (standing.youAreHost && setupDraft !== null && setupDraft !== undefined);
   const surface = seatedSurface({
     runtime: screen.kind,
     youAreHost: standing.youAreHost,
-    picking,
+    picking: showingPicker,
     strandedRuntime: stranded,
     hasGameToBrowse: browsing !== undefined,
   });
@@ -197,6 +200,21 @@ export function SeatedScreen({
           youAreHost={standing.youAreHost}
         />
       </AnimatedScreen>
+    );
+  }
+
+  if (screen.kind === 'finished') {
+    return (
+      <FinishedScreen
+        code={code}
+        module={screen.module}
+        state={screen.state}
+        roster={roster}
+        playerId={session.playerId}
+        youAreHost={standing.youAreHost}
+        onChooseAnotherGame={() => setPicking(true)}
+        onManagePlayers={() => setPicking(false)}
+      />
     );
   }
 
@@ -253,6 +271,7 @@ export function SeatedScreen({
           browsing={browsing}
           roster={roster}
           settingsChoice={settingsChoice}
+          setupDraft={setupDraft}
           onChooseSetting={setSettingsChoice}
           onBack={() => setPicking(false)}
         />

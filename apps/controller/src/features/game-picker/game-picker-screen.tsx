@@ -1,8 +1,15 @@
 import { api } from '@huddle/convex';
-import type { GameMetadata, GameSettings, GameSettingsSchema } from '@huddle/game-core';
+import type {
+  GameMetadata,
+  GameSettings,
+  GameSettingsPresentation,
+  GameSettingsSchema,
+  GameSetupMode,
+} from '@huddle/game-core';
+import { settingsFrom } from '@huddle/game-core';
 import { type CarouselWindow, nextIndex, previousIndex } from '@huddle/game-registry';
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
+import { GameKeyArt, Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,10 +17,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { lifecycleFailureMessage } from '../game-session';
 import type { RosterSeat } from '../room';
 import { phoneSessionTokenStore } from '../../platform/session';
-import { OutlinePill, PhoneScreen, SeatedHeader, controllerStyles as styles } from '../../ui';
+import {
+  OutlinePill,
+  PhoneScreen,
+  PrimaryButton,
+  SeatedHeader,
+  controllerStyles as styles,
+} from '../../ui';
 import {
   BACK_TO_ROOM,
-  gameToStart,
   settingChosen,
   settingsControls,
   settingsToStart,
@@ -25,25 +37,86 @@ export function PickAGameScreen({
   browsing,
   roster,
   settingsChoice,
+  setupDraft,
   onChooseSetting,
   onBack,
 }: {
   readonly browsing: CarouselWindow;
   readonly roster: readonly RosterSeat[];
   readonly settingsChoice: SettingsChoice | undefined;
+  readonly setupDraft:
+    | { readonly gameId: string; readonly settings: GameSettings; readonly mode: GameSetupMode }
+    | null
+    | undefined;
   readonly onChooseSetting: (next: (current: SettingsChoice | undefined) => SettingsChoice) => void;
   readonly onBack: () => void;
 }) {
   const browseGame = useMutation(api.games.browseGame);
+  const selectGame = useMutation(api.games.selectGame);
+  const configureGame = useMutation(api.games.configureGame);
+  const cancelGameSetup = useMutation(api.games.cancelGameSetup);
   const back = previousIndex(browsing.index);
   const on = nextIndex(browsing.index);
-  // The Host's settings live on this phone and nowhere else — see
-  // `settings-choice`. They travel as one argument of `startGame`, so browsing
-  // stays exactly what it was before this screen gained settings: a mutation of
-  // its own that the TV and every other phone follow, and that nothing here
-  // touches.
+  // The room's setup draft is authoritative; `settingsChoice` is only the
+  // optimistic mirror used while a configure mutation settles. Browsing remains
+  // its own shared mutation, so the TV and every phone still follow the card.
   const { id: gameId } = browsing.focused.metadata;
-  const { settingsSchema } = browsing.focused;
+  const { settingsSchema, settingsPresentation } = browsing.focused;
+  const [mode, setMode] = useState<GameSetupMode>(setupDraft?.mode ?? 'standard');
+  const activeMode = setupDraft?.gameId === gameId ? setupDraft.mode : mode;
+  const selected = setupDraft?.gameId === gameId;
+  const [selecting, setSelecting] = useState(false);
+  const [selectionFailure, setSelectionFailure] = useState<string>();
+
+  const currentSettings =
+    setupDraft?.gameId === gameId ? setupDraft.settings : settingsToStart(settingsSchema, gameId, settingsChoice);
+
+  async function selectCurrentGame() {
+    setSelecting(true);
+    setSelectionFailure(undefined);
+
+    try {
+      const sessionToken = await phoneSessionTokenStore.read();
+      if (sessionToken === null) {
+        setSelectionFailure('This phone has lost its seat — reopen the app to rejoin.');
+        return;
+      }
+
+      await selectGame({ sessionToken, gameId, mode: 'standard' });
+      setMode('standard');
+    } catch (error) {
+      setSelectionFailure(lifecycleFailureMessage(error));
+    } finally {
+      setSelecting(false);
+    }
+  }
+
+  async function configure(settings: GameSettings, nextMode: GameSetupMode = activeMode) {
+    const sessionToken = await phoneSessionTokenStore.read();
+    if (sessionToken === null) return;
+    try {
+      await configureGame({ sessionToken, gameId, settings, mode: nextMode });
+    } catch {
+      // A failed draft update is reflected by the next authoritative snapshot.
+    }
+  }
+
+  function chooseMode(nextMode: GameSetupMode) {
+    if (!selected) return;
+    setMode(nextMode);
+    const preset = settingsPresentation?.presets?.find((candidate) => candidate.mode === nextMode);
+    if (preset !== undefined) {
+      onChooseSetting(() => ({ gameId, settings: preset.settings }));
+      void configure(preset.settings, nextMode);
+      return;
+    }
+    const nextSettings =
+      nextMode === 'custom'
+        ? customSettings(settingsSchema, settingsPresentation, currentSettings)
+        : currentSettings;
+    onChooseSetting(() => ({ gameId, settings: nextSettings }));
+    void configure(nextSettings, nextMode);
+  }
 
   async function browse(to: number | undefined) {
     if (to === undefined) {
@@ -57,13 +130,48 @@ export function PickAGameScreen({
     }
   }
 
+  async function backFromSetup() {
+    const sessionToken = await phoneSessionTokenStore.read();
+    if (sessionToken !== null) {
+      try {
+        await cancelGameSetup({ sessionToken });
+      } catch {
+        // The room subscription remains the source of truth.
+      }
+    }
+    onBack();
+  }
+
   return (
     <PhoneScreen>
-      <SeatedHeader trailing={<OutlinePill label={BACK_TO_ROOM} onPress={onBack} />} />
+      <SeatedHeader trailing={<OutlinePill label={BACK_TO_ROOM} onPress={() => void backFromSetup()} />} />
 
       <Text style={styles.pickingLabel}>YOU’RE THE HOST — PICK A GAME</Text>
 
       <GameCard metadata={browsing.focused.metadata} />
+
+      <View style={styles.selectionStatus}>
+        <Icon name={selected ? 'check' : 'gamepad'} size={18} color={selected ? colors.online : colors.accent} />
+        <Text style={styles.selectionStatusText}>
+          {selected ? `${browsing.focused.metadata.title} selected` : 'Select this game to configure it'}
+        </Text>
+      </View>
+
+      {!selected ? (
+        <View style={styles.field}>
+          <PrimaryButton
+            label={selecting ? 'Selecting…' : `Select ${browsing.focused.metadata.title}`}
+            trailingIcon="arrow-right"
+            enabled={!selecting}
+            onPress={() => void selectCurrentGame()}
+          />
+          {selectionFailure === undefined ? null : (
+            <Text style={styles.failure} accessibilityLiveRegion="polite">
+              {selectionFailure}
+            </Text>
+          )}
+        </View>
+      ) : null}
 
       <View style={styles.pickerRow}>
         <RoundButton
@@ -87,23 +195,83 @@ export function PickAGameScreen({
         Swipe or tap arrows — the TV follows along
       </Text>
 
-      <SettingsControls
-        schema={settingsSchema}
-        gameId={gameId}
-        choice={settingsChoice}
-        // Chosen from the choice React holds rather than the one this render
-        // closed over: two chips tapped in the same beat both count.
-        onChoose={(key, value) =>
-          onChooseSetting((current) => settingChosen(gameId, current, key, value))
-        }
-      />
+      {selected ? (
+        <>
+          <ModeTabs mode={activeMode} onChoose={chooseMode} />
 
-      <StartGameControl
-        roster={roster}
-        browsingAt={browsing.index}
-        settings={settingsToStart(settingsSchema, gameId, settingsChoice)}
-      />
+          {activeMode === 'custom' ? (
+            <SettingsControls
+              schema={settingsSchema}
+              gameId={gameId}
+              choice={{ gameId, settings: setupDraft?.settings ?? settingsChoice?.settings ?? {} }}
+              presentation={settingsPresentation}
+              // Chosen from the choice React holds rather than the one this render
+              // closed over: two chips tapped in the same beat both count.
+              onChoose={(key, value) =>
+                onChooseSetting((current) => {
+                  const next = settingChosen(gameId, current, key, value);
+                  void configure(next.settings);
+                  return next;
+                })
+              }
+            />
+          ) : (
+            <PresetSummary schema={settingsSchema} settings={currentSettings} />
+          )}
+
+          <StartGameControl roster={roster} browsingAt={browsing.index} selected />
+        </>
+      ) : null}
     </PhoneScreen>
+  );
+}
+
+/** Reset preset-only values before moving into the narrower custom shell. */
+function customSettings(
+  schema: GameSettingsSchema,
+  presentation: GameSettingsPresentation | undefined,
+  current: GameSettings,
+): GameSettings {
+  const next = { ...current };
+  const customKeys = presentation?.customSettingKeys;
+
+  for (const setting of schema) {
+    if (customKeys !== undefined && !customKeys.includes(setting.key)) {
+      next[setting.key] = setting.defaultValue;
+      continue;
+    }
+
+    const allowed = presentation?.customOptions?.[setting.key];
+    if (allowed !== undefined && !allowed.includes(next[setting.key] ?? '')) {
+      next[setting.key] = allowed.includes(setting.defaultValue)
+        ? setting.defaultValue
+        : (allowed[0] ?? setting.defaultValue);
+    }
+  }
+
+  return settingsFrom(schema, next);
+}
+
+function PresetSummary({
+  schema,
+  settings,
+}: {
+  readonly schema: GameSettingsSchema;
+  readonly settings: GameSettings;
+}) {
+  const rows = schema.filter((setting) => setting.key !== 'scoring');
+  return (
+    <View style={styles.presetSummary}>
+      <Text style={styles.label}>SETTINGS</Text>
+      {rows.map((setting) => (
+        <View key={setting.key} style={styles.presetRow}>
+          <Text style={styles.settingLabel}>{setting.label}</Text>
+          <Text style={styles.presetValue}>
+            {setting.options.find((option) => option.value === settings[setting.key])?.label ?? settings[setting.key]}
+          </Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -129,7 +297,14 @@ function GameCard({ metadata }: { readonly metadata: GameMetadata }) {
   return (
     <Surface
       elevation={elevation.phoneCard}
-      style={[styles.stretch, styles.gameCard, { backgroundColor: colors[keyArt.color] }]}>
+      style={[styles.stretch, styles.gameCard, { backgroundColor: colors[keyArt.color] }]}
+    >
+      <GameKeyArt
+        gameId={metadata.id}
+        title={title}
+        color={keyArt.color}
+        style={StyleSheet.absoluteFill}
+      />
       <Text style={styles.gameCardTitle}>{title}</Text>
 
       <View style={styles.gameCardChips}>
@@ -153,6 +328,36 @@ function GameCardChip({ icon, label }: { readonly icon: IconName; readonly label
   );
 }
 
+function ModeTabs({
+  mode,
+  onChoose,
+}: {
+  readonly mode: GameSetupMode;
+  readonly onChoose: (mode: GameSetupMode) => void;
+}) {
+  return (
+    <View style={styles.modeTabs} accessibilityRole="tablist">
+      {(['quick', 'standard', 'custom'] as const).map((candidate) => (
+        <Pressable
+          key={candidate}
+          onPress={() => onChoose(candidate)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: mode === candidate }}
+        >
+          <Surface
+            elevation={elevation.phoneSmall}
+            style={[styles.modeTab, mode === candidate && styles.modeTabChosen]}
+          >
+            <Text style={[styles.modeTabLabel, mode === candidate && styles.modeTabLabelChosen]}>
+              {candidate.charAt(0).toUpperCase() + candidate.slice(1)}
+            </Text>
+          </Surface>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 /**
  * This phone gives up its seat (the scope's "leave").
  *
@@ -172,14 +377,16 @@ function SettingsControls({
   schema,
   gameId,
   choice,
+  presentation,
   onChoose,
 }: {
   readonly schema: GameSettingsSchema;
   readonly gameId: string;
   readonly choice: SettingsChoice | undefined;
+  readonly presentation?: GameSettingsPresentation;
   readonly onChoose: (key: string, value: string) => void;
 }) {
-  const controls = settingsControls(schema, gameId, choice);
+  const controls = settingsControls(schema, gameId, choice, presentation);
 
   if (controls.length === 0) {
     return null;
@@ -320,12 +527,11 @@ function RoundButton({
 function StartGameControl({
   roster,
   browsingAt,
-  settings,
+  selected,
 }: {
   readonly roster: readonly RosterSeat[];
   readonly browsingAt: number;
-  /** What the controls above are showing: the settings the room starts on. */
-  readonly settings: GameSettings;
+  readonly selected: boolean;
 }) {
   const startGame = useMutation(api.games.startGame);
   const [starting, setStarting] = useState(false);
@@ -344,11 +550,10 @@ function StartGameControl({
         return;
       }
 
-      const game = gameToStart(browsingAt);
-
-      if (game !== undefined) {
-        await startGame({ sessionToken, gameId: game.id, settings });
-      }
+      // The shared Convex draft is authoritative. This avoids starting on a
+      // stale local settings snapshot while the latest chip mutation is still
+      // settling on the room.
+      await startGame({ sessionToken });
     } catch (error) {
       setFailure(lifecycleFailureMessage(error));
     } finally {
@@ -356,7 +561,7 @@ function StartGameControl({
     }
   }
 
-  const pressable = control.enabled && !starting;
+  const pressable = selected && control.enabled && !starting;
 
   return (
     <View style={styles.field}>
@@ -370,12 +575,12 @@ function StartGameControl({
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneCard}
-            style={[[styles.stretch, !control.enabled && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
+            style={[[styles.stretch, !pressable && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
             {starting ? (
               <LoadingIndicator size="small" color={colors.inverse} label="Starting game" />
             ) : null}
             <Text style={styles.buttonLabel}>
-              {starting ? 'Starting…' : control.label}
+              {starting ? 'Starting…' : 'Start game'}
             </Text>
           </Surface>
         )}

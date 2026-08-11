@@ -1,4 +1,4 @@
-import type { GameLifecycleRejection } from '@huddle/game-core';
+import type { GameLifecycleRejection, GameSetupRejection } from '@huddle/game-core';
 import { ConvexError } from 'convex/values';
 
 /**
@@ -12,24 +12,30 @@ import { ConvexError } from 'convex/values';
 /** When the failure is not one of the server's answers, but the trip itself. */
 const UNEXPECTED_FAILURE = 'Could not reach the room. Check your connection and try again.';
 
+type ControllerGameRejection = GameLifecycleRejection | GameSetupRejection;
+
 /**
  * The `kind`s as values. Keyed by the union so a kind added to
  * `GameLifecycleRejection` and not to this record is a compile error rather
  * than a silent fall-through to the generic line.
  */
-const REJECTION_KINDS: Readonly<Record<GameLifecycleRejection['kind'], true>> = {
+const REJECTION_KINDS: Readonly<Record<ControllerGameRejection['kind'], true>> = {
   alreadyInGame: true,
   gameNotInstalled: true,
   notEnoughPlayers: true,
   notHost: true,
   notInRoom: true,
   settingRejected: true,
+  setupAlreadyRunning: true,
+  setupNotFound: true,
   tooManyPlayers: true,
   tvUnavailable: true,
+  replayNotAllowed: true,
+  replayNotFinished: true,
 };
 
-/** Whether `data` off a `ConvexError` is one of the lifecycle refusals. */
-function isGameLifecycleRejection(data: unknown): data is GameLifecycleRejection {
+/** Whether `data` off a `ConvexError` is one of the lifecycle/setup refusals. */
+function isGameLifecycleRejection(data: unknown): data is ControllerGameRejection {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -57,7 +63,7 @@ function isGameLifecycleRejection(data: unknown): data is GameLifecycleRejection
  * The rest are the server declining to trust its callers. They get a line
  * anyway, because a silent tap is the one outcome a Host cannot make sense of.
  */
-export function rejectionMessage(rejection: GameLifecycleRejection): string {
+export function rejectionMessage(rejection: ControllerGameRejection): string {
   switch (rejection.kind) {
     case 'notEnoughPlayers':
       return rejection.need - rejection.have === 1
@@ -83,6 +89,14 @@ export function rejectionMessage(rejection: GameLifecycleRejection): string {
       // and gets the same answer. The key is not named: the Host cannot act on
       // it, and the control they used is on their screen either way.
       return 'This room can’t play that game that way. Update Huddle and try again.';
+    case 'setupNotFound':
+      return 'Choose a game before configuring it.';
+    case 'setupAlreadyRunning':
+      return 'This room is already playing.';
+    case 'replayNotFinished':
+      return 'Replay is available after the game finishes.';
+    case 'replayNotAllowed':
+      return 'The current roster cannot replay this game.';
     case 'tvUnavailable':
       return 'The TV is reconnecting. Wait for it to return, then try again.';
   }

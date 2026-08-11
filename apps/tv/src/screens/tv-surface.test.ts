@@ -7,6 +7,10 @@ describe('TV surface', () => {
     expect(tvSurface({ runtime: 'game', hasBrowsing: true })).toBe('game');
   });
 
+  it('keeps a finished game on the module surface for its results screen', () => {
+    expect(tvSurface({ runtime: 'finished', hasBrowsing: true })).toBe('game');
+  });
+
   it.each(['paused', 'unavailable'] as const)('fails closed for a %s runtime', (runtime) => {
     expect(tvSurface({ runtime, hasBrowsing: true })).toBe('runtime-status');
   });

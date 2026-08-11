@@ -3,7 +3,7 @@ import type { GameModule } from '@huddle/game-core';
 import { VotingControllerScreen } from './controller-screen';
 import type { VotingEvent, VotingState } from './logic';
 import { votingMetadata } from './metadata';
-import { VOTING_SETTINGS_SCHEMA } from './settings';
+import { VOTING_SETTINGS_PRESENTATION, VOTING_SETTINGS_SCHEMA } from './settings';
 import { VotingTvScreen } from './tv-screen';
 
 /**
@@ -23,6 +23,9 @@ import { VotingTvScreen } from './tv-screen';
 export const votingGameModule: GameModule<VotingState, VotingEvent> = {
   metadata: votingMetadata,
   settingsSchema: VOTING_SETTINGS_SCHEMA,
+  settingsPresentation: VOTING_SETTINGS_PRESENTATION,
+  finishedSummary: () => ({ title: 'Hot Takes complete' }),
+  isFinished: (state) => state.phase === 'finished',
   screens: {
     tv: VotingTvScreen,
     controller: VotingControllerScreen,

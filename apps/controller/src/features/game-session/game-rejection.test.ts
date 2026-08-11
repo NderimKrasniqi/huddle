@@ -1,4 +1,4 @@
-import type { GameLifecycleRejection } from '@huddle/game-core';
+import type { GameLifecycleRejection, GameSetupRejection } from '@huddle/game-core';
 import { ConvexError } from 'convex/values';
 import { describe, expect, it } from 'vitest';
 
@@ -21,6 +21,13 @@ const EVERY_REJECTION: readonly GameLifecycleRejection[] = [
   { kind: 'notEnoughPlayers', need: 2, have: 1 },
   { kind: 'tooManyPlayers', max: 4, have: 6 },
   { kind: 'settingRejected', key: 'questionCount', value: '7' },
+];
+
+const EVERY_SETUP_REJECTION: readonly GameSetupRejection[] = [
+  { kind: 'setupNotFound' },
+  { kind: 'setupAlreadyRunning' },
+  { kind: 'replayNotFinished' },
+  { kind: 'replayNotAllowed' },
 ];
 
 describe('rejectionMessage', () => {
@@ -59,6 +66,9 @@ describe('rejectionMessage', () => {
     for (const rejection of EVERY_REJECTION) {
       expect(rejectionMessage(rejection).length, rejection.kind).toBeGreaterThan(0);
     }
+    for (const rejection of EVERY_SETUP_REJECTION) {
+      expect(rejectionMessage(rejection).length, rejection.kind).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -67,6 +77,15 @@ describe('lifecycleFailureMessage', () => {
     const thrown = new ConvexError<GameLifecycleRejection>({ kind: 'notHost' });
 
     expect(lifecycleFailureMessage(thrown)).toBe('Somebody else is running this room now.');
+  });
+
+  it('reads setup and replay refusals off a ConvexError too', () => {
+    expect(lifecycleFailureMessage(new ConvexError<GameSetupRejection>({ kind: 'setupNotFound' }))).toBe(
+      'Choose a game before configuring it.',
+    );
+    expect(lifecycleFailureMessage(new ConvexError<GameSetupRejection>({ kind: 'replayNotAllowed' }))).toBe(
+      'The current roster cannot replay this game.',
+    );
   });
 
   it('reads a settings refusal off one too', () => {

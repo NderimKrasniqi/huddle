@@ -658,20 +658,45 @@ describe('the Host starting a game', () => {
     expect(await t.query(api.games.running, { roomId })).toBeNull();
   });
 
-  it('refuses a setting the game does not declare', async () => {
+  it('refuses settings that the selected custom mode does not expose', async () => {
     const t = convexTest(schema, modules);
     const { roomId, host } = await roomWithParty(t);
 
+    await t.mutation(api.games.selectGame, { sessionToken: host, gameId: 'trivia', mode: 'standard' });
+
     expect(
       await rejectionFrom(
-        t.mutation(api.games.startGame, {
+        t.mutation(api.games.configureGame, {
           sessionToken: host,
-          gameId: 'trivia',
-          settings: { difficulty: 'hard' },
+          mode: 'custom',
+          settings: { scoring: 'speed' },
         }),
       ),
-    ).toEqual({ kind: 'settingRejected', key: 'difficulty', value: 'hard' });
-    expect(await t.query(api.games.running, { roomId })).toBeNull();
+    ).toEqual({ kind: 'settingRejected', key: 'scoring', value: 'speed' });
+
+    expect(await t.query(api.games.setup, { roomId })).toMatchObject({ mode: 'standard' });
+
+    expect(
+      await rejectionFrom(
+        t.mutation(api.games.configureGame, {
+          sessionToken: host,
+          mode: 'custom',
+          settings: { scoring: 'flat', questionSeconds: '15' },
+        }),
+      ),
+    ).toEqual({ kind: 'settingRejected', key: 'questionSeconds', value: '15' });
+  });
+
+  it('accepts the newly declared difficulty setting', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.games.startGame, {
+      sessionToken: host,
+      gameId: 'trivia',
+      settings: { difficulty: 'hard' },
+    });
+    expect(await t.query(api.games.running, { roomId })).not.toBeNull();
   });
 
   it('tells a party too small that, before it tells them about a setting', async () => {
@@ -1605,6 +1630,78 @@ describe('the carousel the Host browses', () => {
       kind: 'running',
       gameId: running?.gameId,
       state: runningState(running),
+    });
+  });
+});
+
+describe('the shared game setup draft', () => {
+  it('selects a preset, mirrors configuration, and starts atomically', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host } = await roomWithParty(t);
+
+    await t.mutation(api.games.selectGame, { sessionToken: host, gameId: 'trivia', mode: 'quick' });
+    expect(await t.query(api.games.setup, { roomId })).toMatchObject({
+      gameId: 'trivia',
+      mode: 'quick',
+      settings: { questionCount: '5', difficulty: 'mixed', questionSeconds: '15' },
+    });
+
+    await t.mutation(api.games.configureGame, {
+      sessionToken: host,
+      settings: { questionCount: '15', difficulty: 'hard', questionSeconds: '30', category: 'Movies' },
+      mode: 'custom',
+    });
+    expect(await t.query(api.games.setup, { roomId })).toMatchObject({
+      mode: 'custom',
+      settings: { questionCount: '15', difficulty: 'hard', questionSeconds: '30', category: 'Movies' },
+    });
+
+    await t.mutation(api.games.startGame, { sessionToken: host });
+    expect(await t.query(api.games.setup, { roomId })).toBeNull();
+    expect(await t.query(api.games.running, { roomId })).toMatchObject({
+      kind: 'running',
+      gameId: 'trivia',
+      settings: { questionCount: '15', difficulty: 'hard', questionSeconds: '30', category: 'Movies' },
+      mode: 'custom',
+    });
+  });
+
+  it('is Host-only and can be cancelled while the TV is away', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host, guest } = await roomWithParty(t);
+
+    expect(
+      await rejectionFrom(t.mutation(api.games.selectGame, { sessionToken: guest, gameId: 'trivia' })),
+    ).toEqual({ kind: 'notHost' });
+
+    await t.mutation(api.games.selectGame, { sessionToken: host, gameId: 'trivia' });
+    await t.mutation(api.games.cancelGameSetup, { sessionToken: host });
+    expect(await t.query(api.games.setup, { roomId })).toBeNull();
+  });
+
+  it('replays only a finished run with fresh state and locked settings', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, tokens } = await roomPlayingOn(
+      t,
+      { questionCount: '5', difficulty: 'hard', questionSeconds: '30' },
+      'Ada',
+      'Grace',
+    );
+    await playToTheFinalScores(t, roomId, tokens);
+    const before = await t.query(api.games.running, { roomId });
+    expect((before as unknown as { state: { phase: string } }).state.phase).toBe('finished');
+
+    await t.mutation(api.games.replayGame, { sessionToken: tokens.Ada ?? '' });
+    const after = await t.query(api.games.running, { roomId });
+    expect(after).toMatchObject({
+      kind: 'running',
+      mode: 'standard',
+      settings: { questionCount: '5', difficulty: 'hard', questionSeconds: '30' },
+    });
+    expect((after as unknown as { state: { phase: string; questionIndex: number; standings: readonly { score: number }[] } }).state).toMatchObject({
+      phase: 'question',
+      questionIndex: 0,
+      standings: [{ score: 0 }, { score: 0 }],
     });
   });
 });
