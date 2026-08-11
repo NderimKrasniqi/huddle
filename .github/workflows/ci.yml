@@ -74,3 +74,42 @@ jobs:
       # options, an answer index pointing nowhere — out of the repo.
       - name: Validate packs
         run: pnpm validate:packs
+
+      # A source seam can miss a bundler-only edge. Export both client graphs
+      # and scan the actual Hermes output for curated question text and the
+      # serialized pack; this is the production proof described in F-011.
+      - name: Export and inspect client bundle seams
+        run: |
+          controller_export="$(mktemp -d)"
+          tv_export="$(mktemp -d)"
+          pnpm --filter @huddle/controller exec expo export --platform ios --output-dir "$controller_export"
+          pnpm --filter @huddle/tv exec expo export --platform ios --output-dir "$tv_export"
+          pnpm verify:bundle-seam -- "$controller_export"
+          pnpm verify:bundle-seam -- "$tv_export"
+
+      - name: Inspect Android TV prebuild metadata
+        run: pnpm --filter @huddle/tv prebuild --platform android --no-install
+
+  # The Node floor is an intentional compatibility contract, not just the
+  # developer machine version. Keep a focused 22.13 gate beside the complete
+  # Node 24 suite so an engine/type regression cannot hide behind a newer
+  # runtime.
+  node-22-compat:
+    name: Node 22.13 compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Install Node 22.13
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.13.0'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck on the supported floor
+        run: pnpm typecheck
+      - name: Run pure and backend tests on the supported floor
+        run: pnpm test:unit && pnpm test:integration

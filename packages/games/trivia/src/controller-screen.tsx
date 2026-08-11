@@ -13,7 +13,7 @@ import { Surface } from '@huddle/ui/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
-import type { TriviaEvent, TriviaState } from './logic';
+import type { TriviaEvent, TriviaState } from './types';
 
 /**
  * Trivia on the phone: four buttons, and then a phone that gets out of the way.

@@ -74,6 +74,12 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files["src/features/one/index.ts"] = "import { View } from 'react-native'; export { View };\n"
         self.assert_invalid(files, "pure entrypoint imports renderer code")
 
+    def test_pure_index_cannot_reexport_renderer_transitively(self) -> None:
+        files = self.baseline()
+        files["src/features/one/index.ts"] = "export { view } from './renderer';\n"
+        files["src/features/one/renderer.ts"] = "import { View } from 'react-native'; export const view = View;\n"
+        self.assert_invalid(files, "transitively imports renderer code")
+
     def test_dependency_cycle_is_rejected(self) -> None:
         files = self.baseline()
         files["src/features/one/a.ts"] = "import { b } from './b'; export { b };\n"
@@ -84,6 +90,55 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files = self.baseline()
         files["src/features/one/BadName.ts"] = "export const bad = true;\n"
         self.assert_invalid(files, "authored filename must be kebab-case")
+
+    def package_root(self, manifests: dict[str, str]) -> Path:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        for relative, source in manifests.items():
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(source, encoding="utf-8")
+        return root
+
+    def test_missing_package_export_target_is_rejected(self) -> None:
+        root = self.package_root({"packages/sample/package.json": '{"name":"sample","exports":{".":"./src/index.ts"}}'})
+        with self.assertRaisesRegex(SystemExit, "package export target missing"):
+            validator.validate_package_boundaries(root)
+
+    def test_forbidden_workspace_dependency_is_rejected(self) -> None:
+        root = self.package_root(
+            {
+                "apps/phone/package.json": '{"name":"phone","exports":{".":"./index.ts"}}',
+                "packages/game/package.json": '{"name":"game","dependencies":{"phone":"workspace:*"},"exports":{".":"./index.ts"}}',
+                "apps/phone/index.ts": "export {};\n",
+                "packages/game/index.ts": "export {};\n",
+            }
+        )
+        with self.assertRaisesRegex(SystemExit, "forbidden workspace dependency direction"):
+            validator.validate_package_boundaries(root)
+
+    def test_rules_only_entrypoint_cannot_reexport_renderer(self) -> None:
+        root = self.package_root(
+            {
+                "packages/rules/package.json": '{"name":"rules","exports":{"./logic":"./src/logic.ts"}}',
+                "packages/rules/src/logic.ts": "export { view } from './view';\n",
+                "packages/rules/src/view.ts": "import { View } from 'react-native'; export const view = View;\n",
+            }
+        )
+        with self.assertRaisesRegex(SystemExit, "rules-only entrypoint"):
+            validator.validate_package_boundaries(root)
+
+    def test_client_safe_entrypoint_cannot_reach_server_content(self) -> None:
+        root = self.package_root(
+            {
+                "packages/client/package.json": '{"name":"client","exports":{"./categories":"./src/categories.ts"}}',
+                "packages/client/src/categories.ts": "export { questions } from './server';\n",
+                "packages/client/src/server.ts": "export const questions = [];\n",
+            }
+        )
+        with self.assertRaisesRegex(SystemExit, "client-safe entrypoint"):
+            validator.validate_package_boundaries(root)
 
 
 if __name__ == "__main__":

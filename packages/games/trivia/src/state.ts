@@ -1,6 +1,6 @@
 import type { GamePlayerId } from '@huddle/game-core';
 
-import type { TriviaState } from './logic';
+import type { TriviaState } from './types';
 
 /**
  * Trivia's state constants and the pure reads over it — the half of the rules a
@@ -17,7 +17,7 @@ import type { TriviaState } from './logic';
  * rules' own use and re-exports them, so the server and the tests go on reading
  * them off the module they always have.
  *
- * The types come from `./logic` as *types*, which erase, so this module has no
+ * The types come from `./types` as *types*, which erase, so this module has no
  * runtime import of it and therefore no path to the pack — which is the whole
  * point of the seam.
  */

@@ -1,9 +1,9 @@
 # Huddle Architecture
 
-> Reconciled 2026-08-11 for **F-010 Architecture, Structure, and Naming
-> Refactor**.
+> Reconciled 2026-08-12 for **F-011 Quality Foundation and Maintainability
+> Pass** (building on F-010).
 > Phases 1–5 remain the frozen product baseline. This document records the
-> repository's current boundaries through Feature 7 without changing Expo,
+> repository's current boundaries through Feature 11 without changing Expo,
 > Convex, pnpm workspaces, the game registry, shared UI primitives, or the
 > approved Soft Minimal palette and TV assets.
 
@@ -34,7 +34,10 @@ The current implementation is a pnpm workspace with Expo Router apps under
 `apps/controller` and `apps/tv`, Convex functions under `convex/convex`,
 platform contracts under `packages/game-core` and `packages/game-registry`,
 game modules under `packages/games/*`, and shared tokens/primitives under
-`packages/ui`. Expo route adapters are thin. The Controller root screen owns
+`packages/ui`. Trivia owns its curated question content under
+`packages/games/trivia`; the client/server registry seam, rather than a
+separate workspace package, keeps that content out of Controller bundles.
+Expo route adapters are thin. The Controller root screen owns
 only deep-link/session composition, while the TV root screen owns room opening,
 live subscriptions, and pure surface selection. Both apps keep rendering,
 styles, feature hooks, and platform lifecycle code behind explicit entrypoints.
@@ -81,10 +84,29 @@ Only genuinely cross-app tokens and primitives live in `@huddle/ui`. The
 React-Native implementation has two intentional entrypoints: `@huddle/ui/native`
 contains the Node-safe core primitives used by game modules, while
 `@huddle/ui/kit` contains the attached Huddle UI kit, its Lucide-backed icon
-wrapper, and the phone/TV helper components used by the platform screens. The
-kit entrypoint stays separate so its renderer dependency does not enter the
-plain-Node game registry tests. Redux, Zustand, Nx, Turborepo, a second API
-server, and a new shared package are explicitly out of scope.
+wrapper, and the phone/TV helper components used by the platform screens. Kit
+controls, status, room-code, list-row, pagination, and utility responsibilities
+have named modules under `packages/ui/src/kit/`; `components.tsx` remains a
+source-compatible compatibility barrel. The kit entrypoint stays separate so
+its renderer dependency does not enter the plain-Node game registry tests.
+Redux, Zustand, Nx, Turborepo, a second API server, and a new shared package are
+explicitly out of scope.
+
+Package entrypoints are contracts: pure/type entrypoints cannot transitively
+re-export React Native renderers, rules-only and client-safe entries cannot
+reach server logic or curated Trivia content, and manifests may depend only in
+the approved workspace direction. The validator checks these properties over
+the transitive import graph, including package export targets. Trivia's
+`content/categories` projection is client-safe; `schemas.ts` keeps untrusted
+state/event decoding separate from transitions, while pack JSON, question
+parsing, and server rules remain reachable only from the server-side Trivia
+graph. Voting uses the same type/schema seam without introducing a runtime path
+to its rules from the client barrel.
+
+TV identity failures are an explicit internal boot state distinct from network
+silence and service rejection. Device identity errors are typed at the
+platform boundary, logged once without credentials, and never bypass durable
+token persistence before room creation.
 
 ## Startup and loading boundary
 

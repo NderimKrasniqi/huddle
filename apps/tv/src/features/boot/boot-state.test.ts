@@ -23,6 +23,7 @@ describe('TV boot presentation', () => {
       'opening',
       'reconnecting',
       'misconfigured',
+      'deviceFailure',
     ];
 
     for (const phase of phases) {

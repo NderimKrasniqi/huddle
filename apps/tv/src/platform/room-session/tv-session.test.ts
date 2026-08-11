@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ensureTvSessionToken, isTvSessionToken, type TvSessionStore } from './tv-session';
+import {
+  ensureTvSessionToken,
+  isTvIdentityError,
+  isTvSessionToken,
+  TvIdentityError,
+  type TvSessionStore,
+} from './tv-session';
 
 const UUID = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -39,7 +45,28 @@ describe('durable TV identity', () => {
       },
       write: async () => undefined,
     };
-    await expect(ensureTvSessionToken(persisted, () => UUID)).rejects.toThrow('keystore');
+    await expect(ensureTvSessionToken(persisted, () => UUID)).rejects.toMatchObject({
+      name: 'TvIdentityError',
+      failure: 'read',
+    });
+  });
+
+  it('wraps UUID and write failures without exposing provider errors', async () => {
+    await expect(ensureTvSessionToken(store(null), () => 'not-a-uuid')).rejects.toBeInstanceOf(
+      TvIdentityError,
+    );
+
+    const persisted: TvSessionStore = {
+      read: async () => null,
+      write: async () => {
+        throw new Error('provider detail should not escape');
+      },
+    };
+    const error = await ensureTvSessionToken(persisted, () => UUID).catch((failure: unknown) => failure);
+
+    expect(isTvIdentityError(error)).toBe(true);
+    expect(error).toMatchObject({ failure: 'write' });
+    expect((error as Error).message).not.toContain('provider detail');
   });
 
   it('only accepts v4 UUID credentials', () => {

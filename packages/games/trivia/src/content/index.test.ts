@@ -32,8 +32,9 @@ function reachableFromIndex(): Map<string, string> {
 }
 
 /**
- * The seam this package holds: `@huddle/packs` is imported by both apps, and
- * Pack Validation reads a directory — `node:fs`, which Metro has no answer for.
+ * The seam this content owner holds: the schema and curated pack are useful to
+ * server rules, while Pack Validation reads a directory — `node:fs`, which
+ * Metro has no answer for.
  *
  * Written as a test rather than trusted to the comment on the export list,
  * because the failure it prevents surfaces as a broken app build saying nothing

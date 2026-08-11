@@ -9,7 +9,7 @@ import { type GameSettings, type GameSettingsSchema, settingsFrom } from '@huddl
 import {
   CURATED_CATEGORIES as PACK_CATEGORIES,
   RESERVED_CATEGORY as EVERY_CATEGORY,
-} from '@huddle/packs/categories';
+} from './content/categories';
 
 /**
  * Trivia's host-tunable options: what the Host is offered, and what trivia makes

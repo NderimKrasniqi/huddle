@@ -91,14 +91,27 @@ describe('resumeSession', () => {
   it('asks the room nothing when the phone has never joined', async () => {
     const { report, said } = reportsOf();
     const lookUp = vi.fn().mockResolvedValue(ADAS_SEAT);
+    const tokenStatus = vi.fn();
 
-    resumeSession(phoneRemembering(null), lookUp, report, PATIENCE);
+    resumeSession(phoneRemembering(null), lookUp, report, PATIENCE, tokenStatus);
     await vi.advanceTimersByTimeAsync(1);
 
     expect(said).toEqual([null]);
+    expect(tokenStatus).toHaveBeenCalledWith('missing');
     // A phone with no token has no seat to claim, and asking about one would
     // be asking with somebody else's answer.
     expect(lookUp).not.toHaveBeenCalled();
+  });
+
+  it('announces a persisted token before waiting for its room lookup', async () => {
+    const { report } = reportsOf();
+    const silence = vi.fn(() => new Promise<PlayerSession | null>(() => {}));
+    const tokenStatus = vi.fn();
+
+    resumeSession(phoneRemembering('adastoken'), silence, report, PATIENCE, tokenStatus);
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(tokenStatus).toHaveBeenCalledWith('present');
   });
 
   it('has no session when the room does not know the token', async () => {

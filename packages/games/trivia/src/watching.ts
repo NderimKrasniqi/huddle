@@ -1,6 +1,6 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/game-core';
 
-import type { TriviaState } from './logic';
+import type { TriviaState } from './types';
 import { answersIn, playersCounted, QUESTION_SECONDS } from './state';
 
 /**

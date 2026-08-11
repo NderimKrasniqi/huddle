@@ -2,6 +2,7 @@ import type { api } from '@huddle/convex';
 import type { FunctionReturnType } from 'convex/server';
 
 import { onlyOnce } from './only-once';
+import { isTvIdentityError } from './tv-session';
 
 /**
  * Everything about getting a room onto the pairing screen: which room the TV is
@@ -81,7 +82,8 @@ export type RoomOpening =
   | { readonly kind: 'opening' }
   | { readonly kind: 'reconnecting' }
   | { readonly kind: 'open'; readonly room: OpenRoom }
-  | { readonly kind: 'misconfigured' };
+  | { readonly kind: 'misconfigured' }
+  | { readonly kind: 'deviceFailure' };
 
 /**
  * One value rather than a fresh object per failed attempt: the screen keeps
@@ -196,7 +198,17 @@ export function keepOpeningRoom(
       (error: unknown) => {
         clearTimeout(impatient);
         failures += 1;
-        complainOnce('Huddle TV could not open a room; it keeps trying:', error);
+
+        if (isTvIdentityError(error)) {
+          // Identity failures are local and cannot be fixed by hammering the
+          // backend. The error type deliberately contains no credential, so a
+          // sanitized one-time line is safe for diagnostics.
+          complainOnce(`Huddle TV device identity failed (${error.failure}).`);
+          if (!stopped) report({ kind: 'deviceFailure' });
+          return;
+        }
+
+        complainOnce('Huddle TV could not open a room; it keeps trying.');
 
         if (!stopped) {
           report(RECONNECTING);
@@ -263,6 +275,11 @@ export function roomOpeningCaption(opening: RoomOpening): RoomOpeningCaption {
       return {
         kind: 'trouble',
         text: 'No Huddle backend — set EXPO_PUBLIC_CONVEX_URL and rebuild',
+      };
+    case 'deviceFailure':
+      return {
+        kind: 'trouble',
+        text: 'Huddle could not save this TV identity — check device storage',
       };
   }
 }

@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 
 import { JoinForm } from '../features/join/native';
 import { SeatedController } from './seated-controller';
-import { joinScreenState, type PlayerSession, phoneSessionTokenStore, resumeSession } from '../platform/session';
+import { joinScreenState, type PlayerSession, resumeSession } from '../platform/session';
+import { phoneSessionTokenStore } from '../platform/session/native';
 import { PhoneLoadingScreen } from '../ui/native';
 
 export default function ControllerScreen() {
@@ -28,6 +29,13 @@ export default function ControllerScreen() {
   // inexplicably back at the start. `undefined` on an ordinary launch.
   const [notice, setNotice] = useState<string>();
 
+  // A fresh phone has no credential to restore. Keep the Join form actionable
+  // while SecureStore answers, and only show the restore surface after a token
+  // is actually found. This prevents a new iPhone from getting stuck behind
+  // “Finding your room” while still protecting a returning player from taking
+  // a duplicate seat during a valid lookup.
+  const [restoringToken, setRestoringToken] = useState(false);
+
   useEffect(() => {
     // Safe on every mount, unlike the TV's `openRoom`: rejoining reads, so a
     // remount asks the same question again instead of taking a second seat.
@@ -40,7 +48,19 @@ export default function ControllerScreen() {
       // deadline and the room finally answering, the player may have joined
       // somewhere else — and the room they are in now beats the one they were
       // in then, whichever order the two arrive in.
-      (late) => setSession((current) => current ?? late),
+      (late) => {
+        setRestoringToken(false);
+        setSession((current) => current ?? late);
+      },
+      undefined,
+      (status) => {
+        if (status === 'present') {
+          setRestoringToken(true);
+        } else {
+          setRestoringToken(false);
+          setSession(null);
+        }
+      },
     );
   }, [convex]);
 
@@ -57,10 +77,10 @@ export default function ControllerScreen() {
 
   const state = joinScreenState(session, linkedCode ?? '');
 
-  if (state.kind === 'restoring') {
+  if (state.kind === 'restoring' && restoringToken) {
     // Do not draw the Join form while an existing seat may still be on its way.
-    // `resumeSession` bounds this state, and the branded recovery surface says
-    // what the formerly blank phone is doing meanwhile.
+    // `resumeSession` only raises this flag after finding a persisted token, so
+    // a fresh phone goes straight to the actionable Join surface instead.
     return <PhoneLoadingScreen phase="restoring" />;
   }
 

@@ -1,6 +1,6 @@
 import type { GamePlayerId } from '@huddle/game-core';
 
-import type { TriviaState } from './logic';
+import type { TriviaState } from './types';
 
 /**
  * The Answer Screen as data: what one phone is looking at, given the state the

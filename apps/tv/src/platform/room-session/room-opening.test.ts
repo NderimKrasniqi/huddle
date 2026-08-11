@@ -9,6 +9,7 @@ import {
   roomOpeningAtLaunch,
   roomOpeningCaption,
 } from './room-opening';
+import { TvIdentityError } from './tv-session';
 
 /** The room `openRoom` hands back, as the TV receives it. */
 const room: OpenRoom = { roomId: 'room-KWRD' as OpenRoom['roomId'], code: 'KWRD' };
@@ -81,6 +82,17 @@ describe('keepOpeningRoom', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(open).toHaveBeenCalledTimes(2);
     expect(reported.at(-1)).toEqual({ kind: 'open', room });
+  });
+
+  it('surfaces a device identity failure without retrying the network', async () => {
+    const open = vi.fn(() => Promise.reject(new TvIdentityError('read', 'identity unavailable')));
+
+    keepOpeningRoom(open, report);
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(5 * 30_000);
+
+    expect(reported).toEqual([{ kind: 'deviceFailure' }]);
+    expect(open).toHaveBeenCalledTimes(1);
   });
 
   it('lengthens the wait with each failure', async () => {
@@ -218,7 +230,12 @@ describe('roomOpeningCaption', () => {
     // Arithmetic, not a measurement: there is no simulator in this suite, and
     // a wrapped caption would push the QR card sideways.
     const captions = (
-      [{ kind: 'opening' }, { kind: 'reconnecting' }, { kind: 'misconfigured' }] as const
+      [
+        { kind: 'opening' },
+        { kind: 'reconnecting' },
+        { kind: 'misconfigured' },
+        { kind: 'deviceFailure' },
+      ] as const
     ).map((opening) => {
       const caption = roomOpeningCaption(opening);
       return caption.kind === 'invitation'
@@ -226,7 +243,7 @@ describe('roomOpeningCaption', () => {
         : caption.text;
     });
 
-    expect(captions.map((text) => text.length <= 64)).toEqual([true, true, true]);
+    expect(captions.map((text) => text.length <= 64)).toEqual([true, true, true, true]);
   });
 
   it('names the setting to fix when there is no deployment to open a room on', () => {
@@ -237,6 +254,13 @@ describe('roomOpeningCaption', () => {
     expect(caption).toEqual({
       kind: 'trouble',
       text: expect.stringContaining('EXPO_PUBLIC_CONVEX_URL'),
+    });
+  });
+
+  it('explains how to recover a device identity failure', () => {
+    expect(roomOpeningCaption({ kind: 'deviceFailure' })).toEqual({
+      kind: 'trouble',
+      text: expect.stringMatching(/storage/i),
     });
   });
 });

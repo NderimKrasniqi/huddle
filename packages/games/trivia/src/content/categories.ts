@@ -1,4 +1,4 @@
-import { RESERVED_CATEGORY } from './question-pack';
+import { RESERVED_CATEGORY } from './category-contract';
 
 /**
  * The Curated Pack's category names, and the reserved "no filter" word — the
@@ -11,11 +11,11 @@ import { RESERVED_CATEGORY } from './question-pack';
  * every answer before the TV asks (docs/implementation-plan.md 5.9). The Host's
  * category filter still needs the *names* of the categories, though — and a
  * category name is not an answer. So the names live here, as a plain list with
- * no path to the questions, and reach the Controller through
- * `@huddle/packs/categories` while the pack itself stays server-side.
+ * no path to the questions, and reach the Controller through trivia's
+ * settings module while the pack itself stays server-side.
  *
  * Hand-authored rather than derived, precisely so importing it pulls in no
- * questions: `curated-categories.test.ts` imports both this list and the real
+ * questions: `categories.test.ts` imports both this list and the real
  * `CURATED_PACK` and fails if they ever disagree, so the list cannot drift from
  * the pack even though it is not computed from it. Order of first appearance,
  * matching how `PACK_CATEGORIES` used to read them off the pack.
@@ -31,7 +31,7 @@ export const CURATED_CATEGORIES: readonly string[] = [
 
 // Re-exported from the client-safe entry so a consumer that needs the "all
 // categories" sentinel alongside the names takes both from one pack-free import
-// rather than reaching back into the schema module by name. It is the pack's own
-// constant (`./question-pack`, which imports no questions), so the filter and
-// the gate that reserves the word cannot drift.
+// rather than reaching back into the schema module by name. The sentinel lives
+// in the tiny `category-contract` module so the filter and the validation gate
+// share one value without creating a runtime edge to the pack schema.
 export { RESERVED_CATEGORY };

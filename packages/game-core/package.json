@@ -13,8 +13,8 @@
   },
   "//devDependencies": "React is a *type-only* dependency: the Game Module interface types a game's two screens, and a screen is a React component. Nothing in this package imports a value from React, so `@types/react` is the whole of the need and there is no peer dependency on the runtime — a package that never calls React has no business asking a consumer to install it. This is also what keeps game-core runnable under plain Node, which is how the Convex server reads it.",
   "devDependencies": {
-    "@types/node": "^26.1.1",
-    "@types/react": "~19.2.17",
-    "typescript": "~5.9.3"
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "typescript": "catalog:"
   }
 }

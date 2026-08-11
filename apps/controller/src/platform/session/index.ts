@@ -5,7 +5,6 @@ export {
   type PlayerSession,
   rememberSession,
   resumeSession,
+  type SessionTokenStatus,
   type SessionTokenStore,
 } from './session';
-export { phoneSessionTokenStore } from './session-store';
-export { useSessionToken } from './use-session-token';

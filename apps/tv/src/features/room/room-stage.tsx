@@ -3,19 +3,15 @@ import {
   isGreeting,
   JUST_JOINED_MS,
   noteArrivals,
-  ROOM_CODE_LENGTH,
-  roomJoinLink,
 } from '@huddle/game-core';
-import { colors, elevation, motionDuration, popIn, springOf } from '@huddle/ui';
-import { Avatar, Icon, Surface } from '@huddle/ui/native';
+import { colors, motionDuration, popIn, springOf } from '@huddle/ui';
+import { Avatar, Icon } from '@huddle/ui/native';
 import { JoinCountRow, SectionDivider } from '@huddle/ui/kit';
 import { useCallback, useEffect, useState } from 'react';
 import { Animated, Text, View } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 
 import {
   type RoomOpening,
-  type RoomOpeningCaption,
   roomOpeningCaption,
 } from '../../platform/room-session';
 import { TvHeader, TvStage } from '../../ui/native';
@@ -23,13 +19,13 @@ import type { RosterSeat } from '../../models';
 import {
   type RoomSeat,
   roomCountLine,
-  ROOM_QR_SIZE,
   roomSeats,
   seat,
   seatSlot,
   seatSpokenAs,
 } from './roster';
 import { styles } from './styles';
+import { RoomCaption, RoomCodeTiles, RoomQrCard } from './room-invitation';
 
 export function RoomStage({
   opening,
@@ -287,90 +283,6 @@ function RoomCount({ roster }: { readonly roster: readonly RosterSeat[] }) {
   );
 
   return <JoinCountRow joined={joined} total={total} note={note} style={styles.countLine} />;
-}
-
-/**
- * TV — Game carousel (`docs/design/reference/screens/02-game-carousel.png`): the
- * game the Host is browsing, with its neighbours either side.
- *
- * Games and nothing else. The board draws no roster here and no room chip
- * either, which is the other half of the Room screen keeping the code: a
- * latecomer reads it off the Room the party came from, and this screen is the
- * moment the room stops recruiting and starts choosing.
- *
- * The television is a renderer here as everywhere else — it draws the index the
- * room stored, and the Host's phone is the only thing that moves it. Nothing on
- * this screen knows which game it is showing: the card is `GameMetadata`, which
- * is what metadata is for.
- */
-
-function RoomCodeTiles({ code }: { readonly code: string | undefined }) {
-  return (
-    <View style={styles.tiles}>
-      {Array.from({ length: ROOM_CODE_LENGTH }, (_unused, position) => (
-        <Surface key={position} elevation={elevation.tvCard} style={styles.tile}>
-          <Text style={styles.tileLetter}>{code?.charAt(position) ?? ''}</Text>
-        </Surface>
-      ))}
-    </View>
-  );
-}
-
-/**
- * The line under the tiles: the invitation to join, or — when there is no code
- * to join with — what has gone wrong, as a chip.
- *
- * Trouble is promoted from the caption's quiet muted line to a bordered chip
- * because of who is reading it and when: four blank code tiles are the least
- * explicable thing this app can put on a television, and the sentence
- * explaining them competes with a hero the size of the screen. The chip is
- * assembled from parts the system already has — the soft peach accent surface,
- * a hairline border and a TV card's shadow — because the design package draws
- * no failure state for this screen at all (it draws a TV that is working).
- */
-
-function RoomCaption({ caption }: { readonly caption: RoomOpeningCaption }) {
-  if (caption.kind === 'invitation') {
-    return (
-      <Text style={styles.caption}>
-        {caption.before}
-        <Text style={styles.captionEmphasis}>{caption.emphasis}</Text>
-        {caption.after}
-      </Text>
-    );
-  }
-
-  return (
-    <Surface elevation={elevation.tvCard} style={styles.troubleChip}>
-      <Text style={styles.troubleChipText}>{caption.text}</Text>
-    </Surface>
-  );
-}
-
-/**
- * The Join Link as a QR: scanning it opens the Controller straight into the
- * room.
- *
- * No caption under it, which the board is explicit about — a QR standing beside
- * a room code that already says "open Huddle on your phone" needs no second
- * sentence, and the space it would take is the space the roster grew into.
- */
-
-function RoomQrCard({ code }: { readonly code: string | undefined }) {
-  return (
-    <Surface elevation={elevation.tvCard} style={styles.qrCard}>
-      <View style={styles.qr}>
-        {code === undefined ? null : (
-          <QRCode
-            value={roomJoinLink(code)}
-            size={ROOM_QR_SIZE}
-            color={colors.ink}
-            backgroundColor={colors.roomSurface}
-          />
-        )}
-      </View>
-    </Surface>
-  );
 }
 
 /**

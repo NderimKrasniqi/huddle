@@ -20,7 +20,7 @@
     "@huddle/game-voting": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
-    "typescript": "~5.9.3"
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
   }
 }

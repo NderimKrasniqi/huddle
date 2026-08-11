@@ -9,6 +9,7 @@ same checks useful against isolated fixture apps in the Python test suite.
 from __future__ import annotations
 
 import re
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +30,10 @@ KEBAB_FILE = re.compile(
 KEBAB_DIR = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 RENDERER_IMPORT = re.compile(
     r"['\"](?:react|react-native(?:/[^'\"]*)?|convex/react|expo(?:/[^'\"]*)?)['\"]"
+)
+SHARED_RENDERER_IMPORT = re.compile(r"['\"]@huddle/ui/(?:kit|native)['\"]")
+SERVER_CONTENT_IMPORT = re.compile(
+    r"(?:curated-pack|questions|server|node:[a-z0-9_/]+)", re.IGNORECASE
 )
 
 
@@ -147,16 +152,190 @@ def validate_entrypoint_content(app: Path, root: Path = ROOT) -> None:
             if entrypoint.name == "index.ts" and RENDERER_IMPORT.search(source):
                 fail(f"pure entrypoint imports renderer code: {relative(entrypoint, root)}")
 
+            if entrypoint.name == "index.ts":
+                validate_transitive_renderer_free(entrypoint, root, "pure entrypoint")
+
     for models in (src / "models",):
         if not models.is_dir():
             fail(f"missing app models layer: {relative(models, root)}")
         for path in source_files(models):
-            if RENDERER_IMPORT.search(COMMENTS.sub("", path.read_text(encoding="utf-8"))):
+            if renderer_import(COMMENTS.sub("", path.read_text(encoding="utf-8"))):
                 fail(f"model entrypoint exposes renderer code: {relative(path, root)}")
 
     ui = src / "ui"
     if not (ui / "index.ts").is_file():
         fail(f"missing public UI entrypoint: {relative(ui / 'index.ts', root)}")
+
+
+def renderer_import(source: str) -> re.Match[str] | None:
+    """Return a renderer import, including a renderer-bearing UI seam."""
+
+    return RENDERER_IMPORT.search(source) or SHARED_RENDERER_IMPORT.search(source)
+
+
+def validate_transitive_renderer_free(entrypoint: Path, root: Path, label: str) -> None:
+    """Ensure a pure entrypoint cannot hide a renderer behind a re-export."""
+
+    pending = [entrypoint]
+    visited: set[Path] = set()
+    while pending:
+        source = pending.pop()
+        if source in visited or not source.is_file():
+            continue
+        visited.add(source)
+        text = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+        if renderer_import(text):
+            fail(f"{label} transitively imports renderer code: {relative(source, root)}")
+        for match in MODULE_REFERENCE.finditer(text):
+            target = resolve_import(source, match.group("path"))
+            if target is not None:
+                pending.append(target)
+
+
+def export_values(value: object) -> list[str]:
+    """Flatten conditional/package export declarations into target strings."""
+
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        result: list[str] = []
+        for child in value.values():
+            result.extend(export_values(child))
+        return result
+    if isinstance(value, list):
+        result = []
+        for child in value:
+            result.extend(export_values(child))
+        return result
+    return []
+
+
+def package_manifests(root: Path) -> list[Path]:
+    return sorted(
+        path
+        for path in root.rglob("package.json")
+        if "node_modules" not in path.parts and ".git" not in path.parts
+    )
+
+
+def package_kind(path: Path, root: Path) -> str:
+    rel = path.parent.relative_to(root).parts
+    if not rel:
+        return "root"
+    if rel[0] == "apps":
+        return "app"
+    if rel[0] == "convex":
+        return "convex"
+    if rel[:2] == ("packages", "game-core"):
+        return "core"
+    if rel[:2] == ("packages", "game-registry"):
+        return "registry"
+    if rel[:2] == ("packages", "ui"):
+        return "ui"
+    if rel[:2] == ("packages", "games"):
+        return "game"
+    return "package"
+
+
+def validate_package_boundaries(root: Path = ROOT) -> None:
+    """Validate package export targets and workspace dependency direction."""
+
+    manifests = package_manifests(root)
+    by_name: dict[str, Path] = {}
+    payloads: dict[Path, dict[str, object]] = {}
+    for manifest in manifests:
+        try:
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            fail(f"invalid package manifest: {relative(manifest, root)} ({error})")
+        if not isinstance(payload, dict):
+            fail(f"package manifest must be an object: {relative(manifest, root)}")
+        payloads[manifest] = payload
+        name = payload.get("name")
+        if isinstance(name, str):
+            by_name[name] = manifest
+
+        exports = payload.get("exports")
+        if exports is not None:
+            for target in export_values(exports):
+                if not target.startswith("."):
+                    continue
+                resolved = manifest.parent / target
+                if "*" in target:
+                    resolved = Path(str(resolved).split("*", 1)[0])
+                if not resolved.exists():
+                    fail(
+                        f"package export target missing: {relative(manifest, root)} -> {target}"
+                    )
+
+    allowed: dict[str, set[str]] = {
+        "app": {"core", "registry", "game", "ui", "convex"},
+        "convex": {"core", "registry"},
+        "registry": {"core", "game"},
+        "game": {"core", "ui"},
+        "ui": {"core"},
+        "core": set(),
+        "package": set(),
+        "root": {"app", "convex", "core", "registry", "game", "ui", "package"},
+    }
+    for manifest, payload in payloads.items():
+        source_kind = package_kind(manifest, root)
+        dependencies: dict[str, object] = {}
+        for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+            value = payload.get(field)
+            if isinstance(value, dict):
+                dependencies.update(value)
+        for dependency, version in dependencies.items():
+            if not isinstance(version, str) or not version.startswith("workspace:"):
+                continue
+            target_manifest = by_name.get(dependency)
+            if target_manifest is None:
+                fail(
+                    f"workspace dependency has no package: {relative(manifest, root)} -> {dependency}"
+                )
+            target_kind = package_kind(target_manifest, root)
+            if target_kind not in allowed.get(source_kind, set()):
+                fail(
+                    f"forbidden workspace dependency direction: {relative(manifest, root)} -> {dependency}"
+                )
+
+    # Rules-only and client-safe exports are intentionally renderer-free and
+    # cannot reach the server/content graph through an accidental re-export.
+    for manifest, payload in payloads.items():
+        exports = payload.get("exports")
+        if not isinstance(exports, dict):
+            continue
+        for key, declaration in exports.items():
+            if not isinstance(key, str) or key == ".":
+                continue
+            targets = export_values(declaration)
+            is_rules = key in {"./logic", "./rules"} or key.endswith("/logic")
+            is_client_safe = "client" in key or key.endswith("/categories")
+            if not (is_rules or is_client_safe):
+                continue
+            for target in targets:
+                if not target.startswith("."):
+                    continue
+                entrypoint = manifest.parent / target
+                if is_rules:
+                    validate_transitive_renderer_free(entrypoint, root, "rules-only entrypoint")
+                if is_client_safe:
+                    pending = [entrypoint]
+                    visited: set[Path] = set()
+                    while pending:
+                        source = pending.pop()
+                        if source in visited or not source.is_file():
+                            continue
+                        visited.add(source)
+                        text = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+                        if SERVER_CONTENT_IMPORT.search(text):
+                            fail(
+                                f"client-safe entrypoint reaches server/content code: {relative(source, root)}"
+                            )
+                        for match in MODULE_REFERENCE.finditer(text):
+                            child = resolve_import(source, match.group("path"))
+                            if child is not None:
+                                pending.append(child)
 
 
 def allowed_cross_boundary(source_owner: Owner, target_owner: Owner, target: Path) -> bool:
@@ -251,6 +430,7 @@ def validate_app(app: Path, root: Path = ROOT) -> None:
 def main() -> int:
     for name in APP_NAMES:
         validate_app(ROOT / "apps" / name)
+    validate_package_boundaries(ROOT)
 
     print("App architecture validation passed.")
     return 0

@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { convexClient } from '../src/platform/convex';
+import { convexClient } from '../src/platform/convex/native';
 import { PhoneLoadingScreen } from '../src/ui/native';
 
 // Keep the native mark covering the window until the first branded React frame

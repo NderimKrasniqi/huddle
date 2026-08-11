@@ -14,7 +14,7 @@
 // `./logic`. The inline-`type` form inside a value-export block keeps the module
 // dependency in place — the exact shape of the leak this file must not have, and
 // what `client-seam.test.ts` guards.
-export type { TriviaEvent, TriviaPhase, TriviaStanding, TriviaState } from './logic';
+export type { TriviaAdvance, TriviaEvent, TriviaPhase, TriviaStanding, TriviaState } from './types';
 export type { TriviaQuestion } from './questions';
 // Nothing else of `./questions` or `./settings` is exported: the schema reaches
 // the hub as `triviaGameModule.settingsSchema` and the pack's categories reach

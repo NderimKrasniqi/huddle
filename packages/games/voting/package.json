@@ -16,7 +16,7 @@
   "dependencies": {
     "@huddle/game-core": "workspace:*",
     "@huddle/ui": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "catalog:"
   },
   "//peerDependencies": "Screens only. `react-native` resolves to whichever variant the consuming app installed — react-native-tvos on the TV, stock on the phone — and the `./logic` entry point imports none of it, which is what lets the Convex server take the rules alone. See packages/games/trivia/package.json.",
   "peerDependencies": {
@@ -24,9 +24,9 @@
     "react-native": "*"
   },
   "devDependencies": {
-    "@types/react": "~19.2.17",
+    "@types/react": "catalog:",
     "react": "19.2.3",
     "react-native": "0.86.0",
-    "typescript": "~5.9.3"
+    "typescript": "catalog:"
   }
 }

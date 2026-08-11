@@ -20,6 +20,12 @@ Record only choices this project actually needs.
 | Rendered app tests | Jest + `jest-expo` + `@testing-library/react-native` 14.0.1 + React 19.2 `test-renderer` 1.2 | Controller and TV component behavior is exercised through accessibility-first async queries in per-app `*.render.test.tsx` suites; no snapshots or implementation-detail assertions. |
 | Builds | Local Expo/native builds | MVP development and verification without EAS Build infrastructure. |
 
+The Trivia pack is an owner-local content asset under
+`packages/games/trivia/packs`; `pnpm validate:packs` remains the stable CLI
+entrypoint. A pnpm catalog keeps intentionally shared TypeScript, React type,
+Jest/RNTL, and Zod versions aligned without introducing another workspace
+package. Node `22.13.0` and Node 24 are both CI gates.
+
 ## Architecture
 
 - Convex is the authoritative source of room and game state.
@@ -40,6 +46,9 @@ Record only choices this project actually needs.
 - All Expo apps in the monorepo use the matching `react-native-tvos` React Native fork to avoid dependency conflicts.
 - The supported Node floor is `^22.13.0 || >=24.0.0`, matching Expo SDK 57 and
   the RNTL 14.0.1 release guidance.
+- The client/server registry seam is the bundle boundary for game content:
+  Controller-safe entries expose metadata, settings, and renderers only;
+  Trivia question packs and server rules are server-graph dependencies.
 - Do not add a separate API server, WebSocket gateway, PostgreSQL, Redis, EAS Build, Docker/Kubernetes, or authentication provider unless future requirements justify them.
 
 ## Verification
@@ -53,6 +62,7 @@ rendered tests:       pnpm test:render          # Controller + TV Jest/jest-expo
 unit tests:           pnpm test:unit            # packages + apps + lint-rules
 backend/integration:  pnpm test:integration     # convex (edge-runtime)
 pack validation:      pnpm validate:packs
+bundle seam:          pnpm verify:bundle-seam -- <Expo export directory>
 workflow/architecture: pnpm validate:workflow
 production dependency audit: pnpm audit:prod
 patched dependency checks: pnpm verify:dependency-security

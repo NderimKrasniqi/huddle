@@ -457,3 +457,33 @@ and responsibility explicit.
 - Rendered app tests use Jest/jest-expo and React Native Testing Library while
   pure models, lint rules, package contracts, and Convex behavior remain in
   Vitest. Rendered tests are accessibility-first and never snapshots.
+
+# Feature 11 traceability — Quality Foundation and Maintainability Pass
+
+Feature 11 is a behavior-preserving quality pass. It strengthens ownership,
+reliability, accessibility coverage, and package seams without changing Expo
+routes, Convex public functions or schema, game IDs, registry ordering, stored
+data, approved visuals, or network contracts.
+
+- **F-011** — Quality Foundation and Maintainability Pass.
+- Trivia owns its curated question content. The private `@huddle/packs`
+  workspace is removed; pack parsing, validation, categories, CLI, tests, and
+  JSON live under `packages/games/trivia`. The client-safe category projection
+  remains separate from the server-only question graph, and bundle-seam tests
+  prove that Controller exports contain no pack content or server Trivia code.
+- TV room opening distinguishes device identity failures from reconnecting and
+  configuration failures. SecureStore/UUID errors are typed, credentials are
+  never logged, durable identity is persisted before room creation, and retry
+  backoff/single-flight behavior remains unchanged.
+- Controller and TV coordinators own subscriptions, lifecycle, persistence,
+  and surface precedence while feature renderers, app-local UI primitives, and
+  game renderers own presentation. Huddle Kit is organized by control, status,
+  room-code, list-row, pagination, and utility responsibilities while retaining
+  its compatibility barrel. Trivia/Voting state and event types plus server
+  schemas have dedicated seams. Huddle Kit exports, game package exports,
+  Convex public modules, validators, and function names remain source
+  compatible.
+- Architecture validation follows transitive imports and package manifests,
+  including pure/client-safe entrypoints and workspace dependency direction.
+  Node 22.13 and Node 24 are supported gates; rendered tests use async,
+  accessibility-first Jest/RNTL queries with no snapshots.

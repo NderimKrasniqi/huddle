@@ -1,4 +1,5 @@
-import { CURATED_PACK, type Difficulty, type PackQuestion, RESERVED_CATEGORY } from '@huddle/packs';
+import { CURATED_PACK } from './content/curated-pack';
+import { type Difficulty, type PackQuestion, RESERVED_CATEGORY } from './content/question-pack';
 
 /**
  * Where a game of trivia's questions come from: the Curated Pack, filtered and

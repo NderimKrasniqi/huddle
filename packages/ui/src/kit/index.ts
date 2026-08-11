@@ -6,31 +6,32 @@
 export {
   BottomSheetOptionRow,
   CategoryListRow,
-  IconGallery,
-  InfoChip,
   JoinCountRow,
+  SectionDivider,
+} from './list-row';
+export { IconGallery, InfoChip, UtilityActionButton } from './utility';
+export {
   ModeCard,
   NavigationIconButton,
-  OnlineDot,
-  PageDots,
-  PhoneBrowsingHelper,
   PrimaryButton,
   QuestionStepper,
-  RoomCode,
-  RoomCodeTile,
   SecondaryButton,
-  SectionDivider,
-  SegmentedControl,
   SelectableCard,
+  SegmentedControl,
+  type HuddleMode,
+  type NavigationIconButtonProps,
+} from './controls';
+export { RoomCode, RoomCodeTile } from './room-code';
+export { PageDots } from './pagination';
+export {
+  OnlineDot,
+  PhoneBrowsingHelper,
   SelectedBadge,
   StatusPill,
   StatusStrip,
-  UtilityActionButton,
-  type HuddleMode,
-  type NavigationIconButtonProps,
   type StatusPillVariant,
   type StatusStripVariant,
-} from './components';
+} from './status';
 export { HuddleIcon, QuestionsIcon, type HuddleIconName } from './icon';
 export { HuddleLogo, HuddleMark } from './logo';
 export {

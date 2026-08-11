@@ -5,7 +5,7 @@
  * the whole of the game's content. It is bundled here rather than drawn from a
  * pack (as trivia's questions are) because there is nothing to curate: a party
  * game about opinions has no right answer, so it needs no Question Pack, no
- * scoring key, and no `@huddle/packs` dependency. Keeping it self-contained is
+ * scoring key, and no Trivia content dependency. Keeping it self-contained is
  * also the point of a *test* game — it proves the platform runs a second module
  * that shares none of the first's content machinery.
  *

@@ -17,8 +17,9 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CHOOSE_A_GAME, hostChoosingLine, NOW_VIEWING_CAPTION, nowViewingLine, startControl, type SettingsChoice } from '../features/game-picker';
 import { PickAGameScreen } from '../features/game-picker/native';
 import { BackToLobbyControl, FinishedScreen, GameRuntimeStatusScreen, InGameScreen } from '../features/game-session/native';
-import { useHeartbeat } from '../platform/presence';
-import { phoneSessionTokenStore, type PlayerSession, useSessionToken } from '../platform/session';
+import { type PlayerSession } from '../platform/session';
+import { useHeartbeat } from '../platform/presence/native';
+import { phoneSessionTokenStore, useSessionToken } from '../platform/session/native';
 import { OutlinePill, PhoneScreen, PrimaryButton, RoomCodeChip, SeatedHeader } from '../ui/native';
 import {
   hostControlFailureMessage,

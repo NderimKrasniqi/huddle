@@ -1,8 +1,8 @@
 import { settingsFrom, settingsRefusal } from '@huddle/game-core';
-import { CURATED_PACK } from '@huddle/packs';
 import { describe, expect, it } from 'vitest';
 
 import { EVERY_CATEGORY } from './questions';
+import { CURATED_PACK } from './content/curated-pack';
 import {
   QUESTION_COUNTS,
   SCORING_MODES,

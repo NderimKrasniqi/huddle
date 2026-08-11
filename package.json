@@ -15,22 +15,23 @@
     "test:render": "pnpm --filter @huddle/controller test:render && pnpm --filter @huddle/tv test:render",
     "test:unit": "vitest run --project lint-rules --project packages --project apps",
     "test:integration": "vitest run --project convex",
-    "validate:packs": "node --import tsx packages/packs/src/validate-packs.ts",
+    "validate:packs": "node --import tsx packages/games/trivia/src/content/validate-packs.ts",
+    "verify:bundle-seam": "node tools/verify-client-bundle.cjs",
     "validate:workflow": "python3 tools/validate-workflow.py"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
+    "@types/node": "catalog:",
     "@huddle/game-core": "workspace:*",
     "@huddle/game-registry": "workspace:*",
     "@huddle/game-trivia": "workspace:*",
     "@huddle/game-voting": "workspace:*",
-    "@huddle/packs": "workspace:*",
     "@huddle/ui": "workspace:*",
     "convex-test": "^0.0.54",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.0",
     "tsx": "^4.23.1",
-    "typescript": "~5.9.3",
+    "typescript": "catalog:",
     "vitest": "^4.1.10"
   }
 }

@@ -8,8 +8,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PhoneScreen } from '../../ui/native';
-import { phoneSessionTokenStore, rememberSession, type PlayerSession } from '../../platform/session';
-import { phoneIdentityStore } from '../../platform/storage';
+import { rememberSession, type PlayerSession } from '../../platform/session';
+import { phoneSessionTokenStore } from '../../platform/session/native';
+import { phoneIdentityStore } from '../../platform/storage/native';
 import {
   activeCodeCell,
   canJoin,
@@ -25,7 +26,6 @@ import {
 import { styles } from './styles';
 
 const CARET_BLINK_MS = 530;
-const AVATAR_TILE = 64;
 
 export function JoinForm({
   linkedCode,
@@ -130,11 +130,12 @@ export function JoinForm({
   const ready = canJoin(code, nickname);
 
   return (
-    <PhoneScreen>
-      <View style={styles.heading}>
-        <HuddleLogo size={20} />
-        <Text style={styles.title}>Join the room</Text>
+    <PhoneScreen contentStyle={styles.screen}>
+      <View style={styles.header}>
+        <HuddleLogo size={28} />
       </View>
+
+      <Text style={styles.title}>Join the room</Text>
 
       {showNotice ? (
         <Text style={styles.notice} accessibilityLiveRegion="polite">
@@ -185,15 +186,15 @@ export function JoinForm({
               <Pressable
                 key={id}
                 onPress={() => setAvatar(id)}
+                style={[styles.avatarCell, chosen && styles.avatarChosen]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: chosen }}
                 accessibilityLabel={id.replace(/-/gu, ' ')}
               >
                 <Avatar
                   avatar={id}
-                  size={AVATAR_TILE}
+                  size={54}
                   shape="tile"
-                  style={chosen ? styles.avatarChosen : undefined}
                 />
 
                 {/* The board's tick, on the chosen tile's shoulder. The accent

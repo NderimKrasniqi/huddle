@@ -13,7 +13,7 @@ import { Surface } from '@huddle/ui/native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { VotingState } from './logic';
+import type { VotingState } from './types';
 import { watchedVoteScreen, type PromptOption, type TallyRow } from './voting-tv';
 
 /**

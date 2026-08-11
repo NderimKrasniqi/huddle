@@ -3,7 +3,7 @@ import { useMutation } from 'convex/react';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { phoneSessionTokenStore } from '../session';
+import { phoneSessionTokenStore } from '../session/native';
 import { type ForegroundWatch, keepPresent } from './presence';
 
 const watchAppForeground: ForegroundWatch = (onChange) => {

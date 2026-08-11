@@ -14,7 +14,8 @@ import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { RosterSeat } from '../../models';
-import { phoneSessionTokenStore, type PlayerSession } from '../../platform/session';
+import { type PlayerSession } from '../../platform/session';
+import { phoneSessionTokenStore } from '../../platform/session/native';
 import { PhoneScreen, PrimaryButton, SeatedHeader } from '../../ui/native';
 import { backToLobbyLabel } from './game-controls';
 import { lifecycleFailureMessage } from './game-rejection';

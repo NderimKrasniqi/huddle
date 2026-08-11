@@ -130,17 +130,13 @@ module.exports = defineConfig([
     },
   },
 
-  // 5.9: the Question Pack stays server-side. `@huddle/packs` carries
-  // `CURATED_PACK` — every question's text and its correct answer — and
-  // `questionsFor` is deterministic, so a client that imports it can reproduce
-  // the exact deal and know every answer before the TV asks. Only the rules may
-  // reach it: trivia's `questions.ts`, which the Convex server pulls through
-  // `@huddle/game-trivia/logic`. Everything that ends up in a client bundle —
-  // the two apps, and every game file that is not that one server-only
-  // `questions.ts` — takes the category *names* it needs from
-  // `@huddle/packs/categories` instead, which imports no questions. This gate
-  // catches a direct import; the type seam (a `GameModule` has no rules, so no
-  // spread of the logic can ride the pack in) is what catches the transitive one.
+  // F-011: the Trivia pack stays server-side. `content/curated-pack` carries
+  // every question's text and correct answer, and `questionsFor` is
+  // deterministic, so a client that imports it can reproduce the exact deal.
+  // Only trivia's server-only `questions.ts` may reach it. Client files use the
+  // hand-authored `content/categories` projection instead. This direct-import
+  // gate complements the transitive package/export seam checks in the
+  // architecture validator.
   {
     files: [
       'apps/**/*.ts',
@@ -164,9 +160,14 @@ module.exports = defineConfig([
         {
           paths: [
             {
-              name: '@huddle/packs',
+              name: './content/curated-pack',
               message:
-                'The Question Pack must not ship in a client bundle (5.9): @huddle/packs carries every answer. Import category names from @huddle/packs/categories; the pack itself belongs to trivia’s questions.ts, which only the server pulls.',
+                'The Trivia pack must not ship in a client bundle (F-011): content/curated-pack carries every answer. Import category names from ./content/categories; only trivia questions.ts may reach the pack.',
+            },
+            {
+              name: '@huddle/game-trivia/src/content/curated-pack',
+              message:
+                'The Trivia pack is server-only (F-011). Use the client-safe category projection from @huddle/game-trivia.',
             },
           ],
         },

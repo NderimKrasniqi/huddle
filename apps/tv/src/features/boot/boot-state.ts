@@ -1,4 +1,4 @@
-export type TvBootPhase = 'startup' | 'opening' | 'reconnecting' | 'misconfigured';
+export type TvBootPhase = 'startup' | 'opening' | 'reconnecting' | 'misconfigured' | 'deviceFailure';
 
 export type TvBootPresentation = {
   readonly title: string;
@@ -31,6 +31,12 @@ export function tvBootPresentation(phase: TvBootPhase): TvBootPresentation {
       return {
         title: 'Huddle needs setup',
         message: 'Set EXPO_PUBLIC_CONVEX_URL and rebuild this TV app.',
+        active: false,
+      };
+    case 'deviceFailure':
+      return {
+        title: 'Huddle needs device access',
+        message: 'Huddle could not save this TV identity. Check device storage and restart the TV app.',
         active: false,
       };
   }

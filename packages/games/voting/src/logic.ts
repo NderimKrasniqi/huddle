@@ -1,10 +1,14 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
-import { z } from 'zod';
 
 import { votingMetadata } from './metadata';
-import { CURATED_PROMPTS, type VotingPrompt } from './prompts';
+import { CURATED_PROMPTS } from './prompts';
 import { votingSettings, VOTING_SETTINGS_PRESENTATION, VOTING_SETTINGS_SCHEMA } from './settings';
 import { playersCounted, votesIn, REVEAL_SECONDS, VOTE_SECONDS } from './state';
+import { votingEventSchema, votingStateSchema } from './schemas';
+import type { VotingAdvance, VotingEvent, VotingState } from './types';
+
+export { votingEventSchema, votingStateSchema } from './schemas';
+export type { VotingAdvance, VotingEvent, VotingPhase, VotingState } from './types';
 
 /**
  * The Voting game's rules, with no screens attached.
@@ -20,142 +24,6 @@ import { playersCounted, votesIn, REVEAL_SECONDS, VOTE_SECONDS } from './state';
  * scoring, no right answers, no Question Pack, a different player range, and a
  * loop the room's own clock drives from end to end.
  */
-
-/** How long a prompt stays open for votes before the room stops waiting. */
-/**
- * Where a game of Voting is: a prompt taking votes, its tally on screen, or
- * over.
- *
- * The three beats of the loop the TV draws — the prompt with its options, the
- * reveal with the counts, and the closing screen once the last prompt is done.
- */
-export type VotingPhase = 'voting' | 'reveal' | 'finished';
-
-/**
- * A game of Voting in progress.
- *
- * The privacy the game promises — "each participant's vote stays private until
- * reveal" — is a property of *what this state holds*, not only of what the
- * screens draw. The state never records who voted for what. It keeps two things
- * instead:
- *
- * - `voters`: the players who have voted the current prompt, so a second tap is
- *   refused and the "3/5 voted" numerator can be counted. It says *that* a
- *   player voted, never *what* they voted.
- * - `tally`: an anonymous running count per option. It says *how many* chose
- *   each option, never *who*.
- *
- * No arrangement of the two can name a voter's choice, so — unlike a map of
- * player to option — a vote's owner is not in the payload the hub ships to every
- * client. Voting still declares the required identity projection explicitly:
- * its implementation returns the state unchanged because there is no private
- * field to redact. That the *tally* is visible before the reveal
- * is the price of never storing attribution: a game cannot reveal a count it did
- * not keep, and keeping it anonymously is what lets the reveal show the room its
- * own opinion without ever exposing a person's. The screens hold the count back
- * until the reveal on top of that; the state is what makes the stronger promise.
- *
- * `prompts` is the whole game, dealt once at the start and carried here, so a
- * room is asked what it was dealt however the prompt list changes afterwards.
- * `players` is who is playing — fixed at the start like trivia's standings, so a
- * phone that joins mid-game is in the room but not in this list, and watches.
- */
-export type VotingState = {
-  readonly prompts: readonly VotingPrompt[];
-  /** Which prompt is up; the last one once the game is finished. */
-  readonly promptIndex: number;
-  readonly phase: VotingPhase;
-  /** Who has voted the current prompt — cleared when the room moves on. Never what they voted. */
-  readonly voters: readonly GamePlayerId[];
-  /** The current prompt's anonymous counts, one per option — cleared with `voters`. */
-  readonly tally: readonly number[];
-  /** Who is playing, fixed at the start. A later joiner is in the room but not here. */
-  readonly players: readonly GamePlayerId[];
-};
-
-/**
- * What a player does in a game of Voting, and what moves the room on.
- *
- * `vote` names the prompt it was aimed at, because a phone's tap and the room's
- * beat race: a tap that leaves while prompt one is up must vote on prompt one or
- * nothing, never whatever is on screen when it lands. It carries no timing —
- * this game pays nothing for speed — and `awayPlayerIds` is the hub's, written
- * over whatever arrived, because presence is the room's and a phone writing
- * somebody out of a prompt is a claim (see `GameEvent`).
- *
- * `advance` is the room finishing a beat: a prompt the room stops waiting on, or
- * a reveal ending. Its `playerId` is optional because nobody sends it — both of
- * this game's beats end on the room's own clock (`voteTimer`, `revealTimer`), so
- * the field is always absent, which `GameEvent` says is the room itself.
- *
- * It names both the prompt it is ending and the beat of it, so an `advance` that
- * arrives a beat late lands on nothing: it is addressed to the beat it was armed
- * for, and the reducer returns the state untouched for any other.
- */
-export type VotingEvent =
-  | {
-      readonly kind: 'vote';
-      readonly playerId: GamePlayerId;
-      readonly promptIndex: number;
-      readonly optionIndex: number;
-      /** Who the room had stopped hearing from — the hub's, like trivia's. Absent means nobody. */
-      readonly awayPlayerIds?: readonly GamePlayerId[];
-    }
-  | {
-      readonly kind: 'advance';
-      /** Must be absent: the room's own clock raises both advances. */
-      readonly playerId?: GamePlayerId;
-      readonly promptIndex: number;
-      /** The beat being ended: the prompt on screen, or its reveal. */
-      readonly phase: VotingPhase;
-      /** Hub-enriched clock/presence fields; ignored by the reducer. */
-      readonly msRemaining?: number;
-      readonly awayPlayerIds?: readonly GamePlayerId[];
-    };
-
-/**
- * The `advance` a clock sends. Both of the game's produce exactly this — a
- * `GameDeadline<VotingEvent>` would let a clock start returning a vote, which is
- * not a thing a clock can send.
- */
-type VotingAdvance = Extract<VotingEvent, { kind: 'advance' }>;
-
-const playerIdSchema = z.string().min(1);
-const votingPromptSchema = z.strictObject({
-  text: z.string(),
-  options: z.array(z.string()).min(2).max(4),
-});
-
-/** Strict server-side decoder for persisted Voting state. */
-export const votingStateSchema = z.strictObject({
-  prompts: z.array(votingPromptSchema).min(1),
-  promptIndex: z.number().int().nonnegative(),
-  phase: z.enum(['voting', 'reveal', 'finished']),
-  voters: z.array(playerIdSchema),
-  tally: z.array(z.number().int().nonnegative()),
-  players: z.array(playerIdSchema),
-});
-
-const votingVoteEventSchema = z.strictObject({
-  kind: z.literal('vote'),
-  playerId: playerIdSchema,
-  promptIndex: z.number().int().nonnegative(),
-  optionIndex: z.number().int().min(0).max(3),
-  msRemaining: z.number().finite().nonnegative().optional(),
-  awayPlayerIds: z.array(playerIdSchema).optional(),
-});
-
-const votingAdvanceEventSchema = z.strictObject({
-  kind: z.literal('advance'),
-  playerId: playerIdSchema.optional(),
-  promptIndex: z.number().int().nonnegative(),
-  phase: z.enum(['voting', 'reveal', 'finished']),
-  msRemaining: z.number().finite().nonnegative().optional(),
-  awayPlayerIds: z.array(playerIdSchema).optional(),
-});
-
-/** Strict server-side decoder for untrusted Voting events. */
-export const votingEventSchema = z.union([votingVoteEventSchema, votingAdvanceEventSchema]);
 
 /**
  * The beat a state is on, named: which prompt, and which half of it.

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import { RESERVED_CATEGORY } from './category-contract';
+
+export { RESERVED_CATEGORY } from './category-contract';
+
 /**
  * The Question Pack format: the only way trivia gets content, and the shape
  * every future source of questions (an Open Trivia DB import, an AI-generated
@@ -33,23 +37,6 @@ const optionsSchema = z.tuple([nonEmpty, nonEmpty, nonEmpty, nonEmpty]);
  * question now offers.
  */
 export const QUESTION_OPTION_COUNT: z.infer<typeof optionsSchema>['length'] = 4;
-
-/**
- * The one word a question's category may not be.
- *
- * A category is free text, because a Host's filter is built from whatever
- * categories a pack happens to use — and a filter built that way needs a value
- * meaning *no filter at all*, which trivia spells `all` (`EVERY_CATEGORY`). The
- * two live in the same space, so a pack shipping a category literally named
- * "all" would give the Host an option that quietly dealt them an unfiltered
- * game. The collision is closed here, where a pack is checked, rather than
- * argued away where it is filtered: the sentinel is reserved, and a pack using
- * it is malformed.
- *
- * Matched without regard to case, because "All" is the same mistake made by an
- * author who capitalises their categories.
- */
-export const RESERVED_CATEGORY = 'all';
 
 /** How hard a question is meant to be. */
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;

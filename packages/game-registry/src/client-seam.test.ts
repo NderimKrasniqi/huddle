@@ -35,16 +35,39 @@ const TRIVIA_SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'ga
 const REGISTRY_SRC = dirname(fileURLToPath(import.meta.url));
 
 /** The rules and the deal: the server's alone, and the only files that may reach the pack. */
-const SERVER_ONLY = new Set(['logic.ts', 'questions.ts']);
+const SERVER_ONLY = new Set([
+  'logic.ts',
+  'questions.ts',
+  'content/index.ts',
+  'content/curated-pack.ts',
+  'content/question-pack.ts',
+  'content/pack-validation.ts',
+  'content/validate-packs.ts',
+]);
 
 function triviaClientSources(): readonly string[] {
-  return readdirSync(TRIVIA_SRC).filter(
-    (name) =>
-      /\.tsx?$/.test(name) &&
-      !name.endsWith('.test.ts') &&
-      !name.endsWith('.test.tsx') &&
-      !SERVER_ONLY.has(name),
-  );
+  const names: string[] = [];
+
+  function visit(directory: string, prefix = ''): void {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const relativeName = prefix === '' ? entry.name : `${prefix}/${entry.name}`;
+      if (entry.isDirectory()) {
+        visit(join(directory, entry.name), relativeName);
+        continue;
+      }
+      if (
+        /\.tsx?$/.test(entry.name) &&
+        !entry.name.endsWith('.test.ts') &&
+        !entry.name.endsWith('.test.tsx') &&
+        !SERVER_ONLY.has(relativeName)
+      ) {
+        names.push(relativeName);
+      }
+    }
+  }
+
+  visit(TRIVIA_SRC);
+  return names.sort();
 }
 
 function registryClientSources(): readonly string[] {
@@ -65,6 +88,47 @@ function valueEdgesTo(source: string, modules: string): readonly string[] {
   );
 
   return [...staticEdges, ...dynamicEdges].map((match) => match[0].trim());
+}
+
+/** Runtime-only relative imports used to walk the client-side source graph. */
+function runtimeRelativeImports(source: string): readonly string[] {
+  const imports = source.matchAll(
+    /(?:^|\n)\s*(?:import|export)\s+(?!type\b)[^;]*?(?:from\s+)?['"](\.[^'"]+)['"]/g,
+  );
+  const sideEffects = source.matchAll(/\bimport\s*['"](\.[^'"]+)['"]/g);
+  const dynamic = source.matchAll(/\b(?:import|require)\s*\(\s*['"](\.[^'"]+)['"]/g);
+  return [...imports, ...sideEffects, ...dynamic].map((match) => match[1]!);
+}
+
+function resolveSourceImport(source: string, imported: string): string | undefined {
+  const base = join(dirname(source), imported);
+  const candidates = [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts'), `${base}.json`];
+  return candidates.find((candidate) => {
+    try {
+      readFileSync(candidate);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+function clientRuntimeGraph(entryNames: readonly string[]): readonly string[] {
+  const pending = entryNames.map((name) => join(TRIVIA_SRC, name));
+  const visited = new Set<string>();
+
+  while (pending.length > 0) {
+    const source = pending.pop();
+    if (source === undefined || visited.has(source)) continue;
+    visited.add(source);
+    const text = readFileSync(source, 'utf8');
+    for (const imported of runtimeRelativeImports(text)) {
+      const target = resolveSourceImport(source, imported);
+      if (target !== undefined) pending.push(target);
+    }
+  }
+
+  return [...visited].sort();
 }
 
 describe('the seam guard recognizes every runtime module edge', () => {
@@ -101,6 +165,16 @@ describe('the trivia client sources keep the pack at arm’s length', () => {
     // imports/exports are all runtime edges. Only `import type` / `export type`
     // erase the statement and are allowed.
     expect(valueEdgesTo(text, 'logic|questions')).toEqual([]);
+  });
+
+  it('keeps the production client graph away from pack JSON and server modules', () => {
+    const graph = clientRuntimeGraph(['index.ts', 'controller-screen.tsx', 'tv-screen.tsx']);
+
+    for (const source of graph) {
+      const relativeName = source.slice(TRIVIA_SRC.length + 1);
+      expect(SERVER_ONLY, relativeName).not.toContain(relativeName);
+      expect(relativeName, 'client graph must not contain pack JSON').not.toMatch(/\.json$/);
+    }
   });
 });
 
