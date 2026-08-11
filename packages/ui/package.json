@@ -5,11 +5,12 @@
   "description": "Soft Minimal design system: the only place in Huddle that holds colors, type, and shadow tokens.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "//exports": "The root entry is tokens only and imports nothing from React \u2014 and, since the screens task, no font binaries either \u2014 which is what keeps it runnable under plain Node. That matters beyond this package's own tests: a Game Module's screens import these tokens, so anything the root barrel drags is dragged into every Node test that touches the Registry. Components live behind `./native`, whose react-native import resolves to whichever variant the consuming app installed \u2014 react-native-tvos on the TV, stock on the phone \u2014 which is exactly why it is a peer dependency. `./fonts` is the four .ttf assets, which only the apps' root layouts load.",
+  "//exports": "The root entry is tokens only and imports nothing from React — and, since the screens task, no font binaries either — which is what keeps it runnable under plain Node. That matters beyond this package's own tests: a Game Module's screens import these tokens, so anything the root barrel drags is dragged into every Node test that touches the Registry. Components live behind `./native`, whose react-native import resolves to whichever variant the consuming app installed — react-native-tvos on the TV, stock on the phone — which is exactly why it is a peer dependency. `./fonts` is the four .ttf assets, which only the apps' root layouts load.",
   "exports": {
     ".": "./src/index.ts",
     "./fonts": "./src/fonts.ts",
     "./native": "./src/native/index.ts",
+    "./kit": "./src/native/kit.ts",
     "./assets/*": "./assets/*"
   },
   "scripts": {
@@ -17,7 +18,8 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
-    "@huddle/game-core": "workspace:*"
+    "@huddle/game-core": "workspace:*",
+    "lucide-react-native": "^0.468.0"
   },
   "//peerDependencies": "react-native-svg joins react-native as a peer for the same reason: `./native` draws the icon set with it, and the app that mounts the component is the one that must own the native module. The TV already had it for the room's QR.",
   "peerDependencies": {

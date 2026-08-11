@@ -1,7 +1,8 @@
 import { api } from '@huddle/convex';
 import { AVATAR_IDS, type AvatarId, ROOM_CODE_LENGTH } from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
-import { Avatar, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
+import { HuddleLogo } from '@huddle/ui/kit';
 import { useMutation } from 'convex/react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -130,7 +131,7 @@ export function JoinForm({
   return (
     <PhoneScreen>
       <View style={styles.heading}>
-        <Wordmark height={20} />
+        <HuddleLogo size={20} />
         <Text style={styles.title}>Join the room</Text>
       </View>
 

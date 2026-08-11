@@ -57,6 +57,19 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 28,
   },
+  carouselArrow: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.pill,
+  },
+  carouselArrowHidden: {
+    opacity: 0,
+  },
   // 440×520. This is the TV's focus treatment, which the handoff pins: an
   // orange border at `borderWidth.focus`, and explicitly *not* scale alone —
   // the card is already the largest thing on the screen, so a 1.04 lift reads
@@ -74,6 +87,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    overflow: 'hidden',
     // The card used to clip this to its own corners. It cannot any more —
     // `overflow: 'hidden'` sets `masksToBounds`, which would clip the card's
     // shadow too — so the art rounds its own top corners instead, inset by the
@@ -81,21 +95,15 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: radius.cardLarge - borderWidth.focus,
     borderTopRightRadius: radius.cardLarge - borderWidth.focus,
   },
-  keyArtTitle: {
-    color: colors.surface,
-    fontFamily: fontFamily.bold,
-    fontSize: 46,
-    lineHeight: 52,
-    textAlign: 'center',
-  },
   cardInfo: {
     gap: 12,
     paddingHorizontal: 24,
     paddingVertical: 22,
-    backgroundColor: colors.surface,
+    borderBottomLeftRadius: radius.cardLarge - borderWidth.focus,
+    borderBottomRightRadius: radius.cardLarge - borderWidth.focus,
   },
   cardTitle: {
-    color: colors.ink,
+    color: colors.inverse,
     fontFamily: fontFamily.bold,
     fontSize: 34,
     lineHeight: 38,
@@ -112,12 +120,27 @@ export const styles = StyleSheet.create({
   sideCard: {
     width: 300,
     height: 400,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+    overflow: 'hidden',
     borderColor: colors.ink,
     borderWidth: borderWidth.hairline,
     borderRadius: radius.cardLarge,
+  },
+  sideArt: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    overflow: 'hidden',
+    borderTopLeftRadius: radius.cardLarge,
+    borderTopRightRadius: radius.cardLarge,
+  },
+  sideCardInfo: {
+    minHeight: 76,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomLeftRadius: radius.cardLarge,
+    borderBottomRightRadius: radius.cardLarge,
   },
   sideCardTitle: {
     color: colors.surface,
@@ -153,15 +176,20 @@ export const styles = StyleSheet.create({
   // the line against the left edge. `alignItems` stays and changes meaning —
   // it now centres the two on each other's line.
   chip: {
+    position: 'relative',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderWidth: borderWidth.hairline,
     borderRadius: radius.chip,
   },
+  chipWash: {
+    backgroundColor: colors.inverse,
+    borderRadius: radius.chip,
+    opacity: 0.14,
+  },
   chipText: {
-    color: colors.ink,
+    color: colors.inverse,
     fontFamily: fontFamily.medium,
     fontSize: minBodyFontSize.tv,
   },

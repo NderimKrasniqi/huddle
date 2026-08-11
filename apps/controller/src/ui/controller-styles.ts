@@ -314,11 +314,23 @@ export const controllerStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  // The attached Manage Player board treats the sheet as a focused profile:
+  // face, name, then presence, rather than another roster row. The actions
+  // below can then stay full-width and the target is still unmistakable.
+  sheetHeaderCentered: {
+    alignItems: 'center',
+    gap: 6,
+  },
   sheetName: {
     flex: 1,
     color: colors.ink,
     fontFamily: fontFamily.medium,
     fontSize: 20,
+  },
+  sheetNameCentered: {
+    alignSelf: 'stretch',
+    flex: 0,
+    textAlign: 'center',
   },
   // A confirmation sheet's own title: `sheetName` is a row item beside an
   // avatar and stretches to fill it, which is not what a heading on its own
@@ -521,9 +533,15 @@ export const controllerStyles = StyleSheet.create({
     gap: 10,
   },
   collapsedSettingButton: {
+    minWidth: 0,
+    minHeight: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: 0,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
   },
   collapsedSettingValue: {
     color: colors.ink,
@@ -742,11 +760,24 @@ export const controllerStyles = StyleSheet.create({
   // same shape on a small phone and a large one instead of the same number of
   // points on both.
   gameCard: {
-    aspectRatio: 1,
-    justifyContent: 'flex-end',
-    gap: 12,
-    padding: 20,
+    width: '100%',
+    maxWidth: 338,
+    alignSelf: 'center',
     borderRadius: radius.card,
+    overflow: 'hidden',
+  },
+  gameCardArt: {
+    height: 279,
+    alignSelf: 'stretch',
+    overflow: 'hidden',
+  },
+  gameCardFooter: {
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    borderBottomLeftRadius: radius.card,
+    borderBottomRightRadius: radius.card,
   },
   gameCardPlaceholder: {
     alignSelf: 'center',
@@ -794,9 +825,18 @@ export const controllerStyles = StyleSheet.create({
     opacity: opacity.chipOnArt,
   },
   gameCardChipText: {
-    color: colors.ink,
+    color: colors.inverse,
     fontFamily: fontFamily.medium,
     fontSize: 13,
+  },
+
+  waitingAvatarWell: {
+    width: 192,
+    height: 192,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.soft,
+    borderRadius: radius.pill,
   },
 
   // ————— Dedicated game settings screen —————
@@ -848,6 +888,16 @@ export const controllerStyles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  selectedGameFacts: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  selectedGameFact: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    gap: 4,
+  },
   changeGameText: {
     color: colors.accent,
     fontFamily: fontFamily.semibold,
@@ -887,28 +937,81 @@ export const controllerStyles = StyleSheet.create({
 
   // ————— Waiting —————
 
-  // The green-washed chip the board draws under the hero. It is not the lobby's
-  // status card: there is no border and no shadow, because nothing on this
-  // screen is a surface the reader can act on.
-  nowViewing: {
+  waitingScreenContent: {
+    gap: 24,
+    paddingVertical: 24,
+  },
+  waitingHero: {
+    alignItems: 'center',
+    gap: 18,
+    marginTop: 10,
+  },
+  waitingTitle: {
+    color: colors.ink,
+    fontFamily: fontFamily.bold,
+    fontSize: 25,
+    lineHeight: 31,
+    textAlign: 'center',
+  },
+  // The green-washed status card from the supplied Waiting screen. It remains
+  // passive UI: the live room supplies the game name and no press target is
+  // introduced just to reproduce a static card.
+  waitingStatusCard: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
     gap: 12,
     paddingHorizontal: 18,
-    paddingVertical: 16,
+    minHeight: 64,
     backgroundColor: colors.soft,
     borderRadius: radius.row,
   },
+  statusDotHalo: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.onlineSurface,
+    borderRadius: radius.pill,
+  },
   // What this phone is about to become, said out loud because the screen is
   // otherwise an absence of controls.
+  waitingInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 16,
+    paddingHorizontal: 18,
+    minHeight: 100,
+    borderColor: colors.border,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.row,
+  },
+  waitingInfoIconCircle: {
+    width: 53,
+    height: 53,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+  },
+  waitingInfoText: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: fontFamily.medium,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  // The finished-player screen shares the same passive explainer treatment;
+  // keep its feature-specific name while the waiting screen uses the more
+  // descriptive names above.
   explainer: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
     gap: 16,
     paddingHorizontal: 18,
-    paddingVertical: 18,
+    minHeight: 100,
     borderColor: colors.border,
     borderWidth: borderWidth.hairline,
     borderRadius: radius.row,
@@ -1108,6 +1211,19 @@ export const controllerStyles = StyleSheet.create({
     gap: 20,
     paddingVertical: 28,
   },
+  finishedPlayerHeader: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    minHeight: 28,
+  },
+  finishedPlayerAvatarWell: {
+    width: 160,
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.soft,
+    borderRadius: radius.pill,
+  },
   finishedPlayerGameLine: {
     color: colors.mutedText,
     fontFamily: fontFamily.medium,
@@ -1153,9 +1269,82 @@ export const controllerStyles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  finishedPlayerControllerWell: {
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.roomSurface,
+    borderRadius: radius.pill,
+  },
   finishedPlayerExplainerTitle: {
     color: colors.ink,
     fontFamily: fontFamily.semibold,
     fontSize: 16,
   },
+  // Token-native fallback for the prototype's missing `bottom-celebration.png`.
+  finishedCelebration: {
+    position: 'relative',
+    alignSelf: 'stretch',
+    height: 122,
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  celebrationBlob: {
+    position: 'absolute',
+    bottom: -70,
+    width: 250,
+    height: 130,
+    backgroundColor: colors.soft,
+    borderRadius: radius.pill,
+    opacity: 0.55,
+  },
+  celebrationBlobLeft: {
+    left: -70,
+    transform: [{ rotate: '9deg' }],
+  },
+  celebrationBlobRight: {
+    right: -70,
+    transform: [{ rotate: '-9deg' }],
+  },
+  celebrationLeaf: {
+    position: 'absolute',
+    width: 16,
+    height: 42,
+    backgroundColor: colors.sage,
+    borderRadius: radius.pill,
+    opacity: 0.58,
+  },
+  celebrationLeafOne: {
+    left: 20,
+    bottom: 8,
+    transform: [{ rotate: '-28deg' }],
+  },
+  celebrationLeafTwo: {
+    left: 40,
+    bottom: 22,
+    transform: [{ rotate: '24deg' }],
+  },
+  celebrationLeafThree: {
+    right: 20,
+    bottom: 8,
+    transform: [{ rotate: '28deg' }],
+  },
+  celebrationLeafFour: {
+    right: 40,
+    bottom: 22,
+    transform: [{ rotate: '-24deg' }],
+  },
+  confetti: {
+    position: 'absolute',
+    width: 8,
+    height: 18,
+    borderRadius: radius.chip,
+  },
+  confettiOne: { left: '27%', top: 36, backgroundColor: colors.setupGold, transform: [{ rotate: '-42deg' }] },
+  confettiTwo: { left: '38%', top: 68, backgroundColor: colors.justJoined, transform: [{ rotate: '48deg' }] },
+  confettiThree: { left: '50%', top: 26, backgroundColor: colors.accent, transform: [{ rotate: '38deg' }] },
+  confettiFour: { left: '61%', top: 56, backgroundColor: colors.sage, transform: [{ rotate: '-38deg' }] },
+  confettiFive: { left: '72%', top: 28, backgroundColor: colors.setupGold, transform: [{ rotate: '50deg' }] },
+  confettiSix: { left: '82%', top: 68, backgroundColor: colors.justJoined, transform: [{ rotate: '-48deg' }] },
 });

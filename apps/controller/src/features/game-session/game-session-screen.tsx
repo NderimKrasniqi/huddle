@@ -8,6 +8,7 @@ import {
 } from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
 import { Avatar, GameKeyArt, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
+import { HuddleLogo } from '@huddle/ui/kit';
 import { useMutation } from 'convex/react';
 import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -234,7 +235,13 @@ export function FinishedScreen({
 
   return (
     <PhoneScreen contentStyle={youAreHost ? styles.finishedHostContent : styles.finishedPlayerContent}>
-      <SeatedHeader trailing={null} />
+      {youAreHost ? (
+        <SeatedHeader trailing={null} />
+      ) : (
+        <View style={styles.finishedPlayerHeader}>
+          <HuddleLogo size={28} />
+        </View>
+      )}
 
       {youAreHost ? (
         <>
@@ -331,7 +338,11 @@ export function FinishedScreen({
         </>
       ) : (
         <>
-          {player?.avatar === undefined ? null : <Avatar avatar={player.avatar} size={96} />}
+          {player?.avatar === undefined ? null : (
+            <View style={styles.finishedPlayerAvatarWell}>
+              <Avatar avatar={player.avatar} size={144} />
+            </View>
+          )}
           <Text style={styles.title}>Nice game!</Text>
           <Text style={styles.finishedPlayerGameLine}>🎉 {module.metadata.title} finished</Text>
           <Text style={[styles.waitingFor, styles.asideCentred]}>
@@ -350,16 +361,43 @@ export function FinishedScreen({
           </Surface>
 
           <View style={styles.explainer}>
-            <Icon name="gamepad" size={30} color={colors.mutedText} />
+            <View style={styles.finishedPlayerControllerWell}>
+              <Icon name="gamepad" size={34} color={colors.ink} />
+            </View>
             <View style={styles.finishedPlayerExplainerCopy}>
               <Text style={styles.finishedPlayerExplainerTitle}>{host?.nickname ?? 'The Host'} is the host</Text>
               <Text style={styles.explainerText}>They can play again or choose another game.</Text>
             </View>
           </View>
+          <FinishedCelebration />
         </>
       )}
       {failure === undefined ? null : <Text style={styles.failure}>{failure}</Text>}
     </PhoneScreen>
+  );
+}
+
+/**
+ * The prototype includes a small celebration footer. The source folder does
+ * not contain its referenced bitmap, so this keeps the same quiet botanical
+ * and confetti rhythm with token-native views instead of a broken asset path.
+ */
+function FinishedCelebration() {
+  return (
+    <View pointerEvents="none" style={styles.finishedCelebration}>
+      <View style={[styles.celebrationBlob, styles.celebrationBlobLeft]} />
+      <View style={[styles.celebrationBlob, styles.celebrationBlobRight]} />
+      <View style={[styles.celebrationLeaf, styles.celebrationLeafOne]} />
+      <View style={[styles.celebrationLeaf, styles.celebrationLeafTwo]} />
+      <View style={[styles.celebrationLeaf, styles.celebrationLeafThree]} />
+      <View style={[styles.celebrationLeaf, styles.celebrationLeafFour]} />
+      <View style={[styles.confetti, styles.confettiOne]} />
+      <View style={[styles.confetti, styles.confettiTwo]} />
+      <View style={[styles.confetti, styles.confettiThree]} />
+      <View style={[styles.confetti, styles.confettiFour]} />
+      <View style={[styles.confetti, styles.confettiFive]} />
+      <View style={[styles.confetti, styles.confettiSix]} />
+    </View>
   );
 }
 

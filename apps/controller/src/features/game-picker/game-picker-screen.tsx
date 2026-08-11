@@ -9,7 +9,22 @@ import type {
 import { settingsFrom } from '@huddle/game-core';
 import { type CarouselWindow, nextIndex, previousIndex } from '@huddle/game-registry';
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { GameKeyArt, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
+import {
+  GameKeyArt,
+  Icon,
+  LoadingIndicator,
+  Surface,
+} from '@huddle/ui/native';
+import {
+  InfoChip,
+  CategoryListRow,
+  HuddleLogo,
+  ModeCard,
+  NavigationIconButton,
+  QuestionStepper,
+  SegmentedControl,
+  StatusStrip,
+} from '@huddle/ui/kit';
 import { useMutation } from 'convex/react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -24,6 +39,7 @@ import {
   SeatedHeader,
   controllerStyles as styles,
 } from '../../ui';
+import { CategoryPickerSheet } from './category-picker-sheet';
 import {
   BACK_TO_ROOM,
   settingChosen,
@@ -298,7 +314,7 @@ function GameSettingsScreen({
           enabled
           onPress={onChangeGame}
         />
-        <Wordmark height={28} />
+        <HuddleLogo size={28} />
         <View style={styles.settingsHeaderBalance} />
       </View>
 
@@ -327,10 +343,9 @@ function GameSettingsScreen({
         />
       )}
 
-      <View style={styles.joiningNotice}>
-        <View style={styles.statusDot} />
-        <Text style={styles.joiningNoticeText}>Players can keep joining until you start.</Text>
-      </View>
+      <StatusStrip variant="success" style={styles.joiningNotice}>
+        Players can keep joining until you start.
+      </StatusStrip>
 
       <StartGameControl
         roster={roster}
@@ -372,6 +387,15 @@ function SelectedGameSummary({
         <Text style={styles.selectedGameMeta}>
           {playerRange.min}–{playerRange.max} players · {estimatedMinutes} min · {category}
         </Text>
+        <View style={styles.selectedGameFacts}>
+          <InfoChip
+            icon="players"
+            label={`${playerRange.min}–${playerRange.max}`}
+            style={styles.selectedGameFact}
+          />
+          <InfoChip icon="clock" label={`${estimatedMinutes} min`} style={styles.selectedGameFact} />
+          <InfoChip icon="category" label={category} style={styles.selectedGameFact} />
+        </View>
         <Pressable
           style={styles.changeGameAction}
           onPress={onChangeGame}
@@ -498,23 +522,27 @@ function GameCard({
       elevation={elevation.phoneCard}
       style={[styles.stretch, styles.gameCard, { backgroundColor: colors[keyArt.color] }]}
     >
-      <GameKeyArt
-        gameId={metadata.id}
-        title={title}
-        color={keyArt.color}
-        style={StyleSheet.absoluteFill}
-      />
-      {placeholder ? (
-        <View style={styles.gameCardPlaceholder}>
-          <Text style={styles.gameCardPlaceholderText}>COMING SOON</Text>
-        </View>
-      ) : null}
-      <Text style={styles.gameCardTitle}>{title}</Text>
+      <View style={styles.gameCardArt}>
+        <GameKeyArt
+          gameId={metadata.id}
+          title={title}
+          color={keyArt.color}
+          style={StyleSheet.absoluteFill}
+        />
+        {placeholder ? (
+          <View style={styles.gameCardPlaceholder}>
+            <Text style={styles.gameCardPlaceholderText}>COMING SOON</Text>
+          </View>
+        ) : null}
+      </View>
 
-      <View style={styles.gameCardChips}>
-        <GameCardChip icon="players" label={`${playerRange.min}–${playerRange.max} players`} />
-        <GameCardChip icon="clock" label={`${estimatedMinutes} min`} />
-        <GameCardChip icon="tag" label={category} />
+      <View style={[styles.gameCardFooter, { backgroundColor: colors[keyArt.color] }]}>
+        <Text style={styles.gameCardTitle}>{title}</Text>
+        <View style={styles.gameCardChips}>
+          <GameCardChip icon="players" label={`${playerRange.min}–${playerRange.max} players`} />
+          <GameCardChip icon="clock" label={`${estimatedMinutes} min`} />
+          <GameCardChip icon="tag" label={category} />
+        </View>
       </View>
     </Surface>
   );
@@ -526,7 +554,7 @@ function GameCardChip({ icon, label }: { readonly icon: IconName; readonly label
   return (
     <View style={styles.gameCardChip}>
       <View style={[StyleSheet.absoluteFill, styles.gameCardChipWash]} />
-      <Icon name={icon} size={14} color={colors.ink} />
+      <Icon name={icon} size={14} color={colors.inverse} />
       <Text style={styles.gameCardChipText}>{label}</Text>
     </View>
   );
@@ -541,43 +569,15 @@ function ModeTabs({
 }) {
   return (
     <View style={styles.modeTabs} accessibilityRole="tablist">
-      {([
-        { mode: 'quick', icon: 'clock' },
-        { mode: 'standard', icon: 'check' },
-        { mode: 'custom', icon: 'gamepad' },
-      ] as const).map((candidate) => (
-        <Pressable
-          key={candidate.mode}
-          style={styles.modeTabPressable}
-          onPress={() => onChoose(candidate.mode)}
-          accessibilityRole="button"
-          accessibilityLabel={candidate.mode.charAt(0).toUpperCase() + candidate.mode.slice(1)}
-          accessibilityState={{ selected: mode === candidate.mode }}
-        >
-          <Surface
-            elevation={elevation.phoneSmall}
-            style={[styles.modeTab, mode === candidate.mode && styles.modeTabChosen]}
-          >
-            <Icon
-              name={candidate.icon}
-              size={28}
-              color={mode === candidate.mode ? colors.accent : colors.ink}
-            />
-            <Text
-              style={[
-                styles.modeTabLabel,
-                mode === candidate.mode && styles.modeTabLabelChosen,
-              ]}
-            >
-              {candidate.mode.charAt(0).toUpperCase() + candidate.mode.slice(1)}
-            </Text>
-            {mode === candidate.mode ? (
-              <View style={styles.modeTabCheck}>
-                <Icon name="check" size={15} color={colors.inverse} />
-              </View>
-            ) : null}
-          </Surface>
-        </Pressable>
+      {(['quick', 'standard', 'custom'] as const).map((candidate) => (
+        <View key={candidate} style={styles.modeTabPressable}>
+          <ModeCard
+            mode={candidate}
+            selected={mode === candidate}
+            onPress={() => onChoose(candidate)}
+            style={{ flex: 1, minWidth: 0 }}
+          />
+        </View>
       ))}
     </View>
   );
@@ -612,7 +612,7 @@ function SettingsControls({
   readonly onChoose: (key: string, value: string) => void;
 }) {
   const controls = settingsControls(schema, gameId, choice, presentation);
-  const [expandedKey, setExpandedKey] = useState<string>();
+  const [pickerKey, setPickerKey] = useState<string>();
 
   if (controls.length === 0) {
     return null;
@@ -625,6 +625,10 @@ function SettingsControls({
         const chosen = control.options[chosenIndex];
         const isStepper = control.options.every((option) => /^\d+$/u.test(option.label));
         const isCollapsedChoice = control.options.length > 4;
+        const numericValues = control.options.map((option) => Number(option.label));
+        const firstNumeric = numericValues[0] ?? 0;
+        const secondNumeric = numericValues[1] ?? firstNumeric;
+        const numericStep = numericValues.length > 1 ? secondNumeric - firstNumeric : 1;
 
         return (
         <View
@@ -633,144 +637,46 @@ function SettingsControls({
         >
           <Text style={styles.settingLabel}>{control.label}</Text>
           {isStepper ? (
-            <View style={styles.stepper}>
-              <Pressable
-                disabled={chosenIndex <= 0}
-                onPress={() => {
-                  const previous = control.options[chosenIndex - 1];
-                  if (previous !== undefined) onChoose(control.key, previous.value);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Decrease ${control.label}`}
-              >
-                <View style={[styles.stepperButton, chosenIndex <= 0 && styles.buttonUnavailable]}>
-                  <Text style={styles.stepperButtonText}>−</Text>
-                </View>
-              </Pressable>
-              <Text style={styles.stepperValue}>{chosen?.label ?? '—'}</Text>
-              <Pressable
-                disabled={chosenIndex < 0 || chosenIndex >= control.options.length - 1}
-                onPress={() => {
-                  const next = control.options[chosenIndex + 1];
-                  if (next !== undefined) onChoose(control.key, next.value);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Increase ${control.label}`}
-              >
-                <View
-                  style={[
-                    styles.stepperButton,
-                    (chosenIndex < 0 || chosenIndex >= control.options.length - 1) &&
-                      styles.buttonUnavailable,
-                  ]}
-                >
-                  <Text style={styles.stepperButtonText}>+</Text>
-                </View>
-              </Pressable>
-            </View>
+            <QuestionStepper
+              value={Number(chosen?.label ?? numericValues[0] ?? 0)}
+              min={numericValues[0] ?? 0}
+              max={numericValues[numericValues.length - 1] ?? 0}
+              step={numericStep}
+              onChange={(value) => {
+                const next = control.options.find((option) => Number(option.label) === value);
+                if (next !== undefined) onChoose(control.key, next.value);
+              }}
+            />
           ) : isCollapsedChoice ? (
             <View style={styles.collapsedSetting}>
-              <Pressable
+              <CategoryListRow
                 style={styles.collapsedSettingButton}
-                onPress={() =>
-                  setExpandedKey((current) => (current === control.key ? undefined : control.key))
-                }
-                accessibilityRole="button"
-                accessibilityState={{ expanded: expandedKey === control.key }}
-              >
-                <Text style={styles.collapsedSettingValue}>{chosen?.label ?? 'Choose'}</Text>
-                <Icon name="chevron-right" size={22} color={colors.ink} />
-              </Pressable>
-              {expandedKey === control.key ? (
-                <View style={styles.expandedSettingOptions}>
-                  {control.options.map((option) => (
-                    <SettingOption
-                      key={option.value}
-                      label={option.label}
-                      spokenAs={`${control.label}: ${option.label}`}
-                      chosen={option.chosen}
-                      onPress={() => {
-                        onChoose(control.key, option.value);
-                        setExpandedKey(undefined);
-                      }}
-                    />
-                  ))}
-                </View>
-              ) : null}
+                label={chosen?.label ?? 'Choose'}
+                onPress={() => setPickerKey(control.key)}
+              />
+              <CategoryPickerSheet
+                visible={pickerKey === control.key}
+                title={`Choose ${control.label.toLowerCase()}`}
+                options={control.options}
+                selectedValue={chosen?.value}
+                onSelect={(value) => onChoose(control.key, value)}
+                onDismiss={() => setPickerKey(undefined)}
+              />
             </View>
           ) : (
-            <View style={styles.settingOptions}>
-              {control.options.map((option) => (
-                <SettingOption
-                  key={option.value}
-                  label={option.label}
-                  // Which setting this value belongs to, for a screen reader —
-                  // three settings' chips are one flat list of buttons to it, and
-                  // "Movies, selected" alone says nothing about what it sets.
-                  spokenAs={`${control.label}: ${option.label}`}
-                  chosen={option.chosen}
-                  onPress={() => onChoose(control.key, option.value)}
-                />
-              ))}
-            </View>
+            <SegmentedControl
+              options={control.options.map((option) => option.label)}
+              value={chosen?.label ?? control.options[0]?.label ?? ''}
+              onChange={(label) => {
+                const next = control.options.find((option) => option.label === label);
+                if (next !== undefined) onChoose(control.key, next.value);
+              }}
+            />
           )}
         </View>
         );
       })}
     </View>
-  );
-}
-
-/**
- * One value of one setting, as Soft Minimal draws a choice: the chosen chip is
- * accented and sits on its own shadow, while the rest are white and flat. The
- * sticker shadow lifts the thing that is currently true off the ones that
- * merely could be.
- */
-
-function SettingOption({
-  label,
-  spokenAs,
-  chosen,
-  onPress,
-}: {
-  readonly label: string;
-  /** The label read aloud: the setting this value belongs to, and the value. */
-  readonly spokenAs: string;
-  readonly chosen: boolean;
-  readonly onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={spokenAs}
-      accessibilityState={{ selected: chosen }}
-    >
-      {({ pressed }) =>
-        chosen ? (
-          <Surface
-            elevation={elevation.phoneSmall}
-            style={[
-              styles.settingOption,
-              styles.settingOptionChosen,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={[styles.settingOptionLabel, styles.settingOptionLabelChosen]}>
-              {label}
-            </Text>
-          </Surface>
-        ) : (
-          // No press travel on the flat chip. Soft Minimal's press is a sticker
-          // going down onto its own shadow, and
-          // a chip that has no shadow to meet would just slide 3px sideways.
-          <View style={styles.settingOption}>
-            <Text style={styles.settingOptionLabel}>{label}</Text>
-          </View>
-        )
-      }
-    </Pressable>
   );
 }
 
@@ -798,21 +704,14 @@ function RoundButton({
   readonly onPress: () => void;
 }) {
   return (
-    <Pressable
+    <NavigationIconButton
+      icon={icon === 'chevron-left' ? 'carousel-left' : 'carousel-right'}
       disabled={!enabled}
       onPress={onPress}
-      accessibilityRole="button"
+      size={56}
+      style={[styles.roundButton, !enabled && styles.buttonUnavailable]}
       accessibilityLabel={spokenAs}
-      accessibilityState={{ disabled: !enabled }}
-    >
-      {({ pressed }) => (
-        <Surface
-          elevation={elevation.phoneSmall}
-          style={[enabled ? undefined : styles.buttonUnavailable, [styles.roundButton, pressed && styles.buttonPressed]]}>
-          <Icon name={icon} size={26} color={colors.ink} />
-        </Surface>
-      )}
-    </Pressable>
+    />
   );
 }
 
