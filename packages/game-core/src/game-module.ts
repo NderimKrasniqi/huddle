@@ -210,6 +210,36 @@ export type GameSetting = {
 /** A game module's declaration of its host-tunable options. */
 export type GameSettingsSchema = readonly GameSetting[];
 
+/** A named setup mode shared by the Host phone and TV draft surface. */
+export type GameSettingsMode = 'quick' | 'standard' | 'custom';
+
+/** A module-owned preset; the hub only renders its label and values. */
+export type GameSettingsPreset = {
+  readonly mode: Exclude<GameSettingsMode, 'custom'>;
+  readonly label: string;
+  readonly settings: Readonly<Record<string, string>>;
+};
+
+/** Presentation hints for a generic setup shell. */
+export type GameSettingsPresentation = {
+  readonly presets?: readonly GameSettingsPreset[];
+  /** Keys/options that the custom shell should expose; schema remains authority. */
+  readonly customSettingKeys?: readonly string[];
+  /** Optional custom-mode option allowlist; presets can expose additional values. */
+  readonly customOptions?: Readonly<Record<string, readonly string[]>>;
+};
+
+/** Stable projection used by generic finished shells. */
+export type FinishedSummary = {
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly standings?: readonly {
+    readonly playerId: GamePlayerId;
+    readonly score?: number;
+    readonly rank?: number;
+  }[];
+};
+
 /** What a game is started with: who is playing, and what the Host chose. */
 export type GameSetup<Settings> = {
   readonly players: readonly GamePlayer[];
@@ -273,6 +303,7 @@ export interface GameLogic<
   decodeEvent(value: unknown): Event;
   readonly metadata: GameMetadata;
   readonly settingsSchema: GameSettingsSchema;
+  readonly settingsPresentation?: GameSettingsPresentation;
   /** The state a game begins in, given its players and the Host's settings. */
   createInitialState(setup: GameSetup<Settings>): State;
   /**
@@ -312,6 +343,10 @@ export interface GameLogic<
    * player's and which are the room's.
    */
   redactStateFor(state: State, viewer: GamePlayerId | undefined): State;
+  /** Server-side finished predicate; legacy modules may omit it. */
+  isFinished?(state: State): boolean;
+  /** Server-side projection for the generic finished screens. */
+  finishedSummary?(state: State): FinishedSummary;
 }
 
 /**
@@ -339,6 +374,9 @@ export interface GameLogic<
 export interface GameModule<State = unknown, Event extends GameEvent = GameEvent> {
   readonly metadata: GameMetadata;
   readonly settingsSchema: GameSettingsSchema;
+  readonly settingsPresentation?: GameSettingsPresentation;
+  finishedSummary?(state: State): FinishedSummary;
+  isFinished?(state: State): boolean;
   /**
    * The two faces of a running game. Both are React components — plain
    * functions of their props — so the hub mounts them without knowing what

@@ -27,7 +27,7 @@ export const triviaMetadata: GameMetadata = {
    * handoff's "~12 min" chip is mock filler; the chip draws whatever the module
    * declares, and this is the number the scoped settings produce.
    */
-  estimatedMinutes: 5,
+  estimatedMinutes: 15,
   /** The genre chip. Not one of a Question Pack's categories. */
-  category: 'Knowledge',
+  category: 'Quiz',
 };

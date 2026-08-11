@@ -69,6 +69,13 @@ export const colors = {
   shadowSoft: '#0F172A0F',
   shadowMedium: '#0F172A1A',
   shadowStrong: '#0F172A24',
+  /** Dark Game Setup canvas accents sampled from the supplied TV reference. */
+  setupCanvas: '#0B2A2D',
+  setupText: '#FFF8EA',
+  setupMuted: '#B9E5DB',
+  setupGold: '#F5C765',
+  setupSurface: '#F5F1E7',
+  setupWash: '#0B2A2DD9',
 } as const;
 
 export type ColorToken = keyof typeof colors;

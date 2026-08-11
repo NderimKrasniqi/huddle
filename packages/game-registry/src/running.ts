@@ -20,7 +20,18 @@ export type RunningGameScreen =
       readonly kind: 'game';
       readonly module: GameModule;
       readonly state: unknown;
+      readonly gameId?: string;
+      readonly settings?: Readonly<Record<string, string>>;
+      readonly mode?: 'quick' | 'standard' | 'custom';
       readonly clockRemainingMs?: number;
+    }
+  | {
+      readonly kind: 'finished';
+      readonly module: GameModule;
+      readonly state: unknown;
+      readonly gameId: string;
+      readonly settings?: Readonly<Record<string, string>>;
+      readonly mode?: 'quick' | 'standard' | 'custom';
     }
   /** The room is paused and no game controls should mount. */
   | {
@@ -73,14 +84,36 @@ export function runningGameScreen(
 
   const module = gameModuleById(response.gameId);
 
-  return module === undefined
-    ? { kind: 'unavailable', gameId: response.gameId }
-    : {
-        kind: 'game',
-        module,
-        state: response.state,
-        ...(response.clockRemainingMs === undefined
-          ? {}
-          : { clockRemainingMs: response.clockRemainingMs }),
-      };
+  if (module === undefined)
+    return { kind: 'unavailable', gameId: response.gameId };
+
+  const state = response.state;
+  const finished =
+    module.isFinished?.(state) ??
+    (typeof state === 'object' &&
+      state !== null &&
+      'phase' in state &&
+      (state as { phase?: unknown }).phase === 'finished');
+
+  if (finished) {
+    return {
+      kind: 'finished',
+      module,
+      state,
+      gameId: response.gameId,
+      ...(response.settings === undefined ? {} : { settings: response.settings }),
+      ...(response.mode === undefined ? {} : { mode: response.mode }),
+    };
+  }
+
+  return {
+    kind: 'game',
+    module,
+    state,
+    ...(response.settings === undefined ? {} : { settings: response.settings }),
+    ...(response.mode === undefined ? {} : { mode: response.mode }),
+    ...(response.clockRemainingMs === undefined
+      ? {}
+      : { clockRemainingMs: response.clockRemainingMs }),
+  };
 }

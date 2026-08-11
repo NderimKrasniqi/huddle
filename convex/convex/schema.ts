@@ -46,6 +46,19 @@ export default defineSchema({
      */
     hostPlayerId: v.optional(v.id('players')),
     /**
+     * The Host's live game draft. It is separate from `game` so browsing and
+     * editing settings can be mirrored to the TV without seeding a runtime.
+     * Optional for backwards compatibility with rooms created before setup
+     * drafts existed.
+     */
+    setup: v.optional(
+      v.object({
+        gameId: v.string(),
+        settings: v.record(v.string(), v.string()),
+        mode: v.union(v.literal('quick'), v.literal('standard'), v.literal('custom')),
+      }),
+    ),
+    /**
      * The game this room is playing, and the state it is at — absent while the
      * room is in its lobby.
      *
@@ -65,6 +78,12 @@ export default defineSchema({
       v.object({
         /** Which installed module — `GameMetadata.id`, as the Registry knows it. */
         gameId: v.string(),
+        /** Settings locked at Start; optional for legacy running games. */
+        settings: v.optional(v.record(v.string(), v.string())),
+        /** Preset/custom mode locked at Start; optional for legacy games. */
+        mode: v.optional(
+          v.union(v.literal('quick'), v.literal('standard'), v.literal('custom')),
+        ),
         /**
          * Decoder version for the opaque state stored below.
          *

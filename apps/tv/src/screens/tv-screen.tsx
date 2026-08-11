@@ -4,6 +4,7 @@ import { useQuery } from 'convex/react';
 import { useEffect } from 'react';
 
 import { CarouselStage } from '../features/carousel/native';
+import { GameSetupStage } from '../features/game-setup/native';
 import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage, useRoomGreetings } from '../features/room/native';
 import type { RosterSeat } from '../features/room';
@@ -45,17 +46,18 @@ function OpenRoomStage({
   const running = useQuery(api.games.running, { roomId: room.roomId });
   const runtime = runningGameScreen(running);
   const browsingAt = useQuery(api.games.browsing, { roomId: room.roomId });
+  const setup = useQuery(api.games.setup, { roomId: room.roomId });
   const browsing =
     browsingAt === undefined || browsingAt === null ? undefined : carouselWindow(browsingAt);
-  const surface = tvSurface({ runtime: runtime.kind, hasBrowsing: browsing !== undefined });
+  const surface = tvSurface({ runtime: runtime.kind, hasBrowsing: browsing !== undefined, hasSetup: setup !== null && setup !== undefined });
   const seats: readonly RosterSeat[] = roster ?? [];
 
-  if (surface === 'game' && runtime.kind === 'game') {
+  if (surface === 'game' && (runtime.kind === 'game' || runtime.kind === 'finished')) {
     return (
       <GameStage
         module={runtime.module}
         state={runtime.state}
-        clockRemainingMs={runtime.clockRemainingMs}
+        clockRemainingMs={runtime.kind === 'game' ? runtime.clockRemainingMs : undefined}
         roster={seats}
       />
     );
@@ -72,6 +74,10 @@ function OpenRoomStage({
         disconnectedPlayers={seats.filter((player) => player.away).map((player) => player.nickname)}
       />
     );
+  }
+
+  if (surface === 'setup' && setup !== null && setup !== undefined) {
+    return <GameSetupStage code={room.code} draft={setup} roster={seats} />;
   }
 
   if (surface === 'carousel' && browsing !== undefined) {

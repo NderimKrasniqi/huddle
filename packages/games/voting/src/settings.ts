@@ -45,6 +45,22 @@ export const VOTING_SETTINGS_SCHEMA: GameSettingsSchema = [
   },
 ];
 
+export const VOTING_SETTINGS_PRESENTATION = {
+  presets: [
+    {
+      mode: 'standard' as const,
+      label: 'Standard',
+      settings: { rounds: String(DEFAULT_ROUNDS) },
+    },
+    {
+      mode: 'quick' as const,
+      label: 'Quick',
+      settings: { rounds: '3' },
+    },
+  ],
+  customSettingKeys: [ROUNDS_KEY],
+} as const;
+
 /** The setting above, as the game's own rules need it. */
 export type VotingSettings = {
   readonly rounds: RoundCount;

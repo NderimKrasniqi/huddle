@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { votingMetadata } from './metadata';
 import { CURATED_PROMPTS, type VotingPrompt } from './prompts';
-import { votingSettings, VOTING_SETTINGS_SCHEMA } from './settings';
+import { votingSettings, VOTING_SETTINGS_PRESENTATION, VOTING_SETTINGS_SCHEMA } from './settings';
 import { playersCounted, votesIn, REVEAL_SECONDS, VOTE_SECONDS } from './state';
 
 /**
@@ -302,6 +302,7 @@ export const votingGameLogic: GameLogic<VotingState, VotingEvent, GameSettings> 
   decodeEvent: (value) => votingEventSchema.parse(value) as VotingEvent,
   metadata: votingMetadata,
   settingsSchema: VOTING_SETTINGS_SCHEMA,
+  settingsPresentation: VOTING_SETTINGS_PRESENTATION,
   createInitialState: ({ players, settings }) => {
     const chosen = votingSettings(settings);
     // The whole game is dealt here and never again: the prompts ride in the
@@ -336,6 +337,8 @@ export const votingGameLogic: GameLogic<VotingState, VotingEvent, GameSettings> 
   // the same state. The required projection seam still makes that guarantee
   // explicit to the runtime.
   redactStateFor: (state) => state,
+  isFinished: (state) => state.phase === 'finished',
+  finishedSummary: () => ({ title: 'Hot Takes complete' }),
 };
 
 /**

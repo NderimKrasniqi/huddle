@@ -1,7 +1,7 @@
-export type SeatedSurface = 'game' | 'runtime-status' | 'waiting' | 'picker' | 'room';
+export type SeatedSurface = 'game' | 'finished' | 'runtime-status' | 'waiting' | 'picker' | 'room';
 
 export type SeatedSurfaceInput = {
-  readonly runtime: 'game' | 'paused' | 'unavailable' | 'lobby';
+  readonly runtime: 'game' | 'finished' | 'paused' | 'unavailable' | 'lobby';
   readonly youAreHost: boolean;
   readonly picking: boolean;
   readonly strandedRuntime: boolean;
@@ -11,6 +11,7 @@ export type SeatedSurfaceInput = {
 /** Selects a seated surface without React or Convex state. */
 export function seatedSurface(input: SeatedSurfaceInput): SeatedSurface {
   if (input.runtime === 'game') return 'game';
+  if (input.runtime === 'finished') return 'finished';
   if (input.runtime === 'paused' || input.runtime === 'unavailable') return 'runtime-status';
   if (!input.youAreHost) return 'waiting';
   if (input.picking && !input.strandedRuntime && input.hasGameToBrowse) return 'picker';

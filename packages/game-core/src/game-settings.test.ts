@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { GameSettingsSchema } from './game-module';
-import { settingsFrom, settingsRefusal } from './game-settings';
+import type { GameSettingsPresentation, GameSettingsSchema } from './game-module';
+import { settingsFrom, settingsRefusal, settingsRefusalForMode } from './game-settings';
 
 /**
  * The hub settling a Host's choices against a schema it cannot read.
@@ -32,6 +32,23 @@ const coinToss: GameSettingsSchema = [
     defaultValue: 'penny',
   },
 ];
+
+const coinTossPresentation: GameSettingsPresentation = {
+  presets: [
+    {
+      mode: 'quick',
+      label: 'Quick',
+      settings: { tosses: '1', coin: 'penny' },
+    },
+    {
+      mode: 'standard',
+      label: 'Standard',
+      settings: { tosses: '3', coin: 'pound' },
+    },
+  ],
+  customSettingKeys: ['tosses'],
+  customOptions: { tosses: ['1'] },
+};
 
 describe('the settings a game starts with', () => {
   it('is nothing at all for a game that declares no settings', () => {
@@ -93,5 +110,42 @@ describe('the settings a game refuses to start on', () => {
       key: 'tosses',
       value: '1',
     });
+  });
+});
+
+describe('the settings a setup mode refuses', () => {
+  it('keeps generic schema validation when no presentation is declared', () => {
+    expect(settingsRefusalForMode(coinToss, undefined, { tosses: '3' }, 'custom')).toBeNull();
+    expect(settingsRefusalForMode(coinToss, undefined, { tosses: '7' }, 'custom')).toEqual({
+      kind: 'settingRejected',
+      key: 'tosses',
+      value: '7',
+    });
+  });
+
+  it('requires custom mode to leave hidden settings at their defaults', () => {
+    expect(
+      settingsRefusalForMode(
+        coinToss,
+        coinTossPresentation,
+        { tosses: '1', coin: 'pound' },
+        'custom',
+      ),
+    ).toEqual({ kind: 'settingRejected', key: 'coin', value: 'pound' });
+  });
+
+  it('enforces custom option allowlists', () => {
+    expect(
+      settingsRefusalForMode(coinToss, coinTossPresentation, { tosses: '3', coin: 'penny' }, 'custom'),
+    ).toEqual({ kind: 'settingRejected', key: 'tosses', value: '3' });
+  });
+
+  it('requires quick and standard modes to match their module-owned presets', () => {
+    expect(settingsRefusalForMode(coinToss, coinTossPresentation, { tosses: '3', coin: 'penny' }, 'quick')).toEqual({
+      kind: 'settingRejected',
+      key: 'tosses',
+      value: '3',
+    });
+    expect(settingsRefusalForMode(coinToss, coinTossPresentation, { tosses: '3', coin: 'pound' }, 'standard')).toBeNull();
   });
 });

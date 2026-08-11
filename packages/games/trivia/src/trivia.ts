@@ -3,7 +3,7 @@ import type { GameModule } from '@huddle/game-core';
 import { TriviaControllerScreen } from './controller-screen';
 import type { TriviaEvent, TriviaState } from './logic';
 import { triviaMetadata } from './metadata';
-import { TRIVIA_SETTINGS_SCHEMA } from './settings';
+import { TRIVIA_SETTINGS_PRESENTATION, TRIVIA_SETTINGS_SCHEMA } from './settings';
 import { TriviaTvScreen } from './tv-screen';
 
 /**
@@ -22,6 +22,16 @@ import { TriviaTvScreen } from './tv-screen';
 export const triviaGameModule: GameModule<TriviaState, TriviaEvent> = {
   metadata: triviaMetadata,
   settingsSchema: TRIVIA_SETTINGS_SCHEMA,
+  settingsPresentation: TRIVIA_SETTINGS_PRESENTATION,
+  finishedSummary: (state) => ({
+    title: 'Final scores',
+    standings: state.standings.map((standing, index) => ({
+      playerId: standing.playerId,
+      score: standing.score,
+      rank: index + 1,
+    })),
+  }),
+  isFinished: (state) => state.phase === 'finished',
   screens: {
     tv: TriviaTvScreen,
     controller: TriviaControllerScreen,

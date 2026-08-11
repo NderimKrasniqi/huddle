@@ -286,8 +286,7 @@ export const controllerStyles = StyleSheet.create({
   // this screen reaching for the safe area the Modal renders outside of.
   sheetRoot: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+    justifyContent: 'flex-end',
   },
   // Soft Minimal's scrim: ink pulled back to a wash, so the room reads as still
   // there behind the dialog. A separate view from the panel, which is its
@@ -303,10 +302,12 @@ export const controllerStyles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 14,
     padding: 20,
+    paddingBottom: 28,
     backgroundColor: colors.surface,
     borderColor: colors.ink,
     borderWidth: borderWidth.hairline,
-    borderRadius: radius.card,
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -398,6 +399,26 @@ export const controllerStyles = StyleSheet.create({
   settings: {
     alignSelf: 'stretch',
     gap: 14,
+  },
+  presetSummary: {
+    alignSelf: 'stretch',
+    gap: 10,
+    padding: 16,
+    backgroundColor: colors.soft,
+    borderRadius: radius.row,
+  },
+  presetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  presetValue: {
+    flexShrink: 1,
+    color: colors.ink,
+    fontFamily: fontFamily.semibold,
+    fontSize: 16,
+    textAlign: 'right',
   },
   setting: {
     alignSelf: 'stretch',
@@ -594,6 +615,51 @@ export const controllerStyles = StyleSheet.create({
     marginRight: -letterSpacing.label,
     textAlign: 'center',
   },
+  modeTabs: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    gap: 8,
+  },
+  modeTab: {
+    minWidth: 92,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: borderWidth.hairline,
+    borderRadius: radius.chip,
+  },
+  modeTabChosen: {
+    backgroundColor: colors.accent,
+    borderColor: colors.ink,
+  },
+  modeTabLabel: {
+    color: colors.ink,
+    fontFamily: fontFamily.medium,
+    fontSize: 14,
+  },
+  modeTabLabelChosen: {
+    color: colors.surface,
+    fontFamily: fontFamily.semibold,
+  },
+  selectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.soft,
+    borderRadius: radius.row,
+  },
+  selectionStatusText: {
+    flex: 1,
+    color: colors.ink,
+    fontFamily: fontFamily.medium,
+    fontSize: 15,
+  },
   // The board's tall card. `aspectRatio` rather than a height, so it is the
   // same shape on a small phone and a large one instead of the same number of
   // points on both.
@@ -722,5 +788,19 @@ export const controllerStyles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 16,
     lineHeight: 22,
+  },
+  finishedRoster: {
+    alignSelf: 'stretch',
+    gap: 8,
+    paddingTop: 6,
+  },
+  finishedRosterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 10,
+    paddingVertical: 6,
+    borderBottomColor: colors.border,
+    borderBottomWidth: borderWidth.hairline,
   },
 });

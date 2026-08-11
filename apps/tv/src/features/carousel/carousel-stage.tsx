@@ -1,9 +1,9 @@
 import type { GameModule } from '@huddle/game-core';
 import { type CarouselWindow } from '@huddle/game-registry';
 import { colors, elevation, motionDuration } from '@huddle/ui';
-import { Surface, Wordmark } from '@huddle/ui/native';
+import { GameKeyArt, Surface, Wordmark } from '@huddle/ui/native';
 import { useLayoutEffect, useState } from 'react';
-import { Animated, Easing, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { TvStage } from '../../ui';
 import { roomLayout, type RosterSeat } from '../room';
@@ -89,6 +89,12 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
       style={styles.focusedCard}
     >
       <View style={[styles.keyArt, { backgroundColor: colors[keyArt.color] }]}>
+        <GameKeyArt
+          gameId={game.metadata.id}
+          title={title}
+          color={keyArt.color}
+          style={StyleSheet.absoluteFill}
+        />
         <Text style={styles.keyArtTitle}>{title}</Text>
       </View>
 
@@ -114,7 +120,15 @@ function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
 
   return (
     <View style={styles.sideCardWrapper}>
-      <View style={[styles.sideCard, { backgroundColor: colors[game.metadata.keyArt.color] }]}>
+      <View
+        style={[styles.sideCard, { backgroundColor: colors[game.metadata.keyArt.color] }]}
+      >
+        <GameKeyArt
+          gameId={game.metadata.id}
+          title={game.metadata.title}
+          color={game.metadata.keyArt.color}
+          style={StyleSheet.absoluteFill}
+        />
         <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>
       </View>
     </View>

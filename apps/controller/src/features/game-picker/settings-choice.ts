@@ -1,4 +1,9 @@
-import { type GameSettings, type GameSettingsSchema, settingsFrom } from '@huddle/game-core';
+import {
+  type GameSettings,
+  type GameSettingsPresentation,
+  type GameSettingsSchema,
+  settingsFrom,
+} from '@huddle/game-core';
 
 /**
  * The Host's settings while they are still choosing them: what the controls
@@ -10,20 +15,18 @@ import { type GameSettings, type GameSettingsSchema, settingsFrom } from '@huddl
  * lets one screen draw whatever the chosen game declares without knowing what
  * any of it means.
  *
- * The choice lives on the Host's phone and nowhere else. It is not on the room
- * beside `browsingGameIndex` on purpose: the carousel is a shared surface that
- * three screens read, and settings are the opposite — a phone that is not
- * running the room has no settings to draw, rather than settings it is trusted
- * not to draw. What reaches the room is the one `startGame` argument, and that
- * mutation is Host-only (`roomThisPhoneRuns`), so the refusal underneath this
- * screen is what actually keeps a non-Host from setting anything.
+ * The choice is an optimistic mirror for the Host's picker. The authoritative
+ * copy lives in the room's optional setup draft, which `configureGame` updates
+ * after each tap and which `startGame` locks atomically. A non-Host never gets
+ * this screen, and the Convex mutations remain Host-only, so the local mirror
+ * cannot become a second source of truth or a way around authorization.
  */
 
 /** What the Host has picked, and the card they picked it on. */
 export type SettingsChoice = {
   /** `GameMetadata.id` of the game these settings were chosen for. */
   readonly gameId: string;
-  /** Only the settings actually touched; the rest default at `settingsFrom`. */
+  /** Settings shown while the room draft mutation settles; untouched values default at `settingsFrom`. */
   readonly settings: GameSettings;
 };
 
@@ -94,16 +97,25 @@ export function settingsControls(
   schema: GameSettingsSchema,
   gameId: string,
   choice: SettingsChoice | undefined,
+  presentation?: GameSettingsPresentation,
 ): readonly SettingControl[] {
   const starting = settingsToStart(schema, gameId, choice);
+  const visibleKeys = presentation?.customSettingKeys;
 
-  return schema.map((setting) => ({
+  return schema
+    .filter((setting) => visibleKeys === undefined || visibleKeys.includes(setting.key))
+    .map((setting) => ({
     key: setting.key,
     label: setting.label,
-    options: setting.options.map((option) => ({
+    options: setting.options
+      .filter((option) => {
+        const allowed = presentation?.customOptions?.[setting.key];
+        return allowed === undefined || allowed.includes(option.value);
+      })
+      .map((option) => ({
       value: option.value,
       label: option.label,
       chosen: starting[setting.key] === option.value,
-    })),
-  }));
+      })),
+    }));
 }

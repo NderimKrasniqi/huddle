@@ -18,6 +18,10 @@ export type {
   GameSetting,
   GameSettingOption,
   GameSettingsSchema,
+  GameSettingsMode,
+  GameSettingsPreset,
+  GameSettingsPresentation,
+  FinishedSummary,
   GameSetup,
   PlayerRange,
   RosterSeatForGame,
@@ -25,7 +29,12 @@ export type {
 } from './game-module';
 // The Host's settings as everything outside a game module holds them, settled
 // and refused generically against whatever schema the game declares.
-export { type GameSettings, settingsFrom, settingsRefusal } from './game-settings';
+export {
+  type GameSettings,
+  settingsFrom,
+  settingsRefusal,
+  settingsRefusalForMode,
+} from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
 // Which seats a screen watched arrive, so both clients can greet an arrival the
 // same way. Here rather than in an app because both draw a roster now.
@@ -50,6 +59,10 @@ export { ROOM_PLAYER_CAP } from './room-capacity';
 export {
   type GameLifecycleIntent,
   type GameLifecycleRejection,
+  type GameSetupRejection,
+  type GameSetupMode,
+  type RoomSetup,
+  GAME_SETUP_MODES,
   phaseAfter,
   refusalToStart,
   roomPhase,

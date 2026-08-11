@@ -1,4 +1,16 @@
 import type { PlayerRange } from './game-module';
+import type { GameSettings } from './game-settings';
+
+/** The three ways a Host can prepare a game before pressing Start. */
+export const GAME_SETUP_MODES = ['quick', 'standard', 'custom'] as const;
+export type GameSetupMode = (typeof GAME_SETUP_MODES)[number];
+
+/** A live, shared Host draft. */
+export type RoomSetup = {
+  readonly gameId: string;
+  readonly settings: GameSettings;
+  readonly mode: GameSetupMode;
+};
 
 /**
  * Where a room stands between parties and games.
@@ -13,7 +25,7 @@ import type { PlayerRange } from './game-module';
  * such row as an in-game room with nothing running, and no repair to write for
  * a start that half-succeeded.
  */
-export const ROOM_PHASES = ['lobby', 'in-game'] as const;
+export const ROOM_PHASES = ['lobby', 'configuring', 'in-game'] as const;
 
 export type RoomPhase = (typeof ROOM_PHASES)[number];
 
@@ -21,6 +33,10 @@ export type RoomPhase = (typeof ROOM_PHASES)[number];
 export type RunningGame<State = unknown> = {
   readonly gameId: string;
   readonly state: State;
+  /** Settings are immutable once a game starts; absent on legacy rows. */
+  readonly settings?: GameSettings;
+  /** Preset/custom mode selected for this run; absent on legacy rows. */
+  readonly mode?: GameSetupMode;
 };
 
 /**
@@ -36,6 +52,8 @@ export type RunningGameResponse =
       readonly kind: 'running';
       readonly gameId: string;
       readonly state: unknown;
+      readonly settings?: GameSettings;
+      readonly mode?: GameSetupMode;
       readonly clockRemainingMs?: number;
     }
   | {
@@ -49,8 +67,12 @@ export type RunningGameResponse =
     };
 
 /** The phase of a room holding `game` — the lobby if it holds none. */
-export function roomPhase(game: RunningGame | undefined | null): RoomPhase {
-  return game === undefined || game === null ? 'lobby' : 'in-game';
+export function roomPhase(
+  game: RunningGame | undefined | null,
+  setup?: RoomSetup | null,
+): RoomPhase {
+  if (game !== undefined && game !== null) return 'in-game';
+  return setup === undefined || setup === null ? 'lobby' : 'configuring';
 }
 
 /**
@@ -89,6 +111,13 @@ export type GameLifecycleRejection =
   | { readonly kind: 'settingRejected'; readonly key: string; readonly value: string }
   /** The shared TV is away, so starting a game would advance unseen state. */
   | { readonly kind: 'tvUnavailable' };
+
+/** Why a Host-only draft action was refused. */
+export type GameSetupRejection =
+  | { readonly kind: 'setupNotFound' }
+  | { readonly kind: 'setupAlreadyRunning' }
+  | { readonly kind: 'replayNotFinished' }
+  | { readonly kind: 'replayNotAllowed' };
 
 /** What the Host asked the room to do. */
 export type GameLifecycleIntent = 'start' | 'end';

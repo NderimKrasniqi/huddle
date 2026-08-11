@@ -686,6 +686,7 @@ export const leaveRoom = mutation({
       await ctx.db.patch(room._id, {
         hostPlayerId: undefined,
         game: undefined,
+        setup: undefined,
         browsingGameIndex: undefined,
       });
       return null;

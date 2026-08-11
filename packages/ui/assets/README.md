@@ -8,11 +8,10 @@ plus the cleaned avatar batch delivered the same day.
 
 ## Status: wired
 
-`avatars/`, `logo/`, `tv-backgrounds/` and `app-icons/` are all consumed by the
-apps and proved through `expo export` / `expo prebuild`. `icons/` is consumed
-differently — see its own section, which is the one folder here that is not a
-bundle input. `game-art/` is the only set still staged, and only in part: it has
-art for two games that do not exist and none for one that does.
+`avatars/`, `logo/`, `tv-backgrounds/`, `game-art/` and `app-icons/` are all
+consumed by the apps and proved through `expo export` / `expo prebuild`.
+`icons/` is consumed differently — see its own section, which is the one folder
+here that is not a bundle input.
 
 ## `avatars/`
 
@@ -77,11 +76,13 @@ Host avatar, not a bitmap badge.
 
 ## `game-art/`
 
-Full-bleed 1254×1254, no alpha — matches §10 and needs no rework.
+Full-bleed 1254×1254, no alpha — matches §10 and needs no rework. The shared
+`GameKeyArt` renderer maps installed game ids to these files and falls back to
+the module palette for future entries.
 
-`trivia.png` maps to the built `trivia` module. `drawing.png` (Draw Battle) and
-`word-game.png` (Word Sneak) have no game behind them, and the built `voting`
-module has no art.
+`trivia.png` maps to the built `trivia` module; `word-game.png` is the current
+key art for Voting/Hot Takes and `drawing.png` remains reserved for a future
+Draw Battle entry.
 
 One consistency note, not a defect: these are photoreal 3D renders, where the
 avatars and TV backgrounds are flat illustration. The two do not currently read
@@ -96,9 +97,12 @@ layered over one. `huddle-tv-background-01.png` renders full-viewport with
 `cover`, so the artwork reaches every edge. `TvStage` applies
 `tvSafeStageScale` only to its 1280×720 content layer; `colors.screen` remains
 the loading fallback. On a non-16:9 panel, `cover` crops decorative edges rather
-than stretching the composition. The newly approved, dark Game setup reference
-is not implemented; adopting it requires the explicit per-screen exception
-recorded in `docs/design/soft-minimal-handoff.md`.
+than stretching the composition. `game-setup-background.png` is the
+authoritative Game Setup canvas supplied by the product reference. It is
+preserved byte-for-byte at 1672×941 RGB and rendered full-bleed with aspect-fill
+by the TV Game Setup surface. Provenance:
+`/Users/nderimkrasniqi/Desktop/game-setup-background.png`; SHA-256
+`838ba1955257e43b353b550a20b470813d6120dd55a0b64afe2fa9060082f3c9`.
 
 `-01` is warmer, `-02` cooler and greyer. `-01` is the default for the Room and
 carousel until the assignment is settled — see the handoff.

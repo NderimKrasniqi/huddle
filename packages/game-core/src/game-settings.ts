@@ -1,4 +1,9 @@
-import type { GameSetting, GameSettingsSchema } from './game-module';
+import type {
+  GameSetting,
+  GameSettingsMode,
+  GameSettingsPresentation,
+  GameSettingsSchema,
+} from './game-module';
 import type { GameLifecycleRejection } from './room-phase';
 
 /**
@@ -72,6 +77,63 @@ export function settingsRefusal(
     // reachable from a settings screen drawn off this schema.
     if (setting === undefined || !offers(setting, value)) {
       return { kind: 'settingRejected', key, value };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Refuse a setting that is valid in the broad schema but not in the selected
+ * setup mode. Presentation data is still module-owned; this helper only
+ * applies its closed option lists at the server boundary so a modified client
+ * cannot bypass the generic setup shell.
+ */
+export function settingsRefusalForMode(
+  schema: GameSettingsSchema,
+  presentation: GameSettingsPresentation | undefined,
+  chosen: GameSettings | undefined,
+  mode: GameSettingsMode | undefined,
+): GameLifecycleRejection | null {
+  const genericRefusal = settingsRefusal(schema, chosen);
+  if (genericRefusal !== null || presentation === undefined || mode === undefined) {
+    return genericRefusal;
+  }
+
+  const settled = settingsFrom(schema, chosen);
+
+  if (mode === 'custom') {
+    for (const setting of schema) {
+      const value = settled[setting.key] ?? setting.defaultValue;
+      const customKeys = presentation.customSettingKeys;
+
+      // A setting hidden from the custom shell stays at its module default.
+      // This is what lets Trivia keep legacy scoring in its schema while all
+      // newly selectable modes remain flat-scored.
+      if (customKeys !== undefined && !customKeys.includes(setting.key)) {
+        if (value !== setting.defaultValue) {
+          return { kind: 'settingRejected', key: setting.key, value };
+        }
+        continue;
+      }
+
+      const allowed = presentation.customOptions?.[setting.key];
+      if (allowed !== undefined && !allowed.includes(value)) {
+        return { kind: 'settingRejected', key: setting.key, value };
+      }
+    }
+
+    return null;
+  }
+
+  const preset = presentation.presets?.find((candidate) => candidate.mode === mode);
+  if (preset === undefined) return null;
+
+  const expected = settingsFrom(schema, preset.settings);
+  for (const setting of schema) {
+    const value = settled[setting.key] ?? setting.defaultValue;
+    if (value !== expected[setting.key]) {
+      return { kind: 'settingRejected', key: setting.key, value };
     }
   }
 
