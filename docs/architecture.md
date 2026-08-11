@@ -49,7 +49,7 @@ apps/controller/src/
 
 apps/tv/src/
   screens/                     # room opening, subscriptions, surface selection
-  features/{boot,room,carousel,game-session}/
+  features/{boot,room,carousel,game-setup,game-session}/
   platform/{convex,room-session}/
   ui/                          # TV-only primitives
 ```
@@ -80,7 +80,7 @@ surfaces; pending mutations remain on their owning screen with an activity
 indicator and an accessibility `busy` state. Platform screen transitions may
 fade/scale the whole surface, while gameplay animation remains module-owned.
 
-## Approved pre-game flow
+## Implemented pre-game and finish flow
 
 The pre-game TV experience has three distinct product states:
 
@@ -101,10 +101,18 @@ The TV and controllers then mount the selected `GameModule` screens. The
 platform owns the room, browse/setup projection, and lifecycle transition; the
 module owns gameplay visuals, rules, scoring, and its finished beat.
 
-The current surface selectors already have Room, Carousel, Game, and recovery
-states. The approved Game Setup state is the remaining platform surface to
-implement, and it must be an explicit shared state rather than an inference
-from the Host phone's local settings state.
+The current surface selectors implement Room, Carousel, Game Setup, Game, and
+recovery as separate platform states. Game Setup is driven by the shared
+`rooms.setup` projection, not inferred from the Host phone's local component
+state. The Host-only select/configure/cancel/start mutations validate the game
+and settings at the Convex boundary; Start stores immutable settings with the
+running game and clears the draft atomically.
+
+When a module reaches its finished beat, the phone mounts the platform-owned
+`FinishedScreen` over the module's summary. Replay is Host-authorized, requires
+a server-confirmed finished runtime, and creates fresh state with the locked
+settings and current roster. Choose-another and manage-player actions end only
+the game, preserving the room and roster.
 
 ## Current Convex boundaries
 

@@ -79,6 +79,7 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 | Start a game; non-host start refused | ✅ | ✅ | `games.test.ts` + `voting-lifecycle.test.ts` › "refuses a phone that is not the Host" |
 | Settings locked at start (re-start refused mid-game) | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › "refuses to start a second game over the one being played" (`alreadyInGame`) |
 | End the active game; discard state, keep room | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › ending |
+| Finished Host can replay fresh state, choose another game, or return to roster management | ✅ | ✅ | `games.test.ts` › shared setup/replay; `apps/controller/src/features/game-session/game-session-screen.tsx` › `FinishedScreen`; replay/end remain Host-authorized Convex mutations |
 | Leave one's own seat; final departure returns the TV-owned room to an empty lobby | 🔁 | 🔁 | `players.test.ts` › leaveRoom, TV-owned empty-room/code retention, active-game discard and deadline cancellation |
 | Host is also a normal player; can act in the game | ✅ | ✅ | `games.test.ts` › "is open to every player, not only the Host"; Voting votes from the host seat in `voting-lifecycle.test.ts` |
 | Host cannot read another player's private state | ✅ | 🔁 | Trivia: `games.test.ts`/`players.test.ts` private-projection; Voting has **no** private per-player state — the tally is anonymous (`voting-lifecycle.test.ts` › "keeps the tally anonymous") |
@@ -91,8 +92,8 @@ Legend: ✅ automated · 🔁 game-agnostic (proven once) · 🧪 manual · ⛔ 
 |---|---|---|---|
 | Catalog + metadata (name, art, range, duration, modes) | ✅ | ✅ | `game-registry` browsing/carousel suites; both modules' client-safe metadata in `packages/games/*/src/metadata.ts` |
 | Host scrolls games on the phone; TV follows the highlighted carousel card | 🔁 | 🔁 | `games.test.ts` › browsing query; `apps/tv/src/features/carousel/carousel-footer.test.ts` |
-| Explicit game selection switches the TV from Browse Games to Game Setup | ⛔ | ⛔ | Approved TV flow/reference screen; dedicated shared setup surface is not implemented yet |
-| Host changes settings on the phone; TV Game Setup mirrors draft settings before Start | ⛔ | ⛔ | Approved TV/phone settings references; shared setup projection is not implemented yet |
+| Explicit game selection switches the TV from Browse Games to Game Setup | ✅ | ✅ | `games.test.ts` › shared setup draft; `apps/tv/src/screens/tv-surface.test.ts`; `apps/tv/src/features/game-setup/game-setup-stage.tsx` |
+| Host changes settings on the phone; TV Game Setup mirrors draft settings before Start | ✅ | ✅ | `games.test.ts` › "selects a preset, mirrors configuration, and starts atomically"; `packages/game-core/src/game-settings.test.ts`; Controller picker setup mutation wiring |
 | Start is a phone action that locks settings and enters the game runtime | ✅ | ✅ | `games.test.ts`/`voting-lifecycle.test.ts` › start validation and `alreadyInGame` lock |
 | Settings settled against the game's own schema (validate/default) | ✅ | ✅ | Trivia (3 settings) `games.test.ts`; Voting (1 setting) `voting-lifecycle.test.ts` › "starts on the rounds the Host chose…", "refuses a value…", "refuses a setting…" |
 | A game the build does not install is refused | 🔁 | 🔁 | `games.test.ts` › "refuses a game the Registry does not install" |

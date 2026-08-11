@@ -224,10 +224,13 @@ Joining the lobby counts as ready by default. A game may introduce additional ga
 After a game finishes:
 
 1. Game displays results.
-2. Game-specific session state ends.
-3. Players return to the existing room.
-4. Room membership, names, avatars, and host remain unchanged.
-5. Host can replay or choose another game.
+2. The finished runtime remains authoritative until the host chooses what
+   happens next; non-host phones wait on that room-level decision.
+3. The host may replay with fresh state and locked settings, choose another
+   game, or return to roster management.
+4. Choosing another game or managing players ends only the game and returns to
+   the existing room.
+5. Room membership, names, avatars, and host remain unchanged.
 
 If the host deliberately ends an active game, the game ends immediately, unfinished game state/scores are discarded, and everyone returns to the existing room.
 
@@ -415,3 +418,16 @@ gameplay animation into the platform.
 - Room opening never reuses the Room renderer without a valid code/QR.
 - Pending platform actions expose both changing copy and a visible activity
   indicator; gameplay visuals and rules remain module-owned.
+
+# Feature 9 traceability — Phone Screen Parity and Shared Game Setup
+
+This work implements the approved platform-owned setup and finished-room
+surfaces while preserving module ownership of gameplay.
+
+- **F-009** — Phone Screen Parity and Shared Game Setup.
+- Browsing, setup, running, paused/unavailable, and finished are distinct shared
+  states; only the Host can mutate setup or lifecycle state.
+- Settings are validated and mirrored before Start, then locked into the running
+  game. Replay starts from fresh state with the current roster.
+- Games retain ownership of metadata, settings schemas, rules, gameplay screens,
+  result summaries, and private-state projection.
