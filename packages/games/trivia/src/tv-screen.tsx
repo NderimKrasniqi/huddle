@@ -14,7 +14,7 @@ import { Surface } from '@huddle/ui/native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { TriviaState } from './logic';
+import type { TriviaState } from './types';
 import {
   watchedScreen,
   type FinalStanding,

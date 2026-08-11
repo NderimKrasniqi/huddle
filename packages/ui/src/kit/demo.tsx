@@ -4,28 +4,20 @@ import { SafeAreaView, ScrollView, Text, View } from 'react-native';
 import { colors } from '../colors';
 
 import { HuddleLogo } from './logo';
+import { BottomSheetOptionRow, CategoryListRow, JoinCountRow, SectionDivider } from './list-row';
+import { PageDots } from './pagination';
+import { RoomCode } from './room-code';
+import { OnlineDot, PhoneBrowsingHelper, SelectedBadge, StatusPill, StatusStrip } from './status';
 import {
-  BottomSheetOptionRow,
-  CategoryListRow,
-  IconGallery,
-  InfoChip,
-  JoinCountRow,
   ModeCard,
   NavigationIconButton,
-  OnlineDot,
-  PageDots,
-  PhoneBrowsingHelper,
   PrimaryButton,
   QuestionStepper,
-  RoomCode,
   SecondaryButton,
-  SectionDivider,
-  SegmentedControl,
   SelectableCard,
-  SelectedBadge,
-  StatusPill,
-  StatusStrip,
-} from './components';
+  SegmentedControl,
+} from './controls';
+import { IconGallery, InfoChip } from './utility';
 import { huddleUIKitColors, huddleUIKitTypography } from './theme';
 
 function Section({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {

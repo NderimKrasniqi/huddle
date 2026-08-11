@@ -6,6 +6,24 @@ export type TvSessionStore = {
   readonly write: (token: string) => Promise<void>;
 };
 
+export type TvIdentityFailure = 'read' | 'write' | 'uuid';
+
+/** A device identity failure that cannot be repaired by retrying the network. */
+export class TvIdentityError extends Error {
+  readonly kind = 'tv-identity';
+  readonly failure: TvIdentityFailure;
+
+  constructor(failure: TvIdentityFailure, message: string) {
+    super(message);
+    this.name = 'TvIdentityError';
+    this.failure = failure;
+  }
+}
+
+export function isTvIdentityError(error: unknown): error is TvIdentityError {
+  return error instanceof TvIdentityError;
+}
+
 /** UUIDs are the only values accepted from the persisted TV keystore. */
 export function isTvSessionToken(value: string | null): value is string {
   return value !== null &&
@@ -40,10 +58,33 @@ export async function ensureTvSessionToken(
   store: TvSessionStore,
   uuid: () => string,
 ): Promise<string> {
-  const stored = await store.read();
+  let stored: string | null;
+  try {
+    stored = await store.read();
+  } catch {
+    // Do not retain or expose a storage exception: a provider may include
+    // implementation details or a credential in its message.
+    throw new TvIdentityError('read', 'Huddle TV could not read its device identity');
+  }
+
   if (isTvSessionToken(stored)) return stored;
-  const token = uuid();
-  if (!isTvSessionToken(token)) throw new Error('Crypto.randomUUID returned an invalid token');
-  await store.write(token);
+
+  let token: string;
+  try {
+    token = uuid();
+  } catch {
+    throw new TvIdentityError('uuid', 'Huddle TV could not create a device identity');
+  }
+
+  if (!isTvSessionToken(token)) {
+    throw new TvIdentityError('uuid', 'Huddle TV received an invalid device identity');
+  }
+
+  try {
+    await store.write(token);
+  } catch {
+    throw new TvIdentityError('write', 'Huddle TV could not save its device identity');
+  }
+
   return token;
 }

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -17,7 +17,7 @@ import { PACKS_DIRECTORY, validatePacksIn } from './pack-validation';
  * spawning it proves that.
  */
 
-const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 
 const goodPack = {
   id: 'fixture-pack',

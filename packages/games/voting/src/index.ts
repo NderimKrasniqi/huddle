@@ -4,7 +4,7 @@
 //
 // The rules are also reachable on their own at `@huddle/game-voting/logic`,
 // which is the entry point the Convex server uses — see `./logic`.
-export type { VotingEvent, VotingPhase, VotingState } from './logic';
+export type { VotingAdvance, VotingEvent, VotingPhase, VotingState } from './types';
 // Timing constants are pure client display facts and live in the client-safe
 // state seam; the rules object itself remains behind `./logic`.
 export { REVEAL_SECONDS, VOTE_SECONDS } from './state';

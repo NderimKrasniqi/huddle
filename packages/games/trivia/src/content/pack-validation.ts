@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
@@ -17,7 +17,7 @@ import { type QuestionPack, questionPackSchema } from './question-pack';
  */
 
 /** Where the packs that ship with Huddle live. */
-export const PACKS_DIRECTORY = fileURLToPath(new URL('../packs', import.meta.url));
+export const PACKS_DIRECTORY = join(dirname(fileURLToPath(import.meta.url)), '../../packs');
 
 export type PackFileReport =
   | { readonly file: string; readonly ok: true; readonly pack: QuestionPack }

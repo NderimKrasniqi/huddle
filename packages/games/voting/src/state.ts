@@ -1,6 +1,6 @@
 import type { GamePlayerId } from '@huddle/game-core';
 
-import type { VotingState } from './logic';
+import type { VotingState } from './types';
 
 /** How long a prompt stays open. Kept in this client-safe state seam. */
 export const VOTE_SECONDS = 20;

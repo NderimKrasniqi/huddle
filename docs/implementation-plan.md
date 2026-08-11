@@ -1,22 +1,24 @@
 # Implementation Plan
 
-> **Reconciled 2026-08-11 against the existing implementation and design
+> **Reconciled 2026-08-12 against the existing implementation and design
 > inventory.** Huddle was built through a prior plan into Phase 5, then hardened
 > through Features 6 and 7. All numbered implementation tasks below are complete;
 > completed entries retain their closeout evidence, while the unnumbered backlog
 > at the end records real follow-up work without pretending it already shipped.
 >
 > **Current evidence:** `pnpm typecheck`, `pnpm lint`, and
-> `pnpm validate:workflow` clean; `pnpm test` green — 71 files, 825 tests, 0
-> failures. Backend (`convex/convex/{rooms,players,games}.ts`),
-> platform packages (`game-core`, `game-registry`, `packs`, `ui`), the Trivia
+> `pnpm validate:workflow` clean; the complete Vitest suite is green — 74
+> files, 868 tests — and the rendered Controller/TV suites are green. Backend
+> (`convex/convex/{rooms,players,games}.ts`), platform packages (`game-core`,
+> `game-registry`, owner-local Trivia content, `ui`), the Trivia
 > module (`packages/games/trivia`), and both apps (`apps/tv`, `apps/controller`)
 > are implemented and tested.
 >
-> **Dependency evidence:** `pnpm audit:prod` is clean after explicitly excluding
-> only the two `image-size@1.2.1` CVEs fixed by the committed pnpm patch;
-> `pnpm verify:dependency-security` exercises those fixes and pinned transitive
-> remediations. See `docs/dependency-security.md`.
+> **Dependency evidence:** `pnpm verify:dependency-security` exercises the
+> committed `image-size@1.2.1` patch and pinned transitive remediations. The
+> npm advisory endpoint was unavailable in this sandbox when `pnpm audit:prod`
+> was attempted; the two intentionally excluded CVEs remain documented in
+> `docs/dependency-security.md`.
 >
 > **2026-08-10 audit resolution:** Product direction resolved F4–F6. A
 > TV-created room now survives an empty roster until TV-session expiry; every
@@ -144,7 +146,7 @@
 **Outcome:** A complete multiplayer Trivia game exercises private inputs, shared TV state, timers, rounds, scoring, and recovery. **— Complete.**
 
 - [x] **4.1 — Define Trivia metadata, rules, and built-in content**
-  - Done: curated question packs in `packages/packs`; player range, round/question counts, answer duration, scoring, and late-join/continue exposed through the contract.
+  - Done: curated question packs in `packages/games/trivia/packs`; player range, round/question counts, answer duration, scoring, and late-join/continue exposed through the contract.
 
 - [x] **4.2 — Implement the authoritative Trivia state machine**
   - Done: round/question/answer/reveal/result states; one-answer-per-player validation; authoritative deadlines with Convex scheduled functions; server-side scoring (incl. speed mode); `games.test.ts` covers valid/invalid answers, deadlines, and scoring.
@@ -223,11 +225,11 @@
   - **Verify:** a returning phone prefills its previous name/avatar; nothing sensitive is stored outside SecureStore. Typecheck/lint/tests green; not yet exercised on hardware.
 
 - [x] **5.9 — (Follow-up) Keep the question pack out of the Controller bundle**
-  - Raised by 5.6's security review. The wire no longer carries unplayed questions or their answers (`redactStateFor`), but `@huddle/packs` is still reachable from the Controller's entry point — `apps/controller` → `@huddle/game-registry` → `@huddle/game-trivia` → `./questions` → `CURATED_PACK` — and `questionsFor` is deterministic, so a **modified** client can reproduce the exact deal locally and know every answer.
+  - Raised by 5.6's security review. The wire no longer carries unplayed questions or their answers (`redactStateFor`), but Trivia's curated content was still reachable from the Controller's entry point — `apps/controller` → `@huddle/game-registry` → `@huddle/game-trivia` → `./questions` → `CURATED_PACK` — and `questionsFor` is deterministic, so a **modified** client could reproduce the exact deal locally and know every answer.
   - The redaction is what stops a passive read (the socket, a proxy, an honest client showing too much); this is what would stop a determined one.
   - The fix is structural rather than a projection: the client-side `GameModule` would have to stop carrying `createInitialState`, so the dealing code — and the pack with it — stays on the server. Deliberately not attempted inside 5.6.
   - **Verify:** a production Controller bundle contains no pack question text; the server still deals a game unchanged.
-  - **Done** (branch `fix/5.9-pack-out-of-client-bundle`). The fix turned out larger than "stop carrying `createInitialState`": the client's *screens* also pulled `./logic` (and the pack behind it) through pure value helpers (`revealBeat`, `answersIn`, `playersCounted`, `QUESTION_SECONDS`), and the trivia *barrel* re-exported `triviaGameLogic` as a value. Changes: `GameModule` no longer `extends GameLogic` (game-core) — a client type with metadata/settingsSchema/screens and no rules; the pack-free selectors moved to `trivia/src/state.ts` so the screens import them without `./logic`; `settings.ts` takes category names from a new client-safe `@huddle/packs/categories` (`curated-categories.ts`, drift-guarded by test) instead of `./questions`; the trivia barrel re-exports the module + types only (`export type { … }`, not `export { type … }` — the latter keeps a runtime edge). Guards: an eslint `no-restricted-imports` ban on `@huddle/packs` in client files, and `client-seam.test.ts`. **Verified** by bundling the client registry entry with esbuild — `huddle-classics.json`, `curated-pack.ts`, `questions.ts`, `logic.ts` are absent from the client module graph and no question text is in the output; the server's `games.test.ts` deals unchanged. Independent security review **PASS**.
+  - **Done** (branch `fix/5.9-pack-out-of-client-bundle`). The fix turned out larger than "stop carrying `createInitialState`": the client's *screens* also pulled `./logic` (and the pack behind it) through pure value helpers (`revealBeat`, `answersIn`, `playersCounted`, `QUESTION_SECONDS`), and the trivia *barrel* re-exported `triviaGameLogic` as a value. Changes: `GameModule` no longer `extends GameLogic` (game-core) — a client type with metadata/settingsSchema/screens and no rules; the pack-free selectors moved to `trivia/src/state.ts` so the screens import them without `./logic`; `settings.ts` takes category names from `trivia/src/content/categories` (drift-guarded by test) instead of `./questions`; the trivia barrel re-exports the module + types only (`export type { … }`, not `export { type … }` — the latter keeps a runtime edge). Guards: an eslint `no-restricted-imports` ban on the server-only content path in client files, and `client-seam.test.ts`. **Verified** by bundling the client registry entry with esbuild — `huddle-classics.json`, `curated-pack.ts`, `questions.ts`, `logic.ts` are absent from the client module graph and no question text is in the output; the server's `games.test.ts` deals unchanged. Independent security review **PASS**.
 
 - [x] **5.10 — Reconcile Soft Minimal TV visuals and shipped assets**
   - Done: `huddle-tv-background-01.png` is the full-viewport TV canvas; only the 1280×720 content layer receives `tvSafeStageScale`, with `colors.screen` retained as the loading fallback.
@@ -658,11 +660,82 @@ Soft Minimal visuals stable.
     Android TV prebuild metadata, simulator captures, and `git diff --check`.
 
 **Status:** complete for repository automation. Evidence: `pnpm typecheck`,
-`pnpm lint`, 74 Vitest files / 858 tests, both Jest rendered suites, isolated
+`pnpm lint`, 74 Vitest files / 859 tests, both Jest rendered suites, isolated
 architecture fixtures, `pnpm validate:workflow`, pack validation, and
 `git diff --check` pass. Expo exports, Android TV prebuild metadata, and
 physical mixed-hardware captures remain release checks because they require
 native/device state and are not replaced by rendered tests.
+
+# Feature 11 — F-011 Quality Foundation and Maintainability Pass
+
+Feature 11 records and implements a behavior-preserving maintainability pass.
+It removes the private Trivia-pack workspace in favor of owner-local content,
+hardens TV identity recovery, follows transitive package seams, and expands
+rendered accessibility coverage while preserving public routes, Convex APIs,
+game exports, registry ordering, assets, and visuals.
+
+## Phase 11.1 — Record ownership and contracts
+
+- [x] **11.1.1 — Record F-011 truth**
+  - Update project scope, architecture, tech-stack, and this implementation
+    plan before code changes. Document Trivia content ownership, device-failure
+    boot state, package/export rules, catalog, and Node 22/24 gates.
+
+## Phase 11.2 — Trivia content ownership and bundle safety
+
+- [x] **11.2.1 — Move the curated pack into Trivia**
+  - Move the JSON, schema/parser, category projection, validation CLI, and
+    tests to `packages/games/trivia/packs` and `src/content`; remove
+    `@huddle/packs` from the workspace and lockfile while retaining the root
+    `pnpm validate:packs` command and unchanged pack behavior.
+- [x] **11.2.2 — Preserve the client/server seam**
+  - Keep settings dependent only on client-safe categories and keep questions,
+    pack parsing, and server logic off the Controller graph. Extend parity,
+    production export, and client-content leak tests.
+
+## Phase 11.3 — Reliability and app ownership
+
+- [x] **11.3.1 — Harden TV identity recovery**
+  - Add typed SecureStore/UUID device failures, exhaustive boot presentation,
+    and tests while preserving durable-token ordering, retry backoff,
+    single-flight opening, and log-once behavior.
+- [x] **11.3.2 — Thin coordinators and split renderers**
+  - Reduce Controller/TV coordinators to lifecycle and surface selection,
+    extract Room/session/stage pieces, and consolidate app-local pending,
+    action, and inline-error primitives without visual changes.
+
+## Phase 11.4 — Shared UI, games, and Convex ownership
+
+- [x] **11.4.1 — Split shared and game renderers**
+  - Split Huddle Kit and Trivia/Voting logic/renderers by responsibility while
+    retaining all named exports and preventing client runtime paths to rules or
+    content. Add accessibility roles, names, selected/disabled/busy state, and
+    TV focus semantics.
+- [x] **11.4.2 — Split private Convex helpers and tests**
+  - Move private handlers into responsibility-named kebab-case `lib/` modules
+    and split large behavior suites without changing public modules,
+    validators, schemas, or assertions.
+
+## Phase 11.5 — Validation and release gates
+
+- [x] **11.5.1 — Extend architecture and dependency validation**
+  - Add fixture-first transitive import, export-target, workspace-direction,
+    rules-only, and client-safe checks. Add the pnpm catalog and Node 22.13 CI
+    job alongside Node 24; do not introduce file-length lint rules.
+- [x] **11.5.2 — Run the complete verification set**
+  - Run pack, pure/backend, rendered Controller/TV/shared, typecheck, lint,
+    workflow/architecture, dependency/security, Expo export, Android TV
+    prebuild, Node 22/24, and `git diff --check` gates. Record evidence and
+    leave physical TV/mixed-controller checks as release work.
+
+**F-011 status:** repository automation is complete. Evidence for this pass:
+the Trivia pack validator, 74 Vitest files / 868 tests, Controller and TV Jest
+rendered suites (3 suites / 6 tests), typecheck, ESLint, architecture
+fixtures, workflow validation, dependency verification, both Expo iOS exports,
+the client-bundle seam scan, Android TV prebuild metadata, and
+`git diff --check` pass. The production dependency audit could not reach the
+npm advisory service in this sandbox; physical mixed-controller captures remain
+a native release check.
 
 # Reported QA findings — 2026-08-11
 
@@ -682,20 +755,18 @@ entry.
   which surfaces are intentionally adapted, which are missing, and which
   routes/components must be wired before considering the reference handoff
   adopted.
-- **Unexpected iPhone restore state:** a fresh iPhone should show the join
-  surface, not remain on **“Finding your room.”** Keep the restore surface only
-  for a valid persisted participant session, and investigate stale SecureStore
-  credentials or a stalled session lookup when the fresh-simulator path does
-  not fall through to joining.
-- **Join-screen visual fidelity:** the current Controller **“Join the room”**
-  surface does not match the supplied `JoinRoomScreen` reference
-  pixel-for-pixel. The current implementation uses a compact inline logo/title,
-  different room-code tile proportions, typography/label treatment, spacing,
-  avatar count/grid, and button composition. Compare the live iPhone capture
-  against the reference for layout, spacing, typography, color, iconography,
-  and interaction states, then track each remaining delta before calling the
-  screen adopted. Apply the same comparison method to the remaining Controller
-  and TV surfaces after this screen is reconciled.
+- **Unexpected iPhone restore state — first fix complete (2026-08-12):** a
+  fresh iPhone now goes straight to the Join surface. `resumeSession` reports
+  whether SecureStore found a persisted token, and the restore surface is shown
+  only while a found token is being looked up. A returning participant still
+  gets the bounded **“Finding your room”** state; a missing, stale, or unreadable
+  token falls through to joining. The behavior is covered by session tests.
+- **Join-screen visual fidelity — first parity pass (2026-08-12):** the
+  Controller **“Join the room”** surface now follows the reference's left-aligned
+  title, full-width logo header, compact square code tiles, dark/tightly tracked
+  labels, hairline name field, five-by-two avatar rhythm, and solid orange Join
+  action. Exact simulator capture comparison remains open for logo scale,
+  artwork crop, and device-specific spacing before calling the screen adopted.
 
 ## Remaining reference-screen parity audit
 
@@ -703,6 +774,31 @@ The following mappings continue the audit against the supplied
 `huddle-expo-tv-phone` screens and the approved images under
 `docs/design/reference/screens/`. They describe visual follow-up work, not a
 request to discard the current data, authorization, or game-module boundaries.
+
+### Audit run — 2026-08-12
+
+The automated suite is green (74 Vitest files / 859 tests, both rendered Jest
+suites, typecheck, lint, and workflow validation). This verifies behavior and
+renderability, not pixel equality. XcodeBuildMCP found the configured iPhone 17
+and Apple TV targets, but every simulator is currently shut down, so live
+screenshot comparison is still blocked. The static screen-by-screen ledger is:
+
+| Surface | Current production entrypoint | Current result | Open parity issues to fix or verify |
+| --- | --- | --- | --- |
+| Join room | `features/join/join-form.tsx` | First pass applied | Verify logo width/artwork crop and device spacing on a live iPhone; retain 10 live avatars rather than the reference's 8. |
+| Your room / Host room | `screens/seated-controller.tsx` | Mismatch remains | Restore the reference's large upper whitespace, 122px wordmark/header, title/code alignment, 40px rows, and Host/Just-joined/Away/online treatments. |
+| Pick a game | `features/game-picker/game-picker-screen.tsx` | Mismatch remains | Reconcile illustrated Trivia art/crop, icon chips, chevrons, pager, help copy, and CTA while keeping the live 2–10 range. |
+| Game settings — Standard | `features/game-picker/game-picker-screen.tsx` | Mismatch remains | Compare summary card, mode tile/check badge, summary rows, joining notice, and bottom CTA. |
+| Game settings — Quick | `features/game-picker/game-picker-screen.tsx` | Mismatch remains | Verify Quick-specific tile selection, summary values, spacing, and CTA against `07-game-settings-host-quick.png`. |
+| Game settings — Custom | `features/game-picker/game-picker-screen.tsx` | Mismatch remains | Compare steppers, pills, category row, draft-state persistence, notice, and CTA against `08-game-settings-host-custom.png`. |
+| Category picker | `features/game-picker/category-picker-sheet.tsx` | Mismatch remains | Match sheet height, grabber/title spacing, row/divider geometry, selected check, scrim, Done, and Cancel. |
+| Manage player | `screens/seated-controller.tsx` | Mismatch remains | Match bottom-sheet geometry, away avatar, disabled Make-host row, explanatory copy, Remove, and Cancel without weakening authorization. |
+| Waiting player | `features/game-session/game-session-screen.tsx` | Mismatch remains | Match host avatar, “is choosing…” typography, green status card, gamepad/info card, and vertical spacing while retaining Leave/live data. |
+| Finished player | `features/game-session/game-session-screen.tsx` | Mismatch remains | Match wordmark/avatar/artwork, completion copy, active-room and host/controller cards, and celebration treatment. |
+| TV room lobby | `features/room/room-stage.tsx` | Mismatch remains | Recheck code tile proportions, QR quiet zone, divider contrast, background scale, safe-area exception, and roster spacing. |
+| TV game carousel | `features/carousel/carousel-stage.tsx` | Mismatch remains | Add/verify illustrated art, overlay icon chips, chevrons, five-dot pager, browsing footer glyph, and card treatment. |
+| TV game setup | `features/game-setup/game-setup-stage.tsx` | Structural mismatch | Compare fixed Trivia hero/dark canvas, left rule list, right QR/code block, and bottom roster strip against `03-game-setup.png`. |
+| Shared components / preview shells | `packages/ui/src/kit/*`, app feature UI | Intentional adaptation, not 1:1 | Decide which reference geometry/assets belong in shared primitives and whether a dev-only deterministic preview harness is needed. |
 
 - **Host room** — `HostRoomScreen` → the `SeatedController` room surface:
   reconcile the reference's full-width 122px wordmark/header, large upper

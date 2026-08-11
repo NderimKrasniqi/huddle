@@ -1,7 +1,7 @@
 import type { GameModule } from '@huddle/game-core';
 
 import { VotingControllerScreen } from './controller-screen';
-import type { VotingEvent, VotingState } from './logic';
+import type { VotingEvent, VotingState } from './types';
 import { votingMetadata } from './metadata';
 import { VOTING_SETTINGS_PRESENTATION, VOTING_SETTINGS_SCHEMA } from './settings';
 import { VotingTvScreen } from './tv-screen';

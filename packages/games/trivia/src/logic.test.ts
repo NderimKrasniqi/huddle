@@ -1,5 +1,4 @@
 import { type GamePlayer, type GameSettings, settingsFrom } from '@huddle/game-core';
-import { CURATED_PACK } from '@huddle/packs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,6 +16,7 @@ import {
   type TriviaState,
 } from './logic';
 import { EVERY_CATEGORY, PACK_CATEGORIES } from './questions';
+import { CURATED_PACK } from './content/curated-pack';
 import { TRIVIA_SETTINGS_SCHEMA } from './settings';
 
 /**

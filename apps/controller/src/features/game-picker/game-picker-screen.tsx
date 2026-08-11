@@ -31,7 +31,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { lifecycleFailureMessage } from '../../models';
 import type { RosterSeat } from '../../models';
-import { phoneSessionTokenStore } from '../../platform/session';
+import { phoneSessionTokenStore } from '../../platform/session/native';
 import {
   OutlinePill,
   PhoneScreen,

@@ -12,7 +12,10 @@ export {
 } from './room-opening';
 export {
   ensureTvSessionToken,
+  isTvIdentityError,
   isTvSessionToken,
   TV_SESSION_TOKEN_KEY,
+  TvIdentityError,
+  type TvIdentityFailure,
   type TvSessionStore,
 } from './tv-session';

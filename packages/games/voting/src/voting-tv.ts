@@ -1,7 +1,7 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/game-core';
 
 import { playersCounted, VOTE_SECONDS, votesIn } from './state';
-import type { VotingState } from './logic';
+import type { VotingState } from './types';
 
 /**
  * The television as data: what the room is looking at, given the state the room

@@ -36,6 +36,9 @@ export type SessionTokenStore = {
 /** Asking the room which seat a token holds — `players.session`, bound to a client. */
 export type SessionLookup = (sessionToken: string) => Promise<PlayerSession | null>;
 
+/** Whether the launch found a persisted credential before asking the room. */
+export type SessionTokenStatus = 'present' | 'missing';
+
 /**
  * `store`, plus a memory of what it was last given — so that a store which
  * cannot write is not also a store that cannot read.
@@ -117,18 +120,30 @@ export function resumeSession(
   lookUp: SessionLookup,
   report: (session: PlayerSession | null) => void,
   patience: number = RESUME_PATIENCE_MS,
+  onTokenStatus?: (status: SessionTokenStatus) => void,
 ): () => void {
   let cancelled = false;
-  const givingUp = setTimeout(() => report(null), patience);
+  let timedOut = false;
+  const givingUp = setTimeout(() => {
+    timedOut = true;
+    report(null);
+  }, patience);
 
   void (async () => {
     let session: PlayerSession | null = null;
 
     try {
       const sessionToken = await store.read();
-      session = sessionToken === null ? null : await lookUp(sessionToken);
+      if (sessionToken === null) {
+        if (!cancelled && !timedOut) onTokenStatus?.('missing');
+        session = null;
+      } else {
+        if (!cancelled && !timedOut) onTokenStatus?.('present');
+        session = await lookUp(sessionToken);
+      }
     } catch {
       // A phone that cannot say who it is arrives as somebody new.
+      if (!cancelled && !timedOut) onTokenStatus?.('missing');
     }
 
     clearTimeout(givingUp);

@@ -1,7 +1,7 @@
 import type { GameModule } from '@huddle/game-core';
 
 import { TriviaControllerScreen } from './controller-screen';
-import type { TriviaEvent, TriviaState } from './logic';
+import type { TriviaEvent, TriviaState } from './types';
 import { triviaMetadata } from './metadata';
 import { TRIVIA_SETTINGS_PRESENTATION, TRIVIA_SETTINGS_SCHEMA } from './settings';
 import { TriviaTvScreen } from './tv-screen';

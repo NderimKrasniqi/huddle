@@ -12,7 +12,7 @@ import {
 import { Surface } from '@huddle/ui/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { VotingEvent, VotingState } from './logic';
+import type { VotingEvent, VotingState } from './types';
 import { voteScreen, type VoteOption } from './voting-controller';
 
 /**

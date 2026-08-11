@@ -1,5 +1,4 @@
 import type { GameDeadline, GameLogic, GamePlayerId, GameSettings } from '@huddle/game-core';
-import { z } from 'zod';
 
 import { triviaMetadata } from './metadata';
 import { questionsFor, type TriviaQuestion } from './questions';
@@ -7,7 +6,6 @@ import {
   triviaSettings,
   TRIVIA_SETTINGS_PRESENTATION,
   TRIVIA_SETTINGS_SCHEMA,
-  type ScoringMode,
 } from './settings';
 // The pure reads over the state live in `./state`, so the screens can import
 // them without pulling this file — and the Question Pack `./questions` deals
@@ -15,8 +13,12 @@ import {
 // imported here for the rules' own use and re-exported, so the server and the
 // tests go on reading them off the module they always have.
 import { answersIn, beatOf, playersCounted, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
+import { triviaEventSchema, triviaStateSchema } from './schemas';
+import type { TriviaAdvance, TriviaEvent, TriviaStanding, TriviaState } from './types';
 
 export { answersIn, playersCounted, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
+export { triviaEventSchema, triviaStateSchema } from './schemas';
+export type { TriviaAdvance, TriviaEvent, TriviaPhase, TriviaStanding, TriviaState } from './types';
 
 /**
  * Trivia's rules, with no screens attached.
@@ -52,175 +54,6 @@ export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
  */
 export const SPEED_BONUS_PER_CORRECT_ANSWER = 100;
 
-
-/**
- * Where a game of trivia is: a question on screen, its Reveal, or over.
- *
- * The three beats of the loop the TV draws (docs/implementation-plan.md, Phase
- * 3): the question with its four options, the reveal with the right answer and
- * the running scoreboard, and the final standings.
- */
-export type TriviaPhase = 'question' | 'reveal' | 'finished';
-
-/** One row of the scoreboard: a player and what they have scored so far. */
-export type TriviaStanding = {
-  readonly playerId: GamePlayerId;
-  readonly score: number;
-};
-
-/**
- * A game of trivia in progress.
- *
- * The standings are the players: everyone the game was started with has a row
- * from the first question, so this list is both the scoreboard and the answer
- * to "who is playing". It is held in scoreboard order — highest first, ties in
- * the order they already had — so the running scoreboard, the Victory Screen
- * and the finished state are one ordering decided once here, rather than the
- * same sort written again on every screen that draws it.
- *
- * `answers` is the current question's only: it is cleared when the room moves
- * to the next one, and a player missing from it is a player who has not
- * answered — which scores exactly what a wrong answer scores.
- *
- * The last two fields are optional because a game already in progress when
- * speed scoring landed carries neither, and must finish unharmed: a room dealt
- * its question by an older deployment reads as flat with nothing timed, which
- * is exactly how that room was being scored when it started.
- */
-export type TriviaState = {
-  readonly questions: readonly TriviaQuestion[];
-  /** Which question is up; the last one played once the game is finished. */
-  readonly questionIndex: number;
-  /** Selected timer duration; absent on legacy games, which used 20 seconds. */
-  readonly questionSeconds?: number;
-  readonly phase: TriviaPhase;
-  /** The current question's answers: player → the option they locked in. */
-  readonly answers: Readonly<Record<GamePlayerId, number>>;
-  /**
-   * The current question's timings: player → the seconds the Question Timer
-   * still had when their answer landed. Cleared with `answers`, which it is
-   * keyed exactly like.
-   *
-   * Beside `answers` rather than inside it, because `answers` is the map three
-   * screens read — the "3/5 answered" count, a phone's Locked In buttons, the
-   * Reveal's Verdict — and not one of them has any business with the timing.
-   * Only `revealed` reads this, and only to price a correct answer.
-   */
-  readonly answerSeconds?: Readonly<Record<GamePlayerId, number>>;
-  readonly standings: readonly TriviaStanding[];
-  /**
-   * The Scoring Mode the Host chose, kept because the reveal is where it is
-   * read and the reveal is handed nothing but the state.
-   */
-  readonly scoring?: ScoringMode;
-};
-
-/**
- * What a player does in a game of trivia, and what moves the room on.
- *
- * `answer` names the question it was aimed at, because a phone's tap and the
- * room's beat race: a tap that leaves while question one is up must answer
- * question one or nothing at all, never whatever is on screen when it lands.
- * Its `msRemaining` is what speed scoring is paid on, and it is the hub's
- * rather than the phone's for the same reason `playerId` is: a phone naming its
- * own speed is a claim, and the hub writes the field over whatever arrived.
- *
- * `advance` is the room finishing a beat — a reveal ending, or a question the
- * room stops waiting on. Both advances come from the server-owned game clock,
- * so neither names a player. `playerId` remains optional in the wire shape
- * because the hub attaches it to every phone event; the reducer rejects that
- * form, which prevents a phone from impersonating the clock and skipping a
- * beat.
- *
- * It names both the question it is ending and its phase because a callback
- * arriving one beat late must do nothing. A bare "move on" could otherwise
- * land on the next question and reveal it before the room has read it.
- */
-export type TriviaEvent =
-  | {
-      readonly kind: 'answer';
-      readonly playerId: GamePlayerId;
-      readonly questionIndex: number;
-      readonly optionIndex: number;
-      /**
-       * How long the Question Timer had left when this reached the rules.
-       * Absent where the room could not say — see `secondsLeftOn`.
-       */
-      readonly msRemaining?: number;
-      /**
-       * Who the room had stopped hearing from when this reached the rules — the
-       * hub's, like `msRemaining`, and for the same reason: presence is the
-       * room's and a reducer holds only the game.
-       *
-       * It is on the answer alone because ending a question early is the only
-       * rule in trivia that waits for anybody. Absent means the room could not
-       * say, and trivia then waits for the whole scoreboard.
-       */
-      readonly awayPlayerIds?: readonly GamePlayerId[];
-    }
-  | {
-      readonly kind: 'advance';
-      /** Must be absent: only the room's own clock may raise this event. */
-      readonly playerId?: GamePlayerId;
-      readonly questionIndex: number;
-      /** The beat being ended: the question on screen, or its reveal. */
-      readonly phase: TriviaPhase;
-      /** Hub-enriched clock/presence fields; ignored by the reducer. */
-      readonly msRemaining?: number;
-      readonly awayPlayerIds?: readonly GamePlayerId[];
-    };
-
-/**
- * The `advance` a clock sends. Both of trivia's produce exactly this — a
- * `GameDeadline<TriviaEvent>` would let either of them start returning an
- * answer, which is not a thing a clock can send.
- */
-export type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;
-
-const playerIdSchema = z.string().min(1);
-const awayPlayerIdsSchema = z.array(playerIdSchema);
-const triviaQuestionSchema = z.strictObject({
-  text: z.string(),
-  options: z.tuple([z.string(), z.string(), z.string(), z.string()]),
-  // -2 is the redacted correct-answer sentinel used by the client projection.
-  correctIndex: z.number().int().min(-2).max(3).refine((value) => value !== -1),
-});
-
-/** Strict server-side decoder for persisted Trivia state. */
-export const triviaStateSchema = z.strictObject({
-  questions: z.array(triviaQuestionSchema).min(1),
-  questionIndex: z.number().int().nonnegative(),
-  phase: z.enum(['question', 'reveal', 'finished']),
-  // -1 is the redacted answer sentinel; the server's stored state only has 0–3.
-  answers: z.record(playerIdSchema, z.number().int().min(-1).max(3)),
-  answerSeconds: z.record(playerIdSchema, z.number().finite().nonnegative()).optional(),
-  questionSeconds: z.number().int().min(10).max(30).optional(),
-  standings: z.array(
-    z.strictObject({ playerId: playerIdSchema, score: z.number().finite() }),
-  ),
-  scoring: z.enum(['flat', 'speed']).optional(),
-});
-
-const triviaAnswerEventSchema = z.strictObject({
-  kind: z.literal('answer'),
-  playerId: playerIdSchema,
-  questionIndex: z.number().int().nonnegative(),
-  optionIndex: z.number().int().min(0).max(3),
-  msRemaining: z.number().finite().nonnegative().optional(),
-  awayPlayerIds: awayPlayerIdsSchema.optional(),
-});
-
-const triviaAdvanceEventSchema = z.strictObject({
-  kind: z.literal('advance'),
-  playerId: playerIdSchema.optional(),
-  questionIndex: z.number().int().nonnegative(),
-  phase: z.enum(['question', 'reveal', 'finished']),
-  msRemaining: z.number().finite().nonnegative().optional(),
-  awayPlayerIds: awayPlayerIdsSchema.optional(),
-});
-
-/** Strict server-side decoder for untrusted Trivia events. */
-export const triviaEventSchema = z.union([triviaAnswerEventSchema, triviaAdvanceEventSchema]);
 
 /** The scoreboard order: highest first, ties left in the order they had. */
 function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStanding[] {
@@ -507,7 +340,7 @@ function questionsAsAsked(state: TriviaState): readonly TriviaQuestion[] {
  * should — by keeping unplayed questions off the broadcast. Keeping the pack out
  * of the client bundle entirely, so a *modified* client cannot hold the
  * deterministic deal and work it out locally, is 5.9's doing (the client-safe
- * `GameModule`, `./state`, and `@huddle/packs/categories`). The two are
+ * `GameModule`, `./state`, and `./content/categories`). The two are
  * complementary: even with the pack gone from the client, this projection is
  * still the only thing between one player's in-flight answer and the rest of the
  * room.

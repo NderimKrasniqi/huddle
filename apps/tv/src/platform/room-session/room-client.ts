@@ -1,6 +1,6 @@
 import { api } from '@huddle/convex';
 
-import { convexClient } from '../convex';
+import { convexClient } from '../convex/native';
 import { ensureTvSessionToken } from './tv-session';
 import { nativeTvSessionUuid, secureTvSessionStore } from './tv-session-native';
 import { keepTvPresent } from './tv-presence';

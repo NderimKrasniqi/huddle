@@ -1,6 +1,6 @@
 import type { GamePlayerId } from '@huddle/game-core';
 
-import type { VotingState } from './logic';
+import type { VotingState } from './types';
 
 /**
  * The Vote Screen as data: what one phone is looking at, given the state the

@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { convexClient } from '../src/platform/convex';
+import { convexClient } from '../src/platform/convex/native';
 import { TvBootScreen } from '../src/features/boot/native';
 
 // Do not surrender the native launch surface to an undecoded/unthemed React
