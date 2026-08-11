@@ -160,7 +160,7 @@ before it is trusted to the pixel.
 | Startup / room opening | `TvBootScreen` | Platform treatment | Existing TV background + supplied Huddle symbol/wordmark; pulse and activity dots use React Native `Animated` |
 | Room | `RoomStage` | `01-room.png` | Code, QR and roster on one screen |
 | Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Shown while the Host scrolls; TV follows the highlighted card |
-| Game setup | **none yet** | `03-game-setup.png` | Explicit game selection switches here; TV mirrors the Host's draft settings |
+| Game setup | `GameSetupStage` | `03-game-setup.png` | Explicit selection switches here; the dedicated dark canvas mirrors the Host's shared settings draft |
 | Game frame | `GameStage` | **none** | Needs design |
 | Recovery status | `TvRuntimeStatus` | **none** | Names disconnected players; says the Host may wait or continue |
 
@@ -174,7 +174,7 @@ before it is trusted to the pixel.
 | Lobby (player) | `SeatedScreen` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
 | Game settings (host) | `SettingsControls` in the picker | `06`–`08-game-settings-host-*` | Host edits draft settings here; TV Game Setup mirrors them until Start |
-| Finished game | `InGameScreen` + module screen | `09-game-finished-player.png`, `10-game-finished-host.png` | New hub-level post-game actions await implementation; finished state currently remains module-owned until the Host chooses Back to lobby |
+| Finished game | `FinishedScreen` + module summary | `09-game-finished-player.png`, `10-game-finished-host.png` | Host can replay, choose another game, or manage players; non-Hosts wait for that room-level decision |
 | Leave | `LeaveRoomSheet` | **none** | The board draws the pill, not the sheet |
 | Game frame | `InGameScreen` | **none** | Needs design |
 | Recovery status | `GameRuntimeStatusScreen` | **none** | Host gets secondary Wait + primary Continue; others see the pending Host decision |
@@ -188,19 +188,19 @@ before it is trusted to the pixel.
   estimate, preset names, values, and other mock content describe the proposed
   layout; they do not change a module's duration or supported settings until
   the module and registry adopt them.
-- **The TV setup screen is a proposed new platform surface.** Its dark,
-  full-bleed treatment conflicts with the default warm image canvas above, so
-  adopting it requires an explicit per-screen canvas exception or a revised
-  approved export—not an implicit palette change across existing TV screens.
+- **The TV setup screen is an explicit platform surface.** `GameSetupStage`
+  supplies `game-setup-background.png` through `TvStage.backgroundSource`, so
+  its approved dark full-bleed canvas is a per-screen exception and does not
+  change the warm default used by Room, carousel, game, and recovery surfaces.
 - **The TV and phone pre-game states are connected.** The TV stays on the
   carousel while the Host scrolls. An explicit game selection switches the TV
   to Game Setup, where the Host's phone setting changes are mirrored live. The
   Host's Start button is the transition action, not another screen; it locks
   settings and hands control to the game module's own runtime screen.
-- **Finished-game actions need product wiring.** “Play again”, “Choose another
-  game”, and “Manage players” are approved visual direction, but the current
-  platform exposes one generic Back to lobby action and lets each game render
-  its own finished beat. Their exact lifecycle mapping must land with the UI.
+- **Finished-game actions are wired at the platform boundary.** Replay creates
+  fresh state with locked settings and the current roster; Choose another game
+  and Manage players end the runtime while preserving the room, then route the
+  Host to the picker or roster controls. Modules still own result content.
 
 ## Icons
 
@@ -369,15 +369,14 @@ landing together are now both greeted.
    faces are a holding pattern rather than a decision.
 7. **Resolved — Room screen geometry adopted.** The implementation now uses the
    approved board landmarks recorded below, including the 5×2 ten-seat grid.
-8. **New references await adoption.** TV Game setup, phone settings presets,
-   and phone finished-game actions are approved references, but remain explicit
-   implementation work as described in the screen inventory and reconciliation
-   notes above.
+8. **Resolved — platform references adopted.** TV Game Setup, phone settings
+   presets, and phone finished-game actions now use the approved references.
+   Gameplay frames remain module-owned and are still separate design work.
 9. **Platform loading uses existing brand art.** Native splashes use
    `huddle-symbol-orange.png`; in-app loading pulses that supplied symbol and
    uses shared activity dots/fades. No Lottie file or new animation asset ships.
-   The loading treatment does not stand in for the still-missing Game Setup,
-   recovery-status, Leave-sheet, or game-frame designs.
+   The loading treatment does not stand in for the still-missing recovery-status,
+   Leave-sheet, or game-frame designs.
 
 ## The 2026-08-09 TV re-export
 

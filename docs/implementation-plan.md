@@ -56,8 +56,7 @@
   - Done: `packages/game-core/src/game-module.ts` + `game-settings.ts` + `room-phase.ts` define metadata, min/max, config, lifecycle/pause, commands, public vs participant-private state, late-join and continue-after-leave; kept independent of Trivia.
 
 - [x] **2.2 — Build the game catalog and host configuration flow**
-  - Done: `packages/game-registry` (`registry.ts`, `browsing.ts`, `carousel.ts`) + host picker; TV mirrors the browsing selection; min/max enforced before start; config locked on start; non-host start rejected (tested).
-  - Deferred: the approved shared TV Game Setup surface and its live projection of the Host's draft settings are tracked under the post-MVP pre-game flow work below.
+  - Done: `packages/game-registry` (`registry.ts`, `browsing.ts`, `carousel.ts`) + host picker; TV mirrors browsing and the explicit shared Game Setup draft; min/max enforced before start; config locked on start; non-host start rejected (tested).
 
 - [x] **2.3 — Implement the generic game-session lifecycle**
   - Done: `convex/convex/games.ts` runs room → configuring → active/paused → finished → room; host-authorized start/pause/resume/end/replay/end-room; ending discards game state but preserves room/participants/host; `games.test.ts` covers no-leak and stable room identity.
@@ -259,7 +258,7 @@ the existing public room/game contracts except for the intentional TV APIs and
 **Current feature:** —
 **Current phase:** —
 **Current task:** —
-**Last completed task:** 8.1.1 Add branded native and in-app startup/loading feedback
+**Last completed task:** 9.1.1 Implement phone screen parity and shared TV Game Setup
 **Blockers:** None
 
 ## Phase 6.1 — Project workflow and truth
@@ -522,24 +521,38 @@ state, or game-module screens.
 
 ---
 
+# Feature 9 — F-009 Phone Screen Parity and Shared Game Setup
+
+Feature 9 adopts the approved phone settings/finished references and the TV
+Game Setup surface without moving game-owned rules or gameplay screens into the
+platform.
+
+## Phase 9.1 — Shared setup and finished-room actions
+
+- [x] **9.1.1 — Implement phone screen parity and shared TV Game Setup**
+  - Add explicit Host-authorized select/configure/cancel mutations and a shared
+    setup projection; validate preset/custom settings at the Convex boundary and
+    clear the draft atomically when Start locks settings into the runtime.
+  - Adopt Standard, Quick, and Custom phone settings flows; mirror the selected
+    game and settings on `GameSetupStage` using the approved per-screen dark
+    canvas while browsing remains a separate carousel state.
+  - Add platform finished screens and Host actions for fresh replay, choosing
+    another game, and returning to roster management. Replay requires a finished
+    server runtime and carries no question, answer, score, or round state.
+  - Keep Trivia's question pack behind the server-only Registry seam and retain
+    each module's metadata, settings schema, rendering, rules, and summary.
+  - Verification: typecheck, dependency policy, and `git diff --check` pass; 74
+    Vitest files with 851 tests pass; CI passes; focused security review found no
+    verified vulnerabilities in the changed authorization, validation,
+    projection, session, dependency, or client-bundle boundaries.
+  - **Depends on:** 8.1.1
+
+---
+
 # Deferred post-MVP and release work
 
 These are real follow-ups, not completed numbered tasks:
 
-- Implement the approved pre-game TV flow as an explicit platform state:
-  - keep the TV on Browse Games while the Host scrolls on the phone and follow
-    the highlighted card;
-  - switch the TV to Game Setup only after the Host explicitly selects a game;
-  - mirror the Host phone's draft setting changes in the shared TV setup
-    projection until Start;
-  - treat Start as the phone action that validates requirements, locks settings,
-    and enters the game-owned runtime.
-  The established 10-player cap and module-owned metadata/settings remain
-  authoritative over mock content.
-- Adopt the phone game-settings presets and phone finished-game references,
-  reconciling their proposed actions with the platform lifecycle. The game
-  screen itself remains module-owned work and is separate from this platform
-  task.
 - Design the five implemented surfaces still missing approved treatment: TV
   Game frame, TV recovery status, phone Leave sheet, phone Game frame, and
   phone recovery status.
