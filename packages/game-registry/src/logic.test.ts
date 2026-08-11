@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { clampBrowsingIndex } from './browsing';
+import { CAROUSEL_PLACEHOLDER_COUNT } from './carousel-catalog';
 import { browsingIndex, GAME_LOGIC_REGISTRY } from './logic';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -74,13 +75,15 @@ describe('the entry point the Convex server imports', () => {
 
 describe('the server’s carousel clamp', () => {
   it('clamps over the games the server installs', () => {
-    expect(browsingIndex(99)).toBe(GAME_LOGIC_REGISTRY.length - 1);
+    expect(browsingIndex(99)).toBe(GAME_LOGIC_REGISTRY.length + CAROUSEL_PLACEHOLDER_COUNT - 1);
     expect(browsingIndex(undefined)).toBe(0);
   });
 
   it('is the same arithmetic the clients use', () => {
     for (const stored of [undefined, null, -1, 0, 1, 99, Number.NaN]) {
-      expect(browsingIndex(stored)).toBe(clampBrowsingIndex(stored, GAME_LOGIC_REGISTRY.length));
+      expect(browsingIndex(stored)).toBe(
+        clampBrowsingIndex(stored, GAME_LOGIC_REGISTRY.length + CAROUSEL_PLACEHOLDER_COUNT),
+      );
     }
   });
 });

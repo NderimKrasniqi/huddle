@@ -1,5 +1,5 @@
 import type { RosterSeatForGame } from '@huddle/game-core';
-import { GAME_REGISTRY } from '@huddle/game-registry';
+import { CAROUSEL_REGISTRY, GAME_REGISTRY } from '@huddle/game-registry';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -32,6 +32,17 @@ describe('the game the Host would start', () => {
     // Not "trivia": the phone reads the Registry, and naming a game here is the
     // thing the whole interface exists to avoid.
     expect(gameToStart(0)).toBe(GAME_REGISTRY[0]?.metadata);
+  });
+
+  it('does not turn a reference placeholder into a startable game', () => {
+    const placeholderIndex = CAROUSEL_REGISTRY.findIndex((game) => game.placeholder === true);
+
+    expect(gameToStart(placeholderIndex)).toBeUndefined();
+    expect(startControl(party(2), placeholderIndex)).toEqual({
+      label: 'Coming soon',
+      enabled: false,
+      blockedBecause: `${CAROUSEL_REGISTRY[placeholderIndex]?.metadata.title} is a reference placeholder and is not playable yet.`,
+    });
   });
 });
 

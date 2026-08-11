@@ -59,9 +59,14 @@ coordinator. Features own screens, styles, pure models/helpers, and adjacent
 tests. Platform folders own Convex bindings, credentials, secure storage, and
 presence. Cross-feature deep imports are prohibited; each feature exposes a
 small model entry point plus an explicit native UI entry point where required.
-Only genuinely cross-app tokens and primitives live
-in `@huddle/ui`. Redux, Zustand, Nx, Turborepo, a second API server, and a new
-shared package are explicitly out of scope.
+Only genuinely cross-app tokens and primitives live in `@huddle/ui`. The
+React-Native implementation has two intentional entrypoints: `@huddle/ui/native`
+contains the Node-safe core primitives used by game modules, while
+`@huddle/ui/kit` contains the attached Huddle UI kit, its Lucide-backed icon
+wrapper, and the phone/TV helper components used by the platform screens. The
+kit entrypoint stays separate so its renderer dependency does not enter the
+plain-Node game registry tests. Redux, Zustand, Nx, Turborepo, a second API
+server, and a new shared package are explicitly out of scope.
 
 ## Startup and loading boundary
 

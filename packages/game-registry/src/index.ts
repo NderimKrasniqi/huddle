@@ -7,11 +7,16 @@
 export {
   browsingIndex,
   type CarouselWindow,
+  CAROUSEL_REGISTRY,
   carouselWindow,
   nextIndex,
   previousIndex,
 } from './carousel';
 export { GAME_REGISTRY } from './registry';
+export {
+  CAROUSEL_PLACEHOLDER_COUNT,
+  CAROUSEL_PLACEHOLDER_IDS,
+} from './carousel-catalog';
 // What a client draws for the room's running game — the client-side half of
 // rendering purely from the Registry.
 export {

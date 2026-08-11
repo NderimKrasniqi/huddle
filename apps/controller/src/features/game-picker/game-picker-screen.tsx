@@ -9,9 +9,24 @@ import type {
 import { settingsFrom } from '@huddle/game-core';
 import { type CarouselWindow, nextIndex, previousIndex } from '@huddle/game-registry';
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { GameKeyArt, Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
+import {
+  GameKeyArt,
+  Icon,
+  LoadingIndicator,
+  Surface,
+} from '@huddle/ui/native';
+import {
+  InfoChip,
+  CategoryListRow,
+  HuddleLogo,
+  ModeCard,
+  NavigationIconButton,
+  QuestionStepper,
+  SegmentedControl,
+  StatusStrip,
+} from '@huddle/ui/kit';
 import { useMutation } from 'convex/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { lifecycleFailureMessage } from '../game-session';
@@ -24,6 +39,7 @@ import {
   SeatedHeader,
   controllerStyles as styles,
 } from '../../ui';
+import { CategoryPickerSheet } from './category-picker-sheet';
 import {
   BACK_TO_ROOM,
   settingChosen,
@@ -62,16 +78,43 @@ export function PickAGameScreen({
   // its own shared mutation, so the TV and every phone still follow the card.
   const { id: gameId } = browsing.focused.metadata;
   const { settingsSchema, settingsPresentation } = browsing.focused;
+  const placeholder = browsing.focused.placeholder === true;
   const [mode, setMode] = useState<GameSetupMode>(setupDraft?.mode ?? 'standard');
   const activeMode = setupDraft?.gameId === gameId ? setupDraft.mode : mode;
-  const selected = setupDraft?.gameId === gameId;
+  const selected = !placeholder && setupDraft?.gameId === gameId;
   const [selecting, setSelecting] = useState(false);
   const [selectionFailure, setSelectionFailure] = useState<string>();
+  const announcedPicker = useRef(false);
+
+  // Opening the picker is itself shared room state: the TV must leave the
+  // roster for the carousel before the Host taps an arrow. Announce the
+  // current card once per picker mount; later cards are announced by `browse`.
+  useEffect(() => {
+    if (announcedPicker.current) return;
+    announcedPicker.current = true;
+
+    void (async () => {
+      const sessionToken = await phoneSessionTokenStore.read();
+      if (sessionToken !== null) {
+        try {
+          await browseGame({ sessionToken, index: browsing.index });
+        } catch {
+          // The room subscription remains authoritative; an arrow tap can
+          // retry the same announcement without trapping the Host here.
+        }
+      }
+    })();
+  }, [browseGame, browsing.index]);
 
   const currentSettings =
     setupDraft?.gameId === gameId ? setupDraft.settings : settingsToStart(settingsSchema, gameId, settingsChoice);
 
   async function selectCurrentGame() {
+    if (placeholder) {
+      setSelectionFailure(`${browsing.focused.metadata.title} is coming soon.`);
+      return;
+    }
+
     setSelecting(true);
     setSelectionFailure(undefined);
 
@@ -142,36 +185,52 @@ export function PickAGameScreen({
     onBack();
   }
 
+  async function changeGame() {
+    const sessionToken = await phoneSessionTokenStore.read();
+    if (sessionToken === null) {
+      setSelectionFailure('This phone has lost its seat — reopen the app to rejoin.');
+      return;
+    }
+
+    try {
+      await cancelGameSetup({ sessionToken });
+    } catch (error) {
+      setSelectionFailure(lifecycleFailureMessage(error));
+    }
+  }
+
+  if (selected) {
+    return (
+      <GameSettingsScreen
+        metadata={browsing.focused.metadata}
+        schema={settingsSchema}
+        presentation={settingsPresentation}
+        mode={activeMode}
+        settings={currentSettings}
+        settingsChoice={settingsChoice}
+        roster={roster}
+        browsingAt={browsing.index}
+        failure={selectionFailure}
+        onChooseMode={chooseMode}
+        onChooseSetting={(key, value) =>
+          onChooseSetting((current) => {
+            const next = settingChosen(gameId, current, key, value);
+            void configure(next.settings);
+            return next;
+          })
+        }
+        onChangeGame={() => void changeGame()}
+      />
+    );
+  }
+
   return (
     <PhoneScreen>
       <SeatedHeader trailing={<OutlinePill label={BACK_TO_ROOM} onPress={() => void backFromSetup()} />} />
 
       <Text style={styles.pickingLabel}>YOU’RE THE HOST — PICK A GAME</Text>
 
-      <GameCard metadata={browsing.focused.metadata} />
-
-      <View style={styles.selectionStatus}>
-        <Icon name={selected ? 'check' : 'gamepad'} size={18} color={selected ? colors.online : colors.accent} />
-        <Text style={styles.selectionStatusText}>
-          {selected ? `${browsing.focused.metadata.title} selected` : 'Select this game to configure it'}
-        </Text>
-      </View>
-
-      {!selected ? (
-        <View style={styles.field}>
-          <PrimaryButton
-            label={selecting ? 'Selecting…' : `Select ${browsing.focused.metadata.title}`}
-            trailingIcon="arrow-right"
-            enabled={!selecting}
-            onPress={() => void selectCurrentGame()}
-          />
-          {selectionFailure === undefined ? null : (
-            <Text style={styles.failure} accessibilityLiveRegion="polite">
-              {selectionFailure}
-            </Text>
-          )}
-        </View>
-      ) : null}
+      <GameCard metadata={browsing.focused.metadata} placeholder={placeholder} />
 
       <View style={styles.pickerRow}>
         <RoundButton
@@ -195,34 +254,159 @@ export function PickAGameScreen({
         Swipe or tap arrows — the TV follows along
       </Text>
 
-      {selected ? (
-        <>
-          <ModeTabs mode={activeMode} onChoose={chooseMode} />
+      <View style={styles.field}>
+        <PrimaryButton
+          label={
+            placeholder
+              ? 'Coming soon'
+              : selecting
+                ? 'Selecting…'
+                : `Select ${browsing.focused.metadata.title}`
+          }
+          trailingIcon={placeholder ? undefined : 'arrow-right'}
+          enabled={!selecting && !placeholder}
+          onPress={() => void selectCurrentGame()}
+        />
+        {selectionFailure === undefined ? null : (
+          <Text style={styles.failure} accessibilityLiveRegion="polite">
+            {selectionFailure}
+          </Text>
+        )}
+      </View>
 
-          {activeMode === 'custom' ? (
-            <SettingsControls
-              schema={settingsSchema}
-              gameId={gameId}
-              choice={{ gameId, settings: setupDraft?.settings ?? settingsChoice?.settings ?? {} }}
-              presentation={settingsPresentation}
-              // Chosen from the choice React holds rather than the one this render
-              // closed over: two chips tapped in the same beat both count.
-              onChoose={(key, value) =>
-                onChooseSetting((current) => {
-                  const next = settingChosen(gameId, current, key, value);
-                  void configure(next.settings);
-                  return next;
-                })
-              }
-            />
-          ) : (
-            <PresetSummary schema={settingsSchema} settings={currentSettings} />
-          )}
-
-          <StartGameControl roster={roster} browsingAt={browsing.index} selected />
-        </>
-      ) : null}
     </PhoneScreen>
+  );
+}
+
+function GameSettingsScreen({
+  metadata,
+  schema,
+  presentation,
+  mode,
+  settings,
+  settingsChoice,
+  roster,
+  browsingAt,
+  failure,
+  onChooseMode,
+  onChooseSetting,
+  onChangeGame,
+}: {
+  readonly metadata: GameMetadata;
+  readonly schema: GameSettingsSchema;
+  readonly presentation: GameSettingsPresentation | undefined;
+  readonly mode: GameSetupMode;
+  readonly settings: GameSettings;
+  readonly settingsChoice: SettingsChoice | undefined;
+  readonly roster: readonly RosterSeat[];
+  readonly browsingAt: number;
+  readonly failure: string | undefined;
+  readonly onChooseMode: (mode: GameSetupMode) => void;
+  readonly onChooseSetting: (key: string, value: string) => void;
+  readonly onChangeGame: () => void;
+}) {
+  return (
+    <PhoneScreen contentStyle={styles.settingsScreenContent}>
+      <View style={styles.settingsScreenHeader}>
+        <RoundButton
+          icon="chevron-left"
+          spokenAs="Back to game picker"
+          enabled
+          onPress={onChangeGame}
+        />
+        <HuddleLogo size={28} />
+        <View style={styles.settingsHeaderBalance} />
+      </View>
+
+      <SelectedGameSummary metadata={metadata} onChangeGame={onChangeGame} />
+
+      <Text style={styles.settingsScreenTitle}>How do you want to play?</Text>
+      <ModeTabs mode={mode} onChoose={onChooseMode} />
+
+      {mode === 'custom' ? (
+        <SettingsControls
+          schema={schema}
+          gameId={metadata.id}
+          choice={{
+            gameId: metadata.id,
+            settings:
+              settingsChoice?.gameId === metadata.id ? settingsChoice.settings : settings,
+          }}
+          presentation={presentation}
+          onChoose={onChooseSetting}
+        />
+      ) : (
+        <PresetSummary
+          schema={schema}
+          settings={settings}
+          onCustomize={mode === 'standard' ? () => onChooseMode('custom') : undefined}
+        />
+      )}
+
+      <StatusStrip variant="success" style={styles.joiningNotice}>
+        Players can keep joining until you start.
+      </StatusStrip>
+
+      <StartGameControl
+        roster={roster}
+        browsingAt={browsingAt}
+        selected
+        title={mode === 'quick' ? `Quick ${metadata.title}` : metadata.title}
+      />
+
+      {failure === undefined ? null : (
+        <Text style={styles.failure} accessibilityLiveRegion="polite">
+          {failure}
+        </Text>
+      )}
+    </PhoneScreen>
+  );
+}
+
+function SelectedGameSummary({
+  metadata,
+  onChangeGame,
+}: {
+  readonly metadata: GameMetadata;
+  readonly onChangeGame: () => void;
+}) {
+  const { title, keyArt, playerRange, estimatedMinutes, category } = metadata;
+
+  return (
+    <Surface elevation={elevation.phoneSmall} style={styles.selectedGameSummary}>
+      <View style={[styles.selectedGameArt, { backgroundColor: colors[keyArt.color] }]}>
+        <GameKeyArt
+          gameId={metadata.id}
+          title={title}
+          color={keyArt.color}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      <View style={styles.selectedGameCopy}>
+        <Text style={styles.selectedGameTitle}>{title}</Text>
+        <Text style={styles.selectedGameMeta}>
+          {playerRange.min}–{playerRange.max} players · {estimatedMinutes} min · {category}
+        </Text>
+        <View style={styles.selectedGameFacts}>
+          <InfoChip
+            icon="players"
+            label={`${playerRange.min}–${playerRange.max}`}
+            style={styles.selectedGameFact}
+          />
+          <InfoChip icon="clock" label={`${estimatedMinutes} min`} style={styles.selectedGameFact} />
+          <InfoChip icon="category" label={category} style={styles.selectedGameFact} />
+        </View>
+        <Pressable
+          style={styles.changeGameAction}
+          onPress={onChangeGame}
+          accessibilityRole="button"
+          accessibilityLabel="Change game"
+        >
+          <Text style={styles.changeGameText}>Change</Text>
+          <Icon name="chevron-right" size={18} color={colors.accent} />
+        </Pressable>
+      </View>
+    </Surface>
   );
 }
 
@@ -255,24 +439,57 @@ function customSettings(
 function PresetSummary({
   schema,
   settings,
+  onCustomize,
 }: {
   readonly schema: GameSettingsSchema;
   readonly settings: GameSettings;
+  readonly onCustomize?: () => void;
 }) {
   const rows = schema.filter((setting) => setting.key !== 'scoring');
   return (
-    <View style={styles.presetSummary}>
-      <Text style={styles.label}>SETTINGS</Text>
-      {rows.map((setting) => (
-        <View key={setting.key} style={styles.presetRow}>
-          <Text style={styles.settingLabel}>{setting.label}</Text>
-          <Text style={styles.presetValue}>
-            {setting.options.find((option) => option.value === settings[setting.key])?.label ?? settings[setting.key]}
-          </Text>
-        </View>
-      ))}
+    <View style={styles.presetGroup}>
+      <View style={styles.presetSummary}>
+        {rows.map((setting) => {
+          const value =
+            setting.options.find((option) => option.value === settings[setting.key])?.label ??
+            settings[setting.key];
+          return (
+            <View key={setting.key} style={styles.presetRow}>
+              <Icon name={settingSummaryIcon(setting.label)} size={22} color={colors.ink} />
+              <Text style={styles.presetValue}>
+                {settingSummaryCopy(setting.label, value)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+      {onCustomize === undefined ? null : (
+        <Pressable
+          style={styles.customizeSettings}
+          onPress={onCustomize}
+          accessibilityRole="button"
+        >
+          <Text style={styles.customizeSettingsText}>Customize settings</Text>
+        </Pressable>
+      )}
     </View>
   );
+}
+
+function settingSummaryIcon(label: string): IconName {
+  if (label === 'Time per question') return 'clock';
+  if (label === 'Category') return 'tag';
+  if (label === 'Difficulty') return 'scan';
+  return 'gamepad';
+}
+
+function settingSummaryCopy(label: string, value: string | undefined): string {
+  const shown = value ?? '—';
+  if (label === 'Questions') return `${shown} questions`;
+  if (label === 'Difficulty') return `${shown} difficulty`;
+  if (label === 'Time per question') return `${shown} per question`;
+  if (label === 'Category') return `Category: ${shown}`;
+  return `${label}: ${shown}`;
 }
 
 /**
@@ -291,7 +508,13 @@ function PresetSummary({
  * other seated screen too.
  */
 
-function GameCard({ metadata }: { readonly metadata: GameMetadata }) {
+function GameCard({
+  metadata,
+  placeholder,
+}: {
+  readonly metadata: GameMetadata;
+  readonly placeholder: boolean;
+}) {
   const { title, keyArt, playerRange, estimatedMinutes, category } = metadata;
 
   return (
@@ -299,18 +522,27 @@ function GameCard({ metadata }: { readonly metadata: GameMetadata }) {
       elevation={elevation.phoneCard}
       style={[styles.stretch, styles.gameCard, { backgroundColor: colors[keyArt.color] }]}
     >
-      <GameKeyArt
-        gameId={metadata.id}
-        title={title}
-        color={keyArt.color}
-        style={StyleSheet.absoluteFill}
-      />
-      <Text style={styles.gameCardTitle}>{title}</Text>
+      <View style={styles.gameCardArt}>
+        <GameKeyArt
+          gameId={metadata.id}
+          title={title}
+          color={keyArt.color}
+          style={StyleSheet.absoluteFill}
+        />
+        {placeholder ? (
+          <View style={styles.gameCardPlaceholder}>
+            <Text style={styles.gameCardPlaceholderText}>COMING SOON</Text>
+          </View>
+        ) : null}
+      </View>
 
-      <View style={styles.gameCardChips}>
-        <GameCardChip icon="players" label={`${playerRange.min}–${playerRange.max} players`} />
-        <GameCardChip icon="clock" label={`${estimatedMinutes} min`} />
-        <GameCardChip icon="tag" label={category} />
+      <View style={[styles.gameCardFooter, { backgroundColor: colors[keyArt.color] }]}>
+        <Text style={styles.gameCardTitle}>{title}</Text>
+        <View style={styles.gameCardChips}>
+          <GameCardChip icon="players" label={`${playerRange.min}–${playerRange.max} players`} />
+          <GameCardChip icon="clock" label={`${estimatedMinutes} min`} />
+          <GameCardChip icon="tag" label={category} />
+        </View>
       </View>
     </Surface>
   );
@@ -322,7 +554,7 @@ function GameCardChip({ icon, label }: { readonly icon: IconName; readonly label
   return (
     <View style={styles.gameCardChip}>
       <View style={[StyleSheet.absoluteFill, styles.gameCardChipWash]} />
-      <Icon name={icon} size={14} color={colors.ink} />
+      <Icon name={icon} size={14} color={colors.inverse} />
       <Text style={styles.gameCardChipText}>{label}</Text>
     </View>
   );
@@ -338,21 +570,14 @@ function ModeTabs({
   return (
     <View style={styles.modeTabs} accessibilityRole="tablist">
       {(['quick', 'standard', 'custom'] as const).map((candidate) => (
-        <Pressable
-          key={candidate}
-          onPress={() => onChoose(candidate)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: mode === candidate }}
-        >
-          <Surface
-            elevation={elevation.phoneSmall}
-            style={[styles.modeTab, mode === candidate && styles.modeTabChosen]}
-          >
-            <Text style={[styles.modeTabLabel, mode === candidate && styles.modeTabLabelChosen]}>
-              {candidate.charAt(0).toUpperCase() + candidate.slice(1)}
-            </Text>
-          </Surface>
-        </Pressable>
+        <View key={candidate} style={styles.modeTabPressable}>
+          <ModeCard
+            mode={candidate}
+            selected={mode === candidate}
+            onPress={() => onChoose(candidate)}
+            style={{ flex: 1, minWidth: 0 }}
+          />
+        </View>
       ))}
     </View>
   );
@@ -387,88 +612,71 @@ function SettingsControls({
   readonly onChoose: (key: string, value: string) => void;
 }) {
   const controls = settingsControls(schema, gameId, choice, presentation);
+  const [pickerKey, setPickerKey] = useState<string>();
 
   if (controls.length === 0) {
     return null;
   }
 
   return (
-    <View style={styles.settings}>
-      <Text style={styles.label}>SETTINGS</Text>
+    <View style={styles.settingsPanel}>
+      {controls.map((control, index) => {
+        const chosenIndex = control.options.findIndex((option) => option.chosen);
+        const chosen = control.options[chosenIndex];
+        const isStepper = control.options.every((option) => /^\d+$/u.test(option.label));
+        const isCollapsedChoice = control.options.length > 4;
+        const numericValues = control.options.map((option) => Number(option.label));
+        const firstNumeric = numericValues[0] ?? 0;
+        const secondNumeric = numericValues[1] ?? firstNumeric;
+        const numericStep = numericValues.length > 1 ? secondNumeric - firstNumeric : 1;
 
-      {controls.map((control) => (
-        <View key={control.key} style={styles.setting}>
+        return (
+        <View
+          key={control.key}
+          style={[styles.settingRow, index > 0 && styles.settingRowRuled]}
+        >
           <Text style={styles.settingLabel}>{control.label}</Text>
-          <View style={styles.settingOptions}>
-            {control.options.map((option) => (
-              <SettingOption
-                key={option.value}
-                label={option.label}
-                // Which setting this value belongs to, for a screen reader —
-                // three settings' chips are one flat list of buttons to it, and
-                // "Movies, selected" alone says nothing about what it sets.
-                spokenAs={`${control.label}: ${option.label}`}
-                chosen={option.chosen}
-                onPress={() => onChoose(control.key, option.value)}
+          {isStepper ? (
+            <QuestionStepper
+              value={Number(chosen?.label ?? numericValues[0] ?? 0)}
+              min={numericValues[0] ?? 0}
+              max={numericValues[numericValues.length - 1] ?? 0}
+              step={numericStep}
+              onChange={(value) => {
+                const next = control.options.find((option) => Number(option.label) === value);
+                if (next !== undefined) onChoose(control.key, next.value);
+              }}
+            />
+          ) : isCollapsedChoice ? (
+            <View style={styles.collapsedSetting}>
+              <CategoryListRow
+                style={styles.collapsedSettingButton}
+                label={chosen?.label ?? 'Choose'}
+                onPress={() => setPickerKey(control.key)}
               />
-            ))}
-          </View>
+              <CategoryPickerSheet
+                visible={pickerKey === control.key}
+                title={`Choose ${control.label.toLowerCase()}`}
+                options={control.options}
+                selectedValue={chosen?.value}
+                onSelect={(value) => onChoose(control.key, value)}
+                onDismiss={() => setPickerKey(undefined)}
+              />
+            </View>
+          ) : (
+            <SegmentedControl
+              options={control.options.map((option) => option.label)}
+              value={chosen?.label ?? control.options[0]?.label ?? ''}
+              onChange={(label) => {
+                const next = control.options.find((option) => option.label === label);
+                if (next !== undefined) onChoose(control.key, next.value);
+              }}
+            />
+          )}
         </View>
-      ))}
+        );
+      })}
     </View>
-  );
-}
-
-/**
- * One value of one setting, as Soft Minimal draws a choice: the chosen chip is
- * accented and sits on its own shadow, while the rest are white and flat. The
- * sticker shadow lifts the thing that is currently true off the ones that
- * merely could be.
- */
-
-function SettingOption({
-  label,
-  spokenAs,
-  chosen,
-  onPress,
-}: {
-  readonly label: string;
-  /** The label read aloud: the setting this value belongs to, and the value. */
-  readonly spokenAs: string;
-  readonly chosen: boolean;
-  readonly onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={spokenAs}
-      accessibilityState={{ selected: chosen }}
-    >
-      {({ pressed }) =>
-        chosen ? (
-          <Surface
-            elevation={elevation.phoneSmall}
-            style={[
-              styles.settingOption,
-              styles.settingOptionChosen,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={[styles.settingOptionLabel, styles.settingOptionLabelChosen]}>
-              {label}
-            </Text>
-          </Surface>
-        ) : (
-          // No press travel on the flat chip. Soft Minimal's press is a sticker
-          // going down onto its own shadow, and
-          // a chip that has no shadow to meet would just slide 3px sideways.
-          <View style={styles.settingOption}>
-            <Text style={styles.settingOptionLabel}>{label}</Text>
-          </View>
-        )
-      }
-    </Pressable>
   );
 }
 
@@ -496,21 +704,14 @@ function RoundButton({
   readonly onPress: () => void;
 }) {
   return (
-    <Pressable
+    <NavigationIconButton
+      icon={icon === 'chevron-left' ? 'carousel-left' : 'carousel-right'}
       disabled={!enabled}
       onPress={onPress}
-      accessibilityRole="button"
+      size={56}
+      style={[styles.roundButton, !enabled && styles.buttonUnavailable]}
       accessibilityLabel={spokenAs}
-      accessibilityState={{ disabled: !enabled }}
-    >
-      {({ pressed }) => (
-        <Surface
-          elevation={elevation.phoneSmall}
-          style={[enabled ? undefined : styles.buttonUnavailable, [styles.roundButton, pressed && styles.buttonPressed]]}>
-          <Icon name={icon} size={26} color={colors.ink} />
-        </Surface>
-      )}
-    </Pressable>
+    />
   );
 }
 
@@ -528,10 +729,12 @@ function StartGameControl({
   roster,
   browsingAt,
   selected,
+  title,
 }: {
   readonly roster: readonly RosterSeat[];
   readonly browsingAt: number;
   readonly selected: boolean;
+  readonly title: string;
 }) {
   const startGame = useMutation(api.games.startGame);
   const [starting, setStarting] = useState(false);
@@ -580,7 +783,7 @@ function StartGameControl({
               <LoadingIndicator size="small" color={colors.inverse} label="Starting game" />
             ) : null}
             <Text style={styles.buttonLabel}>
-              {starting ? 'Starting…' : 'Start game'}
+              {starting ? 'Starting…' : `Start ${title}`}
             </Text>
           </Surface>
         )}

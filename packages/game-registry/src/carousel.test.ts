@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { browsingIndex, carouselWindow, nextIndex, previousIndex } from './carousel';
-import { GAME_REGISTRY } from './registry';
+import {
+  browsingIndex,
+  CAROUSEL_REGISTRY,
+  carouselWindow,
+  nextIndex,
+  previousIndex,
+} from './carousel';
 
-const LAST = GAME_REGISTRY.length - 1;
+const LAST = CAROUSEL_REGISTRY.length - 1;
 
 describe('the index the room stores', () => {
   it('is the first card in a room nobody has browsed in', () => {
@@ -32,7 +37,7 @@ describe('the index the room stores', () => {
 
 describe('the carousel window', () => {
   it('focuses the game the index names', () => {
-    expect(carouselWindow(0)?.focused).toBe(GAME_REGISTRY[0]);
+    expect(carouselWindow(0)?.focused).toBe(CAROUSEL_REGISTRY[0]);
   });
 
   it('offers the neighbours the focused card actually has, and does not wrap', () => {
@@ -43,14 +48,21 @@ describe('the carousel window', () => {
     // its real Registry siblings.
     expect(carouselWindow(0)?.previous).toBeUndefined();
     expect(carouselWindow(LAST)?.next).toBeUndefined();
-    expect(carouselWindow(0)?.next).toBe(GAME_REGISTRY[1]);
-    expect(carouselWindow(LAST)?.previous).toBe(GAME_REGISTRY[LAST - 1]);
-    expect(carouselWindow(0)?.total).toBe(GAME_REGISTRY.length);
+    expect(carouselWindow(0)?.next).toBe(CAROUSEL_REGISTRY[1]);
+    expect(carouselWindow(LAST)?.previous).toBe(CAROUSEL_REGISTRY[LAST - 1]);
+    expect(carouselWindow(0)?.total).toBe(CAROUSEL_REGISTRY.length);
   });
 
   it('reports the index it settled on, not the one it was given', () => {
     // The screens draw page dots off this, so it has to be the clamped one.
     expect(carouselWindow(99)?.index).toBe(LAST);
+  });
+
+  it('reaches both reference-only cards and marks them as placeholders', () => {
+    expect(carouselWindow(2)?.focused.metadata.id).toBe('draw-battle');
+    expect(carouselWindow(2)?.focused.placeholder).toBe(true);
+    expect(carouselWindow(3)?.focused.metadata.id).toBe('word-sneak');
+    expect(carouselWindow(3)?.focused.placeholder).toBe(true);
   });
 
   it('always has a card for a build that installs a game', () => {
@@ -79,7 +91,7 @@ describe('where the Host’s arrows go', () => {
   it('steps one card at a time when there is somewhere to step', () => {
     // Generic over the registry length even though the current build installs
     // both Trivia and Hot Takes.
-    if (GAME_REGISTRY.length > 1) {
+    if (CAROUSEL_REGISTRY.length > 1) {
       expect(nextIndex(0)).toBe(1);
       expect(previousIndex(1)).toBe(0);
     } else {

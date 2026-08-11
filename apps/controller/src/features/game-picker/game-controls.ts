@@ -3,7 +3,8 @@ import { carouselWindow } from '@huddle/game-registry';
 
 /** The game the Host would start right now, given the card they are on. */
 export function gameToStart(browsingAt: number): GameMetadata | undefined {
-  return carouselWindow(browsingAt)?.focused.metadata;
+  const focused = carouselWindow(browsingAt)?.focused;
+  return focused?.placeholder === true ? undefined : focused?.metadata;
 }
 
 export const NOW_VIEWING_CAPTION = 'Your phone becomes the controller for the game on the TV.';
@@ -35,7 +36,15 @@ export function startControl(
 ): StartControl {
   const game = gameToStart(browsingAt);
   if (game === undefined) {
-    return { label: 'No games installed', enabled: false, blockedBecause: undefined };
+    const focused = carouselWindow(browsingAt)?.focused;
+    return {
+      label: focused?.placeholder === true ? 'Coming soon' : 'No games installed',
+      enabled: false,
+      blockedBecause:
+        focused?.placeholder === true
+          ? `${focused.metadata.title} is a reference placeholder and is not playable yet.`
+          : undefined,
+    };
   }
 
   const short = game.playerRange.min - seats.length;

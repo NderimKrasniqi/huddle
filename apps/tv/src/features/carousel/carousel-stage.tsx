@@ -1,7 +1,8 @@
 import type { GameModule } from '@huddle/game-core';
 import { type CarouselWindow } from '@huddle/game-registry';
 import { colors, elevation, motionDuration } from '@huddle/ui';
-import { GameKeyArt, Surface, Wordmark } from '@huddle/ui/native';
+import { GameKeyArt, Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { PageDots, PhoneBrowsingHelper } from '@huddle/ui/kit';
 import { useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
@@ -30,15 +31,18 @@ export function CarouselStage({
         <CarouselCards window={window} />
 
         <View style={styles.carouselFooter}>
-          <View style={styles.pageDots}>
-            {Array.from({ length: window.total }, (_unused, position) => (
-              <View
-                key={position}
-                style={[styles.pageDot, position === window.index && styles.pageDotActive]}
-              />
-            ))}
-          </View>
-          <Text style={styles.browsingLine}>{carouselFooterLine(host)}</Text>
+          <PageDots
+            count={window.total}
+            activeIndex={window.index}
+            style={styles.pageDots}
+            dotStyle={styles.pageDot}
+            activeDotStyle={styles.pageDotActive}
+          />
+          {host === undefined ? (
+            <Text style={styles.browsingLine}>{carouselFooterLine(host)}</Text>
+          ) : (
+            <PhoneBrowsingHelper name={host.nickname} />
+          )}
         </View>
       </View>
     </TvStage>
@@ -69,9 +73,21 @@ function CarouselCards({ window }: { readonly window: CarouselWindow }) {
       {/* The side cards are absent rather than duplicated with one game
           installed — `carouselWindow` is what decides that, and this just
           draws what it was handed. */}
+      <Surface
+        elevation={elevation.tvCard}
+        style={[styles.carouselArrow, window.previous === undefined && styles.carouselArrowHidden]}
+      >
+        <Icon name="chevron-left" size={28} color={colors.ink} />
+      </Surface>
       <SideKeyArt game={window.previous} />
       <FocusedGameCard game={window.focused} />
       <SideKeyArt game={window.next} />
+      <Surface
+        elevation={elevation.tvCard}
+        style={[styles.carouselArrow, window.next === undefined && styles.carouselArrowHidden]}
+      >
+        <Icon name="chevron-right" size={28} color={colors.ink} />
+      </Surface>
     </Animated.View>
   );
 }
@@ -95,15 +111,15 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
           color={keyArt.color}
           style={StyleSheet.absoluteFill}
         />
-        <Text style={styles.keyArtTitle}>{title}</Text>
+        {game.placeholder ? <PlaceholderBadge /> : null}
       </View>
 
-      <View style={styles.cardInfo}>
+      <View style={[styles.cardInfo, { backgroundColor: colors[keyArt.color] }]}>
         <Text style={styles.cardTitle}>{title}</Text>
         <View style={styles.chips}>
           <Chip text={`${playerRange.min}–${playerRange.max} players`} />
           <Chip text={`~${estimatedMinutes} min`} />
-          <Chip text={category} tone={colors.soft} />
+          <Chip text={category} />
         </View>
       </View>
     </Surface>
@@ -123,22 +139,41 @@ function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
       <View
         style={[styles.sideCard, { backgroundColor: colors[game.metadata.keyArt.color] }]}
       >
-        <GameKeyArt
-          gameId={game.metadata.id}
-          title={game.metadata.title}
-          color={game.metadata.keyArt.color}
-          style={StyleSheet.absoluteFill}
-        />
-        <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>
+        <View style={styles.sideArt}>
+          <GameKeyArt
+            gameId={game.metadata.id}
+            title={game.metadata.title}
+            color={game.metadata.keyArt.color}
+            style={StyleSheet.absoluteFill}
+          />
+          {game.placeholder ? <PlaceholderBadge /> : null}
+        </View>
+        <View
+          style={[
+            styles.sideCardInfo,
+            { backgroundColor: colors[game.metadata.keyArt.color] },
+          ]}
+        >
+          <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>
+        </View>
       </View>
     </View>
   );
 }
 
-/** One meta chip under a card's title. */
-function Chip({ text, tone }: { readonly text: string; readonly tone?: string }) {
+function PlaceholderBadge() {
   return (
-    <View style={[styles.chip, tone === undefined ? null : { backgroundColor: tone }]}>
+    <View style={styles.placeholderBadge}>
+      <Text style={styles.placeholderBadgeText}>COMING SOON</Text>
+    </View>
+  );
+}
+
+/** One meta chip under a card's title. */
+function Chip({ text }: { readonly text: string }) {
+  return (
+    <View style={styles.chip}>
+      <View style={[StyleSheet.absoluteFill, styles.chipWash]} />
       <Text style={styles.chipText}>{text}</Text>
     </View>
   );

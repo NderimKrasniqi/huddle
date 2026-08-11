@@ -8,6 +8,7 @@ import {
 } from '@huddle/game-core';
 import { colors, elevation, motionDuration, popIn, springOf } from '@huddle/ui';
 import { Avatar, Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { JoinCountRow, SectionDivider } from '@huddle/ui/kit';
 import { useCallback, useEffect, useState } from 'react';
 import { Animated, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -86,13 +87,7 @@ const notedByNobody = () => undefined;
 
 /** The rule the roster sits under, with its label let into the middle of it. */
 function PlayersDivider() {
-  return (
-    <View style={styles.divider}>
-      <View style={styles.dividerRule} />
-      <Text style={styles.dividerLabel}>PLAYERS IN THE ROOM</Text>
-      <View style={styles.dividerRule} />
-    </View>
-  );
+  return <SectionDivider label="Players in the room" style={styles.divider} />;
 }
 
 /**
@@ -292,16 +287,7 @@ function RoomCount({ roster }: { readonly roster: readonly RosterSeat[] }) {
     roster.find((seated) => seated.host)?.nickname,
   );
 
-  return (
-    <View style={styles.countLine}>
-      <Icon name="player-count" size={28} color={colors.ink} />
-      <Text style={styles.countText}>
-        <Text style={styles.countJoined}>{joined}</Text>
-        {` of ${total} joined`}
-        {note === undefined ? '' : ` — ${note}`}
-      </Text>
-    </View>
-  );
+  return <JoinCountRow joined={joined} total={total} note={note} style={styles.countLine} />;
 }
 
 /**

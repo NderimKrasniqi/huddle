@@ -375,6 +375,14 @@ export interface GameModule<State = unknown, Event extends GameEvent = GameEvent
   readonly metadata: GameMetadata;
   readonly settingsSchema: GameSettingsSchema;
   readonly settingsPresentation?: GameSettingsPresentation;
+  /**
+   * A carousel-only card that is visible for browsing but is not installed.
+   *
+   * Placeholders deliberately still use the GameModule shape so both clients
+   * can render them through the same carousel. They never enter the server's
+   * GameLogicRegistry and therefore cannot be selected or started.
+   */
+  readonly placeholder?: boolean;
   finishedSummary?(state: State): FinishedSummary;
   isFinished?(state: State): boolean;
   /**

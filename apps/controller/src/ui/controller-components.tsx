@@ -1,5 +1,6 @@
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
+import { Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
+import { HuddleLogo } from '@huddle/ui/kit';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -8,7 +9,7 @@ import { controllerStyles as styles } from './controller-styles';
 export function SeatedHeader({ trailing }: { readonly trailing: ReactNode }) {
   return (
     <View style={styles.seatedHeader}>
-      <Wordmark height={20} />
+      <HuddleLogo size={20} />
       {trailing}
     </View>
   );

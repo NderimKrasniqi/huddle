@@ -1,7 +1,14 @@
-import { roomJoinLink, type GameSettingsMode, type GameSettingsPresentation, type GameSettingsSchema } from '@huddle/game-core';
+import {
+  ROOM_CODE_LENGTH,
+  ROOM_PLAYER_CAP,
+  roomJoinLink,
+  type GameSettingsMode,
+  type GameSettingsPresentation,
+  type GameSettingsSchema,
+} from '@huddle/game-core';
 import { gameModuleById } from '@huddle/game-registry';
-import { colors, elevation } from '@huddle/ui';
-import { Avatar, Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { colors, type IconName } from '@huddle/ui';
+import { Avatar, Icon, Wordmark } from '@huddle/ui/native';
 import QRCode from 'react-native-qrcode-svg';
 import { Text, View } from 'react-native';
 
@@ -35,39 +42,57 @@ export function GameSetupStage({
       <View style={styles.screen}>
         <View style={styles.setupLeft}>
           <Wordmark on="dark" height={42} />
-          <Text style={styles.setupEyebrow}>GAME SETUP</Text>
           <Text style={styles.setupTitle}>{game.metadata.title}</Text>
-          <Text style={styles.setupMode}>{capitalize(draft.mode)} mode</Text>
+          <View style={styles.setupMode}>
+            <Text style={styles.setupModeText}>{capitalize(draft.mode)} mode</Text>
+          </View>
           <View style={styles.setupSummary}>
             {summary.map((line) => (
               <View key={line.label} style={styles.setupSummaryRow}>
-                <Text style={styles.setupSummaryLabel}>{line.label}</Text>
-                <Text style={styles.setupSummaryValue}>{line.value}</Text>
+                <Icon name={setupRuleIcon(line.label)} size={24} color={colors.setupGold} />
+                <View style={styles.setupSummaryCopy}>
+                  <Text style={styles.setupSummaryLabel}>{line.label}</Text>
+                  <Text style={styles.setupSummaryValue}>{line.value}</Text>
+                </View>
               </View>
             ))}
           </View>
-          <View style={styles.setupHostLine}>
-            {host === undefined ? null : <Avatar avatar={host.avatar} size={52} />}
-            <View>
-              <Text style={styles.setupHostCaption}>HOST</Text>
-              <Text style={styles.setupHostName}>{host?.nickname ?? 'Waiting for Host'}</Text>
+          <Text style={styles.setupHostLineText}>
+            {host === undefined ? 'Waiting for the Host to finish setting up.' : `${host.nickname} (host) is setting up the game.`}
+          </Text>
+          <View style={styles.setupJoinedBlock}>
+            <View style={styles.setupJoinedLine}>
+              <Icon name="players" size={24} color={colors.setupText} />
+              <Text style={styles.setupJoinedText}>
+                <Text style={styles.setupJoinedCount}>{roster.length}</Text> of {ROOM_PLAYER_CAP} players joined
+              </Text>
             </View>
-            <Text style={styles.setupCount}>{roster.length}/10</Text>
-          </View>
-          <View style={styles.setupRoster}>
-            {roster.map((seat) => (
-              <Avatar key={seat.playerId} avatar={seat.avatar} size={40} label={seat.nickname} />
-            ))}
+            <View style={styles.setupRoster}>
+              {roster.slice(0, 8).map((seat) => (
+                <Avatar key={seat.playerId} avatar={seat.avatar} size={48} label={seat.nickname} />
+              ))}
+              {roster.length > 8 ? (
+                <View style={styles.setupRosterMore}>
+                  <Text style={styles.setupRosterMoreText}>+{roster.length - 8}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
 
         <View style={styles.setupRight}>
-          <Surface elevation={elevation.tvCard} style={styles.joinCard}>
-            <Text style={styles.joinCardEyebrow}>JOIN ON YOUR PHONE</Text>
-            <QRCode value={roomJoinLink(code)} size={154} color={colors.ink} backgroundColor={colors.setupSurface} />
-            <Text style={styles.joinCode}>{code}</Text>
-            <Text style={styles.joinHint}>Scan the QR code or enter the four-letter code.</Text>
-          </Surface>
+          <Text style={styles.setupRightText}>Players can still join while the Host is setting up.</Text>
+          <View style={styles.joinCard}>
+            <QRCode value={roomJoinLink(code)} size={164} color={colors.ink} backgroundColor={colors.setupSurface} />
+            <Text style={styles.joinCardEyebrow}>JOIN WITH CODE</Text>
+            <View style={styles.setupCodeRow}>
+              {Array.from({ length: ROOM_CODE_LENGTH }, (_, index) => (
+                <View key={index} style={styles.setupCodeBox}>
+                  <Text style={styles.setupCodeBoxText}>{code[index] ?? ''}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
           <View style={styles.joinPill}>
             <Icon name="tv" size={22} color={colors.inverse} />
             <Text style={styles.joinPillText}>Values mirror the Host phone live</Text>
@@ -80,6 +105,14 @@ export function GameSetupStage({
 
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function setupRuleIcon(label: string): IconName {
+  if (label === 'Time per question') return 'clock';
+  if (label === 'Category') return 'tag';
+  if (label === 'Difficulty') return 'scan';
+  if (label === 'Questions') return 'gamepad';
+  return 'tv';
 }
 
 function settingSummary(

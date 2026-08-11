@@ -19,8 +19,14 @@ import {
 } from '../platform/room-session';
 import { tvSurface } from './tv-surface';
 
-/** Opens a room, owns its subscriptions, and selects the TV surface. */
-export default function TvRoomScreen() {
+/**
+ * Production counterpart to the standalone prototype's `HuddleTVRoot`.
+ *
+ * The real app owns the TV session and Convex subscriptions here instead of
+ * accepting a demo view model: room, browse, setup, and runtime phases remain
+ * display-only projections of the authoritative room state.
+ */
+export function HuddleTVRoot() {
   const { opening, reopen } = useRoomOpening();
 
   if (opening.kind !== 'open') {
@@ -36,6 +42,8 @@ export default function TvRoomScreen() {
     />
   );
 }
+
+export default HuddleTVRoot;
 
 function OpenRoomStage({
   room,

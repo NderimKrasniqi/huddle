@@ -2,7 +2,14 @@ import { api } from '@huddle/convex';
 import { type Arrivals, isGreeting, JUST_JOINED_MS, noteArrivals } from '@huddle/game-core';
 import { type CarouselWindow, carouselWindow, runningGameScreen } from '@huddle/game-registry';
 import { colors, elevation } from '@huddle/ui';
-import { AnimatedScreen, Avatar, Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
+import {
+  AnimatedScreen,
+  Avatar,
+  Icon,
+  LoadingIndicator,
+  Surface,
+} from '@huddle/ui/native';
+import { OnlineDot, StatusPill } from '@huddle/ui/kit';
 import { useMutation, useQuery } from 'convex/react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -206,7 +213,6 @@ export function SeatedScreen({
   if (screen.kind === 'finished') {
     return (
       <FinishedScreen
-        code={code}
         module={screen.module}
         state={screen.state}
         roster={roster}
@@ -352,7 +358,7 @@ function YourRoomScreen({
   const managingSeat = roster.find((seat) => seat.playerId === managing);
 
   return (
-    <PhoneScreen>
+    <PhoneScreen contentStyle={styles.waitingScreenContent}>
       <SeatedHeader
         trailing={
           <LeaveControl
@@ -467,22 +473,29 @@ function WaitingScreen({
 
       {/* No label. The name is in the line directly under it, and an avatar
           that announced itself would make a screen reader say it twice. */}
-      {standing.hostAvatar === undefined ? null : (
-        <Avatar avatar={standing.hostAvatar} size={WAITING_AVATAR} />
-      )}
-
-      <Text style={styles.title}>{hostChoosingLine(standing.hostNickname)}</Text>
+      <View style={styles.waitingHero}>
+        {standing.hostAvatar === undefined ? null : (
+          <View style={styles.waitingAvatarWell}>
+            <Avatar avatar={standing.hostAvatar} size={WAITING_AVATAR} />
+          </View>
+        )}
+        <Text style={styles.waitingTitle}>{hostChoosingLine(standing.hostNickname)}</Text>
+      </View>
 
       {browsing === undefined ? null : (
-        <View style={styles.nowViewing}>
-          <View style={styles.statusDot} />
+        <View style={styles.waitingStatusCard}>
+          <View style={styles.statusDotHalo}>
+            <View style={styles.statusDot} />
+          </View>
           <Text style={styles.statusText}>{nowViewingLine(browsing.focused.metadata)}</Text>
         </View>
       )}
 
-      <View style={styles.explainer}>
-        <Icon name="gamepad" size={32} color={colors.mutedText} />
-        <Text style={styles.explainerText}>{NOW_VIEWING_CAPTION}</Text>
+      <View style={styles.waitingInfoCard}>
+        <View style={styles.waitingInfoIconCircle}>
+          <Icon name="gamepad" size={32} color={colors.ink} />
+        </View>
+        <Text style={styles.waitingInfoText}>{NOW_VIEWING_CAPTION}</Text>
       </View>
     </PhoneScreen>
   );
@@ -809,12 +822,7 @@ function RosterRow({
 function RosterSlot({ slot }: { readonly slot: RosterRowSlot }) {
   switch (slot) {
     case 'host':
-      return (
-        <View style={styles.hostSlot}>
-          <Text style={styles.hostSlotText}>HOST</Text>
-          <Icon name="crown" size={16} color={colors.accent} />
-        </View>
-      );
+      return <StatusPill variant="host" />;
     case 'just-joined':
       return (
         <View style={styles.justJoinedChip}>
@@ -822,14 +830,9 @@ function RosterSlot({ slot }: { readonly slot: RosterRowSlot }) {
         </View>
       );
     case 'away':
-      return (
-        <View style={styles.awaySlot}>
-          <Text style={styles.awayText}>Away</Text>
-          <Icon name="clock" size={14} color={colors.away} />
-        </View>
-      );
+      return <StatusPill variant="away" />;
     default:
-      return <View style={styles.statusDot} />;
+      return <OnlineDot size={12} />;
   }
 }
 
@@ -901,7 +904,7 @@ function ManagePlayerSheet({
       {/* The board stacks the target: face, name, state. Centred and vertical
           rather than the row this used to be, because the sheet is about one
           person and a row reads as one of a list. */}
-      <View style={styles.sheetHeader}>
+      <View style={styles.sheetHeaderCentered}>
         <View>
           <Avatar
             avatar={seat.avatar}
@@ -922,7 +925,7 @@ function ManagePlayerSheet({
           ) : null}
         </View>
 
-        <Text style={styles.sheetName} numberOfLines={1}>
+        <Text style={[styles.sheetName, styles.sheetNameCentered]} numberOfLines={1}>
           {seat.nickname}
         </Text>
 

@@ -48,6 +48,8 @@ export const colors = {
   accent: '#FF6B4A',
   /** Online. */
   online: '#34A853',
+  /** Pale online notice surface, sampled from the approved phone settings flow. */
+  onlineSurface: '#EEF6EC',
   /** Just joined — the one informational blue in the system. */
   justJoined: '#2D9CDB',
   /** Away, and anything present but inactive. */
