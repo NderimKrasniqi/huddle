@@ -1,4 +1,5 @@
 import { api } from '@huddle/convex';
+import { AnimatedScreen } from '@huddle/ui/native';
 import { useConvex } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -6,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { JoinForm } from '../features/join/native';
 import { SeatedScreen } from '../features/room/native';
 import { joinScreenState, type PlayerSession, phoneSessionTokenStore, resumeSession } from '../platform/session';
+import { PhoneLoadingScreen } from '../ui';
 
 export default function JoinScreen() {
   // The code a scanned Join Link brought with it, if the phone arrived that way
@@ -56,12 +58,10 @@ export default function JoinScreen() {
   const state = joinScreenState(session, linkedCode ?? '');
 
   if (state.kind === 'restoring') {
-    // Nothing yet — the launch is already blank behind the root layout's font
-    // gate, on a window painted the Soft Minimal canvas. Drawing the join form
-    // here instead would flash the wrong screen at every player who is in fact
-    // already in the room. It is bounded: `resumeSession` will say "no seat"
-    // rather than let a phone that cannot reach the backend wait for ever.
-    return null;
+    // Do not draw the Join form while an existing seat may still be on its way.
+    // `resumeSession` bounds this state, and the branded recovery surface says
+    // what the formerly blank phone is doing meanwhile.
+    return <PhoneLoadingScreen phase="restoring" />;
   }
 
   if (state.kind === 'seated') {
@@ -70,16 +70,18 @@ export default function JoinScreen() {
     // Forgetting the seat here is what sends the phone back to the form — the
     // screen below watches the room for it.
     return (
-      <SeatedScreen
-        session={state.session}
-        onSeatLost={(reason) => {
-          setNotice(reason);
-          setSession(null);
-        }}
-        // No notice. A phone that tapped Leave knows why it is here, and
-        // `seatLossNotice` has no true sentence for a departure nobody imposed.
-        onLeft={() => setSession(null)}
-      />
+      <AnimatedScreen key={`seated-${state.session.playerId}`}>
+        <SeatedScreen
+          session={state.session}
+          onSeatLost={(reason) => {
+            setNotice(reason);
+            setSession(null);
+          }}
+          // No notice. A phone that tapped Leave knows why it is here, and
+          // `seatLossNotice` has no true sentence for a departure nobody imposed.
+          onLeft={() => setSession(null)}
+        />
+      </AnimatedScreen>
     );
   }
 
@@ -90,11 +92,13 @@ export default function JoinScreen() {
   // room's TV, since `joinScreenState` sends that scan here. A typed join has
   // no link and so a constant key: nothing remounts under somebody's thumbs.
   return (
-    <JoinForm
-      key={linkedCode ?? ''}
-      linkedCode={linkedCode ?? ''}
-      onSeated={setSession}
-      notice={notice}
-    />
+    <AnimatedScreen key={`join-${linkedCode ?? ''}`}>
+      <JoinForm
+        key={linkedCode ?? ''}
+        linkedCode={linkedCode ?? ''}
+        onSeated={setSession}
+        notice={notice}
+      />
+    </AnimatedScreen>
   );
 }

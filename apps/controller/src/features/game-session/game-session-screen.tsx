@@ -1,7 +1,7 @@
 import { api } from '@huddle/convex';
 import { gamePlayersFrom, type GameEvent, type GameModule, type GamePlayer } from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
-import { Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -36,7 +36,7 @@ export function GameRuntimeStatusScreen({
   const title = playerDisconnected
     ? disconnected
     : paused
-      ? 'TV disconnected'
+      ? 'Reconnecting to TV'
       : 'Game unavailable';
   const message = playerDisconnected
     ? youAreHost
@@ -49,6 +49,9 @@ export function GameRuntimeStatusScreen({
   return (
     <PhoneScreen>
       <SeatedHeader trailing={leaveControl} />
+      {paused && reason === 'tvDisconnected' ? (
+        <LoadingIndicator label="Reconnecting to TV" />
+      ) : null}
       <Text style={styles.title}>{title}</Text>
       <Text style={[styles.waitingFor, styles.asideCentred]}>{message}</Text>
       {youAreHost && playerDisconnected ? <DisconnectRecoveryControls /> : null}
@@ -98,6 +101,9 @@ function DisconnectRecoveryControls() {
               [styles.button, styles.buttonSecondary, pressed && styles.buttonPressed],
             ]}
           >
+            {waiting ? (
+              <LoadingIndicator size="small" color={colors.ink} label="Waiting for everyone" />
+            ) : null}
             <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>
               {waiting ? 'Waiting for everyone…' : 'Wait for everyone'}
             </Text>
@@ -107,6 +113,7 @@ function DisconnectRecoveryControls() {
       <PrimaryButton
         label={continuing ? 'Continuing…' : 'Continue without them'}
         enabled={!continuing}
+        loading={continuing}
         onPress={() => void continueWithoutThem()}
       />
       {failure === undefined ? null : (
@@ -270,12 +277,15 @@ export function BackToLobbyControl() {
         disabled={returning}
         onPress={() => void backToLobby()}
         accessibilityRole="button"
-        accessibilityState={{ disabled: returning }}
+        accessibilityState={{ disabled: returning, busy: returning }}
       >
         {({ pressed }) => (
           <Surface
             elevation={elevation.phoneCard}
             style={[styles.stretch, [styles.button, styles.backToLobbyButton, pressed && styles.buttonPressed]]}>
+            {returning ? (
+              <LoadingIndicator size="small" color={colors.inverse} label="Returning to lobby" />
+            ) : null}
             <Text style={styles.buttonLabel}>{backToLobbyLabel(returning)}</Text>
           </Surface>
         )}

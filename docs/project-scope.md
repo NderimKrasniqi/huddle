@@ -160,9 +160,18 @@ Each game supplies metadata such as:
 
 The host browses and selects games from their phone.
 
-The TV mirrors the host's current selection/configuration so the room can see what is being chosen.
+While the host scrolls, the TV remains on the Browse Games carousel and follows
+the highlighted card. Selecting a card is an explicit transition: the TV leaves
+the carousel and shows Game Setup for that game. The host changes the draft
+settings on the phone, and the TV mirrors the selected game and those setting
+changes so the room can see what is being prepared.
 
-Game settings are locked when gameplay starts. To change them, the host ends the game, returns to the room, changes configuration, and starts again unless a future game explicitly supports live setting changes.
+Draft settings may change during Game Setup. Pressing Start is an action on the
+host's phone, not a screen: the platform validates the requirements, locks the
+settings, and transitions into the selected game's runtime. To change settings
+after gameplay starts, the host ends the game, returns to the room, changes the
+configuration, and starts again unless a future game explicitly supports live
+setting changes.
 
 ## Game Modules
 
@@ -175,9 +184,16 @@ The platform owns:
 - connection/reconnection;
 - room lifecycle;
 - game catalog/selection;
+- shared pre-game browsing/setup state and its transition into a game;
 - transition into and out of games.
 
 Individual games own game-specific behavior and state.
+
+The platform owns the Game Setup surface and the lifecycle transition around
+it. A game supplies its metadata and settings schema, while its actual gameplay
+screen, rules, scoring, and game-specific finished state remain module-owned.
+An unfinished game screen does not block the platform's room, browse, setup, or
+start functionality.
 
 Games must not build separate room/join/session infrastructure.
 
@@ -197,11 +213,11 @@ The trivia and voting games prove the modular boundary.
 
 Before starting a game:
 
-1. Host selects a game.
-2. TV shows the selection.
-3. Host configures supported modes/rules.
-4. Platform checks the game's player requirements.
-5. Game starts when requirements are satisfied.
+1. Host scrolls through games on the phone; the TV follows the highlighted card in the carousel.
+2. Host explicitly selects a game; the TV switches to Game Setup.
+3. Host configures supported modes/rules on the phone; the TV mirrors the draft settings.
+4. Host presses Start on the phone; this is an action, not a separate screen.
+5. Platform checks the game's player requirements, locks the settings, and starts the game runtime.
 
 Joining the lobby counts as ready by default. A game may introduce additional game-specific readiness rules if necessary.
 
@@ -386,3 +402,16 @@ behavior. It preserves the supported surfaces, room/game contracts, and active
 Soft Minimal design while removing the obsolete development room opener.
 
 - **F-007** — Full-Codebase Behavior-Preserving Refactor.
+
+# Feature 8 traceability — Platform Startup and Loading Feedback
+
+This work changes only platform-owned startup, recovery communication, pending
+action feedback, and transitions. It does not add a game state or move any
+gameplay animation into the platform.
+
+- **F-008** — Platform Startup and Loading Feedback.
+- Native TV and Controller launch surfaces carry Huddle branding before React
+  mounts, then hand off to animated in-app startup/restoration surfaces.
+- Room opening never reuses the Room renderer without a valid code/QR.
+- Pending platform actions expose both changing copy and a visible activity
+  indicator; gameplay visuals and rules remain module-owned.

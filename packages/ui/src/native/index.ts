@@ -5,5 +5,12 @@
 // dependency here rather than a dependency of the package.
 export { Avatar, type AvatarProps, avatarArtwork } from './avatar';
 export { Icon, type IconProps } from './icon';
+export {
+  AnimatedScreen,
+  HuddleLoadingSurface,
+  type HuddleLoadingPlatform,
+  LoadingIndicator,
+  type LoadingIndicatorSize,
+} from './loading';
 export { Surface, type SurfaceProps } from './surface';
 export { Wordmark, type WordmarkProps } from './wordmark';

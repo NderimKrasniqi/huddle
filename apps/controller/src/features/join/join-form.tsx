@@ -1,7 +1,7 @@
 import { api } from '@huddle/convex';
 import { AVATAR_IDS, type AvatarId, ROOM_CODE_LENGTH } from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
-import { Avatar, Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
 import { useMutation } from 'convex/react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -217,7 +217,7 @@ export function JoinForm({
           disabled={!ready || joining}
           onPress={() => void join()}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !ready || joining }}
+          accessibilityState={{ disabled: !ready || joining, busy: joining }}
         >
           {({ pressed }) => (
             <Surface
@@ -225,6 +225,9 @@ export function JoinForm({
               // Dimming belongs to the whole sticker: fading the face alone
               // would leave a solid shadow under a ghosted button.
               style={[[styles.stretch, !ready && styles.buttonUnavailable], [styles.button, pressed && styles.buttonPressed]]}>
+              {joining ? (
+                <LoadingIndicator size="small" color={colors.inverse} label="Joining room" />
+              ) : null}
               <Text style={styles.buttonLabel}>{joining ? 'Joining…' : 'Join'}</Text>
             </Surface>
           )}
