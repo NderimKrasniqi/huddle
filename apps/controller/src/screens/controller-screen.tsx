@@ -5,11 +5,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { JoinForm } from '../features/join/native';
-import { SeatedScreen } from '../features/room/native';
+import { SeatedController } from './seated-controller';
 import { joinScreenState, type PlayerSession, phoneSessionTokenStore, resumeSession } from '../platform/session';
-import { PhoneLoadingScreen } from '../ui';
+import { PhoneLoadingScreen } from '../ui/native';
 
-export default function JoinScreen() {
+export default function ControllerScreen() {
   // The code a scanned Join Link brought with it, if the phone arrived that way
   // (`app/join/[code].tsx`). It is the only difference a scanned join makes —
   // the nickname is still typed.
@@ -71,7 +71,7 @@ export default function JoinScreen() {
     // screen below watches the room for it.
     return (
       <AnimatedScreen key={`seated-${state.session.playerId}`}>
-        <SeatedScreen
+        <SeatedController
           session={state.session}
           onSeatLost={(reason) => {
             setNotice(reason);

@@ -1,6 +1,6 @@
 import { colors, fontFamily } from '@huddle/ui';
 import { StyleSheet } from 'react-native';
-import { roomLayout } from '../room';
+import { tvLayout } from '../../ui';
 
 
 
@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
   // share the band (`roomWordmark`).
   header: {
     paddingHorizontal: 56,
-    paddingTop: roomLayout.headerTop,
+    paddingTop: tvLayout.headerTop,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

@@ -1,6 +1,7 @@
 # Huddle Architecture
 
-> Reconciled 2026-08-11 for **F-007 Full-Codebase Behavior-Preserving Refactor**.
+> Reconciled 2026-08-11 for **F-010 Architecture, Structure, and Naming
+> Refactor**.
 > Phases 1–5 remain the frozen product baseline. This document records the
 > repository's current boundaries through Feature 7 without changing Expo,
 > Convex, pnpm workspaces, the game registry, shared UI primitives, or the
@@ -42,23 +43,40 @@ styles, feature hooks, and platform lifecycle code behind explicit entrypoints.
 
 ```text
 apps/controller/src/
-  screens/                     # deep-link/session composition
+  screens/                     # route surfaces and seated controller
+  models/                      # pure app projections and shared types
   features/{join,room,game-picker,game-session}/
   platform/{convex,session,presence,storage}/
   ui/                          # controller-only primitives
 
 apps/tv/src/
   screens/                     # room opening, subscriptions, surface selection
+  models/                      # pure TV projections and shared types
   features/{boot,room,carousel,game-setup,game-session}/
   platform/{convex,room-session}/
   ui/                          # TV-only primitives
 ```
 
 Expo Router files in `apps/*/app` are thin adapters that mount a root
-coordinator. Features own screens, styles, pure models/helpers, and adjacent
-tests. Platform folders own Convex bindings, credentials, secure storage, and
-presence. Cross-feature deep imports are prohibited; each feature exposes a
-small model entry point plus an explicit native UI entry point where required.
+coordinator. The dependency direction is strict:
+
+```text
+routes → screens → features/platform/models/UI
+features → platform/models/UI
+platform → models and other platform owners through entrypoints
+models → workspace/external contracts only
+UI → shared UI packages only
+```
+
+Features never depend on other features, platform code never reaches upward
+into a feature, and owners are accessed through their public entrypoints rather
+than deep imports. Cycles, empty entrypoints, renderer-bearing model entrypoints,
+and authored non-kebab filenames (outside the documented Expo/generated and
+`index`/`native`/`styles` exceptions) are rejected by workflow validation.
+Features with no pure API may expose only `native.ts`; `index.ts` is reserved
+for pure/type seams and `native.ts` for renderer seams. Features own screens,
+styles, pure models/helpers, and adjacent tests. Platform folders own Convex
+bindings, credentials, secure storage, and presence.
 Only genuinely cross-app tokens and primitives live in `@huddle/ui`. The
 React-Native implementation has two intentional entrypoints: `@huddle/ui/native`
 contains the Node-safe core primitives used by game modules, while
@@ -129,10 +147,10 @@ functions:
 ```text
 convex/convex/lib/
   authorization.ts # member/host/session-token gates
-  roomLifecycle.ts # room-owned-row and deadline deletion
+  room-lifecycle.ts # room-owned-row and deadline deletion
   presence.ts      # roster and player presence reads
-  gameClock.ts     # deadline scheduling, pause, resume, cancellation
-  gameRuntime.ts   # decode, version, projection, unavailable reporting
+  game-clock.ts    # deadline scheduling, pause, resume, cancellation
+  game-runtime.ts  # decode, version, projection, unavailable reporting
 ```
 
 `tvSessions` carries high-churn TV heartbeat data (`roomId`, `sessionToken`,

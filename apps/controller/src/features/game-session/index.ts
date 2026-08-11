@@ -1,3 +1,3 @@
 /** Public game-session feature seam. */
-export { lifecycleFailureMessage } from './game-rejection';
+export { lifecycleFailureMessage } from '../../models';
 export { backToLobbyLabel } from './game-controls';

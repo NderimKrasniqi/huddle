@@ -30,14 +30,14 @@ export {
   type NavigationIconButtonProps,
   type StatusPillVariant,
   type StatusStripVariant,
-} from './huddle-kit-components';
-export { HuddleIcon, QuestionsIcon, type HuddleIconName } from './huddle-kit-icon';
-export { HuddleLogo, HuddleMark } from './huddle-kit-logo';
+} from './components';
+export { HuddleIcon, QuestionsIcon, type HuddleIconName } from './icon';
+export { HuddleLogo, HuddleMark } from './logo';
 export {
   huddleUIKitColors,
   huddleUIKitRadius,
   huddleUIKitShadow,
   huddleUIKitSpacing,
   huddleUIKitTypography,
-} from './huddle-kit-theme';
-export { HuddleUIKitDemo } from './huddle-kit-demo';
+} from './theme';
+export { HuddleUIKitDemo } from './demo';

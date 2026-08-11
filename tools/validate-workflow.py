@@ -61,6 +61,19 @@ def main() -> int:
             "unittest",
             "discover",
             "-s",
+            str(root / "tools" / "tests"),
+            "-p",
+            "test_*.py",
+        ],
+        root,
+    )
+    run(
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
             str(skills / "implement-task" / "tests"),
             "-p",
             "test_*.py",

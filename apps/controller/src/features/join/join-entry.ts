@@ -2,6 +2,7 @@ import {
   NICKNAME_MAX_LENGTH,
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_LENGTH,
+  normalizeRoomCode,
 } from '@huddle/game-core';
 
 /**
@@ -31,7 +32,7 @@ import {
  * the former no-I mitigation remains typeable too.
  */
 export function codeEntry(typed: string): string {
-  return [...typed.toUpperCase()]
+  return [...normalizeRoomCode(typed)]
     .filter((letter) => ROOM_CODE_ACCEPTED_ALPHABET.includes(letter))
     .slice(0, ROOM_CODE_LENGTH)
     .join('');

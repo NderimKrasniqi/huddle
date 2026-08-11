@@ -9,14 +9,12 @@ import { CarouselStage } from '../features/carousel/native';
 import { GameSetupStage } from '../features/game-setup/native';
 import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage, useRoomGreetings } from '../features/room/native';
-import type { RosterSeat } from '../features/room';
+import type { RosterSeat } from '../models';
 import {
-  keepRoomPresent,
   type OpenRoom,
   type RoomOpening,
-  useRoomExpiry,
-  useRoomOpening,
 } from '../platform/room-session';
+import { keepRoomPresent, useRoomExpiry, useRoomOpening } from '../platform/room-session/native';
 import { tvSurface } from './tv-surface';
 
 /**
@@ -26,7 +24,7 @@ import { tvSurface } from './tv-surface';
  * accepting a demo view model: room, browse, setup, and runtime phases remain
  * display-only projections of the authoritative room state.
  */
-export function HuddleTVRoot() {
+export function TvScreen() {
   const { opening, reopen } = useRoomOpening();
 
   if (opening.kind !== 'open') {
@@ -43,7 +41,7 @@ export function HuddleTVRoot() {
   );
 }
 
-export default HuddleTVRoot;
+export default TvScreen;
 
 function OpenRoomStage({
   room,

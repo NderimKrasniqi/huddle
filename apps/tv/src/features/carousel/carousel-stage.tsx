@@ -1,13 +1,13 @@
 import type { GameModule } from '@huddle/game-core';
 import { type CarouselWindow } from '@huddle/game-registry';
 import { colors, elevation, motionDuration } from '@huddle/ui';
-import { GameKeyArt, Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { GameKeyArt, Icon, Surface } from '@huddle/ui/native';
 import { PageDots, PhoneBrowsingHelper } from '@huddle/ui/kit';
 import { useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
-import { TvStage } from '../../ui';
-import { roomLayout, type RosterSeat } from '../room';
+import { TvHeader, TvStage } from '../../ui/native';
+import type { RosterSeat } from '../../models';
 import { cardEntryOffset } from './card-transition';
 import { carouselFooterLine } from './carousel-footer';
 import { styles } from './styles';
@@ -24,9 +24,7 @@ export function CarouselStage({
   return (
     <TvStage>
       <View style={styles.screen}>
-        <View style={styles.header}>
-          <Wordmark height={roomLayout.wordmark} />
-        </View>
+        <TvHeader />
 
         <CarouselCards window={window} />
 

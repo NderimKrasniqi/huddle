@@ -1,7 +1,10 @@
+import {
+  normalizeRoomCode,
+  ROOM_CODE_ACCEPTED_ALPHABET,
+  ROOM_CODE_LENGTH,
+} from '@huddle/game-core';
 import type { api } from '@huddle/convex';
 import type { FunctionReturnType } from 'convex/server';
-
-import { codeEntry } from '../../features/join';
 
 /**
  * Rejoining, from the phone's side: what the Controller does with the Session
@@ -194,7 +197,10 @@ export function joinScreenState(
 
   // Read through the same entry the tiles use, so a link written in lower case
   // or carrying a stray character is compared as the Room Code it means.
-  const scanned = codeEntry(linkedCode);
+  const scanned = [...normalizeRoomCode(linkedCode)]
+    .filter((letter) => ROOM_CODE_ACCEPTED_ALPHABET.includes(letter))
+    .slice(0, ROOM_CODE_LENGTH)
+    .join('');
 
   return scanned !== '' && scanned !== session.code
     ? { kind: 'joining' }

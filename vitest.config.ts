@@ -63,6 +63,7 @@ export default defineConfig({
         test: {
           name: 'packages',
           include: ['packages/**/src/**/*.test.ts'],
+          exclude: ['**/*.render.test.tsx'],
           environment: 'node',
         },
       },
@@ -74,6 +75,14 @@ export default defineConfig({
         test: {
           name: 'apps',
           include: ['apps/*/src/**/*.test.ts'],
+          exclude: ['**/*.render.test.tsx'],
+          environment: 'node',
+        },
+      },
+      {
+        test: {
+          name: 'visual-fixtures',
+          include: ['test/visual-fixtures/**/*.test.ts'],
           environment: 'node',
         },
       },

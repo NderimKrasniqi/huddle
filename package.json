@@ -4,14 +4,15 @@
   "private": true,
   "packageManager": "pnpm@10.13.1",
   "engines": {
-    "node": ">=20"
+    "node": "^22.13.0 || >=24.0.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && pnpm -r typecheck",
     "lint": "eslint . --max-warnings=0",
     "audit:prod": "pnpm audit --prod --ignore CVE-2025-71329 --ignore CVE-2025-71330",
     "verify:dependency-security": "node tools/verify-dependency-security.cjs",
-    "test": "vitest run",
+    "test": "vitest run && pnpm test:render",
+    "test:render": "pnpm --filter @huddle/controller test:render && pnpm --filter @huddle/tv test:render",
     "test:unit": "vitest run --project lint-rules --project packages --project apps",
     "test:integration": "vitest run --project convex",
     "validate:packs": "node --import tsx packages/packs/src/validate-packs.ts",

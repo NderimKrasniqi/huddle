@@ -1,4 +1,4 @@
-import type { RosterSeat } from './host';
+import type { RosterSeat } from '../../models';
 
 /**
  * What the Host can do to another player's row, and whether they can do it now

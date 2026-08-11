@@ -7,7 +7,7 @@ import {
   roomJoinLink,
 } from '@huddle/game-core';
 import { colors, elevation, motionDuration, popIn, springOf } from '@huddle/ui';
-import { Avatar, Icon, Surface, Wordmark } from '@huddle/ui/native';
+import { Avatar, Icon, Surface } from '@huddle/ui/native';
 import { JoinCountRow, SectionDivider } from '@huddle/ui/kit';
 import { useCallback, useEffect, useState } from 'react';
 import { Animated, Text, View } from 'react-native';
@@ -18,14 +18,13 @@ import {
   type RoomOpeningCaption,
   roomOpeningCaption,
 } from '../../platform/room-session';
-import { TvStage } from '../../ui';
+import { TvHeader, TvStage } from '../../ui/native';
+import type { RosterSeat } from '../../models';
 import {
   type RoomSeat,
   roomCountLine,
-  roomLayout,
   ROOM_QR_SIZE,
   roomSeats,
-  type RosterSeat,
   seat,
   seatSlot,
   seatSpokenAs,
@@ -59,7 +58,7 @@ export function RoomStage({
             the mark sits in the left gutter alongside. A header row would stack
             them and push everything below 30pt down the screen. */}
         <View style={styles.roomWordmark}>
-          <Wordmark height={roomLayout.wordmark} />
+          <TvHeader />
         </View>
 
         <Text style={styles.roomTitle}>Grab your phone!</Text>

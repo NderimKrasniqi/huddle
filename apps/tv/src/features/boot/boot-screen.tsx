@@ -1,6 +1,6 @@
 import { AnimatedScreen, HuddleLoadingSurface } from '@huddle/ui/native';
 
-import { TvStage } from '../../ui';
+import { TvStage } from '../../ui/native';
 import { tvBootPresentation, type TvBootPhase } from './boot-state';
 
 /** The TV before it has a safe room code to show. */

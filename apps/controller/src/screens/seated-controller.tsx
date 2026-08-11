@@ -14,12 +14,12 @@ import { useMutation, useQuery } from 'convex/react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CHOOSE_A_GAME, hostChoosingLine, NOW_VIEWING_CAPTION, nowViewingLine, startControl, type SettingsChoice } from '../game-picker';
-import { PickAGameScreen } from '../game-picker/native';
-import { BackToLobbyControl, FinishedScreen, GameRuntimeStatusScreen, InGameScreen } from '../game-session/native';
-import { useHeartbeat } from '../../platform/presence';
-import { phoneSessionTokenStore, type PlayerSession, useSessionToken } from '../../platform/session';
-import { OutlinePill, PhoneScreen, PrimaryButton, RoomCodeChip, SeatedHeader, controllerStyles as styles } from '../../ui';
+import { CHOOSE_A_GAME, hostChoosingLine, NOW_VIEWING_CAPTION, nowViewingLine, startControl, type SettingsChoice } from '../features/game-picker';
+import { PickAGameScreen } from '../features/game-picker/native';
+import { BackToLobbyControl, FinishedScreen, GameRuntimeStatusScreen, InGameScreen } from '../features/game-session/native';
+import { useHeartbeat } from '../platform/presence';
+import { phoneSessionTokenStore, type PlayerSession, useSessionToken } from '../platform/session';
+import { OutlinePill, PhoneScreen, PrimaryButton, RoomCodeChip, SeatedHeader, controllerStyles as styles } from '../ui/native';
 import {
   hostControlFailureMessage,
   hostControlRejectionMessage,
@@ -38,13 +38,13 @@ import {
   type RosterRowControl,
   type RosterRowSlot,
   type RosterSeat,
-} from './index';
+} from '../features/room';
 
 const ROSTER_AVATAR = 36;
 const WAITING_AVATAR = 176;
 const SHEET_AVATAR = 88;
 
-export function SeatedScreen({
+export function SeatedController({
   session,
   onSeatLost,
   onLeft,

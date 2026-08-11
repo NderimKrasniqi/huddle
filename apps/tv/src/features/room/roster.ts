@@ -1,6 +1,7 @@
-import type { api } from '@huddle/convex';
 import { ROOM_PLAYER_CAP } from '@huddle/game-core';
-import type { FunctionReturnType } from 'convex/server';
+import type { RosterSeat } from '../../models';
+
+export type { RosterSeat } from '../../models';
 
 /**
  * The Room screen's player grid: how the seats are laid out, what each one's
@@ -24,8 +25,6 @@ import type { FunctionReturnType } from 'convex/server';
  * One taken seat, taken from the query that serves it — the TV draws what the
  * backend says a seat is, and never its own idea of one.
  */
-export type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
-
 /**
  * Seat measurements at the TV's 1280×720 design size.
  *

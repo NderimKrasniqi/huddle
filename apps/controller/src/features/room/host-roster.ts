@@ -1,4 +1,4 @@
-import type { RosterSeat } from './host';
+import type { RosterSeat } from '../../models';
 
 /**
  * The Host's roster (docs/design/soft-minimal-handoff.md §5): one row per player,

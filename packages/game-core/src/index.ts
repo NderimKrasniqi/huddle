@@ -76,6 +76,7 @@ export {
 export { ROOM_EXPIRY_MS, UNJOINED_ROOM_EXPIRY_MS } from './room-expiry';
 export {
   generateRoomCode,
+  normalizeRoomCode,
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_MINT_ALPHABET,
   ROOM_CODE_LENGTH,

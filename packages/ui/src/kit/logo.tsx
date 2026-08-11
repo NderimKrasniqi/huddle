@@ -3,7 +3,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { fontFamily } from '../typography';
 
-import { huddleUIKitColors } from './huddle-kit-theme';
+import { huddleUIKitColors } from './theme';
 
 export function HuddleMark({ size = 38 }: { readonly size?: number }) {
   return (

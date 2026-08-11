@@ -3,7 +3,7 @@ import { BottomSheetOptionRow } from '@huddle/ui/kit';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PrimaryButton } from '../../ui';
+import { PrimaryButton } from '../../ui/native';
 
 export type CategoryPickerOption = {
   readonly value: string;

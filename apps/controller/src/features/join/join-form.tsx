@@ -7,7 +7,7 @@ import { useMutation } from 'convex/react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { PhoneScreen, controllerStyles as styles } from '../../ui';
+import { PhoneScreen, controllerStyles as styles } from '../../ui/native';
 import { phoneSessionTokenStore, rememberSession, type PlayerSession } from '../../platform/session';
 import { phoneIdentityStore } from '../../platform/storage';
 import {

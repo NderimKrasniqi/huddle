@@ -9,9 +9,9 @@ import { ConvexError, v } from 'convex/values';
 import { components, internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { pauseGameClock, resumePausedGameClock } from './lib/gameClock';
+import { pauseGameClock, resumePausedGameClock } from './lib/game-clock';
 import { playersInRoom, roomSilenceMs } from './lib/presence';
-import { deleteRoom } from './lib/roomLifecycle';
+import { deleteRoom } from './lib/room-lifecycle';
 
 /**
  * What `openRoom` rejects with when it cannot find a free Room Code. A

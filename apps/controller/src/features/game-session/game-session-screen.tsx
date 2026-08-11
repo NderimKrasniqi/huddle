@@ -13,9 +13,9 @@ import { useMutation } from 'convex/react';
 import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import type { RosterSeat } from '../room';
+import type { RosterSeat } from '../../models';
 import { phoneSessionTokenStore, type PlayerSession } from '../../platform/session';
-import { PhoneScreen, PrimaryButton, SeatedHeader, controllerStyles as styles } from '../../ui';
+import { PhoneScreen, PrimaryButton, SeatedHeader, controllerStyles as styles } from '../../ui/native';
 import { backToLobbyLabel } from './game-controls';
 import { lifecycleFailureMessage } from './game-rejection';
 

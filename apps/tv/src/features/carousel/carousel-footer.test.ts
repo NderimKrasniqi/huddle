@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { carouselFooterLine } from './carousel-footer';
-import type { RosterSeat } from '../room';
+import type { RosterSeat } from '../../models';
 
 /** A seated player, as `players.roster` serves one. */
 const seatOf = (nickname: string, host = false): RosterSeat => ({

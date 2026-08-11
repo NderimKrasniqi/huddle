@@ -10,7 +10,7 @@
     ".": "./src/index.ts",
     "./fonts": "./src/fonts.ts",
     "./native": "./src/native/index.ts",
-    "./kit": "./src/native/kit.ts",
+    "./kit": "./src/kit/index.ts",
     "./assets/*": "./assets/*"
   },
   "scripts": {

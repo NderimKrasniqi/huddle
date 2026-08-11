@@ -30,13 +30,13 @@ import {
   resumePausedGameClock,
   stopGameClock,
   windGameClock,
-} from './lib/gameClock';
+} from './lib/game-clock';
 import {
   decodeStoredRuntime,
   projectRuntime,
   runtimeFailure,
   validatedDeadline,
-} from './lib/gameRuntime';
+} from './lib/game-runtime';
 import { awayPlayerIds, gamePlayersInRoom } from './lib/presence';
 
 /**
@@ -526,6 +526,13 @@ export const browseGame = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { room } = await requireRoomHost(ctx, args.sessionToken);
+
+    // Browsing is a shared TV surface. A disconnected display must retain the
+    // last committed card and resume it when it returns; the Host is still
+    // authorized, but this mutation intentionally has no state effect.
+    if (room.tvAway === true) {
+      return null;
+    }
 
     await ctx.db.patch(room._id, { browsingGameIndex: browsingIndex(args.index) });
     return null;

@@ -1,5 +1,6 @@
-import type { api } from '@huddle/convex';
-import type { FunctionReturnType } from 'convex/server';
+import type { RosterSeat } from '../../models';
+
+export type { RosterSeat } from '../../models';
 
 /**
  * The Host, from the phone's side: whether this phone is the one running the
@@ -13,8 +14,6 @@ import type { FunctionReturnType } from 'convex/server';
  */
 
 /** One seat of the room's roster, as `players.roster` serves it. */
-export type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
-
 /** Where this phone stands in its room: who is running it, and whether that is them. */
 export type LobbyStanding = {
   /** Whether the phone reading this holds room control. */

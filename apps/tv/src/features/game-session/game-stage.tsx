@@ -1,9 +1,8 @@
 import { gamePlayersFrom, type GameModule } from '@huddle/game-core';
-import { Wordmark } from '@huddle/ui/native';
 import { Text, View } from 'react-native';
 
-import { TvStage } from '../../ui';
-import { roomLayout, type RosterSeat } from '../room';
+import { TvHeader, TvStage } from '../../ui/native';
+import type { RosterSeat } from '../../models';
 import { styles } from './styles';
 
 export function GameStage({
@@ -24,10 +23,7 @@ export function GameStage({
   return (
     <TvStage>
       <View style={styles.screen}>
-        <View style={styles.header}>
-          <Wordmark height={roomLayout.wordmark} />
-          <Text style={styles.gameTitle}>{module.metadata.title}</Text>
-        </View>
+        <TvHeader trailing={<Text style={styles.gameTitle}>{module.metadata.title}</Text>} />
 
         <View style={styles.gameStage}>
           <TvScreen
@@ -72,7 +68,7 @@ export function TvRuntimeStatus({
   return (
     <TvStage>
       <View style={styles.runtimeStatus}>
-        <Wordmark height={roomLayout.wordmark} />
+        <TvHeader />
         <Text style={styles.gameTitle}>{title}</Text>
         <Text style={styles.runtimeStatusText}>{message}</Text>
       </View>

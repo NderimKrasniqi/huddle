@@ -431,3 +431,29 @@ surfaces while preserving module ownership of gameplay.
   game. Replay starts from fresh state with the current roster.
 - Games retain ownership of metadata, settings schemas, rules, gameplay screens,
   result summaries, and private-state projection.
+
+# Feature 10 traceability — Architecture, Structure, and Naming Refactor
+
+Feature 10 is a behavior-preserving repository refactor. It keeps Expo routes,
+Convex schema and public function names, game IDs, client/server registry seams,
+runtime assets, and the Soft Minimal visual system stable while making ownership
+and responsibility explicit.
+
+- **F-010** — Architecture, Structure, and Naming Refactor.
+- App-local `models/` layers own pure projections and shared application types;
+  routes compose screens, screens compose features/platform/models/UI, and
+  platform owners never depend on features. Cross-feature imports, deep owner
+  imports, renderer-bearing model entrypoints, empty entrypoints, and dependency
+  cycles are rejected by workflow validation.
+- Authored files use kebab-case (with Expo/generated and conventional entrypoint
+  exceptions), symbols follow PascalCase/camelCase/true-constant conventions,
+  and `Screen`, `Stage`, `Surface`, and `Controller` describe distinct roles.
+- Controller and TV coordinators are separated from feature renderers; shared
+  UI-kit, roster, layout, lifecycle, and private Convex responsibilities have
+  named seams without changing package exports or public Convex modules.
+- `normalizeRoomCode` is one public game-core contract used by join/session and
+  Convex normalization. A host-authorized `games.browseGame` call is a no-op
+  while `room.tvAway === true`, including preserving `browsingGameIndex`.
+- Rendered app tests use Jest/jest-expo and React Native Testing Library while
+  pure models, lint rules, package contracts, and Convex behavior remain in
+  Vitest. Rendered tests are accessibility-first and never snapshots.

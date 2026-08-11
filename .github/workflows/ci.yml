@@ -65,6 +65,9 @@ jobs:
       - name: Integration tests
         run: pnpm test:integration
 
+      - name: Rendered app tests
+        run: pnpm test:render
+
       # Question Packs are hand-written data files, so nothing about them is
       # typechecked: this is the gate that keeps a malformed one — three
       # options, an answer index pointing nowhere — out of the repo.

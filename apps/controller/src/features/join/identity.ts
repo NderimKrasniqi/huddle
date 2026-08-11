@@ -1,6 +1,9 @@
-import { type AvatarId, isAvatarId } from '@huddle/game-core';
+import { isAvatarId, type AvatarId } from '@huddle/game-core';
 
+import type { IdentityStore, PlayerIdentity } from '../../models';
 import { nicknameEntry } from './join-entry';
+
+export type { IdentityStore, PlayerIdentity } from '../../models';
 
 /**
  * The two things a returning player should not have to say twice: the name they
@@ -18,21 +21,6 @@ import { nicknameEntry } from './join-entry';
  * and that one field's write never disturbs the other — is plain TypeScript a
  * unit test can run. `identity-store.ts` holds the phone's real storage.
  */
-export type PlayerIdentity = {
-  /** The last name this phone joined under, or `null` if it never has. */
-  readonly nickname: string | null;
-  /** The last avatar this phone claimed, or `null` if it never has. */
-  readonly avatar: AvatarId | null;
-};
-
-/** Where the last-used name and avatar live between launches, as one JSON string. */
-export type IdentityStore = {
-  /** The stored record, or `null` if this phone has remembered nothing. */
-  readonly read: () => Promise<string | null>;
-  /** Writes the record, replacing whatever was there. */
-  readonly write: (raw: string) => Promise<void>;
-};
-
 const NOTHING_REMEMBERED: PlayerIdentity = { nickname: null, avatar: null };
 
 /**

@@ -1632,6 +1632,23 @@ describe('the carousel the Host browses', () => {
       state: runningState(running),
     });
   });
+
+  it('authorizes the Host before making browsing a no-op while the TV is away', async () => {
+    const t = convexTest(schema, modules);
+    const { roomId, host, guest } = await roomWithParty(t);
+
+    await t.mutation(api.games.browseGame, { sessionToken: host, index: 0 });
+    await t.run(async (ctx) => {
+      await ctx.db.patch(roomId, { tvAway: true });
+    });
+
+    await t.mutation(api.games.browseGame, { sessionToken: host, index: 1 });
+    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+    expect(
+      await rejectionFrom(t.mutation(api.games.browseGame, { sessionToken: guest, index: 1 })),
+    ).toEqual({ kind: 'notHost' });
+    expect(await t.query(api.games.browsing, { roomId })).toBe(0);
+  });
 });
 
 describe('the shared game setup draft', () => {

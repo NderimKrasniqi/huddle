@@ -587,6 +587,210 @@ platform.
 
 ---
 
+# Feature 10 — F-010 Architecture, Structure, and Naming Refactor
+
+Feature 10 is a behavior-preserving structural pass. It records the app,
+package, Convex, tooling, and testing boundaries before implementation and
+keeps public routes, schema/functions, game IDs, registry seams, assets, and
+Soft Minimal visuals stable.
+
+## Phase 10.1 — Contracts, documentation, and validation
+
+- [ ] **10.1.1 — Record F-010 architecture and naming truth**
+  - Add the scope, dependency direction, entrypoint policy, naming vocabulary,
+    renderer-test strategy, and TV-away browse rule to the project documents.
+- [ ] **10.1.2 — Extend architecture validation**
+  - Add isolated fixture coverage for forbidden dependency directions, cycles,
+    entrypoint contents, and filename conventions before enabling the checks on
+    the repository. Preserve the client/server registry seam and parity tests.
+- [ ] **10.1.3 — Add the shared room-code contract**
+  - Export `normalizeRoomCode` from `@huddle/game-core`; use it from join,
+    session, and Convex normalization without changing accepted codes.
+  - Make host-authorized `games.browseGame` return `null` without changing the
+    browsing index while the TV is away, with authorization still first.
+
+## Phase 10.2 — Controller ownership and renderers
+
+- [ ] **10.2.1 — Introduce Controller models and seated coordinator**
+  - Move `RosterSeat` and lifecycle rejection presentation into `models/`,
+    rename the root to `ControllerScreen`, and move seated subscriptions,
+    heartbeat/session composition, picker/setup persistence, surface selection,
+    and transitions into `screens/seated-controller.tsx`.
+- [ ] **10.2.2 — Split Controller feature renderers and styles**
+  - Separate Room waiting/room renderers, roster, greeting, manage/leave
+    sheets, picker browsing/settings/cards/controls, and game-session
+    running/recovery/finished/lifecycle controls. Remove the monolithic
+    stylesheet and keep reusable control/header/chip/loading styles in `ui/`.
+
+## Phase 10.3 — TV ownership and layout
+
+- [ ] **10.3.1 — Introduce TV models and shared header layout**
+  - Rename the root to `TvScreen`, move roster projection to `models/roster.ts`,
+    and extract `ui/tv-layout.ts` plus `ui/tv-header.tsx` while Room retains
+    only Room-specific geometry.
+- [ ] **10.3.2 — Split TV Room and lifecycle responsibilities**
+  - Separate Room stage/code-QR/player-grid/greeting/roster/layout modules;
+    rename generic room/session files by responsibility; split opening and
+    expiry hooks; remove empty duplicate feature entrypoints and narrow the
+    room-session seam.
+
+## Phase 10.4 — Workspace and tooling structure
+
+- [ ] **10.4.1 — Move the UI kit and private backend helpers**
+  - Place the Huddle Kit implementation in `packages/ui/src/kit/` with stable
+    `@huddle/ui/kit` exports, and rename private Convex helper files to
+    kebab-case without changing public modules/functions.
+- [ ] **10.4.2 — Rehome evidence and visual fixtures**
+  - Keep executable scripts in `tools/`, move design/regression evidence to
+    `docs/evidence/`, and move the visual-fixture manifest/inventory test to
+    `test/visual-fixtures/` with updated Vitest paths and documentation.
+
+## Phase 10.5 — Rendered tests and release gates
+
+- [ ] **10.5.1 — Add per-app Jest/RNTL projects**
+  - Use Jest/jest-expo with RNTL 14.0.1 and the React 19.2 test-renderer line;
+    name rendered tests `*.render.test.tsx`, exclude them from Vitest, and run
+    both apps from root and CI with async accessibility-first queries.
+- [ ] **10.5.2 — Run the complete verification set**
+  - Cover Controller and TV surfaces, architecture fixtures, TV-away browse,
+    room-code normalization, registry parity/isolation, typecheck, lint,
+    Vitest/Jest, workflow/packs, dependency/security checks, Expo exports,
+    Android TV prebuild metadata, simulator captures, and `git diff --check`.
+
+**Status:** in progress. The final closeout will replace these checkboxes with
+evidence and record any release-only hardware checks as deferred.
+
+# Reported QA findings — 2026-08-11
+
+These findings were reported during the simulator and reference-screen review.
+They are recorded as follow-up work; none is being marked resolved by this
+entry.
+
+- **Simulator target/startup reliability:** make the local run flow reliably
+  expose and launch an iPhone Simulator alongside either the Android TV
+  emulator or the Apple TV Simulator, with the Controller and TV Metro servers
+  using the correct, separate ports. Capture the working target-selection
+  commands and the failure symptoms in the release checklist.
+- **Reference screen/component parity:** audit the supplied
+  `/Users/nderimkrasniqi/Desktop/huddle-expo-tv-phone/src` screens and
+  components against the current Controller/TV entrypoints. The supplied
+  screens/components are not visibly represented in the running app, so record
+  which surfaces are intentionally adapted, which are missing, and which
+  routes/components must be wired before considering the reference handoff
+  adopted.
+- **Unexpected iPhone restore state:** a fresh iPhone should show the join
+  surface, not remain on **“Finding your room.”** Keep the restore surface only
+  for a valid persisted participant session, and investigate stale SecureStore
+  credentials or a stalled session lookup when the fresh-simulator path does
+  not fall through to joining.
+- **Join-screen visual fidelity:** the current Controller **“Join the room”**
+  surface does not match the supplied `JoinRoomScreen` reference
+  pixel-for-pixel. The current implementation uses a compact inline logo/title,
+  different room-code tile proportions, typography/label treatment, spacing,
+  avatar count/grid, and button composition. Compare the live iPhone capture
+  against the reference for layout, spacing, typography, color, iconography,
+  and interaction states, then track each remaining delta before calling the
+  screen adopted. Apply the same comparison method to the remaining Controller
+  and TV surfaces after this screen is reconciled.
+
+## Remaining reference-screen parity audit
+
+The following mappings continue the audit against the supplied
+`huddle-expo-tv-phone` screens and the approved images under
+`docs/design/reference/screens/`. They describe visual follow-up work, not a
+request to discard the current data, authorization, or game-module boundaries.
+
+- **Host room** — `HostRoomScreen` → the `SeatedController` room surface:
+  reconcile the reference's full-width 122px wordmark/header, large upper
+  whitespace, title/code alignment, 40px avatar rows, and explicit Host/
+  Just-joined/Away/online treatments with the current compact token-native
+  header, roster rows, and room-code chip. The 10-player cap remains an
+  intentional product decision even where the sample board shows 6 of 12.
+- **Pick a game** — `PickGameScreen` → `PickAGameScreen`: compare the supplied
+  illustrated Trivia card, card height/art crop, metadata chips with icons,
+  arrow controls, pager, help copy, and CTA against the current registry-driven
+  `GameKeyArt` card and carousel controls. The installed catalog and 2–10
+  range remain authoritative; the board's unavailable games and 2–12 sample
+  copy are reference-only.
+- **Game settings (Standard / Quick / Custom)** — `GameSettingsScreen` → the
+  nested `GameSettingsScreen` and `SettingsControls`: reconcile the supplied
+  `trivia-phone.png` summary card, mode-tile dimensions/icons/check badge,
+  summary rows, custom steppers/pills/category row, joining notice, and bottom
+  CTA with the current schema-driven key-art summary, `InfoChip` row, dynamic
+  controls, and shared token styles. Verify each of the three approved image
+  states independently; do not replace authoritative module settings with
+  sample text from the board.
+- **Category picker** — `CategoryPickerScreen` → `CategoryPickerSheet`:
+  compare the sheet height, grabber/title spacing, row height/dividers,
+  selected check treatment, scrim, Done button, and Cancel action. The current
+  sheet is dynamic and modal-backed, while the reference is a fixed category
+  snapshot over the settings surface; preserve live draft state while matching
+  the visual treatment.
+- **Manage player** — `ManagePlayerScreen` → `ManagePlayerSheet`: compare the
+  bottom-sheet geometry, Taylor/away avatar treatment, disabled Make-host row,
+  explanatory copy, destructive Remove button, and Cancel spacing. The current
+  sheet intentionally supports live Online/Away state and host-control
+  authorization, so parity work must change presentation without weakening
+  those behaviors.
+- **Waiting player** — `WaitingPlayerScreen` → `WaitingScreen`: reconcile the
+  no-action header, host avatar size/art, “is choosing…” typography, green
+  status card, gamepad/info card, and vertical spacing. The current surface adds
+  the room-wide Leave control and uses live host/game data; those are behavior
+  requirements to retain while matching the reference composition.
+- **Finished player** — `GameFinishedPlayerScreen` → `FinishedScreen` (player
+  branch): compare the 149px wordmark, 188px avatar/fox artwork, title and
+  completion copy, active-room card, host/controller card, and bottom
+  celebration asset. The current branch uses dynamic module art, a smaller
+  token-native avatar, vector controller icon, and a token-native celebration
+  fallback; decide whether supplied assets can be adopted without breaking
+  game-agnostic rendering.
+- **TV Room and TV carousel** — `TVRoomLobbyScreen` / `TVGameCarouselScreen`
+  → `RoomStage` / `CarouselStage`: the measured deltas and intentional
+  exceptions remain in `docs/design/pixel-parity.md` (tile/QR sizing, divider
+  contrast, safe-area/background scale, illustrated card art, chip icons,
+  chevrons, pager, and browsing footer). Re-run the comparison on the current
+  tree rather than treating the historical capture as resolved.
+- **TV Game Setup** — `TVGameSetupScreen` → `GameSetupStage`: compare the
+  supplied dark canvas's fixed Trivia hero (`trivia-setup-hero.png`), left rule
+  list/host line, right QR/code block, and bottom roster strip with the current
+  flex layout, schema-driven summary rows, generated QR card, live-mirroring
+  pill, and current background asset. This is a structural visual delta even
+  though the setup protocol and live roster mirroring are implemented.
+- **Shared reference components** — `PhoneHeader`, `PhoneScreen`, `Common`,
+  `GameSettingsComponents`, `TVCommon`, `HuddleLogo`, and `Icon` are not
+  currently imported as a 1:1 replacement. The app uses `@huddle/ui` tokens,
+  native primitives, and the feature renderers instead. Inventory which
+  reference geometry/assets should be ported into those primitives, and which
+  differences are deliberate system-level adaptations, before claiming the
+  supplied component handoff has been adopted.
+- **Phone preview shell** — `PreviewNavigator` (and the reference `src/index.ts`)
+  is a standalone menu that can walk through Join, Host, Manage, Pick, all
+  three settings modes, Category, Waiting, and Finished states. The current
+  Controller launches through Expo Router into the live Convex-backed
+  `ControllerScreen`; it has no equivalent reference preview menu. Decide
+  whether a dev-only parity harness is required so every reference state can be
+  captured deterministically without live room data.
+- **TV root and preview shell** — `HuddleTVRoot`, `TVPreviewApp`, and the
+  reference `tv/types.ts` provide a demo view model plus Room/Browse/Setup phase
+  cycling (including D-pad LEFT/RIGHT). The current `TvScreen` is a production
+  Convex/session coordinator and does not expose that standalone preview shell.
+  Record whether the preview-only router should be ported as a dev tool or
+  intentionally remain reference-only.
+- **TV canvas and focus primitives** — `TVCanvas` authors directly against the
+  supplied 1672×941 artboard and `TVFocusable` supplies optional D-pad focus
+  styling. The current `TvStage` authors a 1280×720 stage with a title-safe
+  scale over the live background, and current TV surfaces are display-only with
+  no `TVFocusable` equivalent. Reconcile the coordinate-system choice,
+  background scaling, overscan behavior, and any future remote-focus treatment
+  before calling the TV shell pixel-parity complete.
+- **Duplicate TV screen paths** — the reference has both
+  `src/screens/TVGameCarouselScreen.tsx`, `TVGameSetupScreen.tsx`, and
+  `TVRoomLobbyScreen.tsx` and the parallel `src/tv/screens/*` versions. The
+  current app intentionally maps these to feature-owned `CarouselStage`,
+  `GameSetupStage`, and `RoomStage` rather than preserving those file paths.
+  Verify that the mapping is complete and that no preview-only copy is being
+  mistaken for the production surface.
+
 # Deferred post-MVP and release work
 
 These are real follow-ups, not completed numbered tasks:
