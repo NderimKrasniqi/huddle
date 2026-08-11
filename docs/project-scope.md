@@ -55,7 +55,9 @@ The room persists across games. Finishing or deliberately ending a game returns 
 
 If every player leaves while the TV remains connected, the room stays open as an empty lobby. The next phone to join becomes host.
 
-The room closes when the TV deliberately ends the session or when the TV fails to recover before its recovery window expires.
+The room closes when the TV fails to heartbeat through its recovery window,
+including after the TV app is closed. The current TV UI has no separate
+immediate "end session" control.
 
 When the room closes, its server-side session state is discarded.
 
@@ -354,7 +356,7 @@ Participant/session credentials may be stored securely on-device for reconnectio
 - Game marketplace/store
 - Public game SDK
 - Community-created game distribution
-- Runtime downloading/installing of third-Huddles
+- Runtime downloading/installing of third-party games
 - Ban/block moderation system
 # Feature 6 traceability — Platform Reliability and Maintainability
 
@@ -373,7 +375,9 @@ the product scope and existing room/game behavior remain unchanged.
 - **BR-006** — One live room per TV session token.
 - **BR-007** — Invalid game runtimes expose no state.
 - **BR-008** — Gameplay cannot advance while the TV is away.
-- **BR-009** — Legacy rooms are discarded, not migrated.
+- **BR-009** — Legacy development rooms are discarded by an approved cleanup,
+  not interpreted or migrated into the current runtime. Compatibility fields
+  remain optional until a deployment audit and cleanup are explicitly run.
 
 # Feature 7 traceability — Full-Codebase Behavior-Preserving Refactor
 

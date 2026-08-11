@@ -5,8 +5,10 @@ The visual source of truth for both apps, replacing Boardwalk
 
 This document reconciles the approved Soft Minimal package against the platform
 **as built**. The design board was drawn against the original Boardwalk §1–§8
-spec, so its seven screens are neither the same set nor the same shape as the
-app's. Where the two disagree, this file records which one wins and why.
+spec, so its original seven screens are neither the same set nor the same shape
+as the app's. Additional setup, settings, and finished-state references were
+approved on 2026-08-11. Where any reference and the product disagree, this file
+records which one wins and why.
 
 ## Source material
 
@@ -14,6 +16,8 @@ app's. Where the two disagree, this file records which one wins and why.
 |---|---|
 | Vendored handoff, tokens, theme files | `soft-minimal/` (verbatim, lint-exempt) |
 | Approved screen board | `reference/boards/approved-soft-minimal-screen-board.png` |
+| Approved phone settings flow | `reference/boards/approved-phone-settings-flow.png` |
+| Approved TV screen flow | `reference/boards/tv-screen-flow.png` |
 | Screen exports | `reference/screens/` |
 | Brand guide | `reference/brand/huddle-brand-guide.png` |
 | Runtime artwork | `packages/ui/assets/` |
@@ -100,8 +104,9 @@ at speed and at distance, so they take navy, and `accent-face.test.ts` holds a
 
 ## The TV canvas is an image
 
-`tv-backgrounds/` is not decoration layered onto a screen — it **is** the TV
-canvas, on every TV screen. Nothing paints a flat colour behind it.
+`tv-backgrounds/` is not decoration layered onto a screen — it **is** the
+default canvas on every implemented TV screen. Nothing currently paints a flat
+colour behind it.
 
 That matters for `TvStage`: `huddle-tv-background-01.png` renders full-viewport
 with `cover`, while only the 1280×720 content layer receives
@@ -121,8 +126,8 @@ Two things it does not change:
 
 Two variants ship: `-01` is warmer, `-02` cooler and greyer. The board does not
 clearly assign one per screen and the difference is subtle enough that sampling
-the exports could not settle it, so **`-01` is the default for both TV screens**
-until told otherwise.
+the exports could not settle it, so **`-01` is the default for the Room and
+carousel** until told otherwise.
 
 Their base is `#FAF1E9`/`#F8F1EA` rather than the `#FFF7F2` canvas token, which
 is exactly why nothing composites them over a fill: the two are close enough to
@@ -130,14 +135,16 @@ look like a mistake and far enough apart to show a seam.
 
 ## Screen inventory
 
-The platform's real surfaces. Three have no design in the package and are marked.
+The platform's real surfaces. Five implemented surfaces still have no approved
+design and are marked. Newly approved references that do not yet match a
+dedicated runtime surface are identified separately from those gaps.
 
 Three more used to be listed here and are now deleted rather than undesigned:
 the About panel and the unknown-game screen on each surface. The package draws
 none of them, and the platform no longer holds them — a game this build lacks
 resolves to the lobby (see `packages/game-registry/src/running.ts`).
 
-Every board named below is in `docs/design/reference/screens/`, flat — the
+Every screen named below is in `docs/design/reference/screens/`, flat — the
 `tv-screens/` and `phone-screens/` prefixes this table used to carry were the
 delivered package's directories, and have never existed here.
 
@@ -152,6 +159,7 @@ before it is trusted to the pixel.
 |---|---|---|---|
 | Room | `RoomStage` | `01-room.png` | Code, QR and roster on one screen |
 | Lobby / carousel | `CarouselStage` | `02-game-carousel.png` | Games only — no roster, no code chip |
+| Game setup | **none yet** | `03-game-setup.png` | Approved TV flow's third state; dedicated runtime surface still needs implementation |
 | Game frame | `GameStage` | **none** | Needs design |
 | Recovery status | `TvRuntimeStatus` | **none** | Names disconnected players; says the Host may wait or continue |
 
@@ -160,12 +168,32 @@ before it is trusted to the pixel.
 | Surface | Component | Design | Notes |
 |---|---|---|---|
 | Join | `JoinForm` | `01-join-room.png` | Now carries avatar selection |
-| Lobby (host) | `YoureInScreen` | `02-your-room-host`, `04-pick-a-game` | Two states of one screen |
-| Lobby (player) | `YoureInScreen` | `05-waiting-player.png` | — |
+| Lobby (host) | `SeatedScreen` | `02-your-room-host.png`, `04-pick-a-game-host.png` | Room and picker states |
+| Lobby (player) | `SeatedScreen` | `05-waiting-player.png` | — |
 | Manage player | `ManagePlayerSheet` | `03-manage-player-host.png` | — |
+| Game settings (host) | `SettingsControls` in the picker | `06`–`08-game-settings-host-*` | New standalone Standard, Quick, and Custom layouts await navigation and visual adoption |
+| Finished game | `InGameScreen` + module screen | `09-game-finished-player.png`, `10-game-finished-host.png` | New hub-level post-game actions await implementation; finished state currently remains module-owned until the Host chooses Back to lobby |
 | Leave | `LeaveRoomSheet` | **none** | The board draws the pill, not the sheet |
 | Game frame | `InGameScreen` | **none** | Needs design |
 | Recovery status | `GameRuntimeStatusScreen` | **none** | Host gets secondary Wait + primary Continue; others see the pending Host decision |
+
+### Reconciliation for the 2026-08-11 references
+
+- **The room cap remains 10.** Any “12 players”, “6 of 12”, or “2–12” sample
+  text in the new images is superseded by `ROOM_PLAYER_CAP` and the declared
+  2–10 ranges of the installed games.
+- **Game metadata and settings schemas remain authoritative.** The 15-minute
+  estimate, preset names, values, and other mock content describe the proposed
+  layout; they do not change a module's duration or supported settings until
+  the module and registry adopt them.
+- **The TV setup screen is a proposed new platform surface.** Its dark,
+  full-bleed treatment conflicts with the default warm image canvas above, so
+  adopting it requires an explicit per-screen canvas exception or a revised
+  approved export—not an implicit palette change across existing TV screens.
+- **Finished-game actions need product wiring.** “Play again”, “Choose another
+  game”, and “Manage players” are approved visual direction, but the current
+  platform exposes one generic Back to lobby action and lets each game render
+  its own finished beat. Their exact lifecycle mapping must land with the UI.
 
 ## Icons
 
@@ -220,7 +248,7 @@ do. The player lobby survives as `05-waiting-player.png`.
 
 **The lobby stays one component, and is now two states.** *(Settled; this entry
 used to read "stays one screen".)* The board draws "Your room" and "Pick a game"
-as separate screens and they now are — but as two states of `YoureInScreen`,
+as separate screens and they now are — but as two states of `SeatedScreen`,
 not two routes. That distinction is the whole entry: the seat, the roster
 subscription, the running-game query and the Host's chosen settings all have to
 survive moving between them and a route would remount every one, which is the
@@ -228,9 +256,9 @@ problem the original merge solved. What the merge got wrong was drawing both at
 once: the roster carries news nothing else in the product carries, and it was
 the section a Host scrolled past to reach the picker.
 
-A game ends onto **Your room**, not onto the picker the Host left. That was the
-open question Phase 2 deferred here; a game ending is when a party takes stock
-of who is still in the room.
+When the Host chooses **Back to lobby** after a game, it lands on **Your room**,
+not on the picker the Host left. The newly approved finished-state actions may
+add more destinations, but they do not silently change that existing path.
 
 **Ten seats, not twelve.** `ROOM_PLAYER_CAP` is 10. The board's 12-seat grid and
 "of 12 joined" line are the old number.
@@ -323,8 +351,10 @@ landing together are now both greeted.
 3. **Avatars have replaced colors.** Done: the schema stores an avatar id, the
    join form is the picker, and `claimColor`, `player-colors.ts`,
    `color-picker.ts` and `color-rejection.ts` are deleted.
-4. **Three screens need designing** — both game frames and the End Room sheet.
-   It was six; the unknown-game pair and the About panel were deleted instead.
+4. **Five implemented surfaces still need designs** — TV Game frame, TV
+   recovery status, phone Leave sheet, phone Game frame, and phone recovery
+   status. The former End Room sheet no longer exists because phones cannot
+   close the TV-owned room.
 5. **Game art coverage** — `voting` has none; Draw Battle and Word Sneak have art
    but no game.
 6. **`accent-face` is interim.** A game's answer options still need a cycle of
@@ -332,6 +362,10 @@ landing together are now both greeted.
    faces are a holding pattern rather than a decision.
 7. **Resolved — Room screen geometry adopted.** The implementation now uses the
    approved board landmarks recorded below, including the 5×2 ten-seat grid.
+8. **New references await adoption.** TV Game setup, phone settings presets,
+   and phone finished-game actions are approved references, but remain explicit
+   implementation work as described in the screen inventory and reconciliation
+   notes above.
 
 ## The 2026-08-09 TV re-export
 

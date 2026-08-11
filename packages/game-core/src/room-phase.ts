@@ -76,6 +76,11 @@ export type GameLifecycleRejection =
    */
   | { readonly kind: 'notEnoughPlayers'; readonly need: number; readonly have: number }
   /**
+   * More players in the room than the game declares it supports. Carries both
+   * numbers so the Host can remove the exact number of seats needed to start.
+   */
+  | { readonly kind: 'tooManyPlayers'; readonly max: number; readonly have: number }
+  /**
    * Starting a game on settings its Settings Schema does not offer — a key the
    * game never declared, or a value the setting does not list. Carries both, so
    * the refusal names what was actually sent rather than only that something
@@ -103,7 +108,7 @@ export function phaseAfter(intent: GameLifecycleIntent): RoomPhase {
 /**
  * Why the room may not start this game right now, or `null` if it may.
  *
- * Both rules are here rather than at the mutation because both are the game's
+ * These rules are here rather than at the mutation because they are the game's
  * own business and neither needs a database: a room already playing must not
  * have that game replaced by a second start, and a game declares the party it
  * is playable by (`PlayerRange`).
@@ -113,13 +118,10 @@ export function phaseAfter(intent: GameLifecycleIntent): RoomPhase {
  * holding the phone, and the screen they want is the screen they have — so
  * ending is unconditional and has no refusal to check.
  *
- * Nor is there one for a room that is too *large* for a game. The room cap is
- * ten and no installed game may declare a maximum above it
- * (`registry.test.ts`), so today the rule could never fire; and were a smaller
- * game installed tomorrow, refusing at the tap would strand a party mid-tap.
- * That belongs in the Host's picker, which can decline to offer a game the room
- * has outgrown before the Host commits to it — and, since `removePlayer`, the
- * Host also has a direct remedy for a room grown past a game it wants to play.
+ * The Host's picker previews the same range, but this shared gate remains
+ * authoritative if a stale client, a race, or a future smaller-capacity game
+ * reaches the mutation. Since `removePlayer`, the rejection has a direct
+ * remedy rather than stranding the room.
  */
 export function refusalToStart(
   phase: RoomPhase,
@@ -135,6 +137,10 @@ export function refusalToStart(
 
   if (seatedPlayers < playerRange.min) {
     return { kind: 'notEnoughPlayers', need: playerRange.min, have: seatedPlayers };
+  }
+
+  if (seatedPlayers > playerRange.max) {
+    return { kind: 'tooManyPlayers', max: playerRange.max, have: seatedPlayers };
   }
 
   return null;

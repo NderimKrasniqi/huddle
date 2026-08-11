@@ -520,8 +520,9 @@ describe('the Host starting a game', () => {
     const alone = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
     await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
 
-    // The refusal has a remedy, and this is it — which is why it is a refusal
-    // and being too *large* for a game is not.
+    // The refusal has a remedy, and this is it. The symmetric too-large gate
+    // is covered in game-core because every installed game currently shares
+    // the room's maximum of ten seats.
     await t.mutation(api.games.startGame, { sessionToken: alone.sessionToken, gameId: 'trivia' });
 
     expect(await t.query(api.games.running, { roomId: room.roomId })).not.toBeNull();

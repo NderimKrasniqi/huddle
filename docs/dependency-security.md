@@ -35,8 +35,10 @@ release for these denial-of-service advisories:
 
 The committed pnpm patch rejects ICNS entries shorter than their eight-byte
 header and rejects ISO-BMFF boxes shorter than their eight-byte header. The
-workspace `auditConfig` ignores only those two CVEs because the version-based
-audit service cannot detect a local patch. Do not broaden that ignore list.
+root `audit:prod` script passes `--ignore` for only those two CVEs because the
+version-based audit service cannot detect a local patch. The command keeps the
+exclusions visible and effective with the workspace's pinned pnpm 10.13.1; do
+not broaden that list.
 
 Remove the local patch and both ignores once Expo/Metro resolves an upstream
 `image-size` release that GitHub marks as patched. Until then,

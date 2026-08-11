@@ -80,6 +80,16 @@ describe('the Host’s start control', () => {
     // "Away players in-game", and the two must not disagree before then.
     expect(startControl(withOneAway, 0).enabled).toBe(true);
   });
+
+  it('blocks a party above the game maximum and names the remedy', () => {
+    const maximum = installed.playerRange.max;
+    const control = startControl(party(maximum + 2), 0);
+
+    expect(control.enabled).toBe(false);
+    expect(control.blockedBecause).toBe(
+      `${installed.title} supports up to ${maximum} players. Remove 2 players to start.`,
+    );
+  });
 });
 
 describe('what a player who is not running the room is told', () => {
