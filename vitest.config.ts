@@ -33,6 +33,7 @@ export default defineConfig({
           name: 'convex',
           root: './convex',
           environment: 'edge-runtime',
+          exclude: ['**/node_modules/**'],
           server: { deps: { inline: ['convex-test'] } },
         },
       },
@@ -63,7 +64,7 @@ export default defineConfig({
         test: {
           name: 'packages',
           include: ['packages/**/src/**/*.test.ts'],
-          exclude: ['**/*.render.test.tsx'],
+          exclude: ['**/node_modules/**', '**/*.render.test.tsx'],
           environment: 'node',
         },
       },
@@ -75,7 +76,7 @@ export default defineConfig({
         test: {
           name: 'apps',
           include: ['apps/*/src/**/*.test.ts'],
-          exclude: ['**/*.render.test.tsx'],
+          exclude: ['**/node_modules/**', '**/*.render.test.tsx'],
           environment: 'node',
         },
       },
