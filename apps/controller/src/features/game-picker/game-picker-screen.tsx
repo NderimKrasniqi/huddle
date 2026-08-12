@@ -11,14 +11,15 @@ import { type CarouselWindow, nextIndex, previousIndex } from '@huddle/game-regi
 import { colors, elevation, type IconName } from '@huddle/ui';
 import {
   GameKeyArt,
+  gameArtSurfaceColor,
   Icon,
   LoadingIndicator,
   Surface,
+  Wordmark,
 } from '@huddle/ui/native';
 import {
   InfoChip,
   CategoryListRow,
-  HuddleLogo,
   ModeCard,
   NavigationIconButton,
   QuestionStepper,
@@ -250,28 +251,30 @@ export function PickAGameScreen({
         />
       </View>
 
-      <Text style={[styles.aside, styles.asideCentred]}>
-        Swipe or tap arrows — the TV follows along
-      </Text>
+      <View style={styles.pickerFooter}>
+        <Text style={[styles.aside, styles.asideCentred]}>
+          Swipe or tap arrows — the TV follows along
+        </Text>
 
-      <View style={styles.field}>
-        <PrimaryButton
-          label={
-            placeholder
-              ? 'Coming soon'
-              : selecting
-                ? 'Selecting…'
-                : `Select ${browsing.focused.metadata.title}`
-          }
-          trailingIcon={placeholder ? undefined : 'arrow-right'}
-          enabled={!selecting && !placeholder}
-          onPress={() => void selectCurrentGame()}
-        />
-        {selectionFailure === undefined ? null : (
-          <Text style={styles.failure} accessibilityLiveRegion="polite">
-            {selectionFailure}
-          </Text>
-        )}
+        <View style={styles.field}>
+          <PrimaryButton
+            label={
+              placeholder
+                ? 'Coming soon'
+                : selecting
+                  ? 'Selecting…'
+                  : `Select ${browsing.focused.metadata.title}`
+            }
+            trailingIcon={placeholder ? undefined : 'arrow-right'}
+            enabled={!selecting && !placeholder}
+            onPress={() => void selectCurrentGame()}
+          />
+          {selectionFailure === undefined ? null : (
+            <Text style={styles.failure} accessibilityLiveRegion="polite">
+              {selectionFailure}
+            </Text>
+          )}
+        </View>
       </View>
 
     </PhoneScreen>
@@ -314,7 +317,7 @@ function GameSettingsScreen({
           enabled
           onPress={onChangeGame}
         />
-        <HuddleLogo size={28} />
+        <Wordmark height={30} />
         <View style={styles.settingsHeaderBalance} />
       </View>
 
@@ -516,11 +519,12 @@ function GameCard({
   readonly placeholder: boolean;
 }) {
   const { title, keyArt, playerRange, estimatedMinutes, category } = metadata;
+  const artSurface = gameArtSurfaceColor(metadata.id, keyArt.color);
 
   return (
     <Surface
       elevation={elevation.phoneCard}
-      style={[styles.stretch, styles.gameCard, { backgroundColor: colors[keyArt.color] }]}
+      style={[styles.stretch, styles.gameCard, { backgroundColor: artSurface }]}
     >
       <View style={styles.gameCardArt}>
         <GameKeyArt
@@ -536,7 +540,7 @@ function GameCard({
         ) : null}
       </View>
 
-      <View style={[styles.gameCardFooter, { backgroundColor: colors[keyArt.color] }]}>
+      <View style={[styles.gameCardFooter, { backgroundColor: artSurface }]}>
         <Text style={styles.gameCardTitle}>{title}</Text>
         <View style={styles.gameCardChips}>
           <GameCardChip icon="players" label={`${playerRange.min}–${playerRange.max} players`} />
@@ -635,7 +639,13 @@ function SettingsControls({
           key={control.key}
           style={[styles.settingRow, index > 0 && styles.settingRowRuled]}
         >
-          <Text style={styles.settingLabel}>{control.label}</Text>
+          <Text
+            style={styles.settingLabel}
+            numberOfLines={control.label === 'Difficulty' ? 1 : 2}
+            adjustsFontSizeToFit={control.label === 'Difficulty'}
+          >
+            {control.label}
+          </Text>
           {isStepper ? (
             <QuestionStepper
               value={Number(chosen?.label ?? numericValues[0] ?? 0)}

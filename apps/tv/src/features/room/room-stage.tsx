@@ -241,7 +241,7 @@ function SeatStatus({
     return (
       <View style={[styles.seatChip, styles.seatChipJustJoined]}>
         <Text style={[styles.seatChipText, styles.seatChipTextJustJoined]} numberOfLines={1}>
-          JUST JOINED!
+          JUST JOINED
         </Text>
       </View>
     );

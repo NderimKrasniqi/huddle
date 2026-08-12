@@ -44,7 +44,7 @@ export function GameSetupStage({
           <Wordmark on="dark" height={42} />
           <Text style={styles.setupTitle}>{game.metadata.title}</Text>
           <View style={styles.setupMode}>
-            <Text style={styles.setupModeText}>{capitalize(draft.mode)} mode</Text>
+            <Text style={styles.setupModeText}>{capitalize(draft.mode)}</Text>
           </View>
           <View style={styles.setupSummary}>
             {summary.map((line) => (

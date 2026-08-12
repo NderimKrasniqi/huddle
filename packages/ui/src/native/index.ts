@@ -4,7 +4,7 @@
 // run under Node with no renderer, which is why `react-native` is a peer
 // dependency here rather than a dependency of the package.
 export { Avatar, type AvatarProps, avatarArtwork } from './avatar';
-export { GameKeyArt } from './game-key-art';
+export { GameKeyArt, gameArtSurfaceColor } from './game-key-art';
 export { Icon, type IconProps } from './icon';
 export {
   AnimatedScreen,

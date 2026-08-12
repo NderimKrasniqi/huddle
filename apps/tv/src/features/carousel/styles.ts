@@ -39,10 +39,8 @@ export const styles = StyleSheet.create({
   },
   // The active dot is an accent pill with an ink border (§6).
   pageDotActive: {
-    width: 32,
+    width: 12,
     backgroundColor: colors.accent,
-    borderColor: colors.ink,
-    borderWidth: borderWidth.hairline,
   },
   browsingLine: {
     color: colors.mutedText,

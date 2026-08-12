@@ -164,12 +164,11 @@ export function PhoneBrowsingHelper({ name }: { readonly name: string }) {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 16,
-        paddingHorizontal: 18,
-        paddingVertical: 14,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
         borderRadius: huddleUIKitRadius.sm,
-        backgroundColor: huddleUIKitColors.infoBackground,
-        borderWidth: 1,
-        borderColor: huddleUIKitColors.border,
+        backgroundColor: 'transparent',
+        borderWidth: 0,
       }}
     >
       <HuddleIcon name="phone" size={Platform.isTV ? 34 : 24} />

@@ -12,6 +12,24 @@ const artwork: Record<string, typeof triviaArt> = {
   'word-sneak': wordGameArt,
 };
 
+/**
+ * The supplied key art has a painted surface that should continue under the
+ * title/fact treatment. Keeping that mapping beside the asset mapping avoids
+ * every phone and TV screen inventing a different footer colour for the same
+ * game card.
+ */
+export function gameArtSurfaceColor(
+  gameId: string,
+  fallback: keyof typeof colors,
+): string {
+  return {
+    trivia: colors.setupCanvas,
+    voting: colors.accent,
+    'draw-battle': colors.sage,
+    'word-sneak': colors.online,
+  }[gameId] ?? colors[fallback];
+}
+
 /** Shared key-art renderer with a palette fallback for future registry entries. */
 export function GameKeyArt({
   gameId,

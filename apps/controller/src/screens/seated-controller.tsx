@@ -42,7 +42,7 @@ import {
 } from '../features/room';
 import { styles } from './seated-controller-styles';
 
-const ROSTER_AVATAR = 36;
+const ROSTER_AVATAR = 44;
 const WAITING_AVATAR = 176;
 const SHEET_AVATAR = 88;
 
@@ -395,27 +395,29 @@ function YourRoomScreen({
         ))}
       </View>
 
-      <View style={styles.countLine}>
-        <View style={styles.statusDot} />
-        <Text style={styles.aside}>{rosterFooterLine(roster.length, canStart)}</Text>
-      </View>
+      <View style={styles.roomFooter}>
+        <View style={styles.countLine}>
+          <View style={styles.statusDot} />
+          <Text style={styles.aside}>{rosterFooterLine(roster.length, canStart)}</Text>
+        </View>
 
-      {stranded ? (
-        <>
-          <Text style={[styles.waitingFor, styles.asideCentred]}>
-            This room is playing a game this phone doesn’t have. Take everyone back
-            to the lobby, or update Huddle to play along.
-          </Text>
-          <BackToLobbyControl />
-        </>
-      ) : (
-        <PrimaryButton
-          label={CHOOSE_A_GAME}
-          trailingIcon="arrow-right"
-          enabled={canPick}
-          onPress={onChooseGame}
-        />
-      )}
+        {stranded ? (
+          <>
+            <Text style={[styles.waitingFor, styles.asideCentred]}>
+              This room is playing a game this phone doesn’t have. Take everyone back
+              to the lobby, or update Huddle to play along.
+            </Text>
+            <BackToLobbyControl />
+          </>
+        ) : (
+          <PrimaryButton
+            label={CHOOSE_A_GAME}
+            trailingIcon="arrow-right"
+            enabled={canPick}
+            onPress={onChooseGame}
+          />
+        )}
+      </View>
 
       {managingSeat === undefined ? null : (
         <ManagePlayerSheet seat={managingSeat} onDismiss={() => setManaging(undefined)} />
@@ -583,6 +585,7 @@ function ConfirmSheet({
         <Surface
           elevation={elevation.phoneCard}
           style={[styles.sheetWrapper, styles.sheet]}>
+          <View style={styles.sheetGrabber} />
           {children}
 
           <Pressable
@@ -824,7 +827,12 @@ function RosterRow({
 function RosterSlot({ slot }: { readonly slot: RosterRowSlot }) {
   switch (slot) {
     case 'host':
-      return <StatusPill variant="host" />;
+      return (
+        <View style={styles.rosterHostSlot}>
+          <Text style={styles.rosterHostLabel}>HOST</Text>
+          <Icon name="crown" size={18} color={colors.accent} />
+        </View>
+      );
     case 'just-joined':
       return (
         <View style={styles.justJoinedChip}>

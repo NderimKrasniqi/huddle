@@ -1,7 +1,7 @@
 import type { GameModule } from '@huddle/game-core';
 import { type CarouselWindow } from '@huddle/game-registry';
 import { colors, elevation, motionDuration } from '@huddle/ui';
-import { GameKeyArt, Icon, Surface } from '@huddle/ui/native';
+import { GameKeyArt, gameArtSurfaceColor, Icon, Surface } from '@huddle/ui/native';
 import { PageDots, PhoneBrowsingHelper } from '@huddle/ui/kit';
 import { useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -96,11 +96,12 @@ function CarouselCards({ window }: { readonly window: CarouselWindow }) {
  */
 function FocusedGameCard({ game }: { readonly game: GameModule }) {
   const { title, keyArt, playerRange, estimatedMinutes, category } = game.metadata;
+  const artSurface = gameArtSurfaceColor(game.metadata.id, keyArt.color);
 
   return (
     <Surface
       elevation={elevation.tvHero}
-      style={styles.focusedCard}
+      style={[styles.focusedCard, { backgroundColor: artSurface }]}
     >
       <View style={[styles.keyArt, { backgroundColor: colors[keyArt.color] }]}>
         <GameKeyArt
@@ -112,7 +113,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
         {game.placeholder ? <PlaceholderBadge /> : null}
       </View>
 
-      <View style={[styles.cardInfo, { backgroundColor: colors[keyArt.color] }]}>
+      <View style={[styles.cardInfo, { backgroundColor: artSurface }]}>
         <Text style={styles.cardTitle}>{title}</Text>
         <View style={styles.chips}>
           <Chip text={`${playerRange.min}–${playerRange.max} players`} />
@@ -132,10 +133,12 @@ function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
     return null;
   }
 
+  const artSurface = gameArtSurfaceColor(game.metadata.id, game.metadata.keyArt.color);
+
   return (
     <View style={styles.sideCardWrapper}>
       <View
-        style={[styles.sideCard, { backgroundColor: colors[game.metadata.keyArt.color] }]}
+        style={[styles.sideCard, { backgroundColor: artSurface }]}
       >
         <View style={styles.sideArt}>
           <GameKeyArt
@@ -149,7 +152,7 @@ function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
         <View
           style={[
             styles.sideCardInfo,
-            { backgroundColor: colors[game.metadata.keyArt.color] },
+            { backgroundColor: artSurface },
           ]}
         >
           <Text style={styles.sideCardTitle}>{game.metadata.title}</Text>

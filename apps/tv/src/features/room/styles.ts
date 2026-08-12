@@ -150,7 +150,7 @@ export const styles = StyleSheet.create({
     maxWidth: seat.width,
   },
   seatChip: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderRadius: radius.pill,
     marginTop: seat.statusGap,
   },
@@ -160,15 +160,14 @@ export const styles = StyleSheet.create({
   seatChipText: {
     fontFamily: fontFamily.semibold,
     fontSize: minBodyFontSize.tv,
-    // Half the label tracking the HOST slot wears. `JUST JOINED!` is twelve
-    // characters in a column sized for a nickname, and full tracking spends
-    // 22pt of it on air — enough to wrap the chip onto a second line and take
-    // its seat out of the row with it.
-    letterSpacing: letterSpacing.label / 2,
+    // The chip has to fit inside a five-seat row at the rendered TV scale.
+    // Keep the board's all-caps label on one line rather than letting tracking
+    // consume the width needed by the seat itself.
+    letterSpacing: 0,
     lineHeight: seat.statusLine,
     // The tracking is applied *between* letters and after the last one too, so
     // a centred all-caps chip reads a point or two left of centre without this.
-    marginRight: -letterSpacing.label / 2,
+    marginRight: 0,
   },
   seatChipTextJustJoined: {
     color: colors.inverse,
