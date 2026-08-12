@@ -102,8 +102,9 @@ export function ModeCard({
       focusable
       style={({ pressed }) => [
         {
+          position: 'relative',
           minWidth: Platform.isTV ? 150 : 96,
-          minHeight: Platform.isTV ? 128 : 104,
+          minHeight: Platform.isTV ? 128 : 96,
           paddingHorizontal: 16,
           paddingVertical: 16,
           borderRadius: huddleUIKitRadius.md,
@@ -120,16 +121,38 @@ export function ModeCard({
         style,
       ]}
     >
-      <HuddleIcon name={mode} size={Platform.isTV ? 42 : 34} />
+      <HuddleIcon
+        name={mode}
+        size={Platform.isTV ? 42 : 34}
+        color={selected ? huddleUIKitColors.orange : huddleUIKitColors.navy}
+      />
       <Text
         style={{
-          color: huddleUIKitColors.textPrimary,
+          color: selected ? huddleUIKitColors.orange : huddleUIKitColors.textPrimary,
           fontFamily: huddleUIKitTypography.semibold,
           fontSize: Platform.isTV ? 18 : 14,
         }}
       >
         {label}
       </Text>
+      {selected ? (
+        <View
+          accessibilityElementsHidden
+          style={{
+            position: 'absolute',
+            top: -11,
+            right: -11,
+            width: 27,
+            height: 27,
+            borderRadius: 14,
+            backgroundColor: huddleUIKitColors.orange,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <HuddleIcon name="check" size={16} color={huddleUIKitColors.surface} strokeWidth={3} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -144,7 +167,7 @@ export function SegmentedControl<T extends string>({
   readonly onChange: (value: T) => void;
 }) {
   return (
-    <View style={{ flexDirection: 'row', gap: 6 }}>
+    <View style={{ flexDirection: 'row', flexShrink: 1, gap: 6 }}>
       {options.map((option) => {
         const selected = option === value;
         return (
@@ -156,7 +179,8 @@ export function SegmentedControl<T extends string>({
             accessibilityState={{ selected }}
             focusable
             style={({ pressed }) => ({
-              minWidth: 72,
+              flex: 1,
+              minWidth: 0,
               alignItems: 'center',
               justifyContent: 'center',
               paddingHorizontal: 14,
@@ -174,8 +198,11 @@ export function SegmentedControl<T extends string>({
                 fontFamily: selected
                   ? huddleUIKitTypography.semibold
                   : huddleUIKitTypography.medium,
-                fontSize: 14,
+                fontSize: 13,
+                textAlign: 'center',
               }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
             >
               {option}
             </Text>

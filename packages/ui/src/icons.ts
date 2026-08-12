@@ -152,6 +152,13 @@ const ICON_SET = {
       { kind: 'path', d: 'M13 17.5a4 4 0 0 1 7 0' },
     ],
   },
+  refresh: {
+    strokeWidth: STROKE,
+    shapes: [
+      { kind: 'path', d: 'M20 11a8 8 0 1 0 2 5' },
+      { kind: 'path', d: 'M20 5v6h-6' },
+    ],
+  },
   players: {
     strokeWidth: STROKE,
     shapes: [

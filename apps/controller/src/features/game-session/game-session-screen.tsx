@@ -8,7 +8,7 @@ import {
 } from '@huddle/game-core';
 import { colors, elevation } from '@huddle/ui';
 import { Avatar, GameKeyArt, Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
-import { HuddleLogo } from '@huddle/ui/kit';
+import { HuddleIcon } from '@huddle/ui/kit';
 import { useMutation } from 'convex/react';
 import { type ReactNode, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -238,10 +238,12 @@ export function FinishedScreen({
   return (
     <PhoneScreen contentStyle={youAreHost ? styles.finishedHostContent : styles.finishedPlayerContent}>
       {youAreHost ? (
-        <SeatedHeader trailing={null} />
+        <View style={styles.finishedPlayerHeader}>
+          <Wordmark height={30} />
+        </View>
       ) : (
         <View style={styles.finishedPlayerHeader}>
-          <HuddleLogo size={28} />
+          <Wordmark height={30} />
         </View>
       )}
 
@@ -265,7 +267,7 @@ export function FinishedScreen({
             <View style={styles.finishedSummaryStats}>
               <View style={styles.finishedSummaryStat}>
                 <View style={[styles.finishedStatIcon, styles.finishedStatIconWinner]}>
-                  <Icon name="crown" size={24} color={colors.accent} />
+                  <HuddleIcon name="trophy" size={24} color={colors.online} />
                 </View>
                 <Text style={styles.finishedStatValue}>{winner?.nickname ?? '—'}</Text>
                 <Text style={styles.finishedStatLabel}>Winner</Text>
@@ -275,7 +277,7 @@ export function FinishedScreen({
                   <Text style={styles.finishedStatGlyph}>★</Text>
                 </View>
                 <Text style={styles.finishedStatValue}>{winnerScore ?? '—'}</Text>
-                <Text style={styles.finishedStatLabel}>Top score</Text>
+                <Text style={styles.finishedStatLabel}>Correct answers</Text>
               </View>
               <View style={styles.finishedSummaryStat}>
                 <View style={[styles.finishedStatIcon, styles.finishedStatIconPlayers]}>
@@ -290,6 +292,7 @@ export function FinishedScreen({
           <View style={styles.field}>
             <PrimaryButton
               label={busy === 'replay' ? 'Starting…' : 'Play again'}
+              leadingIcon="refresh"
               enabled={busy === undefined}
               onPress={() => void run('replay')}
             />
@@ -304,6 +307,9 @@ export function FinishedScreen({
                   elevation={elevation.phoneCard}
                   style={[styles.stretch, styles.button, styles.buttonSecondary, pressed && styles.buttonPressed]}
                 >
+                  <View style={styles.finishedActionIcon}>
+                    <Icon name="gamepad" size={20} color={colors.ink} />
+                  </View>
                   <Text style={[styles.buttonLabel, styles.buttonLabelSecondary]}>
                     {busy === 'choose' ? 'Returning…' : 'Choose another game'}
                   </Text>
@@ -367,7 +373,10 @@ export function FinishedScreen({
               <Icon name="gamepad" size={34} color={colors.ink} />
             </View>
             <View style={styles.finishedPlayerExplainerCopy}>
-              <Text style={styles.finishedPlayerExplainerTitle}>{host?.nickname ?? 'The Host'} is the host</Text>
+              <View style={styles.finishedExplainerTitleRow}>
+                <Text style={styles.finishedPlayerExplainerTitle}>{host?.nickname ?? 'The Host'} is the host</Text>
+                <Icon name="crown" size={16} color={colors.accent} />
+              </View>
               <Text style={styles.explainerText}>They can play again or choose another game.</Text>
             </View>
           </View>

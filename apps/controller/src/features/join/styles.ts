@@ -2,8 +2,8 @@ import { borderWidth, codeLetterBox, colors, fontFamily, minBodyFontSize, opacit
 import { StyleSheet } from 'react-native';
 
 const PRESS_TRAVEL = 2;
-const AVATAR_TILE = 64;
-const AVATAR_GAP = 12;
+const AVATAR_TILE = 54;
+const AVATAR_GAP = 8;
 const AVATAR_COLUMNS = 5;
 
 /** Styles owned by the join surface; shared UI primitives keep their own styles. */
@@ -15,7 +15,7 @@ export const styles = StyleSheet.create({
   header: {
     alignSelf: 'stretch',
     alignItems: 'center',
-    height: 79,
+    height: 69,
   },
   title: {
     alignSelf: 'stretch',
@@ -25,8 +25,8 @@ export const styles = StyleSheet.create({
     // Inter's line box runs taller than its caps; pinning it keeps the
     // heading's own spacing rather than the font's.
     lineHeight: 34,
-    marginTop: 9,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 20,
     textAlign: 'left',
   },
   notice: {
@@ -42,7 +42,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'stretch',
     gap: 8,
-    marginBottom: 21,
+    marginBottom: 17,
   },
   label: {
     alignSelf: 'flex-start',

@@ -42,8 +42,8 @@ export const styles = StyleSheet.create({
       gap: 10,
       minHeight: 56,
       backgroundColor: colors.accent,
-      borderColor: colors.ink,
-      borderWidth: borderWidth.hairline,
+      borderColor: colors.accent,
+      borderWidth: 0,
       borderRadius: radius.button,
     },
   buttonSecondary: {
@@ -79,6 +79,9 @@ export const styles = StyleSheet.create({
       alignItems: 'center',
       gap: 10,
     },
+  finishedActionIcon: {
+      marginRight: 2,
+    },
   codeChip: {
       paddingHorizontal: 14,
       paddingVertical: 6,
@@ -98,18 +101,23 @@ export const styles = StyleSheet.create({
     },
   finishedHostContent: {
       alignItems: 'stretch',
-      gap: 20,
-      paddingVertical: 20,
+      gap: 16,
+      paddingVertical: 16,
     },
   finishedPlayerContent: {
       alignItems: 'center',
-      gap: 20,
-      paddingVertical: 28,
+      gap: 18,
+      paddingVertical: 22,
     },
   finishedPlayerHeader: {
       alignSelf: 'stretch',
       alignItems: 'center',
-      minHeight: 28,
+      minHeight: 30,
+    },
+  finishedExplainerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
   finishedHero: {
       flexDirection: 'row',
@@ -118,8 +126,8 @@ export const styles = StyleSheet.create({
       gap: 14,
     },
   finishedHeroArt: {
-      width: 116,
-      height: 116,
+      width: 132,
+      height: 132,
       borderRadius: radius.row,
     },
   finishedHeroCopy: {
@@ -129,8 +137,8 @@ export const styles = StyleSheet.create({
   finishedHeroTitle: {
       color: colors.ink,
       fontFamily: fontFamily.bold,
-      fontSize: 24,
-      lineHeight: 30,
+      fontSize: 25,
+      lineHeight: 31,
     },
   finishedHeroSubtitle: {
       color: colors.mutedText,
@@ -140,8 +148,8 @@ export const styles = StyleSheet.create({
     },
   finishedSummaryCard: {
       alignSelf: 'stretch',
-      gap: 18,
-      padding: 18,
+      gap: 16,
+      padding: 16,
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: borderWidth.hairline,
@@ -165,8 +173,8 @@ export const styles = StyleSheet.create({
       gap: 4,
     },
   finishedStatIcon: {
-      width: 48,
-      height: 48,
+      width: 54,
+      height: 54,
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: radius.pill,
@@ -227,8 +235,8 @@ export const styles = StyleSheet.create({
       fontSize: 14,
     },
   finishedPlayerAvatarWell: {
-      width: 160,
-      height: 160,
+      width: 176,
+      height: 176,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.soft,

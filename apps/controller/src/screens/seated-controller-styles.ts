@@ -9,6 +9,11 @@ export const styles = StyleSheet.create({
       gap: 24,
       paddingVertical: 24,
     },
+  roomFooter: {
+      alignSelf: 'stretch',
+      gap: 20,
+      marginTop: 'auto',
+    },
   roomTitleRow: {
       flexDirection: 'row',
       alignItems: 'flex-end',
@@ -83,7 +88,7 @@ export const styles = StyleSheet.create({
       gap: 12,
       paddingHorizontal: 18,
       minHeight: 64,
-      backgroundColor: colors.soft,
+      backgroundColor: colors.onlineSurface,
       borderRadius: radius.row,
     },
   statusDotHalo: {
@@ -149,6 +154,14 @@ export const styles = StyleSheet.create({
       borderTopLeftRadius: radius.card,
       borderTopRightRadius: radius.card,
     },
+  sheetGrabber: {
+      alignSelf: 'center',
+      width: 64,
+      height: 5,
+      marginBottom: 4,
+      backgroundColor: colors.border,
+      borderRadius: radius.pill,
+    },
   sheetCancel: {
       alignSelf: 'center',
       paddingVertical: 10,
@@ -209,7 +222,7 @@ export const styles = StyleSheet.create({
       alignItems: 'center',
       alignSelf: 'stretch',
       gap: 12,
-      paddingVertical: 12,
+      paddingVertical: 13,
     },
   rosterRowRuled: {
       borderTopColor: colors.border,
@@ -222,6 +235,16 @@ export const styles = StyleSheet.create({
       flex: 1,
       color: colors.ink,
       fontFamily: fontFamily.medium,
+      fontSize: 16,
+    },
+  rosterHostSlot: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+  rosterHostLabel: {
+      color: colors.accent,
+      fontFamily: fontFamily.semibold,
       fontSize: 16,
     },
   rosterNameAway: {

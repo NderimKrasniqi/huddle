@@ -1,6 +1,5 @@
 import { colors, elevation, type IconName } from '@huddle/ui';
-import { Icon, LoadingIndicator, Surface } from '@huddle/ui/native';
-import { HuddleLogo } from '@huddle/ui/kit';
+import { Icon, LoadingIndicator, Surface, Wordmark } from '@huddle/ui/native';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -9,7 +8,7 @@ import { styles } from './styles';
 export function SeatedHeader({ trailing }: { readonly trailing: ReactNode }) {
   return (
     <View style={styles.seatedHeader}>
-      <HuddleLogo size={20} />
+      <Wordmark height={28} />
       {trailing}
     </View>
   );
@@ -62,12 +61,14 @@ export function OutlinePill({
 
 export function PrimaryButton({
   label,
+  leadingIcon,
   trailingIcon,
   enabled,
   loading = false,
   onPress,
 }: {
   readonly label: string;
+  readonly leadingIcon?: IconName;
   readonly trailingIcon?: IconName;
   readonly enabled: boolean;
   readonly loading?: boolean;
@@ -92,6 +93,9 @@ export function PrimaryButton({
           {loading ? (
             <LoadingIndicator size="small" color={colors.inverse} label={label} />
           ) : null}
+          {leadingIcon === undefined || loading ? null : (
+            <Icon name={leadingIcon} size={20} color={colors.inverse} />
+          )}
           <Text style={styles.buttonLabel}>{label}</Text>
           {trailingIcon === undefined || loading ? null : (
             <Icon name={trailingIcon} size={20} color={colors.inverse} />

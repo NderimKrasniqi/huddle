@@ -2,12 +2,12 @@ import { borderWidth, colors, fontFamily, minBodyFontSize, radius } from '@huddl
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  screen: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 34, paddingVertical: 28 },
-  setupLeft: { width: 700, gap: 14 },
+  screen: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 48, paddingVertical: 28 },
+  setupLeft: { width: 500, gap: 14 },
   setupTitle: { color: colors.setupText, fontFamily: fontFamily.bold, fontSize: 74, lineHeight: 82, marginTop: 20 },
   setupMode: { alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderColor: colors.setupGold, borderWidth: borderWidth.hairline, borderRadius: radius.pill },
   setupModeText: { color: colors.setupGold, fontFamily: fontFamily.semibold, fontSize: 22 },
-  setupSummary: { width: 580, marginTop: 12, paddingVertical: 14, borderTopColor: colors.setupMuted, borderBottomColor: colors.setupMuted, borderTopWidth: borderWidth.hairline, borderBottomWidth: borderWidth.hairline, gap: 10, opacity: 0.9 },
+  setupSummary: { width: 480, marginTop: 12, paddingVertical: 14, borderTopColor: colors.setupMuted, borderBottomColor: colors.setupMuted, borderTopWidth: borderWidth.hairline, borderBottomWidth: borderWidth.hairline, gap: 10, opacity: 0.9 },
   setupSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   setupSummaryCopy: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: 24 },
   setupSummaryLabel: { color: colors.setupMuted, fontFamily: fontFamily.medium, fontSize: 20 },
@@ -20,7 +20,7 @@ export const styles = StyleSheet.create({
   setupRoster: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 10, maxWidth: 560 },
   setupRosterMore: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.setupWash, borderColor: colors.setupMuted, borderWidth: borderWidth.hairline, borderRadius: radius.pill },
   setupRosterMoreText: { color: colors.setupText, fontFamily: fontFamily.semibold, fontSize: 18 },
-  setupRight: { width: 340, alignItems: 'center', justifyContent: 'center', gap: 18, marginRight: 20 },
+  setupRight: { width: 320, alignItems: 'center', justifyContent: 'center', gap: 18, marginRight: 16 },
   setupRightText: { color: colors.setupText, fontFamily: fontFamily.medium, fontSize: 20, lineHeight: 26, textAlign: 'center' },
   joinCard: { width: 300, alignItems: 'center', gap: 14, padding: 22, backgroundColor: colors.setupSurface, borderRadius: radius.card },
   joinCardEyebrow: { color: colors.ink, fontFamily: fontFamily.semibold, fontSize: minBodyFontSize.tv, letterSpacing: 2, textAlign: 'center' },
