@@ -48,8 +48,8 @@ NODE_ENV=production ./apps/tv/android/gradlew -p apps/tv/android clean assembleR
 Artifact and package checks:
 
 - Phone iOS: `/private/tmp/huddle-client-proof.EToGgL/phone-ios-build/Build/Products/Release-iphonesimulator/Huddle.app`, `CFBundleIdentifier=tv.huddle.phone`.
-- Phone Android: `apps/phone/android/app/build/outputs/apk/release/app-release.apk`, 142 MB, package `tv.huddle.phone`.
-- Android TV: `apps/tv/android/app/build/outputs/apk/release/app-release.apk`, 121 MB, package `tv.huddle.hub`.
+- Phone Android: local ignored build output at apps/phone/android/app/build/outputs/apk/release/app-release.apk, 142 MB, package `tv.huddle.phone`.
+- Android TV: local ignored build output at apps/tv/android/app/build/outputs/apk/release/app-release.apk, 121 MB, package `tv.huddle.hub`.
 - Android TV packaged metadata reports `leanback-launchable-activity` for
   `tv.huddle.hub.MainActivity`, required `android.software.leanback`, optional
   touchscreen/faketouch, and the TV banner/icon resources.
