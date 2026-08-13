@@ -1,6 +1,6 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx } from '../_generated/server';
-import { cancelDeadline } from './game-clock';
+import { cancelDeadline } from './gameClock';
 import { playersInRoom } from './presence';
 
 /** Delete every player and TV credential owned by a room before its row. */

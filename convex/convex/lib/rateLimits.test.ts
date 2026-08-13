@@ -1,7 +1,7 @@
 import { MINUTE, SECOND } from '@convex-dev/rate-limiter';
 import { describe, expect, it } from 'vitest';
 
-import { RATE_LIMITS } from './rate-limits';
+import { RATE_LIMITS } from './rateLimits';
 
 describe('party-safe rate-limit policy', () => {
   it('pins every documented token bucket', () => {

@@ -1,7 +1,7 @@
 import { ConvexError, v } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
-import { deleteRoom } from './lib/room-lifecycle';
+import { deleteRoom } from './lib/roomLifecycle';
 
 const countValidator = v.object({
   rooms: v.number(),

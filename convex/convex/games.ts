@@ -30,15 +30,15 @@ import {
   resumePausedGameClock,
   stopGameClock,
   windGameClock,
-} from './lib/game-clock';
+} from './lib/gameClock';
 import {
   decodeStoredRuntime,
   projectRuntime,
   runtimeFailure,
   validatedDeadline,
-} from './lib/game-runtime';
+} from './lib/gameRuntime';
 import { awayPlayerIds, gamePlayersInRoom } from './lib/presence';
-import { limitGameEvent, limitHostCommand, limitMemberCommand } from './lib/rate-limits';
+import { limitGameEvent, limitHostCommand, limitMemberCommand } from './lib/rateLimits';
 
 /**
  * The game lifecycle: the Host starting a game, and the Host ending it.

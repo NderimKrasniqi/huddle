@@ -11,7 +11,7 @@ state, and lifecycle cleanup. Keep public paths stable, shared helpers under
 so React Native screens cannot enter the backend bundle. Credentials authorize;
 `guestId` never does.
 
-Never commit deployment credentials. `development-reset.ts` is development
+Never commit deployment credentials. `developmentReset.ts` is development
 cutover tooling: audit first, require both environment gates and the exact
 confirmation literal, verify zero rows, disable the gate, and never enable or
 invoke it in production.

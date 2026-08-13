@@ -19,9 +19,9 @@ owning suite or validator; manual rows are release blockers until recorded.
 | UI-001 | NativeWind/Tailwind tokens are active; old StyleSheet/Image/Animated imports are blocked | lint; UI-stack validator; typecheck/render tests |
 | ARCH-001 | Renamed paths/native identity and acyclic boundaries hold | architecture/routes/native-identity/boundary validators |
 | DOC-001 | Every Markdown file is classified; active links/paths/terms and requirement IDs validate | `pnpm validate:workflow` |
-| REL-001 | iOS Phone, Android Phone, and Android TV build/export; IDs and Leanback metadata inspected | manual build artifact record |
-| REL-002 | tvOS compiles/runs as experimental evidence only | manual simulator record |
+| REL-001 | iOS Phone, Android Phone, and Android TV build/export; IDs and Leanback metadata inspected | [client build proof](design/qa/evidence/platform-consolidation/2026-08-13-client-builds.md) |
+| REL-002 | tvOS compiles/runs as experimental evidence only | [experimental tvOS result](design/qa/evidence/platform-consolidation/2026-08-13-client-builds.md#experimental-tvos-result) |
 | REL-003 | Physical QR, mixed phones, Ready/Start/End/reconnect, and Android TV focus pass | manual device checklist |
-| DATA-001 | Development counts audited; guarded reset reaches zero; gate disabled; production untouched | deployment log/Convex dashboard record |
+| DATA-001 | Development counts audited; guarded reset reaches zero; gate disabled; production untouched | [development reset record](design/qa/evidence/platform-consolidation/2026-08-13-development-reset.md) |
 
 No exact test totals are normative; suites evolve while these behaviors remain.
