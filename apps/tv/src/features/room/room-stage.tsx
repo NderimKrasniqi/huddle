@@ -3,12 +3,18 @@ import {
   isGreeting,
   JUST_JOINED_MS,
   noteArrivals,
-} from '@huddle/game-core';
+} from '@huddle/domain';
 import { colors, motionDuration, popIn, springOf } from '@huddle/ui';
 import { Avatar, Icon } from '@huddle/ui/native';
 import { JoinCountRow, SectionDivider } from '@huddle/ui/kit';
 import { useCallback, useEffect, useState } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import {
   type RoomOpening,
@@ -360,8 +366,8 @@ function useGreeted(): {
  * every transition, which is precisely the stutter this is meant to remove.
  */
 
-function usePopIn(greeting: boolean): { readonly transform: readonly [{ scale: Animated.Value }] } {
-  const [scale] = useState(() => new Animated.Value(greeting ? popIn.fromScale : 1));
+function usePopIn(greeting: boolean) {
+  const scale = useSharedValue(greeting ? popIn.fromScale : 1);
 
   useEffect(() => {
     if (!greeting) {
@@ -374,20 +380,15 @@ function usePopIn(greeting: boolean): { readonly transform: readonly [{ scale: A
     // since before the last game and is being greeted again after a rejoin is
     // the same instance, and without this line its scale would sit at 1, spring
     // 1→1, and delete the pop-in with every test still green.
-    scale.setValue(popIn.fromScale);
+    scale.value = popIn.fromScale;
 
-    const spring = Animated.spring(scale, {
-      toValue: 1,
+    scale.value = withSpring(1, {
       ...springOf(motionDuration.popIn, popIn.dampingRatio),
-      useNativeDriver: true,
     });
-
-    spring.start();
-
-    return () => spring.stop();
+    return () => cancelAnimation(scale);
   }, [greeting, scale]);
 
-  return { transform: [{ scale }] };
+  return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 }
 
 export function useRoomGreetings(roster: readonly RosterSeat[] | undefined): {

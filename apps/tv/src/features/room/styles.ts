@@ -1,5 +1,4 @@
-import { borderWidth, codeLetterBox, colors, fontFamily, letterSpacing, minBodyFontSize, radius } from '@huddle/ui';
-import { StyleSheet } from 'react-native';
+import { borderWidth, codeLetterBox, colors, fontFamily, letterSpacing, minBodyFontSize, radius, semanticStyles } from '@huddle/ui';
 import { ROOM_QR_SIZE, roomLayout, seat, SEAT_HEIGHT, SEATS_PER_ROW } from './roster';
 
 const QR_CARD_PADDING_X = 14;
@@ -8,7 +7,7 @@ const QR_CARD_WIDTH = ROOM_QR_SIZE + QR_CARD_PADDING_X * 2;
 const CODE_QR_GAP = 27;
 const CODE_ROW_OFFSET = CODE_QR_GAP + QR_CARD_WIDTH;
 
-export const styles = StyleSheet.create({
+export const styles = semanticStyles({
   screen: {
     flex: 1,
   },

@@ -33,7 +33,7 @@ const CODE_FILE = /\.(?:ts|tsx|js|jsx|mjs|cjs|json)$/;
  * `docs/` is the design source of truth and quotes the palette by value;
  * `packages/ui/src/` is where those values legitimately live.
  */
-const EXEMPT = /^(?:docs\/|packages\/ui\/src\/)/;
+const EXEMPT = /^(?:docs\/|packages\/(?:ui|design-tokens)\/)/;
 
 /** An app's Expo config — the one place a literal is allowed, if it matches. */
 const APP_CONFIG = /^apps\/[^/]+\/app\.json$/;
@@ -122,10 +122,10 @@ describe('hex color literals', () => {
     const background = (app: string): unknown => expoConfig(app).backgroundColor;
 
     expect(background('tv')).toBe(colors.screen);
-    expect(background('controller')).toBe(colors.canvas);
+    expect(background('phone')).toBe(colors.canvas);
   });
 
-  it.each(['tv', 'controller'])('generates a branded native splash for %s', (app) => {
+  it.each(['tv', 'phone'])('generates a branded native splash for %s', (app) => {
     // Expo 57 accepts the old top-level splash field but Android prebuild does
     // not apply it. Pin the plugin tuple that generated the inspected native
     // resources so a config cleanup cannot quietly restore the target grid.

@@ -28,4 +28,5 @@ export {
 } from './motion';
 export { elevation, type ElevationToken } from './shadows';
 export { borderWidth, opacity, radius } from './shape';
+export { semanticStyles } from '@huddle/design-tokens';
 export { fontFamily, letterSpacing, minBodyFontSize } from './typography';

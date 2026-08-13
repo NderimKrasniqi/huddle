@@ -1,6 +1,7 @@
-[mcp_servers.opensrc]
+[mcp_servers.context7]
 command = "npx"
 args = [
     "-y",
-    "opensrc-mcp",
+    "@upstash/context7-mcp",
 ]
+enabled_tools = ["resolve-library-id", "query-docs"]

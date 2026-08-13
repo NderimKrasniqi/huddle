@@ -63,8 +63,8 @@ export default defineConfig({
         resolve: stubReactNative,
         test: {
           name: 'packages',
-          include: ['packages/**/src/**/*.test.ts'],
-          exclude: ['**/node_modules/**', '**/*.render.test.tsx'],
+          include: ['packages/**/src/**/*.test.ts', 'games/*/src/**/*.test.ts'],
+          exclude: ['**/node_modules/**', '**/future/**', '**/*.render.test.tsx'],
           environment: 'node',
         },
       },

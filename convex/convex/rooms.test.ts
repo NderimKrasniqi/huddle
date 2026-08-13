@@ -4,7 +4,7 @@ import {
   ROOM_CODE_LENGTH,
   ROOM_CODE_MINT_ALPHABET,
   UNJOINED_ROOM_EXPIRY_MS,
-} from '@huddle/game-core';
+} from '@huddle/domain';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -184,7 +184,7 @@ describe('room expiry', () => {
     await t.finishInProgressScheduledFunctions();
   }
 
-  /** `ms` of evening with these phones doing what a foregrounded Controller does. */
+  /** `ms` of evening with these phones doing what a foregrounded Phone does. */
   async function elapseBeating(
     t: Backend,
     sessionTokens: readonly string[],
@@ -390,14 +390,23 @@ describe('room expiry', () => {
     expect(await pendingExpiryChecks(t, room.roomId)).toBe(1);
   });
 
-  it('stops a running game’s clock as it deletes the room', async () => {
+  it('deletes an expired proof room without leaving gameplay callbacks', async () => {
     const t = convexTest(schema, modules);
     const room = await roomFixture(t);
     const host = await seatPlayer(t, room.code, 'Ada');
     await seatPlayer(t, room.code, 'Grace');
 
     // A game is running, so the room has a deadline scheduled against itself.
-    await t.mutation(api.games.startGame, { sessionToken: host.sessionToken, gameId: 'trivia' });
+    await t.mutation(api.games.selectGame, { sessionToken: host.sessionToken, gameId: 'trivia' });
+    await t.mutation(api.games.finalizeGameSetup, { sessionToken: host.sessionToken });
+    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    for (const seat of roster) {
+      const token = await t.run(async (ctx) => (await ctx.db.get(seat.playerId))?.sessionToken);
+      if (token !== undefined) {
+        await t.mutation(api.games.setGameReady, { sessionToken: token, ready: true });
+      }
+    }
+    await t.mutation(api.games.startGame, { sessionToken: host.sessionToken });
 
     // The party leaves mid-game and the phones go quiet. Rather than run the
     // clock forward — which would fire the deadline itself and leave nothing to
@@ -424,8 +433,7 @@ describe('room expiry', () => {
         (job) => job.name === 'games:reachDeadline',
       ),
     );
-    expect(deadlines).toHaveLength(1);
-    expect(deadlines[0]?.state.kind).toBe('canceled');
+    expect(deadlines).toHaveLength(0);
   });
 
   /**

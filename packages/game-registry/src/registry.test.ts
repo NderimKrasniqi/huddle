@@ -1,8 +1,8 @@
 import {
-  ROOM_PLAYER_CAP,
   KEY_ART_COLOR_NAMES,
   type GameSettingsSchema,
-} from '@huddle/game-core';
+} from '@huddle/contracts';
+import { ROOM_PLAYER_CAP } from '@huddle/domain';
 import { triviaGameModule } from '@huddle/game-trivia';
 import { votingGameModule } from '@huddle/game-voting';
 import { describe, expect, it } from 'vitest';

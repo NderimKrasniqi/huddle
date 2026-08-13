@@ -3,6 +3,10 @@
 Artwork that ships **inside** the apps. Design references that must never reach a
 bundle live in `docs/design/reference/` instead.
 
+Bitmap surfaces render through Expo Image. Asset files remain separate from
+semantic palette/layout tokens in `packages/design-tokens`; artwork may contain
+its own colors, while surrounding UI must use tokens.
+
 Source: the approved Soft Minimal asset package (`HUDDLE ASSETS`, 2026-08-08),
 plus the cleaned avatar batch delivered the same day.
 
@@ -76,7 +80,7 @@ Host avatar, not a bitmap badge.
 
 ## `game-art/`
 
-Full-bleed 1254×1254, no alpha — matches §10 and needs no rework. The shared
+Full-bleed 1254×1254, no alpha, matching the approved carousel treatment. The shared
 `GameKeyArt` renderer maps installed game ids to these files and falls back to
 the module palette for future entries.
 
@@ -90,7 +94,7 @@ as one language.
 
 ## `tv-backgrounds/`
 
-1672×941 (16:9), no alpha, clear centre with decoration at the edges per §11.
+1672×941 (16:9), no alpha, with a clear centre and decoration at the edges.
 
 **This is the default canvas on every implemented TV screen** — not decoration
 layered over one. `huddle-tv-background-01.png` renders full-viewport with
@@ -150,11 +154,11 @@ The wordmark and symbol, transparent, in exact token colors:
 
 `huddle-symbol-orange.png` is also the static native splash image in both Expo
 app configs. After React mounts, the shared loading surface pulses that symbol
-with React Native `Animated` and renders the light-surface wordmark alongside
+with Reanimated/Worklets and renders the light-surface wordmark alongside
 it. There is deliberately no Lottie file or animation-assets folder: startup
 motion is applied to the supplied brand artwork at runtime.
 
-These replace the earlier drawn `HUDDLE.` wordmark Soft Minimal set in Bungee — §5 of the
-handoff is explicit that the wordmark should use supplied artwork rather than be
+These replace the earlier drawn `HUDDLE.` wordmark Soft Minimal set in Bungee.
+The handoff is explicit that the wordmark should use supplied artwork rather than be
 recreated from a text font, which also means the wordmark does not depend on the
 unresolved font decision.

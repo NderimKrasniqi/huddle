@@ -1,489 +1,249 @@
-# Project Scope
-
-## Product
-
-A modular huddle platform for people playing together in the same physical room.
-
-The **Android TV** is the shared screen. Each player's **iOS or Android phone** runs the native controller app.
-
-The platform owns shared multiplayer/session infrastructure. Individual games plug into that platform as separate modules.
-
-## MVP Goal
-
-Prove that:
-
-- an Android TV can create and maintain a multiplayer room;
-- native phone apps can join and act as individual controllers;
-- one player can host and manage the room from their phone while also playing;
-- private player state stays private while shared state appears on the TV;
-- multiple independent games can run on the same room/session infrastructure;
-- players, hosts, and the TV can disconnect and recover without corrupting the room;
-- a second game can be added without rebuilding the platform.
-
-The MVP includes:
-
-- the core huddle platform;
-- one full multiplayer trivia game;
-- one deliberately simple voting/test game that proves game modularity.
-
-## Supported Platforms
-
-### TV
-
-- Android TV only for MVP.
-- The TV displays shared state and room/game configuration.
-- The TV is not the primary controller.
-
-### Phones
-
-- Native iOS app.
-- Native Android app.
-- Browser-based controllers are outside MVP.
-
-## Room Lifecycle
-
-Launching the TV app automatically creates a room.
-
-The TV displays:
-
-- a 4-character room code;
-- a QR code that opens the phone app's join flow.
-
-The first phone to join becomes host.
-
-The room persists across games. Finishing or deliberately ending a game returns everyone to the existing room instead of creating a new room.
-
-If every player leaves while the TV remains connected, the room stays open as an empty lobby. The next phone to join becomes host.
-
-The room closes when the TV fails to heartbeat through its recovery window,
-including after the TV app is closed. The current TV UI has no separate
-immediate "end session" control.
-
-When the room closes, its server-side session state is discarded.
-
-## Joining
-
-Players join by:
-
-- scanning the TV QR code; or
-- entering the 4-character room code in the native phone app.
-
-No account is required.
-
-Before joining, a player chooses:
-
-- a display name;
-- an avatar from a built-in avatar collection.
-
-The app may remember the last-used name and avatar locally.
-
-There are no persistent player profiles in the MVP.
-
-A room code identifies a room; it is not an authorization credential.
-
-## Players
-
-The platform supports up to **10 players** in a room.
-
-Each game declares its own:
-
-- minimum player count;
-- maximum player count;
-- late-join behavior;
-
-A game can start only when the room player count is within that game's declared range. The MVP does not include benching, participant selection, or pre-game spectator assignment.
-
-The declared player range gates **starting only**. After a game has started, the
-current host may continue it with fewer connected players, including below the
-declared minimum.
-
-## Host
-
-The host is also a normal player.
-
-The host's phone provides both:
-
-- private player/game UI;
-- platform-level host controls when needed.
-
-The host can:
-
-- browse games;
-- select a game;
-- configure supported modes/rules;
-- start games;
-- pause/resume where supported;
-- remove players;
-- manually transfer host status;
-- end the active game.
-
-The host cannot end the room. The TV app owns the room session; players may
-leave their own seats, but no phone can close the room for everyone.
-
-The host cannot inspect information that a game defines as private to another player.
-
-If the host deliberately leaves, host ownership transfers to the longest-connected remaining player before the old host is removed — preferring one the room is still hearing from, but taking a currently-silent one over leaving a seated room hostless. If no players remain, the active game is discarded and the TV keeps the same room and Room Code as an empty lobby; the next joiner becomes host.
-
-Once the host's connection is classified as lost after the grace period, the
-longest-connected eligible connected player becomes host automatically.
-
-## TV Responsibilities
-
-The TV displays shared state such as:
-
-- room code and QR code;
-- joined players and avatars;
-- host identity;
-- selected/highlighted game;
-- game information;
-- modes/rules being configured;
-- shared gameplay content;
-- timers;
-- shared results and scores;
-- podium/end-game state;
-- connection/recovery status.
-
-The TV never receives player-private game information that it does not need.
-
-## Game Selection
-
-Available games appear in a game catalog.
-
-Each game supplies metadata such as:
-
-- name;
-- artwork;
-- description;
-- supported player range;
-- estimated duration;
-- available modes/rules.
-
-The host browses and selects games from their phone.
-
-While the host scrolls, the TV remains on the Browse Games carousel and follows
-the highlighted card. Selecting a card is an explicit transition: the TV leaves
-the carousel and shows Game Setup for that game. The host changes the draft
-settings on the phone, and the TV mirrors the selected game and those setting
-changes so the room can see what is being prepared.
-
-Draft settings may change during Game Setup. Pressing Start is an action on the
-host's phone, not a screen: the platform validates the requirements, locks the
-settings, and transitions into the selected game's runtime. To change settings
-after gameplay starts, the host ends the game, returns to the room, changes the
-configuration, and starts again unless a future game explicitly supports live
-setting changes.
-
-## Game Modules
-
-The platform owns:
-
-- room creation;
-- joining;
-- participant identity and session credentials;
-- host ownership;
-- connection/reconnection;
-- room lifecycle;
-- game catalog/selection;
-- shared pre-game browsing/setup state and its transition into a game;
-- transition into and out of games.
-
-Individual games own game-specific behavior and state.
-
-The platform owns the Game Setup surface and the lifecycle transition around
-it. A game supplies its metadata and settings schema, while its actual gameplay
-screen, rules, scoring, and game-specific finished state remain module-owned.
-An unfinished game screen does not block the platform's room, browse, setup, or
-start functionality.
-
-Games must not build separate room/join/session infrastructure.
-
-The architecture should allow games to become independently developed modules later.
-
-The MVP does **not** include:
-
-- a public game SDK;
-- third-party developer tooling;
-- runtime downloading of community games;
-- marketplace functionality;
-- public game publishing.
-
-The trivia and voting games prove the modular boundary.
-
-## Game Lifecycle
-
-Before starting a game:
-
-1. Host scrolls through games on the phone; the TV follows the highlighted card in the carousel.
-2. Host explicitly selects a game; the TV switches to Game Setup.
-3. Host configures supported modes/rules on the phone; the TV mirrors the draft settings.
-4. Host presses Start on the phone; this is an action, not a separate screen.
-5. Platform checks the game's player requirements, locks the settings, and starts the game runtime.
-
-Joining the lobby counts as ready by default. A game may introduce additional game-specific readiness rules if necessary.
-
-After a game finishes:
-
-1. Game displays results.
-2. The finished runtime remains authoritative until the host chooses what
-   happens next; non-host phones wait on that room-level decision.
-3. The host may replay with fresh state and locked settings, choose another
-   game, or return to roster management.
-4. Choosing another game or managing players ends only the game and returns to
-   the existing room.
-5. Room membership, names, avatars, and host remain unchanged.
-
-If the host deliberately ends an active game, the game ends immediately, unfinished game state/scores are discarded, and everyone returns to the existing room.
-
-## Late Joining
-
-Players may always join the room while it exists.
-
-Each game determines whether a newly joined player can enter active gameplay.
-
-If the current game does not support late joining:
-
-- the player still enters the room;
-- they can see appropriate shared room/game status;
-- they do not participate in the active game;
-- they receive no private information belonging to active players;
-- they join gameplay at the next safe point or after the game ends.
-
-## Connectivity
-
-The experience is intended for people physically together in the same room.
-
-Being on the same Wi-Fi network is preferred but **not required**.
-
-Devices may communicate while connected through:
-
-- the same Wi-Fi;
-- separate networks;
-- mobile data.
-
-Internet access is required for the MVP.
-
-Offline/local-network-only gameplay is outside MVP scope.
-
-## Phone Backgrounding and Disconnection
-
-Brief phone backgrounding, screen locking, or temporary app switching does not immediately count as a disconnect.
-
-The platform uses a short grace period before classifying the player's connection as lost.
-
-If an active player is then considered disconnected:
-
-1. The active game pauses.
-2. The host is informed which player disconnected.
-3. The player's identity, avatar, session credential, and relevant game state are preserved for a recovery period.
-4. The host can:
-   - wait for reconnection;
-   - continue without the player, even if connected membership is now below the game's starting minimum.
-5. Reconnecting with the valid participant/session credential restores the same participant.
-
-If the host removes a player, the old participant state is invalidated. The removed person may join the room again as a fresh participant. The MVP has no ban/block system.
-
-Player-count requirements are not re-applied after start. If a departure leaves
-the active game below its declared minimum, the host still chooses between
-waiting and continuing; Back to lobby remains available as a separate choice.
-
-## Host Disconnection
-
-A confirmed host disconnect pauses the active game and immediately transfers
-host ownership to the longest-connected eligible connected player. The new
-host receives the same Wait/Continue choice. If every player is disconnected,
-the first returning player becomes host and receives that choice.
-
-The host may manually transfer host ownership while connected.
-
-## TV Disconnection
-
-The TV represents the shared room session.
-
-If it disconnects:
-
-1. Active gameplay pauses.
-2. Room and game state are preserved for a recovery window.
-3. Reconnecting the TV restores the existing room and game.
-4. Closing the TV app stops its heartbeat; if it does not return before the recovery window expires, the room closes and the session ends.
-
-## Scoring
-
-Scoring belongs to each individual game.
-
-The MVP does not include platform-wide cumulative scoring.
-
-Changing games does not carry game scores into the next game.
-
-## MVP Games
-
-### Trivia
-
-The full reference game exercises:
-
-- private phone answers;
-- shared TV questions;
-- authoritative round timers;
-- rounds;
-- scoring;
-- results;
-- game configuration;
-- player limits;
-- disconnect/reconnect behavior;
-- late-join behavior.
-
-A small built-in question set is sufficient for the MVP; no content-management system is required.
-
-### Voting/Test Game
-
-A deliberately simple second game uses the same platform interfaces while implementing different gameplay.
-
-Its purpose is primarily to prove that the platform is genuinely game-independent.
-
-## Persistence
-
-Room and game session data are ephemeral and are deleted when the room closes.
-
-The MVP does not persist:
-
-- room history;
-- previous game sessions;
-- scores between rooms;
-- achievements;
-- player statistics;
-- profiles;
-- coins;
-- purchases.
-
-Only convenience preferences such as the last-used display name/avatar may be stored locally on the phone.
-
-Participant/session credentials may be stored securely on-device for reconnection during the active room.
-
-## Explicitly Outside MVP
-
-- Web/browser controllers
-- Apple TV or other TV platforms
-- Remote/online matchmaking
-- Players intentionally participating from different physical locations
-- Voice/video chat
-- Offline play
-- Persistent accounts
-- Persistent player profiles
-- Achievements/statistics
-- Platform-wide scoring
-- Coins/currency
-- Purchases
-- Game marketplace/store
-- Public game SDK
-- Community-created game distribution
-- Runtime downloading/installing of third-party games
-- Ban/block moderation system
-# Feature 6 traceability — Platform Reliability and Maintainability
-
-This section records the reopened reliability work discovered after the
-original Phase 1–5 baseline was marked complete. It is intentionally additive:
-the product scope and existing room/game behavior remain unchanged.
-
-- **F-006** — Platform Reliability and Maintainability.
-- **J-006** — Recover a TV-held session after process termination, network loss,
-  and return to service without changing the room identity.
-- **C-006.1** — Durable TV identity.
-- **C-006.2** — Exact pause/resume.
-- **C-006.3** — Validated private game runtime.
-- **C-006.4** — Maintainable module boundaries.
-- **C-006.5** — Resumable engineering workflow.
-- **BR-006** — One live room per TV session token.
-- **BR-007** — Invalid game runtimes expose no state.
-- **BR-008** — Gameplay cannot advance while the TV is away.
-- **BR-009** — Legacy development rooms are discarded by an approved cleanup,
-  not interpreted or migrated into the current runtime. Compatibility fields
-  remain optional until a deployment audit and cleanup are explicitly run.
-
-# Feature 7 traceability — Full-Codebase Behavior-Preserving Refactor
-
-This refactor changes ownership and engineering safeguards, not product
-behavior. It preserves the supported surfaces, room/game contracts, and active
-Soft Minimal design while removing the obsolete development room opener.
-
-- **F-007** — Full-Codebase Behavior-Preserving Refactor.
-
-# Feature 8 traceability — Platform Startup and Loading Feedback
-
-This work changes only platform-owned startup, recovery communication, pending
-action feedback, and transitions. It does not add a game state or move any
-gameplay animation into the platform.
-
-- **F-008** — Platform Startup and Loading Feedback.
-- Native TV and Controller launch surfaces carry Huddle branding before React
-  mounts, then hand off to animated in-app startup/restoration surfaces.
-- Room opening never reuses the Room renderer without a valid code/QR.
-- Pending platform actions expose both changing copy and a visible activity
-  indicator; gameplay visuals and rules remain module-owned.
-
-# Feature 9 traceability — Phone Screen Parity and Shared Game Setup
-
-This work implements the approved platform-owned setup and finished-room
-surfaces while preserving module ownership of gameplay.
-
-- **F-009** — Phone Screen Parity and Shared Game Setup.
-- Browsing, setup, running, paused/unavailable, and finished are distinct shared
-  states; only the Host can mutate setup or lifecycle state.
-- Settings are validated and mirrored before Start, then locked into the running
-  game. Replay starts from fresh state with the current roster.
-- Games retain ownership of metadata, settings schemas, rules, gameplay screens,
-  result summaries, and private-state projection.
-
-# Feature 10 traceability — Architecture, Structure, and Naming Refactor
-
-Feature 10 is a behavior-preserving repository refactor. It keeps Expo routes,
-Convex schema and public function names, game IDs, client/server registry seams,
-runtime assets, and the Soft Minimal visual system stable while making ownership
-and responsibility explicit.
-
-- **F-010** — Architecture, Structure, and Naming Refactor.
-- App-local `models/` layers own pure projections and shared application types;
-  routes compose screens, screens compose features/platform/models/UI, and
-  platform owners never depend on features. Cross-feature imports, deep owner
-  imports, renderer-bearing model entrypoints, empty entrypoints, and dependency
-  cycles are rejected by workflow validation.
-- Authored files use kebab-case (with Expo/generated and conventional entrypoint
-  exceptions), symbols follow PascalCase/camelCase/true-constant conventions,
-  and `Screen`, `Stage`, `Surface`, and `Controller` describe distinct roles.
-- Controller and TV coordinators are separated from feature renderers; shared
-  UI-kit, roster, layout, lifecycle, and private Convex responsibilities have
-  named seams without changing package exports or public Convex modules.
-- `normalizeRoomCode` is one public game-core contract used by join/session and
-  Convex normalization. A host-authorized `games.browseGame` call is a no-op
-  while `room.tvAway === true`, including preserving `browsingGameIndex`.
-- Rendered app tests use Jest/jest-expo and React Native Testing Library while
-  pure models, lint rules, package contracts, and Convex behavior remain in
-  Vitest. Rendered tests are accessibility-first and never snapshots.
-
-# Feature 11 traceability — Quality Foundation and Maintainability Pass
-
-Feature 11 is a behavior-preserving quality pass. It strengthens ownership,
-reliability, accessibility coverage, and package seams without changing Expo
-routes, Convex public functions or schema, game IDs, registry ordering, stored
-data, approved visuals, or network contracts.
-
-- **F-011** — Quality Foundation and Maintainability Pass.
-- Trivia owns its curated question content. The private `@huddle/packs`
-  workspace is removed; pack parsing, validation, categories, CLI, tests, and
-  JSON live under `packages/games/trivia`. The client-safe category projection
-  remains separate from the server-only question graph, and bundle-seam tests
-  prove that Controller exports contain no pack content or server Trivia code.
-- TV room opening distinguishes device identity failures from reconnecting and
-  configuration failures. SecureStore/UUID errors are typed, credentials are
-  never logged, durable identity is persisted before room creation, and retry
-  backoff/single-flight behavior remains unchanged.
-- Controller and TV coordinators own subscriptions, lifecycle, persistence,
-  and surface precedence while feature renderers, app-local UI primitives, and
-  game renderers own presentation. Huddle Kit is organized by control, status,
-  room-code, list-row, pagination, and utility responsibilities while retaining
-  its compatibility barrel. Trivia/Voting state and event types plus server
-  schemas have dedicated seams. Huddle Kit exports, game package exports,
-  Convex public modules, validators, and function names remain source
-  compatible.
-- Architecture validation follows transitive imports and package manifests,
-  including pure/client-safe entrypoints and workspace dependency direction.
-  Node 22.13 and Node 24 are supported gates; rendered tests use async,
-  accessibility-first Jest/RNTL queries with no snapshots.
+# Huddle product scope
+
+## Problem
+
+Local multiplayer party games often create unnecessary friction between the
+shared screen and the people playing. Console-style games require dedicated
+controllers, while browser-based party games can feel disconnected from a
+native living-room product.
+
+The platform work is also repeatedly rebuilt by individual games: creating and
+joining rooms, identifying players, assigning a Host, tracking presence and
+readiness, selecting games, recovering from disconnects, and returning everyone
+to a shared lobby. Huddle must own that game-night lifecycle once so independent
+games can concentrate on gameplay.
+
+## Product solution
+
+Huddle is a native local multiplayer party-game platform. One TV is the shared
+social display and each player uses the Huddle Phone app as their personal
+companion surface. The TV creates a room with a four-character code and QR code;
+iOS and Android phones join it without requiring an account.
+
+The first Phone to join becomes Host. The Host browses games, selects and
+configures one, manages the room, finalizes setup, participates in readiness,
+and explicitly starts or ends the game. Convex keeps the authoritative room,
+membership, presence, setup, and game state so no individual device is trusted
+as the source of truth.
+
+Huddle owns behavior before, between, and around games. A game module owns its
+metadata, settings, rules, state, and Phone/TV presentation. Adding another
+installed game must not require game-specific branches in the Huddle platform.
+
+## Current milestone
+
+The current release proves the reusable platform loop with two installed
+launch-proof modules, Trivia and Voting. It does not yet ship full rounds,
+answers, votes, scoring, winners, or results. Each module proves that its own
+settings resolve into module-owned Phone and TV screens and that the Host can
+return every client to the same lobby.
+
+The implementation should remain no larger than this milestone requires while
+keeping the platform/game boundary durable enough for later complete games.
+
+## Supported and roadmap platforms
+
+- Supported: iOS Phone, Android Phone, and Android TV.
+- The TV application uses one shared React Native TV codebase.
+- Experimental evidence only: Apple TV/tvOS compile and simulator run.
+- Out of scope for this milestone: web clients, store submission, production
+  release tooling, and Apple TV release support.
+
+## Rooms and joining
+
+- The TV creates and owns one durable room and restores it with a private TV
+  credential.
+- A room is located by a four-character code. The code is not authentication.
+- The TV also presents a QR code for the canonical `huddle://join/{CODE}` deep
+  link.
+- The Phone supports both manual code entry and QR scanning.
+- The scanner handles camera permission, denial/settings, unavailable camera,
+  malformed payloads, duplicate scans, and replacement navigation into the join
+  route.
+- Joining requires a display name and one of the ten built-in avatars.
+- A room holds at most 10 seats; both installed games currently require 2–10
+  players.
+- The room and its code survive temporary client disconnects. A room is removed
+  after the current ten-minute inactivity policy when neither its TV nor its
+  seated party remains active.
+
+## Player identity and membership
+
+- No account is required to join and play.
+- Each Phone stores `GuestProfileV1`: a UUID `guestId`, display name, and avatar.
+- The profile persists locally, migrates earlier saved name/avatar data, and can
+  prefill a future join.
+- `guestId` is non-secret metadata used for identity continuity and limits. It
+  never authenticates, authorizes, or recovers a seat.
+- A private SecureStore session credential is the only Phone authority for a
+  current seat.
+- Editing local profile data affects future joins, not the identity or authority
+  of an existing seat.
+- Leaving gives up the current seat. Removal by the Host invalidates that seat;
+  the player may join again as a new seat while the room remains available.
+
+## Host system
+
+- The first seated player is Host. The TV is never Host.
+- Host-only actions are browsing/selecting games, editing/finalizing setup,
+  starting/ending, managing players, and transferring Host authority.
+- A deliberate transfer can target only another player whose Phone is present.
+- If the Host leaves, Huddle transfers authority to the longest-connected
+  remaining seat, preferring a present player.
+- If the Host is confirmed away, Huddle transfers authority to the
+  longest-connected present player when one exists.
+- If everybody is away, the room retains its Host rather than manufacturing an
+  absent successor. The first returning present player repairs Host ownership
+  when necessary.
+- Host transfer preserves every other player’s readiness.
+
+## Presence, reconnection, and recovery
+
+- A foregrounded Phone sends a heartbeat every three seconds and becomes away
+  after approximately 13 seconds without one.
+- Away state is visible to the room and does not itself delete a seat.
+- An away player retains Ready state but blocks a new game from starting.
+- A running game pauses when a player or the TV disconnects. The Host can wait
+  for players to return, continue without disconnected players, or return the
+  room to the lobby.
+- A returning Phone resumes through its current seat credential while that seat
+  and room still exist.
+- A restarting TV restores its room through its durable TV credential.
+- Room expiry clears the room, seats, setup, game state, credentials, and any
+  pending game deadline without relying on a connected client.
+
+## Game browsing and selection
+
+- The Host browses the installed catalog from the Phone.
+- The TV mirrors the Host’s current carousel position in real time.
+- The Host selects an installed game from the Phone; placeholder catalog cards
+  may be browsed but cannot be selected or started.
+- Selected-game and browsing state are authoritative room state shared by every
+  connected client.
+- The platform shows each module’s title, artwork, category, estimated duration,
+  and declared player range without knowing its rules.
+
+## Game configuration and readiness
+
+- A game declares the settings and presets the common setup surface renders.
+- Trivia exposes **Questions: 5 or 10**.
+- Voting exposes **Rounds: 3 or 5**.
+- Setup is either `configuring` or `ready`. Only the Host changes settings,
+  finalizes them, or reopens a locked setup.
+- Finalizing validates and locks the resolved settings. Settings cannot change
+  while locked.
+- Each player controls only their own Ready flag; the Host must also Ready.
+- Start is never automatic. It requires locked settings, every seated player
+  Ready, every seated player present, and the selected game’s player range.
+- New arrivals are unready. Leaving or removal drops that seat’s Ready flag.
+- Reopening setup, switching games, ending a game, or room expiry clears
+  readiness.
+
+## Game ownership and lifecycle
+
+Huddle owns:
+
+- rooms, room codes, TV ownership, seats, Host, and presence;
+- catalog browsing, selection, shared configuration, and readiness;
+- launch authorization, reconnect/pause framing, ending, and lobby return;
+- common loading, failure, recovery, and platform navigation surfaces.
+
+Each game module owns:
+
+- a stable game ID and metadata;
+- minimum and maximum players;
+- settings definitions and presentation hints;
+- server-safe state decoding, rules, events, deadlines, and viewer projection;
+- module-specific Phone and TV screens;
+- future game content, private information, rounds, scoring, and results.
+
+The current journey is:
+
+`TV creates room → Phone scans or enters code → player joins → Host selects and
+configures a game → Host locks setup → every seated player Readies → Host
+explicitly starts → module-owned entered screen → Host ends → every client
+returns to the same lobby`
+
+The proof modules have one `entered` phase, accept no player events, schedule no
+deadlines, and expose only the selected setting plus started confirmation.
+Trivia’s earlier playable engine and question pack remain reference-only under
+`games/trivia/future/`; Voting’s earlier gameplay is not part of the current
+product.
+
+## TV experience
+
+The current TV app provides:
+
+- room opening/restoration, room code, QR code, and a 2×5 seat grid;
+- Host, present, away, and just-joined roster treatments;
+- the game carousel driven by the Host Phone;
+- selected-game setup, locked settings, and readiness progress;
+- module-owned entered-game presentation;
+- player/TV disconnect and recovery presentation;
+- return to the shared lobby after the Host ends a game.
+
+Android TV is display-only for this milestone: it must expose no accidental
+focusable controls. Physical remote-focus verification remains a release gate.
+
+## Phone experience
+
+The current Phone app provides:
+
+- manual-code and QR joining;
+- persistent guest name/avatar setup;
+- room status, roster, presence, readiness, and Leave confirmation;
+- Host player management and deliberate Host transfer;
+- Host catalog browsing, selection, settings, finalize/edit, Start, and End;
+- module-owned entered-game presentation;
+- session loss, player disconnect, TV disconnect, and recovery framing.
+
+The module screen is the extension point for future private answers, votes,
+secret information, cards, drawing, and other game-specific input. Those
+gameplay controls are not shipped by the current proof modules.
+
+## Security and abuse protection
+
+- Convex validates membership, Host privileges, setup changes, Ready changes,
+  starts/ends, transfers, removals, reconnects, and game events.
+- Public actions derive player identity from private credentials; callers do not
+  supply an authoritative player ID.
+- Client-safe module exports exclude server rules and future Trivia content;
+  Convex imports game logic without React Native screens.
+- Structured `rateLimited` rejections identify the operation and include
+  `retryAfterMs`.
+- Token buckets are: rooms 10/minute (20 capacity); joins global 600/minute
+  (1,200), per room 120/minute (240), per guest 60/minute (120); member commands
+  180/minute (360); Host and TV credentials 120/minute (240); game events
+  30/second (60).
+- Heartbeats, scheduled callbacks, and maintenance are exempt from command rate
+  buckets so rate limiting cannot manufacture disconnects.
+
+## Release acceptance
+
+The milestone must prove room creation/restoration, manual and QR joining,
+persistent guest identity, first-player Host assignment, automatic succession,
+presence/reconnect behavior, game browsing and configuration, the full Ready
+gate, launch and End for both proof modules, structured rate limits, bundle
+isolation, and supported-platform builds.
+
+Physical evidence must cover a real Phone camera reading the TV QR code, mixed
+iOS/Android phones, and Android TV remote focus. The current evidence mapping is
+[`acceptance-matrix.md`](./acceptance-matrix.md).
+
+## Known future capabilities — not current scope
+
+- Complete Trivia, Voting, and additional game loops with rounds, private input,
+  timers, scoring, winners, results, replay, and richer shared animation.
+- Downloadable or paid games, a store/catalog service, ownership, and
+  entitlements.
+- Optional Huddle accounts, cloud profiles, statistics, achievements, and a
+  platform economy.
+- Third-party games, a public Huddle game SDK, developer tooling, documentation,
+  and submissions.
+- Web clients, analytics, Sentry, and production store/release operations.
+
+## Scope principle
+
+Build only what the current milestone needs. Preserve boundaries where they
+protect foreseeable product evolution, but do not implement infrastructure
+whose only purpose is a hypothetical future.

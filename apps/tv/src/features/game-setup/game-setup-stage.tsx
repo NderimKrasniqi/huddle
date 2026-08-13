@@ -5,7 +5,7 @@ import {
   type GameSettingsMode,
   type GameSettingsPresentation,
   type GameSettingsSchema,
-} from '@huddle/game-core';
+} from '@huddle/domain';
 import { gameModuleById } from '@huddle/game-registry';
 import { colors, type IconName } from '@huddle/ui';
 import { Avatar, Icon, Wordmark } from '@huddle/ui/native';
@@ -21,6 +21,8 @@ type SetupDraft = {
   readonly gameId: string;
   readonly settings: Readonly<Record<string, string>>;
   readonly mode: GameSettingsMode;
+  readonly stage: 'configuring' | 'ready';
+  readonly readyPlayerIds: readonly string[];
 };
 
 export function GameSetupStage({
@@ -58,7 +60,11 @@ export function GameSetupStage({
             ))}
           </View>
           <Text style={styles.setupHostLineText}>
-            {host === undefined ? 'Waiting for the Host to finish setting up.' : `${host.nickname} (host) is setting up the game.`}
+            {draft.stage === 'ready'
+              ? `${draft.readyPlayerIds.length} of ${roster.length} players ready. The Host starts when everyone is here.`
+              : host === undefined
+                ? 'Waiting for the Host to finish setting up.'
+                : `${host.nickname} (host) is setting up the game.`}
           </Text>
           <View style={styles.setupJoinedBlock}>
             <View style={styles.setupJoinedLine}>

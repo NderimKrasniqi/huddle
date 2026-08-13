@@ -5,7 +5,7 @@
  * Verify an Expo export does not carry Trivia's curated content. Run after an
  * export, for example:
  *
- *   pnpm verify:bundle-seam -- /private/tmp/huddle-controller-export
+ *   pnpm verify:bundle-seam -- /private/tmp/huddle-phone-export
  *
  * The check intentionally reads bytes rather than depending on a particular
  * Metro/Hermes output format. It rejects the pack identity, the pack title,
@@ -24,7 +24,7 @@ if (exportDirectory === undefined) {
   process.exit(2);
 }
 
-const packPath = path.join(root, 'packages/games/trivia/packs/huddle-classics.json');
+const packPath = path.join(root, 'games/trivia/future/packs/huddle-classics.json');
 const pack = JSON.parse(fs.readFileSync(packPath, 'utf8'));
 const markers = [
   pack.id,

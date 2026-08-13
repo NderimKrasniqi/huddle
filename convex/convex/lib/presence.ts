@@ -1,4 +1,4 @@
-import type { GamePlayer } from '@huddle/game-core';
+import type { GamePlayer } from '@huddle/domain';
 
 import type { Doc, Id } from '../_generated/dataModel';
 import type { QueryCtx } from '../_generated/server';

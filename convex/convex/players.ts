@@ -3,11 +3,12 @@ import {
   generateSessionToken,
   type HostControlRejection,
   isAvatarId,
+  isGuestId,
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
   normalizeRoomCode,
   ROOM_PLAYER_CAP,
-} from '@huddle/game-core';
+} from '@huddle/domain';
 import { ConvexError, v } from 'convex/values';
 
 import { internal } from './_generated/api';
@@ -19,11 +20,12 @@ import { playersInRoom } from './lib/presence';
 import { deleteRoom } from './lib/room-lifecycle';
 import { watchForDesertion } from './rooms';
 import { avatarValidator } from './schema';
+import { limitHostCommand, limitJoin, limitMemberCommand } from './lib/rate-limits';
 
 // A join is refused with a `ConvexError` for the reason `openRoom` throws one
 // (see rooms.ts): Convex redacts the message of anything else to "Server
 // Error", while `data` crosses the wire intact. `JoinRejection` itself lives in
-// game-core, because the Controller reads every one of these.
+// game-core, because the Phone reads every one of these.
 
 /**
  * A Room Code as the room holds it. The code is a token in a player's hands —
@@ -238,11 +240,11 @@ async function resumeWhenEveryoneReturns(
 
 /**
  * A player's place in a room, as the phone holding that seat is told it: which
- * room, which player row, and the two things the Controller draws — the Room
+ * room, which player row, and the two things the Phone draws — the Room
  * Code on its chip and the name the room knows them by.
  *
  * `joinRoom` returns one of these and so does `session`, because taking a seat
- * and finding it again land the Controller in the same place. The nickname
+ * and finding it again land the Phone in the same place. The nickname
  * comes back from the row rather than from what was typed: after a force-quit
  * the phone has nothing but its token, and the name on the TV is the room's to
  * state.
@@ -260,7 +262,7 @@ const playerSessionFields = {
 };
 
 /**
- * Puts a phone in a room: the Controller sends the code from the TV and the
+ * Puts a phone in a room: the Phone sends the code from the TV and the
  * nickname its owner typed, and the room gains a seat.
  *
  * The two rules it enforces against the room — the ten-player cap and one
@@ -287,6 +289,7 @@ export const joinRoom = mutation({
     code: v.string(),
     nickname: v.string(),
     avatar: v.string(),
+    guestId: v.optional(v.string()),
   },
   returns: v.object({ ...playerSessionFields, sessionToken: v.string() }),
   handler: async (ctx, args) => {
@@ -311,6 +314,10 @@ export const joinRoom = mutation({
       throw new ConvexError<JoinRejection>({ kind: 'avatarUnknown', avatar: args.avatar });
     }
 
+    if (args.guestId !== undefined && !isGuestId(args.guestId)) {
+      throw new ConvexError<JoinRejection>({ kind: 'guestIdInvalid' });
+    }
+
     const room = await ctx.db
       .query('rooms')
       .withIndex('by_code', (q) => q.eq('code', code))
@@ -319,6 +326,8 @@ export const joinRoom = mutation({
     if (room === null) {
       throw new ConvexError<JoinRejection>({ kind: 'roomNotFound', code });
     }
+
+    await limitJoin(ctx, room._id, args.guestId);
 
     const seated = await playersInRoom(ctx, room._id);
 
@@ -353,6 +362,7 @@ export const joinRoom = mutation({
       lastSeenAt: Date.now(),
       away: false,
       avatar: args.avatar,
+      guestId: args.guestId,
     });
     await watchForSilence(ctx, playerId);
 
@@ -374,12 +384,12 @@ export const joinRoom = mutation({
  * This is rejoining, and it is a query rather than a mutation because nothing
  * changes: force-quitting an app does not give up a seat, so a phone coming
  * back is not asking for one — it is asking which one is already its own. That
- * is the whole reason the roster cannot grow a duplicate. The Controller reads
+ * is the whole reason the roster cannot grow a duplicate. The Phone reads
  * this before it will show anybody a join form
- * (`apps/controller/src/platform/session/session.ts`).
+ * (`apps/phone/src/platform/session/session.ts`).
  *
  * The room is read too, and a token whose room is gone answers `null`: the
- * Controller cannot draw the Room Code chip without it, and a seat in a room
+ * Phone cannot draw the Room Code chip without it, and a seat in a room
  * that no longer exists is not a seat. A phone whose room expired therefore
  * comes back to the Join Screen — which is the whole of what a player has to do
  * about a party that ended while their phone was in a pocket. `expireRoom`
@@ -414,9 +424,9 @@ export const session = query({
 });
 
 /**
- * "Still here" — the Controller's heartbeat, sent every `HEARTBEAT_INTERVAL_MS`
+ * "Still here" — the Phone's heartbeat, sent every `HEARTBEAT_INTERVAL_MS`
  * while the app is in front of its owner and not at all while it is not
- * (`apps/controller/src/platform/presence/presence.ts`). Backgrounding a phone is therefore the
+ * (`apps/phone/src/platform/presence/presence.ts`). Backgrounding a phone is therefore the
  * same event to a room as losing it: the beats stop, and the room finds out by
  * not being told.
  *
@@ -555,6 +565,7 @@ export const transferHost = mutation({
   args: { sessionToken: v.string(), playerId: v.id('players') },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { player: actor, room } = await requireRoomHost(ctx, args.sessionToken);
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
@@ -592,10 +603,19 @@ export const removePlayer = mutation({
   args: { sessionToken: v.string(), playerId: v.id('players') },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { player: actor, room } = await requireRoomHost(ctx, args.sessionToken);
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
     await ctx.db.delete(target._id);
+    if (room.setup !== undefined) {
+      await ctx.db.patch(room._id, {
+        setup: {
+          ...room.setup,
+          readyPlayerIds: (room.setup.readyPlayerIds ?? []).filter((playerId) => playerId !== target._id),
+        },
+      });
+    }
     await resumeWhenEveryoneReturns(ctx, room._id);
     return null;
   },
@@ -626,6 +646,7 @@ export const leaveRoom = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitMemberCommand(ctx, args.sessionToken);
     const player = await playerForSession(ctx, args.sessionToken);
 
     if (player === null) {
@@ -651,6 +672,14 @@ export const leaveRoom = mutation({
     const remaining = await playersInRoom(ctx, player.roomId);
 
     if (remaining.length > 0) {
+      if (room.setup !== undefined) {
+        await ctx.db.patch(room._id, {
+          setup: {
+            ...room.setup,
+            readyPlayerIds: (room.setup.readyPlayerIds ?? []).filter((playerId) => playerId !== player._id),
+          },
+        });
+      }
       // The room lives on, and this is where it is handed back to its clock.
       //
       // Not optional, and not belt-and-braces. Leaving a room whose remaining
@@ -708,7 +737,7 @@ export const leaveRoom = mutation({
  * because the TV has no clock the room agrees with and no business deciding
  * this. `avatar` is also how the join form knows which avatars are spoken for —
  * the room's own answer, so a phone dims exactly what the server would refuse. `host` is here for the same reason
- * as `away` — and it is what a Controller reads to know whether *it* is the
+ * as `away` — and it is what a Phone reads to know whether *it* is the
  * host, since this is the one live subscription every client in the room
  * already holds. A phone finding itself by `playerId` on the roster it is on
  * learns of a handover within a round trip of the room deciding it, which no

@@ -31,18 +31,20 @@ import { describe, expect, it } from 'vitest';
  * with no Node types — the registry owns the client entry these sources feed,
  * and already has the Node types.
  */
-const TRIVIA_SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'games', 'trivia', 'src');
+const TRIVIA_SRC = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'games',
+  'trivia',
+  'src',
+);
 const REGISTRY_SRC = dirname(fileURLToPath(import.meta.url));
 
 /** The rules and the deal: the server's alone, and the only files that may reach the pack. */
 const SERVER_ONLY = new Set([
   'logic.ts',
-  'questions.ts',
-  'content/index.ts',
-  'content/curated-pack.ts',
-  'content/question-pack.ts',
-  'content/pack-validation.ts',
-  'content/validate-packs.ts',
 ]);
 
 function triviaClientSources(): readonly string[] {
@@ -168,7 +170,7 @@ describe('the trivia client sources keep the pack at arm’s length', () => {
   });
 
   it('keeps the production client graph away from pack JSON and server modules', () => {
-    const graph = clientRuntimeGraph(['index.ts', 'controller-screen.tsx', 'tv-screen.tsx']);
+    const graph = clientRuntimeGraph(['index.ts', 'phone-screen.tsx', 'tv-screen.tsx']);
 
     for (const source of graph) {
       const relativeName = source.slice(TRIVIA_SRC.length + 1);

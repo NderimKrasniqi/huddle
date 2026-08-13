@@ -27,7 +27,7 @@ const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
 }).trim();
 
-const TRIVIA_SOURCES = path.join(repoRoot, 'packages/games/trivia/src');
+const TRIVIA_SOURCES = path.join(repoRoot, 'games/trivia/src');
 const A_TRIVIA_SCREEN = path.join(TRIVIA_SOURCES, 'tokens-only-probe.tsx');
 const A_THEME_SOURCE = path.join(repoRoot, 'packages/ui/src/tokens-only-probe.tsx');
 

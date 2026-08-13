@@ -5,7 +5,7 @@ import {
   ROOM_EXPIRY_MS,
   type HostControlRejection,
   type JoinRejection,
-} from '@huddle/game-core';
+} from '@huddle/domain';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,6 +20,19 @@ import { registerRateLimiter, roomFixture } from '../test/fixtures';
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 
 type Backend = ReturnType<typeof convexTest>;
+
+async function launchProof(
+  t: Backend,
+  host: string,
+  memberTokens: readonly string[],
+): Promise<void> {
+  await t.mutation(api.games.selectGame, { sessionToken: host, gameId: 'trivia' });
+  await t.mutation(api.games.finalizeGameSetup, { sessionToken: host });
+  for (const sessionToken of memberTokens) {
+    await t.mutation(api.games.setGameReady, { sessionToken, ready: true });
+  }
+  await t.mutation(api.games.startGame, { sessionToken: host });
+}
 
 /** A room row for player behavior that does not exercise TV opening. */
 async function openRoom(t: Backend) {
@@ -78,7 +91,7 @@ function avatarFor(nickname: string): string {
  * Why a join was refused, or `undefined` if it was not.
  *
  * The `data` is what is asserted rather than the message, for the reason the
- * rejections carry data at all: the Controller picks its copy by `kind`, so a
+ * rejections carry data at all: the Phone picks its copy by `kind`, so a
  * rejection that only reads right in English is a rejection it cannot render.
  */
 async function rejectionOf(attempt: Promise<unknown>): Promise<JoinRejection | undefined> {
@@ -110,6 +123,22 @@ async function elapse(t: Backend, ms: number): Promise<void> {
 }
 
 describe('joinRoom', () => {
+  it('stores a valid guest id as non-secret membership metadata', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    const guestId = '123e4567-e89b-42d3-a456-426614174000';
+    const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox', guestId });
+    const membership = await t.run(async (ctx) => await ctx.db.get(joined.playerId));
+    expect(membership).toMatchObject({ guestId });
+    expect(await t.query(api.players.session, { sessionToken: guestId })).toBeNull();
+  });
+
+  it('rejects malformed guest ids', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await expect(rejectionOf(t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox', guestId: 'not-a-uuid' }))).resolves.toEqual({ kind: 'guestIdInvalid' });
+  });
+
   it('seats a player in the room holding the code, under their nickname', async () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
@@ -350,7 +379,7 @@ describe('joinRoom under simultaneous joins', () => {
  * duplicate no matter how often an app is killed.
  */
 describe('session', () => {
-  /** The seat a token still holds, the way a relaunched Controller asks for it. */
+  /** The seat a token still holds, the way a relaunched Phone asks for it. */
   function sessionOf(t: Backend, sessionToken: string) {
     return t.query(api.players.session, { sessionToken });
   }
@@ -371,7 +400,7 @@ describe('session', () => {
     const room = await openRoom(t);
     const joined = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
 
-    // The app was force-quit here: everything the Controller held is gone but
+    // The app was force-quit here: everything the Phone held is gone but
     // the token it wrote to the phone.
     const resumed = await sessionOf(t, joined.sessionToken);
 
@@ -632,7 +661,7 @@ describe('presence', () => {
     const t = convexTest(schema, modules);
     const { roomId, sessionToken } = await roomWithAda(t);
 
-    // Half a minute of a Controller doing exactly what it does, which is more
+    // Half a minute of a Phone doing exactly what it does, which is more
     // than one away-check's worth: the check has to find her fresh and go back
     // to waiting, every time.
     for (let beat = 0; beat < 10; beat += 1) {
@@ -857,7 +886,7 @@ describe('host transfer', () => {
     vi.useRealTimers();
   });
 
-  /** `ms` of party, with these phones doing what a foregrounded Controller does. */
+  /** `ms` of party, with these phones doing what a foregrounded Phone does. */
   async function elapseBeating(
     t: Backend,
     sessionTokens: readonly string[],
@@ -1342,7 +1371,7 @@ describe('host controls', () => {
       const room = await openRoom(t);
       const ada = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Ada', avatar: 'fox' });
       const grace = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Grace', avatar: 'green-alien' });
-      await t.mutation(api.games.startGame, { sessionToken: ada.sessionToken, gameId: 'trivia' });
+      await launchProof(t, ada.sessionToken, [ada.sessionToken, grace.sessionToken]);
 
       // A phone that went quiet mid-game and will not be back. Removing it is
       // allowed while a game runs; the room keeps playing (now below trivia's
@@ -1445,7 +1474,7 @@ describe('leaveRoom', () => {
     ).toEqual(room);
   });
 
-  it('returns an emptied TV-owned room to its lobby and cancels the game clock', async () => {
+  it('returns an emptied TV-owned proof room to its lobby without scheduling gameplay', async () => {
     vi.useFakeTimers();
 
     try {
@@ -1456,10 +1485,7 @@ describe('leaveRoom', () => {
       });
       const host = (await join(t, room.code, 'Ada')) as { sessionToken: string };
       const guest = (await join(t, room.code, 'Grace')) as { sessionToken: string };
-      await t.mutation(api.games.startGame, {
-        sessionToken: host.sessionToken,
-        gameId: 'trivia',
-      });
+      await launchProof(t, host.sessionToken, [host.sessionToken, guest.sessionToken]);
 
       await t.mutation(api.players.leaveRoom, { sessionToken: guest.sessionToken });
       await t.mutation(api.players.leaveRoom, { sessionToken: host.sessionToken });
@@ -1473,8 +1499,7 @@ describe('leaveRoom', () => {
           (job) => job.name === 'games:reachDeadline',
         ),
       );
-      expect(deadlines).toHaveLength(1);
-      expect(deadlines[0]?.state.kind).toBe('canceled');
+      expect(deadlines).toHaveLength(0);
     } finally {
       vi.useRealTimers();
     }
@@ -1548,14 +1573,14 @@ describe('leaveRoom', () => {
     }
   });
 
-  it('cancels a running legacy room’s clock when the last player leaves', async () => {
+  it('deletes an emptied legacy room after a proof run without scheduling gameplay', async () => {
     vi.useFakeTimers();
 
     try {
       const t = convexTest(schema, modules);
       const { roomId, host, guest } = await roomWithParty(t);
 
-      await t.mutation(api.games.startGame, { sessionToken: host, gameId: 'trivia' });
+      await launchProof(t, host, [host, guest]);
       await t.mutation(api.players.leaveRoom, { sessionToken: guest });
       await t.mutation(api.players.leaveRoom, { sessionToken: host });
 
@@ -1569,8 +1594,7 @@ describe('leaveRoom', () => {
           (job) => job.name === 'games:reachDeadline',
         ),
       );
-      expect(deadlines).toHaveLength(1);
-      expect(deadlines[0]?.state.kind).toBe('canceled');
+      expect(deadlines).toHaveLength(0);
 
       await vi.advanceTimersByTimeAsync(60_000);
       await t.finishInProgressScheduledFunctions();

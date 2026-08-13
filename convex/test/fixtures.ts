@@ -37,6 +37,7 @@ export async function roomFixture(
   t: Backend,
   code = fixtureCode(),
 ): Promise<{ roomId: Id<'rooms'>; code: string }> {
+  registerRateLimiter(t);
   const roomId = await t.run(async (ctx) =>
     await ctx.db.insert('rooms', { code, tvAway: false }),
   );

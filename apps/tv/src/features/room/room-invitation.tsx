@@ -1,4 +1,4 @@
-import { ROOM_CODE_LENGTH, roomJoinLink } from '@huddle/game-core';
+import { ROOM_CODE_LENGTH, roomJoinLink } from '@huddle/domain';
 import { colors, elevation } from '@huddle/ui';
 import { Surface } from '@huddle/ui/native';
 import { Text, View } from 'react-native';

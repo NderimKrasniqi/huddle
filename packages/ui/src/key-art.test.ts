@@ -1,4 +1,4 @@
-import { KEY_ART_COLOR_NAMES } from '@huddle/game-core';
+import { KEY_ART_COLOR_NAMES } from '@huddle/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { colors } from './colors';

@@ -59,11 +59,11 @@ describe('the entry point the Convex server imports', () => {
       const gamePackages = [...source.matchAll(/from '(@huddle\/game-[\w-]+)(\/[\w-]+)?'/g)];
 
       for (const [, packageName, entryPoint] of gamePackages) {
-        // `@huddle/game-core` is the interface, not a game — types only, and
+        // `@huddle/contracts` is the interface, not a game — types only, and
         // nothing of React but the word. Every actual game module has to be
         // reached through its `/logic` entry point, because the bare package is
         // the one that carries the screens.
-        if (packageName === '@huddle/game-core') {
+        if (packageName === '@huddle/contracts') {
           continue;
         }
 

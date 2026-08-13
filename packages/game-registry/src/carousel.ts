@@ -1,4 +1,4 @@
-import type { GameModule } from '@huddle/game-core';
+import type { GameModule } from '@huddle/contracts';
 
 import { clampBrowsingIndex } from './browsing';
 import { CAROUSEL_PLACEHOLDERS } from './carousel-placeholders';
@@ -20,7 +20,7 @@ export const CAROUSEL_REGISTRY: readonly GameModule[] = [
  * the two to agree on an order separately.
  */
 
-/** The Registry entry at `index`, with its neighbours (handoff §6's three cards). */
+/** The Registry entry at `index`, with the neighbouring cards in the approved carousel. */
 export type CarouselWindow = {
   readonly index: number;
   readonly focused: GameModule;

@@ -1,5 +1,6 @@
-import { AVATAR_IDS, type AvatarId } from '@huddle/game-core';
-import { Image, type ImageStyle, type StyleProp } from 'react-native';
+import { AVATAR_IDS, type AvatarId } from '@huddle/contracts';
+import { Image, type ImageStyle } from 'expo-image';
+import type { StyleProp } from 'react-native';
 
 import blueRobot from '../../assets/avatars/blue-robot.png';
 import fox from '../../assets/avatars/fox.png';
@@ -61,6 +62,7 @@ export function Avatar({ avatar, size, shape = 'round', label, style }: AvatarPr
       source={ARTWORK[avatar]}
       accessibilityRole="image"
       accessibilityLabel={label}
+      contentFit="cover"
       style={[
         { width: size, height: size, borderRadius: shape === 'round' ? size / 2 : size * 0.22 },
         style,

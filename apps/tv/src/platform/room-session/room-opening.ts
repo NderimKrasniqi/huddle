@@ -132,7 +132,7 @@ export function reopenDelay(failures: number): number {
  * neither resolves nor rejects it, so a TV switched on ahead of its router
  * would sit on four blank code tiles with nothing to say. Four seconds is far
  * longer than the round trip a working deployment makes — a room with wifi
- * never sees this — and matches the patience the Controller spends on the same
+ * never sees this — and matches the patience the Phone spends on the same
  * silence when it resumes a session.
  */
 const OPEN_PATIENCE_MS = 4_000;
@@ -254,7 +254,7 @@ export type RoomOpeningCaption = {
  * every `EXPO_PUBLIC_` value at bundle time, so an APK sideloaded onto the
  * Philips cannot pick up an edited `.env` by being started again.
  *
- * Exhaustive by construction, as the Controller's rejection copy is
+ * Exhaustive by construction, as the Phone's rejection copy is
  * (`join-rejection.ts`): every kind is named and there is no `default`, so a
  * fifth `RoomOpening` is a compile error here rather than a state that quietly
  * inherits the invitation.

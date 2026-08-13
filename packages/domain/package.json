@@ -1,0 +1,12 @@
+{
+  "name": "@huddle/domain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure room, presence, settings, lifecycle, readiness, and credential rules.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "@huddle/contracts": "workspace:*" },
+  "devDependencies": { "@types/node": "catalog:", "typescript": "catalog:" }
+}

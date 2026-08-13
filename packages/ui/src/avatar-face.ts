@@ -1,4 +1,4 @@
-import type { AvatarId } from '@huddle/game-core';
+import type { AvatarId } from '@huddle/contracts';
 
 import { colors } from './colors';
 

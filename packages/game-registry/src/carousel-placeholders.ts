@@ -1,4 +1,4 @@
-import type { GameModule } from '@huddle/game-core';
+import type { GameModule } from '@huddle/contracts';
 
 import { CAROUSEL_PLACEHOLDER_IDS } from './carousel-catalog';
 
@@ -24,7 +24,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
     settingsSchema: [],
     screens: {
       tv: () => null,
-      controller: () => null,
+      phone: () => null,
     },
   },
   {
@@ -40,7 +40,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
     settingsSchema: [],
     screens: {
       tv: () => null,
-      controller: () => null,
+      phone: () => null,
     },
   },
 ];

@@ -1,7 +1,7 @@
-import { StyleSheet } from 'react-native';
+import { semanticStyles } from '@huddle/design-tokens';
 
 /** Shared static layout styles for Kit primitives. Platform sizing stays local to each control. */
-export const kitStyles = StyleSheet.create({
+export const kitStyles = semanticStyles({
   inlineRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,7 +7,7 @@
   // It is `files` rather than `include` on purpose: a package that declares its
   // own `include` replaces an inherited one, and every package here does. The
   // two lists are merged separately, so this survives.
-  "files": ["types/assets.d.ts"],
+  "files": ["types/assets.d.ts", "types/nativewind.d.ts"],
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],

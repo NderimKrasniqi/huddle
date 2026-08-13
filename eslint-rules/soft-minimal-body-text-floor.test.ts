@@ -30,21 +30,21 @@ const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
 const A_TV_SCREEN = path.join(repoRoot, 'apps/tv/app/body-text-floor-probe.tsx');
 const A_TRIVIA_TV_SCREEN = path.join(
   repoRoot,
-  'packages/games/trivia/src/tv-body-text-floor-probe.tsx',
+  'games/trivia/src/tv-body-text-floor-probe.tsx',
 );
-const A_CONTROLLER_SCREEN = path.join(repoRoot, 'apps/controller/app/body-text-floor-probe.tsx');
+const A_CONTROLLER_SCREEN = path.join(repoRoot, 'apps/phone/app/body-text-floor-probe.tsx');
 const A_TRIVIA_CONTROLLER_SCREEN = path.join(
   repoRoot,
-  'packages/games/trivia/src/controller-body-text-floor-probe.tsx',
+  'games/trivia/src/phone-body-text-floor-probe.tsx',
 );
 
 /** And a file on neither, which no floor governs. */
-const A_SHARED_SOURCE = path.join(repoRoot, 'packages/game-core/src/body-text-floor-probe.ts');
+const A_SHARED_SOURCE = path.join(repoRoot, 'packages/contracts/src/body-text-floor-probe.ts');
 
 const TV_APP_SCREENS = path.join(repoRoot, 'apps/tv/app');
-const CONTROLLER_SCREENS = path.join(repoRoot, 'apps/controller/app');
-const CONTROLLER_SOURCES = path.join(repoRoot, 'apps/controller/src');
-const TRIVIA_SOURCES = path.join(repoRoot, 'packages/games/trivia/src');
+const CONTROLLER_SCREENS = path.join(repoRoot, 'apps/phone/app');
+const CONTROLLER_SOURCES = path.join(repoRoot, 'apps/phone/src');
+const TRIVIA_SOURCES = path.join(repoRoot, 'games/trivia/src');
 
 let eslint: ESLint;
 
@@ -150,7 +150,7 @@ describe('what the phone already renders', () => {
         // `app` recursively: the scanned Join Link's route is a directory down.
         ...screensIn(CONTROLLER_SCREENS),
         ...screensIn(CONTROLLER_SOURCES),
-        path.join(TRIVIA_SOURCES, 'controller-screen.tsx'),
+        path.join(TRIVIA_SOURCES, 'phone-screen.tsx'),
       ]),
     ).toEqual([]);
   });
@@ -225,7 +225,7 @@ describe('body text under the floor', () => {
     expect(await complaints(styles('fontSize: 14,'), A_TRIVIA_TV_SCREEN)).toHaveLength(1);
   });
 
-  // The size the Controller drew its field labels at until this floor was
+  // The size the Phone drew its field labels at until this floor was
   // switched on there, and the whole reason the phone block exists.
   it('is caught on the phone under the handoff\'s smallest caption', async () => {
     for (const filePath of [A_CONTROLLER_SCREEN, A_TRIVIA_CONTROLLER_SCREEN]) {
@@ -299,7 +299,7 @@ describe('what the floor does not reach', () => {
 // Two floors, not a strict one and a lax one: the same sample is judged by the
 // distance the screen it is on is read from. 15 is legible in the hand and not
 // across a room, and each block has to be the number for its own surface —
-// the phone wearing the television's would ban half the Controller, and the
+// the phone wearing the television's would ban half the Phone, and the
 // television wearing the phone's would quietly un-ban what the TV task caught.
 describe('the two surfaces judge the same size differently', () => {
   it('lets the phone keep a size the television refuses', async () => {

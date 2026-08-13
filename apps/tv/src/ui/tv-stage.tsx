@@ -1,7 +1,8 @@
 import { colors, tvDesignSize, tvSafeStageScale } from '@huddle/ui';
 import background from '@huddle/ui/assets/tv-backgrounds/huddle-tv-background-01.png';
+import { Image, type ImageProps } from 'expo-image';
 import { type ReactNode } from 'react';
-import { ImageBackground, StyleSheet, useWindowDimensions, View, type ImageSourcePropType } from 'react-native';
+import { useWindowDimensions, View, type ViewStyle } from 'react-native';
 
 /**
  * The fixed 1280×720 surface every TV screen is drawn on, scaled to fill
@@ -39,27 +40,26 @@ export function TvStage({
   backgroundSource,
 }: {
   readonly children: ReactNode;
-  readonly backgroundSource?: ImageSourcePropType;
+  readonly backgroundSource?: ImageProps['source'];
 }) {
   const window = useWindowDimensions();
 
   return (
-    <ImageBackground
-      source={backgroundSource ?? background}
-      // The artwork reaches the screen edges at every panel size. `cover`
-      // preserves its ratio while allowing a non-16:9 viewport to crop the
-      // decorative edges instead of scaling the content with the image.
-      resizeMode="cover"
-      style={styles.background}
-    >
+    <View style={styles.background}>
+      <Image
+        source={backgroundSource ?? background}
+        contentFit="cover"
+        accessibilityElementsHidden
+        style={styles.backgroundArtwork}
+      />
       <View style={[styles.stage, { transform: [{ scale: tvSafeStageScale(window) }] }]}>
         {children}
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = {
   // The artwork is deliberately full-viewport. The warm fill prevents a flash
   // before the image has decoded and remains the fallback if the asset fails.
   background: {
@@ -68,8 +68,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.screen,
   },
+  backgroundArtwork: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   stage: {
     width: tvDesignSize.width,
     height: tvDesignSize.height,
   },
-});
+} satisfies Record<string, ViewStyle>;

@@ -38,7 +38,7 @@ export type AccentFace = {
  * white on `#FF6B4A` is **2.82:1**, under even WCAG's 3:1 allowance for large
  * text, where navy on it is 6.34:1.
  *
- * The handoff does ask for white on orange (§8), and that stands where it is
+ * The handoff does ask for white on orange for the primary CTA, and that stands where it is
  * about: the primary CTA, one high-intent button a player is looking for. These
  * are answer options — four of them, read at speed, at distance, on a
  * television — and a label a room has to squint at is a worse outcome than a

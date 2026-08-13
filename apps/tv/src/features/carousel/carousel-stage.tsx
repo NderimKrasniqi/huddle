@@ -1,16 +1,25 @@
-import type { GameModule } from '@huddle/game-core';
+import type { GameModule } from '@huddle/domain';
 import { type CarouselWindow } from '@huddle/game-registry';
 import { colors, elevation, motionDuration } from '@huddle/ui';
 import { GameKeyArt, gameArtSurfaceColor, Icon, Surface } from '@huddle/ui/native';
 import { PageDots, PhoneBrowsingHelper } from '@huddle/ui/kit';
 import { useLayoutEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { TvHeader, TvStage } from '../../ui/native';
 import type { RosterSeat } from '../../models';
 import { cardEntryOffset } from './card-transition';
 import { carouselFooterLine } from './carousel-footer';
 import { styles } from './styles';
+
+const absoluteFill = { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 } as const;
 
 export function CarouselStage({
   window,
@@ -91,8 +100,8 @@ function CarouselCards({ window }: { readonly window: CarouselWindow }) {
 }
 
 /**
- * The focused card: key art over the title and its chips (handoff §6 — 440×520,
- * 4px ink border, 10px accent offset shadow).
+ * The focused card: key art over the title and its chips at the approved
+ * 440×520 geometry.
  */
 function FocusedGameCard({ game }: { readonly game: GameModule }) {
   const { title, keyArt, playerRange, estimatedMinutes, category } = game.metadata;
@@ -108,7 +117,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
           gameId={game.metadata.id}
           title={title}
           color={keyArt.color}
-          style={StyleSheet.absoluteFill}
+          style={absoluteFill}
         />
         {game.placeholder ? <PlaceholderBadge /> : null}
       </View>
@@ -125,7 +134,7 @@ function FocusedGameCard({ game }: { readonly game: GameModule }) {
   );
 }
 
-/** A neighbouring card: key art alone, dimmed, tilted and stood back (§6). */
+/** A neighbouring card: key art alone, dimmed, tilted, and stood back. */
 function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
   if (game === undefined) {
     // Nothing rather than a placeholder: an empty slot beside the focused card
@@ -145,7 +154,7 @@ function SideKeyArt({ game }: { readonly game: GameModule | undefined }) {
             gameId={game.metadata.id}
             title={game.metadata.title}
             color={game.metadata.keyArt.color}
-            style={StyleSheet.absoluteFill}
+            style={absoluteFill}
           />
           {game.placeholder ? <PlaceholderBadge /> : null}
         </View>
@@ -174,7 +183,7 @@ function PlaceholderBadge() {
 function Chip({ text }: { readonly text: string }) {
   return (
     <View style={styles.chip}>
-      <View style={[StyleSheet.absoluteFill, styles.chipWash]} />
+      <View style={[absoluteFill, styles.chipWash]} />
       <Text style={styles.chipText}>{text}</Text>
     </View>
   );
@@ -185,10 +194,8 @@ function Chip({ text }: { readonly text: string }) {
  * transition. A changed index starts the next row at the directional entry
  * offset and animates it into place.
  */
-function useCardTransition(
-  index: number,
-): { readonly transform: readonly [{ translateX: Animated.Value }] } {
-  const [slide] = useState(() => new Animated.Value(0));
+function useCardTransition(index: number) {
+  const slide = useSharedValue(0);
   const [entry, setEntry] = useState(() => ({ index, offset: 0 }));
 
   if (entry.index !== index) {
@@ -200,26 +207,22 @@ function useCardTransition(
       return undefined;
     }
 
-    slide.setValue(entry.offset);
+    slide.value = entry.offset;
 
     // Ease-out as the handoff writes it, at the duration Soft Minimal holds for
     // this animation: fast off the mark and settling into the new card, which
     // is the shape of a carousel that has been *pushed* somewhere rather than
     // one drifting there. Cubic is CSS's own `ease-out` curve.
-    const travel = Animated.timing(slide, {
-      toValue: 0,
+    slide.value = withTiming(0, {
       duration: motionDuration.cardTransition,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
     });
-
-    travel.start();
 
     // A Host holding the arrow moves the index again mid-slide; the next
     // transition resets the driver from wherever this one had reached, and a
     // stopped animation is what keeps the two from fighting over it.
-    return () => travel.stop();
+    return () => cancelAnimation(slide);
   }, [entry, slide]);
 
-  return { transform: [{ translateX: slide }] };
+  return useAnimatedStyle(() => ({ transform: [{ translateX: slide.value }] }));
 }

@@ -4,9 +4,9 @@
  * `huddle/tv-remote-surface` — nothing on a TV screen is reachable with the
  * remote, and the app listens for exactly one thing it is pressed for.
  *
- * The principle is the scope's own — "The TV is not the primary controller"
+ * The principle is the scope's own — "The TV is not the primary phone"
  * (`docs/project-scope.md`) — read the strict way: the television is the stage
- * and the phones are the controllers, so it is not a controller at all. A
+ * and the phones are the phones, so it is not a phone at all. A
  * television that has to be *driven* is a television somebody is looking down
  * at a remote to operate. This rule is where that becomes a number, zero, with
  * no exception; the scope states the principle and nothing else states the
@@ -33,7 +33,7 @@
  *
  * Not the rule's question — the flat config's, exactly as with
  * `soft-minimal/body-text-floor`: `apps/tv` and a game module's `tv-*` screens. A
- * Controller screen is a screen made entirely of controls, and this rule must
+ * Phone screen is a screen made entirely of controls, and this rule must
  * never reach one.
  *
  * ## The key listener, and the exception that used to be here
@@ -54,7 +54,7 @@
  *
  * **A TV component factored out of `tv-screen.tsx` into a sibling that is not
  * named `tv-*`.** This is the likeliest gap by some distance: a game author
- * splitting a scoreboard into `packages/games/trivia/src/score-board.tsx` gets
+ * splitting a scoreboard into `games/trivia/src/score-board.tsx` gets
  * no gate on it, because the config's glob keys on the file name. The glob is
  * `soft-minimal/body-text-floor`'s, deliberately — "the TV surface" should be one
  * answer rather than two that drift — so widening it is a decision about both
@@ -169,16 +169,16 @@ module.exports = {
     type: 'problem',
     docs: {
       description:
-        'A TV screen holds nothing a remote can focus, and nothing on the television listens for the remote at all (docs/project-scope.md: the TV is not the primary controller).',
+        'A TV screen holds nothing a remote can focus, and nothing on the television listens for the remote at all (docs/project-scope.md: the TV is not the primary phone).',
     },
     schema: [],
     messages: {
       focusableComponent:
-        '`{{name}}` is a focus target on a television, and the TV app requires zero remote interaction — nothing on a TV screen is remote-reachable. Draw this with `View`/`Text` and drive it from the Controller.',
+        '`{{name}}` is a focus target on a television, and the TV app requires zero remote interaction — nothing on a TV screen is remote-reachable. Draw this with `View`/`Text` and drive it from the Phone.',
       focusProp:
-        '`{{name}}` makes this reachable with the remote, and the TV app requires zero remote interaction — nothing on a TV screen is remote-reachable. Drive it from the Controller instead.',
+        '`{{name}}` makes this reachable with the remote, and the TV app requires zero remote interaction — nothing on a TV screen is remote-reachable. Drive it from the Phone instead.',
       remoteListener:
-        '`{{name}}` is the remote, and no file on the television may hold it — the television is phone-driven, all of it. Put the behaviour on the Controller.',
+        '`{{name}}` is the remote, and no file on the television may hold it — the television is phone-driven, all of it. Put the behaviour on the Phone.',
     },
   },
 

@@ -1,6 +1,6 @@
 /**
  * A Room Code is rendered one letter per tile — on the TV's pairing screen and
- * in the Controller's code entry.
+ * in the Phone's code entry.
  *
  * Soft Minimal coloured the letters by position, running its four accents "in
  * order". Soft Minimal draws every letter in deep navy: the approved board
