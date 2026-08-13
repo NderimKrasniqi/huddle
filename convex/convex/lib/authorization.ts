@@ -1,4 +1,4 @@
-import type { GameLifecycleRejection } from '@huddle/game-core';
+import type { GameLifecycleRejection } from '@huddle/domain';
 import { ConvexError } from 'convex/values';
 
 import type { Doc, Id } from '../_generated/dataModel';
@@ -6,7 +6,7 @@ import type { MutationCtx, QueryCtx } from '../_generated/server';
 
 type DatabaseContext = Pick<QueryCtx, 'db'>;
 
-/** Find the seat represented by a durable Controller session token. */
+/** Find the seat represented by a durable Phone session token. */
 export async function playerForSession(
   ctx: DatabaseContext,
   sessionToken: string,
@@ -17,7 +17,7 @@ export async function playerForSession(
     .first();
 }
 
-/** Require the seat and live room represented by a Controller token. */
+/** Require the seat and live room represented by a Phone token. */
 export async function requirePlayerSession(
   ctx: MutationCtx,
   sessionToken: string,

@@ -1,4 +1,5 @@
-import { Image, StyleSheet, type StyleProp, type ImageStyle } from 'react-native';
+import { Image, type ImageStyle } from 'expo-image';
+import type { StyleProp } from 'react-native';
 
 import logoDark from '../../assets/logo/huddle-logo-dark.png';
 import logoLight from '../../assets/logo/huddle-logo-light.png';
@@ -6,7 +7,7 @@ import logoLight from '../../assets/logo/huddle-logo-light.png';
 /**
  * The HUDDLE wordmark, as artwork.
  *
- * §5 of the handoff is explicit that the wordmark uses supplied brand artwork
+ * The handoff is explicit that the wordmark uses supplied brand artwork
  * rather than being recreated from a text font — it is drawn heavier and more
  * tightly spaced than any weight of Inter, and typing it would be a redrawing
  * that drifts. Soft Minimal did type it, in Bungee, with a tangerine full stop;
@@ -36,12 +37,8 @@ export function Wordmark({ on = 'light', height, style }: WordmarkProps) {
       // decoration: a screen reader that skipped it would not say where it is.
       accessibilityRole="image"
       accessibilityLabel="Huddle"
-      resizeMode="contain"
-      style={[styles.wordmark, { height, width: height * RATIO }, style]}
+      contentFit="contain"
+      style={[{ height, width: height * RATIO }, style]}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  wordmark: { resizeMode: 'contain' },
-});

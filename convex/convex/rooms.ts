@@ -2,16 +2,16 @@ import {
   AWAY_AFTER_MS,
   generateRoomCode,
   ROOM_EXPIRY_MS,
-} from '@huddle/game-core';
-import { MINUTE, RateLimiter } from '@convex-dev/rate-limiter';
+} from '@huddle/domain';
 import { ConvexError, v } from 'convex/values';
 
-import { components, internal } from './_generated/api';
+import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { pauseGameClock, resumePausedGameClock } from './lib/game-clock';
 import { playersInRoom, roomSilenceMs } from './lib/presence';
 import { deleteRoom } from './lib/room-lifecycle';
+import { limitRoomOpen } from './lib/rate-limits';
 
 /**
  * What `openRoom` rejects with when it cannot find a free Room Code. A
@@ -36,14 +36,6 @@ const MAX_CODE_DRAWS = 10;
 
 const TV_SESSION_MAX_SILENCE_MS = AWAY_AFTER_MS;
 
-export type TvRateLimitRejection = {
-  readonly kind: 'tvRateLimited';
-  readonly retryAfterMs: number;
-};
-
-const tvRateLimiter = new RateLimiter(components.rateLimiter, {
-  tvNewRooms: { kind: 'token bucket', rate: 10, period: MINUTE, capacity: 20 },
-});
 
 /**
  * Keep exactly one silence check pending for a present TV.
@@ -158,13 +150,7 @@ export const openRoom = mutation({
 
 /** Token-bucket admission for *new* TV credentials only. */
 async function consumeTvOpenToken(ctx: MutationCtx): Promise<void> {
-  const status = await tvRateLimiter.limit(ctx, 'tvNewRooms', { key: 'global' });
-  if (!status.ok) {
-    throw new ConvexError<TvRateLimitRejection>({
-      kind: 'tvRateLimited',
-      retryAfterMs: status.retryAfter,
-    });
-  }
+  await limitRoomOpen(ctx);
 }
 
 /**

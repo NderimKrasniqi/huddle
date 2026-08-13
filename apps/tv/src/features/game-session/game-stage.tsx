@@ -1,4 +1,4 @@
-import { gamePlayersFrom, type GameModule } from '@huddle/game-core';
+import { gamePlayersFrom, type GameModule } from '@huddle/domain';
 import { Text, View } from 'react-native';
 
 import { TvHeader, TvStage } from '../../ui/native';

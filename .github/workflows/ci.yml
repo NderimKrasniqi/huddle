@@ -80,11 +80,11 @@ jobs:
       # serialized pack; this is the production proof described in F-011.
       - name: Export and inspect client bundle seams
         run: |
-          controller_export="$(mktemp -d)"
+          phone_export="$(mktemp -d)"
           tv_export="$(mktemp -d)"
-          pnpm --filter @huddle/controller exec expo export --platform ios --output-dir "$controller_export"
+          pnpm --filter @huddle/phone exec expo export --platform ios --output-dir "$phone_export"
           pnpm --filter @huddle/tv exec expo export --platform ios --output-dir "$tv_export"
-          pnpm verify:bundle-seam -- "$controller_export"
+          pnpm verify:bundle-seam -- "$phone_export"
           pnpm verify:bundle-seam -- "$tv_export"
 
       - name: Inspect Android TV prebuild metadata

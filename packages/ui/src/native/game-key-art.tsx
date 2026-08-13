@@ -1,5 +1,7 @@
 import { colors } from '../colors';
-import { ImageBackground, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { semanticStyles } from '@huddle/design-tokens';
+import { Image } from 'expo-image';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import triviaArt from '../../assets/game-art/trivia.png';
 import wordGameArt from '../../assets/game-art/word-game.png';
@@ -48,18 +50,21 @@ export function GameKeyArt({
       <Text style={styles.fallbackLabel}>{title}</Text>
     </View>
   ) : (
-    <ImageBackground
+    <View style={[styles.art, style]}>
+      <Image
       source={source}
-      resizeMode="cover"
+      contentFit="cover"
       accessibilityRole="image"
       accessibilityLabel={`${title} artwork`}
-      style={[styles.art, style]}
-    />
+      style={styles.artwork}
+      />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = semanticStyles({
   art: { overflow: 'hidden' },
+  artwork: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   fallback: { alignItems: 'center', justifyContent: 'center' },
   fallbackLabel: { color: colors.inverse },
 });

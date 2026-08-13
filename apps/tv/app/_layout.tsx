@@ -5,8 +5,11 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import '../global.css';
+
 import { convexClient } from '../src/platform/convex/native';
 import { TvBootScreen } from '../src/features/boot/native';
+import { ConnectivityBanner } from '../src/platform/network/native';
 
 // Do not surrender the native launch surface to an undecoded/unthemed React
 // root. The opening screen underneath is already branded when this is hidden.
@@ -32,7 +35,12 @@ export default function TvLayout() {
     return <TvBootScreen phase="startup" />;
   }
 
-  const app = <Stack screenOptions={{ headerShown: false }} />;
+  const app = (
+    <>
+      <ConnectivityBanner />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 
   // A build with no deployment configured has no client to provide, and must
   // still reach the pairing screen: that screen is where the TV says what is

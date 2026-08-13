@@ -42,12 +42,6 @@ module.exports = defineConfig([
     '**/.expo/**',
     '**/expo-env.d.ts',
     'convex/convex/_generated/**',
-    // The incoming Soft Minimal handoff, vendored verbatim so the swap has
-    // something to be checked against. It is a specification, not source: it
-    // carries its own palette and its own token names, so every Soft Minimal rule
-    // fires on it by design. Lint it and the only way to pass is to edit the
-    // handoff, which would make it useless as a reference.
-    'docs/design/soft-minimal/**',
     // Linked git worktrees the agent harness checks out under here for
     // background tasks: a whole second copy of the repo (with its own generated
     // files), gitignored and transient. `eslint .` walks the filesystem, not
@@ -56,6 +50,32 @@ module.exports = defineConfig([
   ]),
 
   expoConfig,
+
+  // NativeWind, Expo Image, and Reanimated are the only active client styling,
+  // image, and animation seams. Keep the removed React Native APIs from
+  // drifting back into either app, shared native UI, or a game-owned screen.
+  {
+    files: [
+      'apps/**/*.{ts,tsx}',
+      'packages/ui/src/**/*.{ts,tsx}',
+      'games/*/src/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['Animated', 'Image', 'ImageBackground', 'StyleSheet'],
+              message:
+                'Use Reanimated/Worklets, Expo Image, and NativeWind semantic classes. StyleSheet is not part of the active UI stack.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 
   // Soft Minimal's own rule: a colour, radius, border width, shadow depth or font
   // family is read from a `packages/ui` token and never written where it is
@@ -84,23 +104,23 @@ module.exports = defineConfig([
   //
   // Both blocks name a game module's screens by file name, which is the
   // convention every module follows (`tv-screen.tsx` beside
-  // `controller-screen.tsx`) and the only handle a config has: a module that
+  // `phone-screen.tsx`) and the only handle a config has: a module that
   // drew a screen out of a file named something else would sit outside the
   // gate. What neither block names is `packages/ui`, which both surfaces import
   // — a shared primitive stands on no one surface, so it cannot be given a
   // floor here. None of them sets a `fontSize` today.
   {
-    files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
+    files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'games/*/src/tv-*.tsx'],
     plugins: { 'soft-minimal': softMinimal },
     rules: {
       'soft-minimal/body-text-floor': ['error', { surface: 'tv', minBodyFontSize: MIN_BODY_FONT_SIZE }],
     },
   },
   // Eyes up, as a gate: the television is the stage and the phones are the
-  // controllers, so nothing a TV screen draws may be reachable with the remote.
+  // phones, so nothing a TV screen draws may be reachable with the remote.
   // Switched on for exactly the paths the TV floor above covers — the same two
   // globs, because "the TV surface" is one answer and having it written twice
-  // differently is how one of them ends up wrong. The Controller is pointedly
+  // differently is how one of them ends up wrong. The Phone is pointedly
   // not among them: its screens are made of controls.
   //
   // The rule takes no options. It used to be handed the one file allowed to
@@ -108,7 +128,7 @@ module.exports = defineConfig([
   // design does not draw an About Panel, so that file is gone and with it the
   // only exemption the TV surface had.
   {
-    files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'packages/games/*/src/tv-*.tsx'],
+    files: ['apps/tv/**/*.ts', 'apps/tv/**/*.tsx', 'games/*/src/tv-*.tsx'],
     plugins: { huddle },
     rules: {
       'huddle/tv-remote-surface': 'error',
@@ -117,9 +137,9 @@ module.exports = defineConfig([
 
   {
     files: [
-      'apps/controller/**/*.ts',
-      'apps/controller/**/*.tsx',
-      'packages/games/*/src/controller-*.tsx',
+      'apps/phone/**/*.ts',
+      'apps/phone/**/*.tsx',
+      'games/*/src/phone-*.tsx',
     ],
     plugins: { 'soft-minimal': softMinimal },
     rules: {
@@ -141,8 +161,8 @@ module.exports = defineConfig([
     files: [
       'apps/**/*.ts',
       'apps/**/*.tsx',
-      'packages/games/*/src/**/*.ts',
-      'packages/games/*/src/**/*.tsx',
+      'games/*/src/**/*.ts',
+      'games/*/src/**/*.tsx',
     ],
     // `questions.ts` is the one client-path file that legitimately holds the
     // pack — it *is* the deal, and only the server pulls it. Tests are exempt
@@ -150,7 +170,7 @@ module.exports = defineConfig([
     // an app, so the thing this gate protects (the client bundle) is not
     // something a `.test.ts` can be in.
     ignores: [
-      'packages/games/*/src/questions.ts',
+      'games/*/src/questions.ts',
       '**/*.test.ts',
       '**/*.test.tsx',
     ],
@@ -159,6 +179,12 @@ module.exports = defineConfig([
         'error',
         {
           paths: [
+            {
+              name: 'react-native',
+              importNames: ['Animated', 'Image', 'ImageBackground', 'StyleSheet'],
+              message:
+                'Use Reanimated/Worklets, Expo Image, and NativeWind semantic classes. StyleSheet is not part of the active UI stack.',
+            },
             {
               name: './content/curated-pack',
               message:

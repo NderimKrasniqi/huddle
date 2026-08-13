@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_NAMES = ("controller", "tv")
+APP_NAMES = ("phone", "tv")
 MODULE_REFERENCE = re.compile(
     r"(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['\"](?P<path>[^'\"]+)['\"]"
 )
@@ -60,7 +60,7 @@ def source_files(src: Path) -> list[Path]:
         path
         for suffix in ("*.ts", "*.tsx")
         for path in src.rglob(suffix)
-        if not path.name.endswith(".d.ts")
+        if not path.name.endswith(".d.ts") and "node_modules" not in path.parts
     )
 
 
@@ -114,9 +114,9 @@ def validate_route_adapters(app: Path, root: Path = ROOT) -> None:
             fail(f"route adapter contains implementation: {relative(route, root)}")
 
         target = resolve_import(route, exports[0].group("path"))
-        screens = (app / "src" / "screens").resolve()
-        if target is None or not target.is_relative_to(screens):
-            fail(f"route adapter bypasses screens: {relative(route, root)}")
+        src = (app / "src").resolve()
+        if target is None or not target.is_relative_to(src):
+            fail(f"route adapter bypasses src ownership: {relative(route, root)}")
 
 
 def validate_filename_conventions(app: Path, root: Path = ROOT) -> None:
@@ -226,13 +226,17 @@ def package_kind(path: Path, root: Path) -> str:
         return "app"
     if rel[0] == "convex":
         return "convex"
-    if rel[:2] == ("packages", "game-core"):
-        return "core"
+    if rel[:2] == ("packages", "contracts"):
+        return "contracts"
+    if rel[:2] == ("packages", "domain"):
+        return "domain"
+    if rel[:2] == ("packages", "design-tokens"):
+        return "tokens"
     if rel[:2] == ("packages", "game-registry"):
         return "registry"
     if rel[:2] == ("packages", "ui"):
         return "ui"
-    if rel[:2] == ("packages", "games"):
+    if rel[0] == "games":
         return "game"
     return "package"
 
@@ -269,14 +273,16 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
                     )
 
     allowed: dict[str, set[str]] = {
-        "app": {"core", "registry", "game", "ui", "convex"},
-        "convex": {"core", "registry"},
-        "registry": {"core", "game"},
-        "game": {"core", "ui"},
-        "ui": {"core"},
-        "core": set(),
+        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "convex"},
+        "convex": {"contracts", "domain", "registry"},
+        "registry": {"contracts", "domain", "game"},
+        "game": {"contracts", "domain", "ui"},
+        "ui": {"contracts", "tokens"},
+        "domain": {"contracts"},
+        "contracts": set(),
+        "tokens": set(),
         "package": set(),
-        "root": {"app", "convex", "core", "registry", "game", "ui", "package"},
+        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "package"},
     }
     for manifest, payload in payloads.items():
         source_kind = package_kind(manifest, root)
@@ -427,10 +433,51 @@ def validate_app(app: Path, root: Path = ROOT) -> None:
     validate_cross_boundary_imports(app, root)
 
 
+def validate_consolidation(root: Path = ROOT) -> None:
+    """Guard renamed paths, native identity, and the single active UI stack."""
+
+    forbidden_paths = [root / "apps" / "controller", root / "packages" / "game-core", root / "packages" / "games"]
+    for path in forbidden_paths:
+        if path.exists():
+            fail(f"superseded package path exists: {relative(path, root)}")
+
+    phone = json.loads((root / "apps" / "phone" / "app.json").read_text(encoding="utf-8"))["expo"]
+    if phone.get("slug") != "huddle-phone":
+        fail("Phone Expo slug must be huddle-phone")
+    if phone.get("ios", {}).get("bundleIdentifier") != "tv.huddle.phone":
+        fail("Phone iOS identity must be tv.huddle.phone")
+    if phone.get("android", {}).get("package") != "tv.huddle.phone":
+        fail("Phone Android identity must be tv.huddle.phone")
+
+    required_ui_files = [
+        root / "apps" / app / name
+        for app in APP_NAMES
+        for name in ("babel.config.cjs", "metro.config.cjs", "tailwind.config.cjs", "global.css", "nativewind-env.d.ts")
+    ]
+    for path in required_ui_files:
+        if not path.is_file():
+            fail(f"NativeWind setup file missing: {relative(path, root)}")
+
+    forbidden_ui = re.compile(r"\bStyleSheet\b|\bImageBackground\b|import\s*\{[^}]*\bAnimated\b[^}]*\}\s*from\s*['\"]react-native['\"]")
+    for base in (root / "apps", root / "packages" / "ui", root / "games"):
+        for source in source_files(base):
+            if "future" in source.parts:
+                continue
+            if forbidden_ui.search(COMMENTS.sub("", source.read_text(encoding="utf-8"))):
+                fail(f"superseded React Native UI API remains: {relative(source, root)}")
+
+    stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core")
+    for base in (root / "apps", root / "packages", root / "games", root / "convex", root / "tools"):
+        for source in source_files(base):
+            if stale.search(source.read_text(encoding="utf-8")):
+                fail(f"superseded platform/package term remains: {relative(source, root)}")
+
+
 def main() -> int:
     for name in APP_NAMES:
         validate_app(ROOT / "apps" / name)
     validate_package_boundaries(ROOT)
+    validate_consolidation(ROOT)
 
     print("App architecture validation passed.")
     return 0

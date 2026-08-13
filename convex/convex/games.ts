@@ -8,7 +8,7 @@ import {
   type GameEvent,
   type GameLifecycleRejection,
   type GamePlayerId,
-} from '@huddle/game-core';
+} from '@huddle/domain';
 import { browsingIndex, gameLogicById, GAME_LOGIC_REGISTRY } from '@huddle/game-registry/logic';
 import { ConvexError, v } from 'convex/values';
 
@@ -38,6 +38,7 @@ import {
   validatedDeadline,
 } from './lib/game-runtime';
 import { awayPlayerIds, gamePlayersInRoom } from './lib/presence';
+import { limitGameEvent, limitHostCommand, limitMemberCommand } from './lib/rate-limits';
 
 /**
  * The game lifecycle: the Host starting a game, and the Host ending it.
@@ -183,9 +184,18 @@ export const setup = query({
       gameId: v.string(),
       settings: v.record(v.string(), v.string()),
       mode: setupModeValidator,
+      stage: v.union(v.literal('configuring'), v.literal('ready')),
+      readyPlayerIds: v.array(v.id('players')),
     }),
   ),
-  handler: async (ctx, args) => (await ctx.db.get(args.roomId))?.setup ?? null,
+  handler: async (ctx, args) => {
+    const draft = (await ctx.db.get(args.roomId))?.setup;
+    return draft === undefined ? null : {
+      ...draft,
+      stage: draft.stage ?? 'configuring',
+      readyPlayerIds: draft.readyPlayerIds ?? [],
+    };
+  },
 });
 
 function setupForGame(gameId: string, mode: GameSetupMode | undefined, chosen: Record<string, string> | undefined) {
@@ -193,12 +203,12 @@ function setupForGame(gameId: string, mode: GameSetupMode | undefined, chosen: R
   if (game === undefined) {
     throw new ConvexError<GameLifecycleRejection>({ kind: 'gameNotInstalled', gameId });
   }
-  const preset =
-    mode === undefined || mode === 'custom'
-      ? undefined
-      : game.settingsPresentation?.presets?.find((candidate) => candidate.mode === mode)?.settings;
-  const settings = chosen ?? preset ?? settingsFrom(game.settingsSchema, undefined);
   const resolvedMode = mode ?? 'standard';
+  const preset =
+    resolvedMode === 'custom'
+      ? undefined
+      : game.settingsPresentation?.presets?.find((candidate) => candidate.mode === resolvedMode)?.settings;
+  const settings = chosen ?? preset ?? settingsFrom(game.settingsSchema, undefined);
   const refusal = settingsRefusalForMode(
     game.settingsSchema,
     game.settingsPresentation,
@@ -214,12 +224,13 @@ export const selectGame = mutation({
   args: { sessionToken: v.string(), gameId: v.string(), mode: v.optional(setupModeValidator) },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     if (room.game !== undefined) throw new ConvexError({ kind: 'setupAlreadyRunning' });
     const selected = setupForGame(args.gameId, args.mode, undefined);
     const index = GAME_LOGIC_REGISTRY.findIndex((entry) => entry.metadata.id === args.gameId);
     await ctx.db.patch(room._id, {
-      setup: { gameId: args.gameId, settings: selected.settings, mode: selected.mode },
+      setup: { gameId: args.gameId, settings: selected.settings, mode: selected.mode, stage: 'configuring', readyPlayerIds: [] },
       ...(index < 0 ? {} : { browsingGameIndex: browsingIndex(index) }),
     });
     return null;
@@ -236,10 +247,12 @@ export const configureGame = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     if (room.game !== undefined) throw new ConvexError({ kind: 'setupAlreadyRunning' });
     const gameId = args.gameId ?? room.setup?.gameId;
     if (gameId === undefined) throw new ConvexError({ kind: 'setupNotFound' });
+    if (room.setup?.stage === 'ready') throw new ConvexError({ kind: 'setupLocked' });
     const game = gameLogicById(gameId);
     if (game === undefined) {
       throw new ConvexError<GameLifecycleRejection>({ kind: 'gameNotInstalled', gameId });
@@ -258,8 +271,58 @@ export const configureGame = mutation({
         gameId,
         settings: settingsFrom(game.settingsSchema, merged),
         mode,
+        stage: 'configuring',
+        readyPlayerIds: [],
       },
     });
+    return null;
+  },
+});
+
+/** Host validates and locks the shared setup before anybody can Ready. */
+export const finalizeGameSetup = mutation({
+  args: { sessionToken: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
+    const draft = room.setup;
+    if (draft === undefined) throw new ConvexError({ kind: 'setupNotFound' });
+    setupForGame(draft.gameId, draft.mode, draft.settings);
+    await ctx.db.patch(room._id, { setup: { ...draft, stage: 'ready', readyPlayerIds: [] } });
+    return null;
+  },
+});
+
+/** Each authenticated member controls only their own Ready flag. */
+export const setGameReady = mutation({
+  args: { sessionToken: v.string(), ready: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await limitMemberCommand(ctx, args.sessionToken);
+    const { player, room } = await requirePlayerSession(ctx, args.sessionToken);
+    const draft = room.setup;
+    if (draft === undefined) throw new ConvexError({ kind: 'setupNotFound' });
+    if (draft.stage !== 'ready') throw new ConvexError({ kind: 'setupNotReady' });
+    const current = draft.readyPlayerIds ?? [];
+    const readyPlayerIds = args.ready
+      ? current.includes(player._id) ? current : [...current, player._id]
+      : current.filter((playerId) => playerId !== player._id);
+    await ctx.db.patch(room._id, { setup: { ...draft, stage: 'ready', readyPlayerIds } });
+    return null;
+  },
+});
+
+/** Host reopens editing and clears the entire party's readiness. */
+export const reopenGameSetup = mutation({
+  args: { sessionToken: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
+    const draft = room.setup;
+    if (draft === undefined) throw new ConvexError({ kind: 'setupNotFound' });
+    await ctx.db.patch(room._id, { setup: { ...draft, stage: 'configuring', readyPlayerIds: [] } });
     return null;
   },
 });
@@ -269,6 +332,7 @@ export const cancelGameSetup = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     if (room.game === undefined) await ctx.db.patch(room._id, { setup: undefined });
     return null;
@@ -282,7 +346,7 @@ export const cancelGameSetup = mutation({
  * The state is seeded here rather than on the phone that tapped, because it is
  * the room's state and not that phone's — every screen in the room reads it
  * from the same row, so there is no moment where the television and a
- * Controller disagree about what was dealt.
+ * Phone disagree about what was dealt.
  *
  * The settings arrive from the Host's phone and are settled against the
  * declaring game's own schema, which the hub reads as labelled strings and
@@ -301,6 +365,7 @@ export const startGame = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
 
     if (room.tvAway === true) {
@@ -324,6 +389,12 @@ export const startGame = mutation({
     }
 
     const players = await gamePlayersInRoom(ctx, room._id);
+    if (room.setup?.stage !== 'ready') throw new ConvexError({ kind: 'setupNotReady' });
+    const away = players.filter((player) => player.away).map((player) => player.playerId);
+    if (away.length > 0) throw new ConvexError({ kind: 'playersAway', playerIds: away });
+    const ready = new Set<string>((room.setup.readyPlayerIds ?? []).map(String));
+    const unready = players.filter((player) => !ready.has(player.playerId)).map((player) => player.playerId);
+    if (unready.length > 0) throw new ConvexError({ kind: 'playersNotReady', playerIds: unready });
     const requestedSettings =
       args.settings === undefined && room.setup?.settings === undefined
         ? undefined
@@ -403,6 +474,7 @@ export const endGame = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
 
     // The game's clock stops with the game. A deadline left pending would fire
@@ -427,6 +499,7 @@ export const replayGame = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     if (room.tvAway === true) throw new ConvexError({ kind: 'tvUnavailable' });
     const running = room.game;
@@ -483,6 +556,7 @@ export const continueAfterDisconnect = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     const running = room.game;
 
@@ -525,6 +599,7 @@ export const browseGame = mutation({
   args: { sessionToken: v.string(), index: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
 
     // Browsing is a shared TV surface. A disconnected display must retain the
@@ -555,6 +630,7 @@ export const sendEvent = mutation({
   args: { sessionToken: v.string(), event: v.any() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await limitGameEvent(ctx, args.sessionToken);
     const { player, room } = await requirePlayerSession(ctx, args.sessionToken);
 
     // Neither recovery boundary accepts input. `playGameEvent` repeats this

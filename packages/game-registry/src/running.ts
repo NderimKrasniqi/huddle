@@ -1,4 +1,4 @@
-import type { GameModule, RunningGame, RunningGameResponse } from '@huddle/game-core';
+import type { GameModule, RunningGame, RunningGameResponse } from '@huddle/contracts';
 
 import { GAME_REGISTRY } from './registry';
 
@@ -7,7 +7,7 @@ export type { RunningGameResponse };
 /**
  * What a client should be drawing, given what the room says it is playing.
  *
- * Both clients ask this and neither names a game: the TV and the Controller
+ * Both clients ask this and neither names a game: the TV and the Phone
  * each hold the same two answers, and the module they mount comes out of the
  * Registry by the id the room stored. That is the whole of "the hub renders
  * purely from the registry" on the client side.

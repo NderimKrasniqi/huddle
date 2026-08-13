@@ -1,10 +1,9 @@
-import { borderWidth, colors, fontFamily, minBodyFontSize, opacity, radius } from '@huddle/ui';
-import { StyleSheet } from 'react-native';
+import { borderWidth, colors, fontFamily, minBodyFontSize, opacity, radius, semanticStyles } from '@huddle/ui';
 import { tvLayout } from '../../ui';
 
 const FOOTER_TEXT_LINE = 28;
 
-export const styles = StyleSheet.create({
+export const styles = semanticStyles({
   screen: {
     flex: 1,
   },
@@ -37,7 +36,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.border,
     borderRadius: radius.pill,
   },
-  // The active dot is an accent pill with an ink border (§6).
+  // The active page dot is an accent pill.
   pageDotActive: {
     width: 12,
     backgroundColor: colors.accent,
@@ -161,13 +160,11 @@ export const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
 
-  // The dots and the line side by side rather than stacked. §6 asks for "page
-  // dots + '<Host> is browsing on their phone'" and does not say in which
-  // direction, and one row is 28pt of content instead of 56: the footer goes
+  // The approved dots and browsing line sit side by side rather than stacked.
+  // One row is 28pt of content instead of 56: the footer goes
   // 92 → 64, the card lands at 124→644 with its 10px accent shadow to 654, and
   // the dots sit at 664. Ten points of daylight under the shadow the active dot
-  // used to disappear into, with every pinned §6 number left alone — the
-  // arithmetic and the two nudges that did not work are in the plan.
+  // used to disappear into, while preserving the approved geometry.
   //
   // `justifyContent` is load-bearing rather than decorative: `screen` stretches
   // this footer across the full 1280pt, so a row without it packs the dots and
@@ -192,6 +189,6 @@ export const styles = StyleSheet.create({
     fontSize: minBodyFontSize.tv,
   },
 
-  // 300×400 at half opacity and stood back, per §6. The tilt comes from
+  // 300×400 at half opacity and stood back. The tilt comes from
   // Soft Minimal's own sticker rotation rather than a number invented here.
 });

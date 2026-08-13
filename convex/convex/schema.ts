@@ -56,6 +56,8 @@ export default defineSchema({
         gameId: v.string(),
         settings: v.record(v.string(), v.string()),
         mode: v.union(v.literal('quick'), v.literal('standard'), v.literal('custom')),
+        stage: v.optional(v.union(v.literal('configuring'), v.literal('ready'))),
+        readyPlayerIds: v.optional(v.array(v.id('players'))),
       }),
     ),
     /**
@@ -208,6 +210,8 @@ export default defineSchema({
      * is no unclaimed state and nothing has to draw one.
      */
     avatar: avatarValidator,
+    /** Non-secret device profile metadata; never an authority or recovery key. */
+    guestId: v.optional(v.string()),
   })
     // `joinRoom` reads a room's players to enforce the cap and the nickname
     // rule, and the TV's roster is that same read. Convex orders an index by

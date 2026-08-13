@@ -80,11 +80,13 @@ export type HuddleMode = 'quick' | 'standard' | 'custom';
 export function ModeCard({
   mode,
   selected = false,
+  disabled = false,
   onPress,
   style,
 }: {
   readonly mode: HuddleMode;
   readonly selected?: boolean;
+  readonly disabled?: boolean;
   readonly onPress?: () => void;
   readonly style?: StyleProp<ViewStyle>;
 }) {
@@ -93,12 +95,13 @@ export function ModeCard({
 
   return (
     <Pressable
+      disabled={disabled}
       onPress={onPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
       focusable
       style={({ pressed }) => [
         {
@@ -114,7 +117,7 @@ export function ModeCard({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 10,
-          opacity: pressed ? 0.85 : 1,
+          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
           transform: [{ scale: focused && Platform.isTV ? 1.04 : 1 }],
           ...huddleUIKitShadow,
         },

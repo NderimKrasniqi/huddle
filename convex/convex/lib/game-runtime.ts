@@ -1,4 +1,4 @@
-import type { GameDeadline, GameLogic } from '@huddle/game-core';
+import type { GameDeadline, GameLogic } from '@huddle/domain';
 import { gameLogicById } from '@huddle/game-registry/logic';
 
 import type { Doc, Id } from '../_generated/dataModel';

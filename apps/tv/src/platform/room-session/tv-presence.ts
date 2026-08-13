@@ -1,4 +1,4 @@
-import { HEARTBEAT_INTERVAL_MS } from '@huddle/game-core';
+import { HEARTBEAT_INTERVAL_MS } from '@huddle/domain';
 
 /** A small injectable loop so TV presence is deterministic in tests. */
 export function keepTvPresent(

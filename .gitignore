@@ -25,8 +25,6 @@ apps/*/android/
 coverage/
 
 # Misc
-# What tools/blank-tile-watch.py keeps: simulator frames and tile-row crops.
-tools/blank-watch/
 .DS_Store
 *.log
 *.tsbuildinfo

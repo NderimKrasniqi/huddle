@@ -34,8 +34,8 @@ const {
  *
  * Not the rule's question — the flat config's, which is what ESLint's `files`
  * is for. `eslint.config.js` switches this on twice: `apps/tv` and a game
- * module's `tv-*` screens with `surface: 'tv'`, `apps/controller` and a
- * module's `controller-*` screens with `surface: 'phone'`. Two blocks and not
+ * module's `tv-*` screens with `surface: 'tv'`, `apps/phone` and a
+ * module's `phone-*` screens with `surface: 'phone'`. Two blocks and not
  * one repo-wide number, because 18 and 14 are two floors rather than a strict
  * one and a lax one — a repo-wide 18 would be the television's number written
  * over the phone's, and a repo-wide 14 would un-ban on the television
@@ -55,7 +55,7 @@ const {
  * (phone caption 12, TV caption 16), so every size the design system specifies
  * already clears them.
  *
- * Soft Minimal needed one. Its floors were 14 and 18 while the Controller drew its
+ * Soft Minimal needed one. Its floors were 14 and 18 while the Phone drew its
  * HOST pill in Bungee at 13, so anything set in `fontFamily.display` was waved
  * through as "drawing type, not setting a sentence". Soft Minimal has no
  * display face — the wordmark ships as artwork and everything else is Inter at

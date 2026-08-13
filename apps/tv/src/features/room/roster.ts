@@ -1,4 +1,4 @@
-import { ROOM_PLAYER_CAP } from '@huddle/game-core';
+import { ROOM_PLAYER_CAP } from '@huddle/domain';
 import type { RosterSeat } from '../../models';
 
 export type { RosterSeat } from '../../models';
@@ -230,7 +230,7 @@ export type SeatSlot = 'justJoined' | 'host' | 'away' | 'present';
  * line gave an arrival over the browsing sentence, kept as the surface moved.
  *
  * After that the order is the Host roster's
- * (`apps/controller/src/features/room/host-roster.ts`)
+ * (`apps/phone/src/features/room/host-roster.ts`)
  * rather than a second opinion about the same question: the Host's slot wins
  * over their own away-ness, so away-ness is never what a slot gives up on a row
  * that could meaningfully be away.

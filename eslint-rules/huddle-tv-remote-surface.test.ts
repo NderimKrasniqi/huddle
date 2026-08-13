@@ -34,10 +34,10 @@ const A_TV_SCREEN = path.join(repoRoot, 'apps/tv/app/remote-surface-probe.tsx');
 /** A game module's TV screen, which stands on the same surface. */
 const A_MODULE_TV_SCREEN = path.join(
   repoRoot,
-  'packages/games/trivia/src/tv-remote-surface-probe.tsx',
+  'games/trivia/src/tv-remote-surface-probe.tsx',
 );
 /** The phone, where a control is the entire point. */
-const A_PHONE_SCREEN = path.join(repoRoot, 'apps/controller/app/remote-surface-probe.tsx');
+const A_PHONE_SCREEN = path.join(repoRoot, 'apps/phone/app/remote-surface-probe.tsx');
 
 let eslint: ESLint;
 
@@ -83,7 +83,7 @@ function tvSources(): string[] {
       .map((file) => path.join(repoRoot, directory, file)),
   );
 
-  const games = path.join(repoRoot, 'packages/games');
+  const games = path.join(repoRoot, 'games');
   const moduleScreens = readdirSync(games).flatMap((game) =>
     readdirSync(path.join(games, game, 'src'))
       .filter((file) => file.startsWith('tv-') && file.endsWith('.tsx'))
@@ -100,7 +100,7 @@ describe('the TV app', () => {
     // Without these the criterion passes vacuously the day a directory moves.
     expect(sources.length).toBeGreaterThan(0);
     expect(sources).toContain(path.join(repoRoot, 'apps/tv/app/index.tsx'));
-    expect(sources.some((file) => file.includes('/packages/games/'))).toBe(true);
+    expect(sources.some((file) => file.includes('/games/'))).toBe(true);
 
     const results = await eslint.lintFiles(sources);
     const offences = results.flatMap((result) =>
@@ -183,10 +183,10 @@ describe('a focusable control put on a TV screen', () => {
     ).toHaveLength(1);
   });
 
-  it('sends the author to the Controller, which is where a control belongs', async () => {
+  it('sends the author to the Phone, which is where a control belongs', async () => {
     const [message] = await complaints(screen('export const A = () => <Pressable />;'));
 
-    expect(message).toContain('Controller');
+    expect(message).toContain('Phone');
   });
 });
 

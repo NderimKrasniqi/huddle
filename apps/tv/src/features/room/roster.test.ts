@@ -1,4 +1,4 @@
-import { ROOM_PLAYER_CAP } from '@huddle/game-core';
+import { ROOM_PLAYER_CAP } from '@huddle/domain';
 import { describe, expect, it } from 'vitest';
 
 import {

@@ -11,8 +11,8 @@ const repoRoot = path.resolve(import.meta.dirname, '..');
  * screen cannot quietly copy the old handoff by wording alone.
  */
 const ACTIVE_ROOTS = [
-  'apps/controller/app',
-  'apps/controller/src',
+  'apps/phone/app',
+  'apps/phone/src',
   'apps/tv/app',
   'apps/tv/src',
   'packages/ui',

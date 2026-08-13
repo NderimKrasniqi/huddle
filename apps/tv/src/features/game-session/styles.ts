@@ -1,10 +1,9 @@
-import { colors, fontFamily } from '@huddle/ui';
-import { StyleSheet } from 'react-native';
+import { colors, fontFamily, semanticStyles } from '@huddle/ui';
 import { tvLayout } from '../../ui';
 
 
 
-export const styles = StyleSheet.create({
+export const styles = semanticStyles({
   screen: {
     flex: 1,
   },

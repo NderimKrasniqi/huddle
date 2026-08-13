@@ -1,5 +1,8 @@
 # Dependency security
 
+Last reviewed: 2026-08-13. Review again on the next Expo SDK or Metro upgrade,
+or by 2026-11-13, whichever comes first.
+
 Production dependency audits run with:
 
 ```sh

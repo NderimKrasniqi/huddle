@@ -1,4 +1,4 @@
-import { AVATAR_IDS } from '@huddle/game-core';
+import { AVATAR_IDS } from '@huddle/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { avatarFace } from '../avatar-face';

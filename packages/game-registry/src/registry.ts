@@ -1,4 +1,4 @@
-import type { GameRegistry } from '@huddle/game-core';
+import type { GameRegistry } from '@huddle/contracts';
 import { triviaGameModule } from '@huddle/game-trivia';
 import { votingGameModule } from '@huddle/game-voting';
 

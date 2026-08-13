@@ -1,7 +1,6 @@
-import { borderWidth, colors, fontFamily, minBodyFontSize, radius } from '@huddle/ui';
-import { StyleSheet } from 'react-native';
+import { borderWidth, colors, fontFamily, minBodyFontSize, radius, semanticStyles } from '@huddle/ui';
 
-export const styles = StyleSheet.create({
+export const styles = semanticStyles({
   screen: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 48, paddingVertical: 28 },
   setupLeft: { width: 500, gap: 14 },
   setupTitle: { color: colors.setupText, fontFamily: fontFamily.bold, fontSize: 74, lineHeight: 82, marginTop: 20 },

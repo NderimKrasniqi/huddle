@@ -1,17 +1,26 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { Image } from 'expo-image';
+import { type ReactNode, useEffect } from 'react';
 import {
-  Animated,
-  Easing,
-  Image,
-  StyleSheet,
   Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import symbol from '../../assets/logo/huddle-symbol-orange.png';
 import { colors } from '../colors';
+import { semanticStyles } from '@huddle/design-tokens';
 import { loadingMotion, motionDuration } from '../motion';
 import { radius } from '../shape';
 import { fontFamily } from '../typography';
@@ -59,46 +68,38 @@ function LoadingDot({
   readonly size: number;
   readonly color: string;
 }) {
-  const [pulse] = useState(() => new Animated.Value(0));
+  const pulse = useSharedValue(0);
 
   useEffect(() => {
     const stagger = motionDuration.activityCycle / 9;
     const movement = motionDuration.activityCycle / 3;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(position * stagger),
-        Animated.timing(pulse, {
-          toValue: 1,
+    pulse.value = withRepeat(
+      withSequence(
+        withDelay(position * stagger, withTiming(1, {
           duration: movement / 2,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 0,
-          duration: movement / 2,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.delay((2 - position) * stagger + movement),
-      ]),
+        })),
+        withTiming(0, { duration: movement / 2, easing: Easing.in(Easing.quad) }),
+        withDelay((2 - position) * stagger + movement, withTiming(0, { duration: 0 })),
+      ),
+      -1,
     );
-
-    animation.start();
-    return () => animation.stop();
+    return () => cancelAnimation(pulse);
   }, [position, pulse]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.35, 1]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.82, 1.18]) }],
+  }));
 
   return (
     <Animated.View
-      style={{
+      style={[{
         width: size,
         height: size,
         backgroundColor: color,
         borderRadius: radius.pill,
-        opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
-        transform: [
-          { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1.18] }) },
-        ],
-      }}
+      }, animatedStyle]}
     />
   );
 }
@@ -111,36 +112,29 @@ export function AnimatedScreen({
   readonly children: ReactNode;
   readonly style?: StyleProp<ViewStyle>;
 }) {
-  const [entry] = useState(() => new Animated.Value(0));
+  const entry = useSharedValue(0);
 
   useEffect(() => {
-    const animation = Animated.timing(entry, {
-      toValue: 1,
+    entry.value = withTiming(1, {
       duration: motionDuration.screenTransition,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
     });
-
-    animation.start();
-    return () => animation.stop();
+    return () => cancelAnimation(entry);
   }, [entry]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: entry.value,
+    transform: [
+      { scale: interpolate(entry.value, [0, 1], [loadingMotion.screenFromScale, 1]) },
+    ],
+  }));
 
   return (
     <Animated.View
       style={[
         styles.screen,
         style,
-        {
-          opacity: entry,
-          transform: [
-            {
-              scale: entry.interpolate({
-                inputRange: [0, 1],
-                outputRange: [loadingMotion.screenFromScale, 1],
-              }),
-            },
-          ],
-        },
+        animatedStyle,
       ]}
     >
       {children}
@@ -153,7 +147,7 @@ export type HuddleLoadingPlatform = 'phone' | 'tv';
 /**
  * The branded in-app bridge between the native splash and a usable Huddle
  * surface. It uses the existing wordmark/symbol assets and React Native
- * Animated, so it works on Android TV without a second animation runtime.
+ * Reanimated and Worklets keep the transitions off the JavaScript render path.
  */
 export function HuddleLoadingSurface({
   platform,
@@ -166,63 +160,52 @@ export function HuddleLoadingSurface({
   readonly message: string;
   readonly active?: boolean;
 }) {
-  const [pulse] = useState(() => new Animated.Value(active ? 0 : 1));
+  const pulse = useSharedValue(active ? 0 : 1);
   const tv = platform === 'tv';
   const symbolSize = tv ? 112 : 76;
 
   useEffect(() => {
-    pulse.stopAnimation();
+    cancelAnimation(pulse);
 
     if (!active) {
-      pulse.setValue(1);
+      pulse.value = 1;
       return undefined;
     }
 
-    pulse.setValue(0);
+    pulse.value = 0;
     const half = motionDuration.loadingPulse / 2;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: half,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 0,
-          duration: half,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: half, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: half, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
     );
-
-    animation.start();
-    return () => animation.stop();
+    return () => cancelAnimation(pulse);
   }, [active, pulse]);
+
+  const markStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [loadingMotion.markFromOpacity, 1]),
+    transform: [
+      {
+        scale: interpolate(
+          pulse.value,
+          [0, 1],
+          [loadingMotion.markFromScale, loadingMotion.markToScale],
+        ),
+      },
+    ],
+  }));
 
   return (
     <View style={[styles.loadingSurface, tv ? styles.loadingSurfaceTv : styles.loadingSurfacePhone]}>
       <Animated.View
-        style={{
-          opacity: pulse.interpolate({
-            inputRange: [0, 1],
-            outputRange: [loadingMotion.markFromOpacity, 1],
-          }),
-          transform: [
-            {
-              scale: pulse.interpolate({
-                inputRange: [0, 1],
-                outputRange: [loadingMotion.markFromScale, loadingMotion.markToScale],
-              }),
-            },
-          ],
-        }}
+        style={markStyle}
       >
         <Image
           source={symbol}
           accessibilityElementsHidden
-          resizeMode="contain"
+          contentFit="contain"
           style={{ width: symbolSize, height: symbolSize }}
         />
       </Animated.View>
@@ -248,7 +231,7 @@ export function HuddleLoadingSurface({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = semanticStyles({
   screen: {
     flex: 1,
   },

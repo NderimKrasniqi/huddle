@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { elevation } from '../shadows';
+import { semanticStyles } from '@huddle/design-tokens';
 
 /**
  * A Soft Minimal surface — card, tile, sheet, button, input — with its shadow.
@@ -40,7 +41,7 @@ export function Surface({ elevation: shadow, style, children }: SurfaceProps) {
   return <View style={[styles.surface, { boxShadow: shadow }, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const styles = semanticStyles({
   // The shadow is drawn outside the border box, so a surface that clips its
   // children must opt into it — clipping here would clip the shadow away.
   surface: { overflow: 'visible' },

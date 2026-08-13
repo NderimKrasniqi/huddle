@@ -1,4 +1,4 @@
-import type { GameLogic, GameLogicRegistry } from '@huddle/game-core';
+import type { GameLogic, GameLogicRegistry } from '@huddle/contracts';
 import { triviaGameLogic } from '@huddle/game-trivia/logic';
 import { votingGameLogic } from '@huddle/game-voting/logic';
 
