@@ -9,7 +9,7 @@ is listed here. Completed work remains available through Git history.
 **Current phase:** 1.1 Deployment cutover and device proof
 **Current task:** 1.1.3
 **Last completed task:** 1.1.2
-**Blockers:** —
+**Blockers:** 1.1.3: Physical Android Phone and physical Android TV remote are still required for the mixed-phone, reconnect, and physical-focus gates.
 
 ## Phase 1.1 — Deployment cutover and device proof
 
@@ -34,17 +34,18 @@ deployment and supported physical platforms without touching production data.
   - **Depends on:** 1.1.1
   - **Done when:** Supported builds pass and experimental tvOS evidence is recorded separately.
 
-- [ ] **1.1.3 — Run physical end-to-end party check**
+- [!] **1.1.3 — Run physical end-to-end party check**
   - **Outcome:** The complete loop works with real camera, phones, and Android TV focus.
   - **Work:** Remove the old app, scan TV QR, join mixed phones, Ready every seat, Start/End both modules, exercise reconnect, and traverse Android TV focus.
   - **Touches:** Development deployment and test devices.
   - **Requirements:** PLAT-001, PLAT-002, REL-003
-  - **Verify:** Dated manual checklist and captures under `docs/design/qa/evidence/platform-consolidation/`.
+  - **Verify:** [Dated physical party checklist](design/qa/evidence/platform-consolidation/2026-08-13-physical-party-check.md) and local device captures under `docs/design/qa/evidence/platform-consolidation/`.
   - **Depends on:** 1.1.2
   - **Done when:** Physical QR, lifecycle, reconnect, and focus gates all pass.
 
 ### Phase 1.1 Completion
 
 - Development data was reset only through the guarded lifecycle path.
-- All supported builds and the physical platform loop pass.
+- All supported builds pass; the physical platform loop remains blocked on the
+  second Android phone and physical Android TV remote listed above.
 - The reset gate is disabled and production was never targeted.
