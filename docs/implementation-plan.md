@@ -743,45 +743,50 @@ These findings were reported during the simulator and reference-screen review.
 They are recorded as follow-up work; none is being marked resolved by this
 entry.
 
-- **Simulator target/startup reliability:** make the local run flow reliably
-  expose and launch an iPhone Simulator alongside either the Android TV
-  emulator or the Apple TV Simulator, with the Controller and TV Metro servers
-  using the correct, separate ports. Capture the working target-selection
-  commands and the failure symptoms in the release checklist.
-- **Reference screen/component parity:** audit the supplied
+- **Simulator target/startup reliability — capture path verified (2026-08-12):**
+  ad-hoc-signed Release builds launched together on iPhone 17 and Apple TV 4K
+  simulators and produced the retained final evidence set. The broader Android
+  TV plus mixed-controller hardware matrix and a concise local failure/port
+  runbook remain release work.
+- **Reference screen/component parity — release audit captured (2026-08-12):**
+  audit the supplied
   `/Users/nderimkrasniqi/Desktop/huddle-expo-tv-phone/src` screens and
-  components against the current Controller/TV entrypoints. The supplied
-  screens/components are not visibly represented in the running app, so record
-  which surfaces are intentionally adapted, which are missing, and which
-  routes/components must be wired before considering the reference handoff
-  adopted.
+  components against the current Controller/TV entrypoints. All ten approved
+  phone references and all three approved TV references now have Release-build
+  composites under `docs/design/qa/evidence/2026-08-12-platform-parity/`.
+  Intentional live-data/product differences and remaining design decisions are
+  recorded in `docs/design/qa/2026-08-12-current-audit.md`.
 - **Unexpected iPhone restore state — first fix complete (2026-08-12):** a
   fresh iPhone now goes straight to the Join surface. `resumeSession` reports
   whether SecureStore found a persisted token, and the restore surface is shown
   only while a found token is being looked up. A returning participant still
   gets the bounded **“Finding your room”** state; a missing, stale, or unreadable
   token falls through to joining. The behavior is covered by session tests.
-- **Join-screen visual fidelity — first parity pass (2026-08-12):** the
+- **Join-screen visual fidelity — release comparison captured (2026-08-12):** the
   Controller **“Join the room”** surface now follows the reference's left-aligned
   title, full-width logo header, compact square code tiles, dark/tightly tracked
   labels, hairline name field, five-by-two avatar rhythm, and solid orange Join
-  action. Exact simulator capture comparison remains open for logo scale,
-  artwork crop, and device-specific spacing before calling the screen adopted.
+  action. The final evidence includes both empty and code-ready Release states;
+  the ten-live-avatar layout remains an intentional product difference from the
+  reference snapshot.
 
-## Remaining reference-screen parity audit
+## Reference-screen parity audit history
 
 The following mappings continue the audit against the supplied
 `huddle-expo-tv-phone` screens and the approved images under
 `docs/design/reference/screens/`. They describe visual follow-up work, not a
 request to discard the current data, authorization, or game-module boundaries.
 
-### Audit run — 2026-08-12
+### Initial audit run — 2026-08-12
 
-The automated suite is green (74 Vitest files / 859 tests, both rendered Jest
-suites, typecheck, lint, and workflow validation). This verifies behavior and
-renderability, not pixel equality. XcodeBuildMCP found the configured iPhone 17
-and Apple TV targets, but every simulator is currently shut down, so live
-screenshot comparison is still blocked. The static screen-by-screen ledger is:
+This static ledger records the gaps as they were initially identified. It is
+retained for decision history; it is not the current capture status. The final
+Release-build screen comparisons and current residuals are in
+`docs/design/qa/2026-08-12-current-audit.md`, with images under
+`docs/design/qa/evidence/2026-08-12-platform-parity/`. The automated suite at
+the initial audit was green (74 Vitest files / 859 tests, both rendered Jest
+suites, typecheck, lint, and workflow validation); that evidence verified
+behavior and renderability, not pixel equality.
 
 | Surface | Current production entrypoint | Current result | Open parity issues to fix or verify |
 | --- | --- | --- | --- |
