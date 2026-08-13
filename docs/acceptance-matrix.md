@@ -22,6 +22,6 @@ owning suite or validator; manual rows are release blockers until recorded.
 | REL-001 | iOS Phone, Android Phone, and Android TV build/export; IDs and Leanback metadata inspected | manual build artifact record |
 | REL-002 | tvOS compiles/runs as experimental evidence only | manual simulator record |
 | REL-003 | Physical QR, mixed phones, Ready/Start/End/reconnect, and Android TV focus pass | manual device checklist |
-| DATA-001 | Development counts audited; guarded reset reaches zero; gate disabled; production untouched | deployment log/Convex dashboard record |
+| DATA-001 | Development counts audited; guarded reset reaches zero; gate disabled; production untouched | [development reset record](design/qa/evidence/platform-consolidation/2026-08-13-development-reset.md) |
 
 No exact test totals are normative; suites evolve while these behaviors remain.

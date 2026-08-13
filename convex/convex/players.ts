@@ -15,12 +15,12 @@ import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { playerForSession, requireRoomHost } from './lib/authorization';
-import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/game-clock';
+import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/gameClock';
 import { playersInRoom } from './lib/presence';
-import { deleteRoom } from './lib/room-lifecycle';
+import { deleteRoom } from './lib/roomLifecycle';
 import { watchForDesertion } from './rooms';
 import { avatarValidator } from './schema';
-import { limitHostCommand, limitJoin, limitMemberCommand } from './lib/rate-limits';
+import { limitHostCommand, limitJoin, limitMemberCommand } from './lib/rateLimits';
 
 // A join is refused with a `ConvexError` for the reason `openRoom` throws one
 // (see rooms.ts): Convex redacts the message of anything else to "Server

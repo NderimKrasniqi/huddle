@@ -24,7 +24,7 @@
     "validate:native-identity": "python3 tools/validate-architecture.py",
     "validate:boundaries": "python3 tools/validate-architecture.py",
     "validate:ui-stack": "python3 tools/validate-architecture.py",
-    "validate:rate-limits": "vitest run --project convex convex/convex/lib/rate-limits.test.ts convex/convex/rooms.test.ts",
+    "validate:rate-limits": "vitest run --project convex convex/convex/lib/rateLimits.test.ts convex/convex/rooms.test.ts",
     "validate:guest-profile": "vitest run --project apps apps/phone/src/features/join/identity.test.ts && vitest run --project convex convex/convex/players.test.ts"
   },
   "devDependencies": {

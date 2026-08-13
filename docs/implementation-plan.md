@@ -7,21 +7,21 @@ is listed here. Completed work remains available through Git history.
 
 **Current feature:** —
 **Current phase:** 1.1 Deployment cutover and device proof
-**Current task:** 1.1.1
-**Last completed task:** —
-**Blockers:** 1.1.1: Development deployment authority is required before auditing or resetting non-production data
+**Current task:** 1.1.2
+**Last completed task:** 1.1.1
+**Blockers:** —
 
 ## Phase 1.1 — Deployment cutover and device proof
 
 **Outcome:** The locally verified consolidation is proven on the development
 deployment and supported physical platforms without touching production data.
 
-- [!] **1.1.1 — Audit and reset development rooms**
+- [x] **1.1.1 — Audit and reset development rooms**
   - **Outcome:** Development room, membership, TV-session, and game counts are recorded, then reach zero through lifecycle cleanup.
   - **Work:** Deploy `developmentReset:audit`; enable both development-only reset gates; invoke the exact confirmation literal; audit zero; disable the gate; deploy the strict schema/runtime.
   - **Touches:** Convex development deployment only.
   - **Requirements:** DATA-001
-  - **Verify:** Before/after dashboard or CLI record; production deployment remains untouched.
+  - **Verify:** [Dated development deployment record](design/qa/evidence/platform-consolidation/2026-08-13-development-reset.md); production deployment remains untouched.
   - **Depends on:** None
   - **Done when:** Zero active development rows are recorded and the reset gate is disabled.
 

@@ -467,7 +467,7 @@ describe('room expiry', () => {
       const room = await roomFixture(t);
 
       // There is no legacy unjoined-room timer. Production rows instead carry a
-      // durable TV session and are covered by tv-recovery.test.ts.
+      // durable TV session and are covered by tvRecovery.test.ts.
       await elapse(t, UNJOINED_ROOM_EXPIRY_MS);
 
       expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);

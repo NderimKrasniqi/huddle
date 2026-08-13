@@ -28,6 +28,7 @@ CURRENT_MARKDOWN = {
     "docs/tech-stack.md",
     "packages/ui/assets/README.md",
 }
+CURRENT_MARKDOWN_PREFIXES = ("docs/design/qa/evidence/platform-consolidation/",)
 
 REUSABLE_SKILL_MARKDOWN = {
     ".agents/skills/code-review/SKILL.md",
@@ -271,7 +272,12 @@ def validate_markdown(root: Path) -> None:
 
     paths = markdown_paths(root)
     actual = {path.relative_to(root).as_posix() for path in paths}
-    expected = CURRENT_MARKDOWN | REUSABLE_SKILL_MARKDOWN | GENERATED_MARKDOWN
+    evidence = {
+        rel
+        for rel in actual
+        if any(rel.startswith(prefix) for prefix in CURRENT_MARKDOWN_PREFIXES)
+    }
+    expected = CURRENT_MARKDOWN | REUSABLE_SKILL_MARKDOWN | GENERATED_MARKDOWN | evidence
     missing = sorted(expected - actual)
     extra = sorted(actual - expected)
     if missing or extra:
@@ -289,7 +295,7 @@ def validate_markdown(root: Path) -> None:
         text = path.read_text(encoding="utf-8")
         for target in MARKDOWN_LINK.findall(text):
             validate_link(path, root, target)
-        if rel not in CURRENT_MARKDOWN:
+        if rel not in CURRENT_MARKDOWN and rel not in evidence:
             continue
         current_text[rel] = text
         if STALE_PRODUCT_TERM.search(text):

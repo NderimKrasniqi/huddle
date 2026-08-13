@@ -96,7 +96,7 @@ export default defineSchema({
          * field was invented to cope with. Absent means "written before there
          * were versions", which every reader already treats as undecodable:
          * `running.stateVersion !== game.stateVersion` fails the runtime rather
-         * than guessing at a format (`games.ts`, `lib/game-runtime.ts`).
+         * than guessing at a format (`games.ts`, `lib/gameRuntime.ts`).
          */
         stateVersion: v.optional(v.number()),
         state: v.any(),
