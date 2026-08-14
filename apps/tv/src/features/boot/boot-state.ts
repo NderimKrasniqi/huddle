@@ -1,43 +1,25 @@
 export type TvBootPhase = 'startup' | 'opening' | 'reconnecting' | 'misconfigured' | 'deviceFailure';
 
 export type TvBootPresentation = {
-  readonly title: string;
-  readonly message: string;
-  readonly active: boolean;
+  readonly purpose:
+    | 'Starting Huddle'
+    | 'Creating a room'
+    | 'Reconnecting to room'
+    | 'TV setup required'
+    | 'TV unavailable';
 };
 
-/** Copy and activity semantics for every pre-room TV state. */
 export function tvBootPresentation(phase: TvBootPhase): TvBootPresentation {
   switch (phase) {
     case 'startup':
-      return {
-        title: 'Starting Huddle',
-        message: 'Getting the TV ready for your group.',
-        active: true,
-      };
+      return { purpose: 'Starting Huddle' };
     case 'opening':
-      return {
-        title: 'Creating your room',
-        message: 'Setting up a room code and connection.',
-        active: true,
-      };
+      return { purpose: 'Creating a room' };
     case 'reconnecting':
-      return {
-        title: 'Reconnecting to Huddle',
-        message: 'We can’t reach the room service yet. Huddle will keep trying automatically.',
-        active: true,
-      };
+      return { purpose: 'Reconnecting to room' };
     case 'misconfigured':
-      return {
-        title: 'Huddle needs setup',
-        message: 'Set EXPO_PUBLIC_CONVEX_URL and rebuild this TV app.',
-        active: false,
-      };
+      return { purpose: 'TV setup required' };
     case 'deviceFailure':
-      return {
-        title: 'Huddle needs device access',
-        message: 'Huddle could not save this TV identity. Check device storage and restart the TV app.',
-        active: false,
-      };
+      return { purpose: 'TV unavailable' };
   }
 }

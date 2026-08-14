@@ -1,5 +1,4 @@
 import { api } from '@huddle/convex';
-import { AnimatedScreen } from '@huddle/ui/native';
 import { useConvex } from 'convex/react';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -77,11 +76,10 @@ export default function PhoneScreen() {
 
   const state = joinScreenState(session, linkedCode ?? '');
 
-  if (state.kind === 'restoring' && restoringToken) {
-    // Do not draw the Join form while an existing seat may still be on its way.
-    // `resumeSession` only raises this flag after finding a persisted token, so
-    // a fresh phone goes straight to the actionable Join surface instead.
-    return <PhoneLoadingScreen phase="restoring" />;
+  if (state.kind === 'restoring') {
+    // Keep the initial launch neutral while storage answers. Once a persisted
+    // credential is found, the same renderer names the recovery state.
+    return <PhoneLoadingScreen phase={restoringToken ? 'restoring' : 'startup'} />;
   }
 
   if (state.kind === 'seated') {
@@ -90,18 +88,16 @@ export default function PhoneScreen() {
     // Forgetting the seat here is what sends the phone back to the form — the
     // screen below watches the room for it.
     return (
-      <AnimatedScreen key={`seated-${state.session.playerId}`}>
-        <SeatedPhone
-          session={state.session}
-          onSeatLost={(reason) => {
-            setNotice(reason);
-            setSession(null);
-          }}
-          // No notice. A phone that tapped Leave knows why it is here, and
-          // `seatLossNotice` has no true sentence for a departure nobody imposed.
-          onLeft={() => setSession(null)}
-        />
-      </AnimatedScreen>
+      <SeatedPhone
+        session={state.session}
+        onSeatLost={(reason) => {
+          setNotice(reason);
+          setSession(null);
+        }}
+        // No notice. A phone that tapped Leave knows why it is here, and
+        // `seatLossNotice` has no true sentence for a departure nobody imposed.
+        onLeft={() => setSession(null)}
+      />
     );
   }
 
@@ -112,13 +108,11 @@ export default function PhoneScreen() {
   // room's TV, since `joinScreenState` sends that scan here. A typed join has
   // no link and so a constant key: nothing remounts under somebody's thumbs.
   return (
-    <AnimatedScreen key={`join-${linkedCode ?? ''}`}>
-      <JoinForm
-        key={linkedCode ?? ''}
-        linkedCode={linkedCode ?? ''}
-        onSeated={setSession}
-        notice={notice}
-      />
-    </AnimatedScreen>
+    <JoinForm
+      key={linkedCode ?? ''}
+      linkedCode={linkedCode ?? ''}
+      onSeated={setSession}
+      notice={notice}
+    />
   );
 }

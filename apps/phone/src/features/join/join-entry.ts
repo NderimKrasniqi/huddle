@@ -39,9 +39,7 @@ export function codeEntry(typed: string): string {
 }
 
 /**
- * The cell waiting for a letter — the one Soft Minimal gives the accent border and
- * the blinking caret — or `undefined` once the code is whole and no cell is
- * waiting for anything.
+ * The next code position, or `undefined` once the code is complete.
  */
 export function activeCodeCell(entry: string): number | undefined {
   return entry.length < ROOM_CODE_LENGTH ? entry.length : undefined;
@@ -55,7 +53,7 @@ export function isCodeComplete(entry: string): boolean {
 /**
  * Whether a code edit crossed the point at which the nickname should take the
  * keyboard. Keeping this transition pure makes the screen's focus hand-off
- * explicit without putting a TextInput ref in the join-entry rules.
+ * explicit without coupling the join-entry rules to a native input reference.
  */
 export function shouldMoveToNickname(previousCode: string, nextCode: string): boolean {
   return !isCodeComplete(previousCode) && isCodeComplete(nextCode);

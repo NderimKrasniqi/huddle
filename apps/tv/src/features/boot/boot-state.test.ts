@@ -2,34 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import { tvBootPresentation, type TvBootPhase } from './boot-state';
 
-describe('TV boot presentation', () => {
-  it.each(['startup', 'opening', 'reconnecting'] as const)(
-    'keeps the %s surface visibly active',
-    (phase) => {
-      expect(tvBootPresentation(phase).active).toBe(true);
-    },
-  );
+describe('TV boot purposes', () => {
+  it('maps every pre-room phase to one exact label', () => {
+    const expected: Record<TvBootPhase, string> = {
+      startup: 'Starting Huddle',
+      opening: 'Creating a room',
+      reconnecting: 'Reconnecting to room',
+      misconfigured: 'TV setup required',
+      deviceFailure: 'TV unavailable',
+    };
 
-  it('does not promise activity for a build that cannot connect', () => {
-    const state = tvBootPresentation('misconfigured');
-    expect(state.active).toBe(false);
-    expect(state.message).toContain('EXPO_PUBLIC_CONVEX_URL');
-    expect(state.message).toMatch(/rebuild/i);
-  });
-
-  it('gives every phase legible title and explanatory copy', () => {
-    const phases: readonly TvBootPhase[] = [
-      'startup',
-      'opening',
-      'reconnecting',
-      'misconfigured',
-      'deviceFailure',
-    ];
-
-    for (const phase of phases) {
-      const state = tvBootPresentation(phase);
-      expect(state.title.length).toBeGreaterThan(0);
-      expect(state.message.length).toBeGreaterThan(0);
+    for (const phase of Object.keys(expected) as TvBootPhase[]) {
+      expect(tvBootPresentation(phase).purpose).toBe(expected[phase]);
     }
   });
 });

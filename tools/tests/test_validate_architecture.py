@@ -91,6 +91,17 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files["src/features/one/BadName.ts"] = "export const bad = true;\n"
         self.assert_invalid(files, "authored filename must be kebab-case")
 
+    def test_only_the_join_room_renderer_has_the_interactive_exception(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+
+        approved = root / "apps/phone/src/features/join/join-room-screen.tsx"
+        neighboring = root / "apps/phone/src/features/join/another-screen.tsx"
+
+        self.assertTrue(validator.is_approved_interactive_renderer(approved, root))
+        self.assertFalse(validator.is_approved_interactive_renderer(neighboring, root))
+
     def package_root(self, manifests: dict[str, str]) -> Path:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

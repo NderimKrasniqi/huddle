@@ -7,7 +7,7 @@ runtime boundaries in `architecture.md`, technology/commands in
 `acceptance-matrix.md`, and visuals in `design/soft-minimal-handoff.md`.
 
 Keep Expo, Convex, pnpm workspaces, one Android TV codebase, the game-registry
-client/server seam, shared primitives, existing assets, and the Soft Minimal
+client/server seam, shared primitives, existing assets, and the warm living-room
 palette intact unless an active task explicitly changes them. Current package
 roots are `apps/phone`, `apps/tv`, `games/*`, `packages/contracts`,
 `packages/domain`, `packages/design-tokens`, `packages/ui`, and

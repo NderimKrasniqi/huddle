@@ -2,21 +2,15 @@
  * The avatars a player can claim, as ids.
  *
  * Ids and not artwork, because the two sides need different halves of the same
- * fact: a phone claims the tile it tapped and the server rules on whether
- * anybody else in the room holds it, neither of which needs to know what a fox
- * looks like. What it looks like is `packages/ui`'s business. So this is
- * protocol, like the Join Link and the Join Rejection, and it lives where
- * protocol lives.
+ * fact: a phone claims a value and the server rules on whether anybody else in
+ * the room holds it. The current neutral renderer does not need to know what a
+ * fox looks like, so this remains protocol alongside Join Links and rejections.
  *
- * Each id is the filename stem of its artwork in `packages/ui/assets/avatars/`,
- * which is what lets the asset map there be keyed by this list rather than by a
- * second list that has to be kept in step. It is also why an id may never be
- * renamed once a room has used one: it is stored on the player row.
+ * An id may never be renamed once a room has used one because it is stored on
+ * the player row and persisted in guest profiles.
  *
- * This replaces the ten claimable colors. A player used to join and *then* pick
- * a swatch, so a seat had to be drawable before the choice was made; the avatar
- * is chosen on the join form, so there is no unclaimed state to draw and the
- * field is required rather than optional.
+ * The field remains required by the join contract even while the clean-slate
+ * presentation is intentionally non-interactive.
  */
 export const AVATAR_IDS = [
   'fox',

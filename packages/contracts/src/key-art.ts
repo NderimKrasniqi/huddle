@@ -1,19 +1,9 @@
 /**
- * The colors a Game Module may set its Key Art in, as names.
+ * Backward-compatible key-art color names in the GameModule contract.
  *
- * Key Art was the handoff's game card: a flat color block with the title on it,
- * which was the whole treatment because a module shipped no images.
- *
- * Soft Minimal ships full-bleed artwork in `packages/ui/assets/game-art/`, and
- * the approved carousel draws three illustrated cards rather than three colored
- * rectangles. So this mechanism is on its way out,
- * and what remains of it is the fallback a module with no art gets.
- *
- * Names for the same reason `PLAYER_COLOR_NAMES` are names: a module declares
- * which one it wears, and `packages/ui` is the only place in Huddle a color may
- * be written down. Every name here is one of its `ColorToken`s —
- * `packages/ui/src/key-art.test.ts` holds the two lists to each other, from the
- * side that owns the values.
+ * The clean-slate native renderer intentionally does not draw key art, but the
+ * contract remains unchanged so registered modules and server data keep their
+ * existing shape.
  */
 export const KEY_ART_COLOR_NAMES = ['accent', 'ink', 'sage', 'justJoined', 'online'] as const;
 
