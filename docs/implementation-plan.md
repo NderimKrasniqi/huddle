@@ -8,12 +8,12 @@ older completed work remains available through Git history.
 ## Execution State
 
 **Current feature:** —
-**Presentation status:** Join Room is implemented and locally verified; device proof and later membership/camera slices remain
-**Current presentation:** The Phone join route owns illustrated four-letter code entry and QR-route navigation; every other Phone, TV, and game-module screen remains on centered `PurposeScreen` labels.
+**Presentation status:** Join Room and TV Room Invitation are implemented and locally verified; Android TV runtime proof and later membership/camera slices remain
+**Current presentation:** The Phone join route owns illustrated four-letter code entry and QR-route navigation; the TV room owns an illustrated authoritative code, dynamic QR, and live roster; every other Phone, TV, and game-module screen remains on centered `PurposeScreen` labels.
 **Current phase:** 1.1 Deployment cutover and device proof
 **Current task:** 1.1.3
 **Last completed task:** 1.1.2
-**Blockers:** 1.1.3: The active Join Room adapter intentionally does not create a seat and the scan modal does not mount a camera, so the full physical party loop waits for later membership/camera slices; a physical Android Phone and Android TV remote are still required for the mixed-phone and physical-focus gates.
+**Blockers:** 1.1.3: The active Join Room adapter intentionally does not create a seat and the scan modal does not mount a camera, so the full physical party loop waits for later membership/camera slices; physical Android Phone and Android TV remote evidence are still required for the mixed-phone and physical-focus gates. The available Android TV emulator can prove the illustrated empty room and lack of software focus targets locally.
 
 ## Phase 1.1 — Deployment cutover and device proof
 
@@ -56,4 +56,5 @@ platforms without touching production data.
   Android TV remote listed above.
 - The reset gate is disabled and production was never targeted.
 - The active presentation keeps the intentional clean slate everywhere except
-  the approved Phone Join Room renderer and its three Phone-specific assets.
+  the approved Phone Join Room and TV Room Invitation renderers and their
+  app-specific supplied assets.

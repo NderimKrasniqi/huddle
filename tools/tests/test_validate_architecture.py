@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
+import struct
 import sys
 import tempfile
 import unittest
@@ -91,16 +94,18 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files["src/features/one/BadName.ts"] = "export const bad = true;\n"
         self.assert_invalid(files, "authored filename must be kebab-case")
 
-    def test_only_the_join_room_renderer_has_the_interactive_exception(self) -> None:
+    def test_only_the_two_incremental_renderers_have_illustrated_exceptions(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
 
-        approved = root / "apps/phone/src/features/join/join-room-screen.tsx"
+        phone = root / "apps/phone/src/features/join/join-room-screen.tsx"
+        tv = root / "apps/tv/src/features/room/room-invitation-screen.tsx"
         neighboring = root / "apps/phone/src/features/join/another-screen.tsx"
 
-        self.assertTrue(validator.is_approved_interactive_renderer(approved, root))
-        self.assertFalse(validator.is_approved_interactive_renderer(neighboring, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(phone, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(tv, root))
+        self.assertFalse(validator.is_approved_illustrated_renderer(neighboring, root))
 
     def package_root(self, manifests: dict[str, str]) -> Path:
         temporary = tempfile.TemporaryDirectory()
@@ -150,6 +155,63 @@ class ArchitectureFixtureTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(SystemExit, "client-safe entrypoint"):
             validator.validate_package_boundaries(root)
+
+    def test_qr_dependencies_are_exact_and_tv_only(self) -> None:
+        root = self.package_root(
+            {
+                "apps/tv/package.json": json.dumps(
+                    {"dependencies": validator.TV_QR_DEPENDENCIES}
+                ),
+                "apps/phone/package.json": '{"dependencies":{}}',
+            }
+        )
+        validator.validate_qr_dependency_scope(root)
+
+        (root / "apps/phone/package.json").write_text(
+            '{"dependencies":{"react-native-svg":"15.15.4"}}',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(SystemExit, "outside the TV renderer"):
+            validator.validate_qr_dependency_scope(root)
+
+    def test_supplied_png_validation_rejects_dimensions_and_hash_changes(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        assets = root / "assets"
+        assets.mkdir()
+
+        payload = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 8) + struct.pack(">II", 12, 34) + b"proof"
+        digest = hashlib.sha256(payload).hexdigest()
+        (assets / "supplied.png").write_bytes(payload)
+        specs = {"supplied.png": ((12, 34), digest)}
+        validator.validate_png_asset_set(assets, specs, "Fixture", root)
+
+        wrong_dimensions = payload[:16] + struct.pack(">II", 13, 34) + payload[24:]
+        (assets / "supplied.png").write_bytes(wrong_dimensions)
+        with self.assertRaisesRegex(SystemExit, "wrong dimensions"):
+            validator.validate_png_asset_set(assets, specs, "Fixture", root)
+
+        (assets / "supplied.png").write_bytes(payload + b"changed")
+        with self.assertRaisesRegex(SystemExit, "differs from supplied PNG"):
+            validator.validate_png_asset_set(assets, specs, "Fixture", root)
+
+    def test_tv_room_assets_match_the_supplied_files(self) -> None:
+        validator.validate_tv_room_assets(ROOT)
+
+    def test_tv_reference_composite_cannot_be_imported(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        source = root / "apps/tv/src/features/room/screen.tsx"
+        source.parent.mkdir(parents=True)
+        source.write_text(
+            "const reference = require('../../assets/tv-lobby-empty.png');\n",
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(SystemExit, "reference composite is imported"):
+            validator.validate_reference_composite_exclusion(root)
 
 
 if __name__ == "__main__":

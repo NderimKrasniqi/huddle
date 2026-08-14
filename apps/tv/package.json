@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "description": "Huddle TV app.",
+  "//scripts": "Apple prebuilds point react-native-svg at this app's pnpm react-native symlink. Without the override its podspec follows the react-native-tvos alias to a sibling node_modules path that does not exist. tvOS remains experimental; Android TV is the required runtime proof.",
   "main": "expo-router/entry",
   "scripts": {
     "start": "EXPO_TV=1 expo start",
     "android": "EXPO_TV=1 expo run:android",
-    "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 expo run:ios",
-    "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 expo prebuild",
+    "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo run:ios",
+    "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo prebuild",
     "typecheck": "tsc --noEmit",
     "test:render": "jest --config jest.config.cjs --runInBand"
   },
@@ -27,8 +28,10 @@
     "expo-splash-screen": "~57.0.5",
     "react": "19.2.3",
     "react-native": "npm:react-native-tvos@~0.86.0-2",
+    "react-native-qrcode-svg": "^6.3.21",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.2"
+    "react-native-screens": "~4.26.2",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@react-native-tvos/config-tv": "^0.1.6",

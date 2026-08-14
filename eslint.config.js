@@ -38,4 +38,20 @@ module.exports = defineConfig([
       ],
     },
   },
+  {
+    files: ['apps/tv/src/features/room/room-invitation-screen.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: forbiddenPresentationImports
+            .filter((name) => name !== 'react-native-qrcode-svg' && name !== 'react-native-svg')
+            .map((name) => ({
+              name,
+              message: 'The illustrated TV Room renderer has one QR/SVG dependency exception.',
+            })),
+        },
+      ],
+    },
+  },
 ]);

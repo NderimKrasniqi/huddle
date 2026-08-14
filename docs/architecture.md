@@ -20,8 +20,9 @@ convex ─> @huddle/game-registry/logic ─> game logic exports
   background and black text.
 - `@huddle/ui/native` exposes only `PurposeScreen`. It remains the sole shared
   renderer and accepts `platform` plus `purpose`, with no children or style
-  override. The illustrated Join Room renderer is app-owned under
-  `apps/phone/src/features/join` and is not exported from a shared package.
+  override. The illustrated Join Room and Room Invitation renderers are
+  app-owned under their respective apps and are not exported from a shared
+  package.
 - `games/*` retain independent metadata, settings, logic, and Phone/TV module
   contracts. Their current screens resolve to the shared purpose renderer.
 - `@huddle/game-registry` remains the ordered client module list and the
@@ -44,15 +45,21 @@ system-font `Text` label. Phone text is 24pt; TV text is 48pt. It accepts no
 controls, inputs, images, progress indicators, overlays, dialogs, animation,
 focus targets, or feature-specific styling.
 
-There is one narrow app-owned exception:
-`apps/phone/src/features/join/join-room-screen.tsx`. It may use ordinary React
-Native `Image`, `ImageBackground`, input, scrolling, keyboard, loading, and
-pressable primitives with the three exact Phone-specific PNGs under
-`apps/phone/assets/join-room`. `JoinForm` remains the route-facing adapter: it
-seeds the renderer from `linkedCode` and owns `/scan` navigation. The renderer
-accepts an optional join callback, but the running adapter intentionally does
-not supply one. It therefore owns presentation and local code-entry state only,
-never Convex authority, identity, credentials, or membership creation.
+There are exactly two narrow app-owned exceptions:
+
+- `apps/phone/src/features/join/join-room-screen.tsx` may use ordinary React
+  Native image, input, scrolling, keyboard, loading, and pressable primitives
+  with the three exact Phone PNGs. `JoinForm` remains its route-facing adapter,
+  seeds `linkedCode`, and owns `/scan` navigation. The renderer owns local entry
+  state only and never Convex authority, identity, credentials, or membership.
+- `apps/tv/src/features/room/room-invitation-screen.tsx` may use ordinary React
+  Native image primitives and the TV app's QR/SVG dependencies with the exact
+  TV PNGs. It is a pure display renderer accepting `roomCode`, `joinUrl`, and an
+  optional ordered player projection. `RoomStage` caps and maps the live
+  `RosterSeat[]` and generates `roomJoinLink(code)`; `TvSessionController`
+  retains the roster query and selects this renderer only for the resolved
+  room surface. The renderer has no controls, focus targets, subscriptions, or
+  room authority.
 
 The state-to-label mapping is platform-owned:
 
@@ -62,7 +69,8 @@ The state-to-label mapping is platform-owned:
   game`, `Game setup`, `Game paused`, `Game unavailable`, `Game finished`,
   `Trivia game`, or `Voting game`.
 - TV boot/room states: `Starting Huddle`, `Creating a room`, `Reconnecting to
-  room`, `TV setup required`, `TV unavailable`, or `Room invitation`.
+  room`, `TV setup required`, or `TV unavailable`; the resolved room uses the
+  illustrated Room Invitation exception above.
 - TV selection/game states use `Choose a game`, `Game setup`, the shared
   runtime labels, and the two module labels.
 
@@ -103,9 +111,11 @@ content out of clients.
 Shared checked-in bitmap assets remain limited to the neutral launcher, splash,
 adaptive-icon, monochrome, and Android TV banner resources under
 `packages/ui/assets/app-icons`. App configuration references only those neutral
-assets. The only runtime product artwork is the three supplied Join Room PNGs,
-kept Phone-specific under `apps/phone/assets/join-room` and consumed only by the
-approved app renderer. Custom fonts and the former redesign importer remain
+assets. Runtime product artwork is app-owned: the three supplied Phone PNGs
+under `apps/phone/assets/join-room`, plus the clean TV background and phone icon
+under `apps/tv/assets/room-invitation`. The third TV file,
+`tv-lobby-empty.png`, is the supplied baked visual reference and must never be
+imported into runtime code. Custom fonts and the former redesign importer remain
 absent, while Phone retains Expo Camera configuration for the platform
 capability.
 

@@ -66,11 +66,17 @@ export function JoinRoomScreen({
   }
 
   const codeLabel =
-    code === '' ? 'Enter four-letter room code' : `Room code ${code.split('').join(' ')}`;
+    code === ''
+      ? 'Enter four-letter room code'
+      : `Room code ${code.split('').join(' ')}`;
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       <ImageBackground
         source={require('../../../assets/join-room/join-room-background.png')}
@@ -80,7 +86,10 @@ export function JoinRoomScreen({
         testID="join-room-background"
       />
 
-      <SafeAreaView style={styles.safeArea} edges={['top', 'right', 'bottom', 'left']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top', 'right', 'bottom', 'left']}
+      >
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -104,7 +113,9 @@ export function JoinRoomScreen({
                 />
 
                 <Text style={styles.title}>Join a game!</Text>
-                <Text style={styles.subtitle}>{'Enter the 4-letter code\non the TV.'}</Text>
+                <Text style={styles.subtitle}>
+                  {'Enter the 4-letter code\non the TV.'}
+                </Text>
               </View>
 
               <View style={styles.codeSection}>
@@ -213,7 +224,11 @@ function CodeBox({ position, value, active }: CodeBoxProps) {
 
   return (
     <View
-      style={[styles.codeBox, active && styles.codeBoxActive, filled && styles.codeBoxFilled]}
+      style={[
+        styles.codeBox,
+        active && styles.codeBoxActive,
+        filled && styles.codeBoxFilled,
+      ]}
       testID={`room-code-cell-${position + 1}`}
     >
       <Text style={styles.codeCharacter}>{value ?? ''}</Text>

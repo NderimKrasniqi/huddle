@@ -37,9 +37,27 @@ SHARED_RENDERER_IMPORT = re.compile(r"['\"]@huddle/ui/(?:kit|native)['\"]")
 SERVER_CONTENT_IMPORT = re.compile(
     r"(?:curated-pack|questions|server|node:[a-z0-9_/]+)", re.IGNORECASE
 )
-APPROVED_INTERACTIVE_RENDERER = Path(
-    "apps/phone/src/features/join/join-room-screen.tsx"
-)
+PHONE_JOIN_RENDERER = Path("apps/phone/src/features/join/join-room-screen.tsx")
+TV_ROOM_RENDERER = Path("apps/tv/src/features/room/room-invitation-screen.tsx")
+APPROVED_ILLUSTRATED_RENDERERS = frozenset((PHONE_JOIN_RENDERER, TV_ROOM_RENDERER))
+TV_QR_DEPENDENCIES = {
+    "react-native-qrcode-svg": "^6.3.21",
+    "react-native-svg": "15.15.4",
+}
+TV_ROOM_ASSET_SPECS = {
+    "tv-lobby-background.png": (
+        (1672, 941),
+        "cd081ff609284c6a1d748852245002faaed972d340c468676d1524ce5b5717cc",
+    ),
+    "tv-lobby-empty.png": (
+        (1672, 941),
+        "a19a82be3258b72a8188484d77bf8083d6906944ab31f495d3d3da32755cc64e",
+    ),
+    "tv-lobby-phone-icon.png": (
+        (1254, 1254),
+        "e801f7e7893f365fe450fc1663e850389e391cf9184527d8f3ae62b4af411da0",
+    ),
+}
 
 
 def relative(path: Path, root: Path = ROOT) -> str:
@@ -69,10 +87,16 @@ def source_files(src: Path) -> list[Path]:
     )
 
 
-def is_approved_interactive_renderer(path: Path, root: Path = ROOT) -> bool:
-    """Allow controls and artwork only in the current incremental Phone slice."""
+def is_approved_illustrated_renderer(path: Path, root: Path = ROOT) -> bool:
+    """Allow artwork only in the two current incremental presentation slices."""
 
-    return path.resolve() == (root / APPROVED_INTERACTIVE_RENDERER).resolve()
+    return any(path.resolve() == (root / approved).resolve() for approved in APPROVED_ILLUSTRATED_RENDERERS)
+
+
+def is_approved_interactive_renderer(path: Path, root: Path = ROOT) -> bool:
+    """Compatibility name retained for isolated validator callers."""
+
+    return is_approved_illustrated_renderer(path, root)
 
 
 def owner_for(path: Path, src: Path) -> Owner | None:
@@ -444,8 +468,91 @@ def validate_app(app: Path, root: Path = ROOT) -> None:
     validate_cross_boundary_imports(app, root)
 
 
+def validate_qr_dependency_scope(root: Path = ROOT) -> None:
+    """Keep QR/SVG packages exact and local to the TV application."""
+
+    tv_manifest = (root / "apps" / "tv" / "package.json").resolve()
+    found_on_tv: dict[str, str] = {}
+    for manifest in package_manifests(root):
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+            declared = payload.get(field, {})
+            if not isinstance(declared, dict):
+                continue
+            for dependency, expected_version in TV_QR_DEPENDENCIES.items():
+                if dependency not in declared:
+                    continue
+                if manifest.resolve() != tv_manifest or field != "dependencies":
+                    fail(
+                        f"QR/SVG dependency is outside the TV renderer: "
+                        f"{relative(manifest, root)} -> {dependency}"
+                    )
+                actual_version = declared[dependency]
+                if actual_version != expected_version:
+                    fail(
+                        f"TV QR/SVG dependency has wrong version: {dependency} "
+                        f"({actual_version}, expected {expected_version})"
+                    )
+                found_on_tv[dependency] = str(actual_version)
+
+    missing = set(TV_QR_DEPENDENCIES).difference(found_on_tv)
+    if missing:
+        fail(f"TV QR/SVG dependency missing: {sorted(missing)[0]}")
+
+
+def validate_png_asset_set(
+    asset_root: Path,
+    specs: dict[str, tuple[tuple[int, int], str]],
+    label: str,
+    root: Path = ROOT,
+) -> None:
+    """Validate one supplied PNG set by exact names, dimensions, and digests."""
+
+    if not asset_root.is_dir():
+        fail(f"{label} asset directory missing: {relative(asset_root, root)}")
+    actual_assets = {path.name for path in asset_root.iterdir() if path.is_file()}
+    if actual_assets != set(specs):
+        fail(f"{label} assets must contain only the approved PNGs")
+
+    for name, (expected_dimensions, expected_digest) in specs.items():
+        path = asset_root / name
+        payload = path.read_bytes()
+        if payload[:8] != b"\x89PNG\r\n\x1a\n":
+            fail(f"{label} asset is not PNG: {relative(path, root)}")
+        actual_dimensions = struct.unpack(">II", payload[16:24])
+        if actual_dimensions != expected_dimensions:
+            fail(
+                f"{label} asset has wrong dimensions: {relative(path, root)} "
+                f"({actual_dimensions}, expected {expected_dimensions})"
+            )
+        if hashlib.sha256(payload).hexdigest() != expected_digest:
+            fail(f"{label} asset differs from supplied PNG: {relative(path, root)}")
+
+
+def validate_tv_room_assets(root: Path = ROOT) -> None:
+    validate_png_asset_set(
+        root / "apps" / "tv" / "assets" / "room-invitation",
+        TV_ROOM_ASSET_SPECS,
+        "TV Room Invitation",
+        root,
+    )
+
+
+def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
+    """The baked empty-room composite is reference-only and cannot enter Metro."""
+
+    source_root = root / "apps" / "tv" / "src"
+    if not source_root.is_dir():
+        return
+    for source in source_files(source_root):
+        if "tv-lobby-empty.png" in source.read_text(encoding="utf-8"):
+            fail(
+                f"TV Room reference composite is imported at runtime: {relative(source, root)}"
+            )
+
+
 def validate_consolidation(root: Path = ROOT) -> None:
-    """Guard the clean-slate baseline, Join Room exception, identity, and assets."""
+    """Guard the clean-slate baseline, illustrated exceptions, identity, and assets."""
 
     forbidden_paths = [root / "apps" / "controller", root / "packages" / "game-core", root / "packages" / "games"]
     for path in forbidden_paths:
@@ -478,22 +585,23 @@ def validate_consolidation(root: Path = ROOT) -> None:
     forbidden_modules = re.compile(
         r"(?:nativewind|react-native-css-interop|expo-image|react-native-reanimated|"
         r"react-native-worklets|lucide-react-native|@react-native-community/netinfo|"
-        r"react-native-qrcode-svg|react-native-svg|@huddle/ui/(?:kit|fonts))"
+        r"@huddle/ui/(?:kit|fonts))"
     )
+    qr_modules = re.compile(r"(?:react-native-qrcode-svg|react-native-svg)")
     forbidden_renderers = re.compile(
         r"\b(?:Pressable|TextInput|CameraView|QRCode|Modal|Animated|Image|ImageBackground|"
         r"ScrollView|ActivityIndicator|Button|TouchableOpacity|TouchableWithoutFeedback)\b"
     )
     for base in (root / "apps", root / "packages" / "ui", root / "games"):
         for source in source_files(base):
-            if "future" in source.parts:
+            if "future" in source.parts or ".test." in source.name:
                 continue
             clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
             if forbidden_modules.search(clean):
                 fail(f"superseded presentation dependency remains: {relative(source, root)}")
-            if forbidden_renderers.search(clean) and not is_approved_interactive_renderer(
-                source, root
-            ):
+            if qr_modules.search(clean) and source.resolve() != (root / TV_ROOM_RENDERER).resolve():
+                fail(f"QR/SVG renderer import is outside TV Room: {relative(source, root)}")
+            if forbidden_renderers.search(clean) and not is_approved_illustrated_renderer(source, root):
                 fail(f"interactive/artwork renderer remains: {relative(source, root)}")
 
     purpose = root / "packages" / "ui" / "src" / "native" / "purpose-screen.tsx"
@@ -522,8 +630,6 @@ def validate_consolidation(root: Path = ROOT) -> None:
         "react-native-worklets",
         "lucide-react-native",
         "@react-native-community/netinfo",
-        "react-native-qrcode-svg",
-        "react-native-svg",
         "@expo-google-fonts/inter",
         "@expo-google-fonts/nunito",
     }
@@ -535,6 +641,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
                 found = banned_dependencies.intersection(declared)
                 if found:
                     fail(f"removed presentation dependency remains: {relative(manifest, root)} -> {sorted(found)[0]}")
+    validate_qr_dependency_scope(root)
 
     asset_specs = {
         "huddle-app-icon-light.png": (1024, 1024),
@@ -573,26 +680,14 @@ def validate_consolidation(root: Path = ROOT) -> None:
             "bd3575c9e144db67ecefb9b726ea88519de8effd8aa608b0a6bab0622b00da35",
         ),
     }
-    join_asset_root = root / "apps" / "phone" / "assets" / "join-room"
-    if not join_asset_root.is_dir():
-        fail(f"Phone Join Room asset directory missing: {relative(join_asset_root, root)}")
-    actual_join_assets = {path.name for path in join_asset_root.iterdir() if path.is_file()}
-    if actual_join_assets != set(join_asset_specs):
-        fail("Phone Join Room assets must contain only the three approved PNGs")
-    for name, (expected_dimensions, expected_digest) in join_asset_specs.items():
-        path = join_asset_root / name
-        with path.open("rb") as handle:
-            payload = handle.read()
-        if payload[:8] != b"\x89PNG\r\n\x1a\n":
-            fail(f"Phone Join Room asset is not PNG: {relative(path, root)}")
-        actual_dimensions = struct.unpack(">II", payload[16:24])
-        if actual_dimensions != expected_dimensions:
-            fail(
-                f"Phone Join Room asset has wrong dimensions: {relative(path, root)} "
-                f"({actual_dimensions}, expected {expected_dimensions})"
-            )
-        if hashlib.sha256(payload).hexdigest() != expected_digest:
-            fail(f"Phone Join Room asset differs from supplied PNG: {relative(path, root)}")
+    validate_png_asset_set(
+        root / "apps" / "phone" / "assets" / "join-room",
+        join_asset_specs,
+        "Phone Join Room",
+        root,
+    )
+    validate_tv_room_assets(root)
+    validate_reference_composite_exclusion(root)
 
     forbidden_asset_dirs = ("avatars", "game-art", "icons", "logo", "phone-backgrounds", "tv-backgrounds")
     for name in forbidden_asset_dirs:

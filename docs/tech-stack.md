@@ -11,7 +11,7 @@ in [`architecture.md`](./architecture.md); product behavior belongs in
 |---|---|---|---|
 | iOS Phone | Expo / React Native | Supported | Export, native identity, illustrated Join Room render |
 | Android Phone | Expo / React Native | Supported | Export, native identity, illustrated Join Room render |
-| Android TV | Expo / `react-native-tvos` | Supported | Export, release build, Leanback metadata, neutral baseline render |
+| Android TV | Expo / `react-native-tvos` | Supported | Export, release build, Leanback metadata, illustrated Room Invitation render |
 | tvOS | Expo / `react-native-tvos` | Experimental | Compile and simulator evidence only |
 
 Web is not a supported client. Store submission and production release tooling
@@ -44,18 +44,28 @@ source directories.
 | Expo SecureStore | `~57.0.1` | Authoritative room session credential |
 | React Native Safe Area | `~5.7.0` | Native inset provider |
 | React Native Screens | `~4.26.2` | Native navigation screens |
+| React Native QR Code SVG | `^6.3.21` | TV Room join-link QR only |
+| React Native SVG | `15.15.4` | TV QR renderer peer/runtime only |
 
 Active renderers use ordinary React Native style objects and system fonts.
 `@huddle/design-tokens` contains only the white/black values used by the shared
 clean-slate baseline, and `PurposeScreen` remains the only renderer exported by
 `@huddle/ui/native`. The Phone-owned Join Room renderer uses built-in React
 Native image, input, pressable, activity, keyboard, and scroll primitives plus
-`react-native-safe-area-context`; it adds no presentation dependency.
+`react-native-safe-area-context`; it adds no presentation dependency. The
+TV-owned Room Invitation renderer is the only consumer permitted to import the
+QR package, and only the TV app declares QR/SVG dependencies.
 NativeWind, Tailwind, CSS interop, custom fonts, Expo Image, Reanimated,
-Worklets, Lucide, NetInfo presentation, SVG renderers, QR renderers, and global
-CSS are not direct workspace dependencies or active presentation APIs. Expo
-Router may retain framework-transitive peer entries in the lockfile; they are
-not imported by Huddle presentation code.
+Worklets, Lucide, NetInfo presentation, and global CSS are not direct workspace
+dependencies or active presentation APIs. Expo Router may retain
+framework-transitive peer entries in the lockfile; they are not imported by
+Huddle presentation code.
+
+The TV `ios` and `prebuild` scripts set
+`REACT_NATIVE_NODE_MODULES_DIR="$PWD/node_modules"`. This is the
+`react-native-svg` podspec escape hatch needed with pnpm and the
+`react-native-tvos` alias on Apple prebuilds. It preserves experimental tvOS
+compile compatibility; Android TV remains the required runtime proof.
 
 Expo Camera configuration remains deliberately present even though the Join
 Room QR action currently opens a modal purpose-label screen that does not mount
@@ -80,7 +90,7 @@ outside command rate buckets.
 | Tool | Baseline | Purpose |
 |---|---:|---|
 | Vitest | `4.1.10` | Domain, contracts, games, apps, and Convex tests |
-| Jest + React Native Testing Library | Jest `29.7` | Join Room behavior/accessibility and Phone/TV purpose-screen render checks |
+| Jest + React Native Testing Library | Jest `29.7` | Join Room, TV Room Invitation, and remaining purpose-screen render checks |
 | ESLint | `9.39` | TypeScript and forbidden presentation-boundary imports |
 | Expo export / Metro | SDK `57` | Platform bundle proof and bundle-seam inspection |
 | Xcode / Gradle | Project-native | Native compile, identifiers, and launcher metadata |
