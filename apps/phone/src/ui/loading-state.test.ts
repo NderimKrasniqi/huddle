@@ -2,16 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { phoneLoadingPresentation } from './loading-state';
 
-describe('phone loading presentation', () => {
-  it('distinguishes app startup from session recovery', () => {
-    expect(phoneLoadingPresentation('startup')).not.toEqual(
-      phoneLoadingPresentation('restoring'),
-    );
-  });
-
-  it('makes session recovery explicit', () => {
-    const state = phoneLoadingPresentation('restoring');
-    expect(`${state.title} ${state.message}`).toMatch(/room|seat/i);
-    expect(state.message).toMatch(/reconnect/i);
+describe('phone loading purposes', () => {
+  it('maps startup and restoration to their exact labels', () => {
+    expect(phoneLoadingPresentation('startup')).toEqual({ purpose: 'Starting Huddle' });
+    expect(phoneLoadingPresentation('restoring')).toEqual({ purpose: 'Restoring your room' });
   });
 });

@@ -8,8 +8,10 @@ same checks useful against isolated fixture apps in the Python test suite.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import json
+import struct
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,6 +36,9 @@ RENDERER_IMPORT = re.compile(
 SHARED_RENDERER_IMPORT = re.compile(r"['\"]@huddle/ui/(?:kit|native)['\"]")
 SERVER_CONTENT_IMPORT = re.compile(
     r"(?:curated-pack|questions|server|node:[a-z0-9_/]+)", re.IGNORECASE
+)
+APPROVED_INTERACTIVE_RENDERER = Path(
+    "apps/phone/src/features/join/join-room-screen.tsx"
 )
 
 
@@ -62,6 +67,12 @@ def source_files(src: Path) -> list[Path]:
         for path in src.rglob(suffix)
         if not path.name.endswith(".d.ts") and "node_modules" not in path.parts
     )
+
+
+def is_approved_interactive_renderer(path: Path, root: Path = ROOT) -> bool:
+    """Allow controls and artwork only in the current incremental Phone slice."""
+
+    return path.resolve() == (root / APPROVED_INTERACTIVE_RENDERER).resolve()
 
 
 def owner_for(path: Path, src: Path) -> Owner | None:
@@ -434,7 +445,7 @@ def validate_app(app: Path, root: Path = ROOT) -> None:
 
 
 def validate_consolidation(root: Path = ROOT) -> None:
-    """Guard renamed paths, native identity, and the single active UI stack."""
+    """Guard the clean-slate baseline, Join Room exception, identity, and assets."""
 
     forbidden_paths = [root / "apps" / "controller", root / "packages" / "game-core", root / "packages" / "games"]
     for path in forbidden_paths:
@@ -449,22 +460,161 @@ def validate_consolidation(root: Path = ROOT) -> None:
     if phone.get("android", {}).get("package") != "tv.huddle.phone":
         fail("Phone Android identity must be tv.huddle.phone")
 
-    required_ui_files = [
+    removed_setup = [
         root / "apps" / app / name
         for app in APP_NAMES
-        for name in ("babel.config.cjs", "metro.config.cjs", "tailwind.config.cjs", "global.css", "nativewind-env.d.ts")
+        for name in (
+            "babel.config.cjs",
+            "metro.config.cjs",
+            "tailwind.config.cjs",
+            "global.css",
+            "nativewind-env.d.ts",
+        )
     ]
-    for path in required_ui_files:
-        if not path.is_file():
-            fail(f"NativeWind setup file missing: {relative(path, root)}")
+    for path in removed_setup:
+        if path.exists():
+            fail(f"superseded presentation setup remains: {relative(path, root)}")
 
-    forbidden_ui = re.compile(r"\bStyleSheet\b|\bImageBackground\b|import\s*\{[^}]*\bAnimated\b[^}]*\}\s*from\s*['\"]react-native['\"]")
+    forbidden_modules = re.compile(
+        r"(?:nativewind|react-native-css-interop|expo-image|react-native-reanimated|"
+        r"react-native-worklets|lucide-react-native|@react-native-community/netinfo|"
+        r"react-native-qrcode-svg|react-native-svg|@huddle/ui/(?:kit|fonts))"
+    )
+    forbidden_renderers = re.compile(
+        r"\b(?:Pressable|TextInput|CameraView|QRCode|Modal|Animated|Image|ImageBackground|"
+        r"ScrollView|ActivityIndicator|Button|TouchableOpacity|TouchableWithoutFeedback)\b"
+    )
     for base in (root / "apps", root / "packages" / "ui", root / "games"):
         for source in source_files(base):
             if "future" in source.parts:
                 continue
-            if forbidden_ui.search(COMMENTS.sub("", source.read_text(encoding="utf-8"))):
-                fail(f"superseded React Native UI API remains: {relative(source, root)}")
+            clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+            if forbidden_modules.search(clean):
+                fail(f"superseded presentation dependency remains: {relative(source, root)}")
+            if forbidden_renderers.search(clean) and not is_approved_interactive_renderer(
+                source, root
+            ):
+                fail(f"interactive/artwork renderer remains: {relative(source, root)}")
+
+    purpose = root / "packages" / "ui" / "src" / "native" / "purpose-screen.tsx"
+    if not purpose.is_file():
+        fail("PurposeScreen renderer is missing")
+    purpose_source = COMMENTS.sub("", purpose.read_text(encoding="utf-8"))
+    if "export function PurposeScreen" not in purpose_source:
+        fail("PurposeScreen renderer is not exported")
+    if re.search(r"\b(?:children|StyleProp|Pressable|TextInput)\b", purpose_source):
+        fail("PurposeScreen must accept no children, style overrides, or controls")
+
+    manifests = [root / "apps" / app / "package.json" for app in APP_NAMES]
+    manifests.extend(
+        [
+            root / "packages" / "ui" / "package.json",
+            root / "packages" / "game-registry" / "package.json",
+            *(root / "games" / name / "package.json" for name in ("trivia", "voting")),
+        ]
+    )
+    banned_dependencies = {
+        "nativewind",
+        "tailwindcss",
+        "react-native-css-interop",
+        "expo-image",
+        "react-native-reanimated",
+        "react-native-worklets",
+        "lucide-react-native",
+        "@react-native-community/netinfo",
+        "react-native-qrcode-svg",
+        "react-native-svg",
+        "@expo-google-fonts/inter",
+        "@expo-google-fonts/nunito",
+    }
+    for manifest in manifests:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+            declared = payload.get(field, {})
+            if isinstance(declared, dict):
+                found = banned_dependencies.intersection(declared)
+                if found:
+                    fail(f"removed presentation dependency remains: {relative(manifest, root)} -> {sorted(found)[0]}")
+
+    asset_specs = {
+        "huddle-app-icon-light.png": (1024, 1024),
+        "huddle-app-icon-dark.png": (1024, 1024),
+        "huddle-android-legacy.png": (1024, 1024),
+        "huddle-android-tv-icon.png": (1024, 1024),
+        "huddle-android-adaptive-foreground.png": (1024, 1024),
+        "huddle-android-monochrome.png": (1024, 1024),
+        "huddle-splash.png": (1024, 1024),
+        "huddle-android-tv-banner.png": (640, 360),
+    }
+    asset_root = root / "packages" / "ui" / "assets" / "app-icons"
+    for name, expected in asset_specs.items():
+        path = asset_root / name
+        if not path.is_file():
+            fail(f"neutral native asset missing: {relative(path, root)}")
+        with path.open("rb") as handle:
+            header = handle.read(24)
+        if header[:8] != b"\x89PNG\r\n\x1a\n":
+            fail(f"native asset is not PNG: {relative(path, root)}")
+        actual = struct.unpack(">II", header[16:24])
+        if actual != expected:
+            fail(f"native asset has wrong dimensions: {relative(path, root)} ({actual}, expected {expected})")
+
+    join_asset_specs = {
+        "huddle-brand-icon.png": (
+            (1254, 1254),
+            "418219f8a51365b86cc8cc2624cb48f8b4ffa94302e9d2d9d4ba05886ef5dc05",
+        ),
+        "join-room-background.png": (
+            (941, 1672),
+            "9882f6929f62345e0ba49aa753eca43b9ecb86ebbd12d0d65f2f49c17dedfd01",
+        ),
+        "qr-code-icon.png": (
+            (1254, 1254),
+            "bd3575c9e144db67ecefb9b726ea88519de8effd8aa608b0a6bab0622b00da35",
+        ),
+    }
+    join_asset_root = root / "apps" / "phone" / "assets" / "join-room"
+    if not join_asset_root.is_dir():
+        fail(f"Phone Join Room asset directory missing: {relative(join_asset_root, root)}")
+    actual_join_assets = {path.name for path in join_asset_root.iterdir() if path.is_file()}
+    if actual_join_assets != set(join_asset_specs):
+        fail("Phone Join Room assets must contain only the three approved PNGs")
+    for name, (expected_dimensions, expected_digest) in join_asset_specs.items():
+        path = join_asset_root / name
+        with path.open("rb") as handle:
+            payload = handle.read()
+        if payload[:8] != b"\x89PNG\r\n\x1a\n":
+            fail(f"Phone Join Room asset is not PNG: {relative(path, root)}")
+        actual_dimensions = struct.unpack(">II", payload[16:24])
+        if actual_dimensions != expected_dimensions:
+            fail(
+                f"Phone Join Room asset has wrong dimensions: {relative(path, root)} "
+                f"({actual_dimensions}, expected {expected_dimensions})"
+            )
+        if hashlib.sha256(payload).hexdigest() != expected_digest:
+            fail(f"Phone Join Room asset differs from supplied PNG: {relative(path, root)}")
+
+    forbidden_asset_dirs = ("avatars", "game-art", "icons", "logo", "phone-backgrounds", "tv-backgrounds")
+    for name in forbidden_asset_dirs:
+        path = root / "packages" / "ui" / "assets" / name
+        if path.exists():
+            fail(f"superseded artwork directory exists: {relative(path, root)}")
+
+    neutral_names = set(asset_specs)
+    for app in APP_NAMES:
+        config_path = root / "apps" / app / "app.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))["expo"]
+        if config.get("backgroundColor") != "#FFFFFF":
+            fail(f"{app} native background must be white")
+        encoded = json.dumps(config)
+        referenced = set(re.findall(r"huddle-[a-z0-9-]+\.png", encoded))
+        if not referenced.issubset(neutral_names):
+            fail(f"{app} config references a non-neutral asset")
+        if "huddle-splash.png" not in referenced:
+            fail(f"{app} config must reference the neutral splash asset")
+
+    if not (root / "apps" / "phone" / "app.json").read_text(encoding="utf-8").__contains__("expo-camera"):
+        fail("Phone Expo Camera configuration must remain")
 
     stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core")
     for base in (root / "apps", root / "packages", root / "games", root / "convex", root / "tools"):

@@ -1,8 +1,3 @@
-export { PhoneScreen } from './phone-screen';
+/** Phone UI seam; every state delegates to the shared neutral renderer. */
+export { PurposeScreen, type PurposeScreenProps } from '@huddle/ui/native';
 export { PhoneLoadingScreen } from './loading-screen';
-export {
-  OutlinePill,
-  PrimaryButton,
-  RoomCodeChip,
-  SeatedHeader,
-} from './phone-components';

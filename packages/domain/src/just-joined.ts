@@ -9,14 +9,9 @@
  * taken, and a `joinedAt` on the wire would be a server timestamp compared
  * against a television's own clock, which nothing in Huddle keeps in step.
  *
- * It is back on the seats it was written for. Soft Minimal's television left the
- * pairing screen at the first join, which made a taken seat unreachable and
- * moved these four seconds onto the carousel's footer line — one greeting at a
- * time, on the one screen that had no seats. Soft Minimal's Room keeps the
- * roster up for as long as the room is between games, so the treatment goes
- * back where the handoff hangs it: on the arriving player's own avatar, which
- * also means two phones landing together are both greeted rather than the
- * newer one taking the older one's sentence.
+ * The grace period is local to the observing surface. Each client can recognize
+ * arrivals independently, so two phones landing together are both preserved
+ * rather than the newer one taking the older one's notice.
  *
  * There is no clock here, for the same kind of reason there is no timestamp. The
  * four seconds are counted by whatever is drawing them; all this has to answer
@@ -27,12 +22,9 @@
  *
  * ## Why it is here rather than in an app
  *
- * It was the television's, in `apps/tv/src/`, for as long as the television was
- * the only surface with seats to greet. The approved phone board draws a JUST
- * JOINED chip on the Host's roster too, and an app cannot import another app —
- * so it moved to the one place both clients already share. It is generic over
- * the seat's id for that move: the two rosters are the same Convex query, but
- * each app names its own row type off it, and this only ever asks who.
+ * Both clients use the same helper, while each app keeps its own local surface
+ * state. It is generic over the seat id because the two rosters come from the
+ * same Convex query but each app names its own row type.
  */
 
 /** How long an arrival is greeted: the handoff's "~4s". */

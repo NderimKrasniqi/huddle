@@ -2,20 +2,17 @@
   "name": "@huddle/tv",
   "version": "0.1.0",
   "private": true,
-  "description": "Huddle TV app: the hub client on the television.",
+  "description": "Huddle TV app.",
   "main": "expo-router/entry",
-  "//scripts": "The Apple builds carry two environment variables the Phone does not need. REACT_NATIVE_NODE_MODULES_DIR is react-native-svg's documented escape hatch: its podspec resolves `react-native/package.json`, lands in `react-native-tvos/` because of the alias below, looks for a sibling `react-native/` that pnpm never created, and dies on `File.join(nil, ...)` with `no implicit conversion of nil into String`. Pointing it at this app's own node_modules — where pnpm does put a `react-native` symlink — is what lets `pod install` finish. LC_ALL is for CocoaPods 1.17 on Ruby 4, which crashes in `Pod::Config#installation_root` without a UTF-8 locale. This app keeps Metro's default 8081 and the Phone takes 8082, so both can run at once during a game; see that app's own note for what sharing a port does.",
   "scripts": {
     "start": "EXPO_TV=1 expo start",
     "android": "EXPO_TV=1 expo run:android",
-    "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo run:ios",
-    "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo prebuild",
+    "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 expo run:ios",
+    "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 expo prebuild",
     "typecheck": "tsc --noEmit",
     "test:render": "jest --config jest.config.cjs --runInBand"
   },
   "dependencies": {
-    "@huddle/design-tokens": "workspace:*",
-    "@react-native-community/netinfo": "12.0.1",
     "@huddle/convex": "workspace:*",
     "@huddle/domain": "workspace:*",
     "@huddle/game-registry": "workspace:*",
@@ -24,23 +21,14 @@
     "expo": "~57.0.12",
     "expo-constants": "~57.0.10",
     "expo-crypto": "~57.0.1",
-    "expo-font": "~57.0.1",
-    "expo-image": "~57.0.2",
     "expo-linking": "~57.0.5",
     "expo-router": "~57.0.12",
     "expo-secure-store": "~57.0.1",
     "expo-splash-screen": "~57.0.5",
-    "expo-system-ui": "~57.0.2",
-    "nativewind": "4.2.1",
     "react": "19.2.3",
     "react-native": "npm:react-native-tvos@~0.86.0-2",
-    "react-native-css-interop": "0.2.1",
-    "react-native-reanimated": "4.5.1",
-    "react-native-qrcode-svg": "^6.3.21",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.2",
-    "react-native-svg": "15.15.4",
-    "react-native-worklets": "0.10.1"
+    "react-native-screens": "~4.26.2"
   },
   "devDependencies": {
     "@react-native-tvos/config-tv": "^0.1.6",
@@ -54,7 +42,6 @@
     "jest-expo": "catalog:",
     "react-test-renderer": "catalog:",
     "test-renderer": "catalog:",
-    "tailwindcss": "3.4.17",
     "typescript": "catalog:"
   }
 }

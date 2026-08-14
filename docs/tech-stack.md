@@ -1,17 +1,17 @@
 # Huddle technology stack
 
-This document owns the approved technologies, pinned versions, platform
-caveats, and verification commands. Runtime boundaries and dependency direction
-belong in [`architecture.md`](./architecture.md); product behavior belongs in
+This document owns approved technologies, pinned versions, platform caveats,
+and verification commands. Runtime boundaries and dependency direction belong
+in [`architecture.md`](./architecture.md); product behavior belongs in
 [`project-scope.md`](./project-scope.md).
 
 ## Supported platform matrix
 
 | Client | Runtime | Milestone status | Required proof |
 |---|---|---|---|
-| iOS Phone | Expo / React Native | Supported | Export, native identity, camera permission, QR join, full room loop |
-| Android Phone | Expo / React Native | Supported | Export, native identity, manual and QR join, full room loop |
-| Android TV | Expo / `react-native-tvos` | Supported | Export, release build, Leanback metadata, remote-focus check, full room loop |
+| iOS Phone | Expo / React Native | Supported | Export, native identity, illustrated Join Room render |
+| Android Phone | Expo / React Native | Supported | Export, native identity, illustrated Join Room render |
+| Android TV | Expo / `react-native-tvos` | Supported | Export, release build, Leanback metadata, neutral baseline render |
 | tvOS | Expo / `react-native-tvos` | Experimental | Compile and simulator evidence only |
 
 Web is not a supported client. Store submission and production release tooling
@@ -26,39 +26,41 @@ are outside this milestone.
 | TypeScript | `~5.9.3` | Strict types across apps, packages, games, and Convex |
 | React | `19.2.3` | Shared component runtime |
 | Expo | SDK `57` | Phone and TV application platform |
-| Expo Router | `~57.0.8` | File-based native navigation and modal/deep-link routing |
-| React Native TV | `~0.86.0-2` | Single React Native runtime with Android TV support |
+| Expo Router | `~57.0.12` | File-based native navigation and deep-link routing |
+| React Native TV | `~0.86.0-2` | One React Native runtime with Android TV support |
 
-The workspace roots are `apps/*`, `packages/*`, `games/*`, and `convex`.
-Applications consume contracts, domain rules, tokens, registry entries, shared
-UI, and game modules through package exports; they do not reach across package
+Workspace roots are `apps/*`, `packages/*`, `games/*`, and `convex`.
+Applications consume contracts, domain rules, the registry, shared neutral UI,
+and game modules through package exports; they do not reach across package
 source directories.
 
-## Client platform libraries
+## Active client libraries
 
 | Technology | Approved version | Use |
 |---|---:|---|
-| NativeWind | `4.2.1` | Active component styling system |
-| Tailwind CSS | `3.4.17` | NativeWind compilation and the shared semantic preset |
-| Reanimated | `4.5.1` | UI-thread animation |
-| Worklets | `0.10.1` | Reanimated worklet runtime |
-| Expo Image | `~57.0.2` | All application image rendering |
-| NetInfo | `~12.0.1` | Advisory offline and retry presentation |
-| Expo Camera | `~57.0.3` | Phone QR scanner in QR-only mode |
+| Expo Camera | `~57.0.3` | Retained Phone QR-scanning capability and native configuration |
 | Expo Crypto | `~57.0.1` | Local guest UUID generation |
 | AsyncStorage | `~2.2.0` | Non-secret local guest profile |
 | Expo SecureStore | `~57.0.1` | Authoritative room session credential |
+| React Native Safe Area | `~5.7.0` | Native inset provider |
+| React Native Screens | `~4.26.2` | Native navigation screens |
 
-NativeWind configuration is app-owned. Each app provides Babel and Metro
-configuration, a CSS entrypoint imported by its root layout, NativeWind type
-declarations, and Tailwind content paths covering the app, shared UI, registry,
-and `games/*`. `@huddle/design-tokens` owns the canonical Soft Minimal values
-and preset.
+Active renderers use ordinary React Native style objects and system fonts.
+`@huddle/design-tokens` contains only the white/black values used by the shared
+clean-slate baseline, and `PurposeScreen` remains the only renderer exported by
+`@huddle/ui/native`. The Phone-owned Join Room renderer uses built-in React
+Native image, input, pressable, activity, keyboard, and scroll primitives plus
+`react-native-safe-area-context`; it adds no presentation dependency.
+NativeWind, Tailwind, CSS interop, custom fonts, Expo Image, Reanimated,
+Worklets, Lucide, NetInfo presentation, SVG renderers, QR renderers, and global
+CSS are not direct workspace dependencies or active presentation APIs. Expo
+Router may retain framework-transitive peer entries in the lockfile; they are
+not imported by Huddle presentation code.
 
-Visual constants must use semantic tokens. Calculated layout and animated
-values may remain native style objects when their constants resolve through
-tokens. ESLint and architecture validation reject active imports of React
-Native `StyleSheet`, `Image`, `ImageBackground`, and `Animated`.
+Expo Camera configuration remains deliberately present even though the Join
+Room QR action currently opens a modal purpose-label screen that does not mount
+a camera. This keeps the platform capability and native boundary ready for a
+later scanner slice.
 
 ## Server and shared contracts
 
@@ -78,24 +80,10 @@ outside command rate buckets.
 | Tool | Baseline | Purpose |
 |---|---:|---|
 | Vitest | `4.1.10` | Domain, contracts, games, apps, and Convex tests |
-| Jest + React Native Testing Library | Jest `29.7` | Rendered Phone and TV component checks |
-| ESLint | `9.39` | TypeScript, React, semantic-token, typography, accessibility, and TV-surface rules |
-| Maestro | `2.8.0` | Repeatable installed-app journeys on simulators and connected devices |
+| Jest + React Native Testing Library | Jest `29.7` | Join Room behavior/accessibility and Phone/TV purpose-screen render checks |
+| ESLint | `9.39` | TypeScript and forbidden presentation-boundary imports |
 | Expo export / Metro | SDK `57` | Platform bundle proof and bundle-seam inspection |
-| Xcode / Gradle | Project-native | Native compile, identifiers, entitlements, and launcher metadata |
-
-Maestro is part of the release proof, not the unit-test layer. Run flows against
-an installed development build with a specific device ID:
-
-```sh
-MAESTRO_CLI_NO_ANALYTICS=1 maestro --device <device-id> test <flow.yaml> --no-ansi
-```
-
-Use Maestro for deterministic navigation, manual-code joining, Ready/start/end,
-recovery, and focus assertions. A simulator flow can prove camera permission and
-scanner fallback UI, but it cannot prove a physical phone reading the TV's real
-QR code. That camera path and Android TV remote focus still require dated
-physical-device evidence.
+| Xcode / Gradle | Project-native | Native compile, identifiers, and launcher metadata |
 
 ## Local verification ladder
 
@@ -130,7 +118,7 @@ git diff --check
 
 ## Bundle and native release proof
 
-Create fresh export directories and inspect every client bundle:
+Create fresh export directories and inspect each client bundle:
 
 ```sh
 pnpm --filter @huddle/phone exec expo export --platform ios --output-dir <phone-ios-export>
@@ -147,17 +135,17 @@ NODE_ENV=production ./apps/tv/android/gradlew -p apps/tv/android assembleRelease
 ```
 
 The Android manifest must require Leanback, make touchscreen/faketouch
-non-required, provide TV icon and banner resources, and expose
-`LEANBACK_LAUNCHER`. Android TV build failure blocks the milestone. tvOS build
-or simulator failure is recorded separately because tvOS remains experimental.
+non-required, provide the neutral TV icon and banner resources, and expose
+`LEANBACK_LAUNCHER`. Android TV build failure blocks the milestone. tvOS
+failure is recorded separately because tvOS remains experimental.
 
 Phone configuration must resolve to slug `huddle-phone`, package
-`tv.huddle.phone`, and iOS bundle identifier `tv.huddle.phone`. Before deep-link
-testing, remove earlier Huddle builds from test devices so `huddle://`
-resolution is unambiguous.
+`tv.huddle.phone`, and iOS bundle identifier `tv.huddle.phone`. Before
+deep-link testing, remove earlier Huddle builds from test devices so
+`huddle://` resolution is unambiguous.
 
 ## Dependency policy
 
 Current audit exceptions, patches, review dates, and production dependency
-policy are owned by [`dependency-security.md`](./dependency-security.md). Do not
-copy advisory lists into this document.
+policy are owned by [`dependency-security.md`](./dependency-security.md). Do
+not copy advisory lists into this document.

@@ -6,9 +6,7 @@
     "version": "0.1.0",
     "orientation": "landscape",
     "userInterfaceStyle": "light",
-    "//backgroundColor": "Soft Minimal's `colors.screen`, retained as the native/loading fallback while the full-viewport TV background image resolves. Stated here so the native window is already right before any React view exists \u2014 otherwise a cold start flashes the platform default before the native splash and animated boot surface take over. Kept honest by color-literals.test.ts, which is also why the value is written out: Expo transpiles app.config.ts and then requires it, so importing the token is not possible.",
-    "backgroundColor": "#FFF7F2",
-    "//splash": "The expo-splash-screen plugin below is the native source of truth. Expo 57 still accepts the legacy top-level splash field but prebuild ignores it and emits the grey target-grid placeholder, so the plugin is intentional and verified from generated Android resources.",
+    "backgroundColor": "#FFFFFF",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.hub",
@@ -16,15 +14,11 @@
       "adaptiveIcon": {
         "foregroundImage": "../../packages/ui/assets/app-icons/huddle-android-adaptive-foreground.png",
         "monochromeImage": "../../packages/ui/assets/app-icons/huddle-android-monochrome.png",
-        "backgroundColor": "#FFF7F2"
+        "backgroundColor": "#FFFFFF"
       }
     },
     "ios": {
       "bundleIdentifier": "tv.huddle.hub",
-      "//infoPlist": "CALayer.allowsEdgeAntialiasing is false by default, and a layer carrying a transform is composited without antialiasing \u2014 so Soft Minimal's \u00b11\u20132\u00b0 sticker tilts turn every tile border into a visible staircase (measured: a rotated edge steps 2px per 50 rows with no intermediate pixel values, where Android feathers the same edge). This key turns edge antialiasing on app-wide. Apple documents a rendering cost; the TV screens are near-static, so it does not matter here. Only the TV app needs it \u2014 nothing in the Phone is rotated.",
-      "infoPlist": {
-        "UIViewEdgeAntialiasing": true
-      },
       "icon": {
         "light": "../../packages/ui/assets/app-icons/huddle-app-icon-light.png",
         "dark": "../../packages/ui/assets/app-icons/huddle-app-icon-dark.png"
@@ -35,10 +29,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "../../packages/ui/assets/logo/huddle-symbol-orange.png",
+          "image": "../../packages/ui/assets/app-icons/huddle-splash.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#FFF7F2"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       [
@@ -55,7 +49,6 @@
       "typedRoutes": true
     },
     "web": { "bundler": "metro" },
-    "//icon": "Reaches outside the app directory into packages/ui/assets, which is where runtime artwork lives for both apps. Expo resolves this relative to the app directory and Metro's watchFolders already cover the workspace, so the path holds \u2014 but it is the kind of thing a `prebuild` proves rather than a reader.",
     "icon": "../../packages/ui/assets/app-icons/huddle-app-icon-light.png"
   }
 }

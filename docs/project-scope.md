@@ -18,7 +18,12 @@ games can concentrate on gameplay.
 Huddle is a native local multiplayer party-game platform. One TV is the shared
 social display and each player uses the Huddle Phone app as their personal
 companion surface. The TV creates a room with a four-character code and QR code;
-iOS and Android phones join it without requiring an account.
+iOS and Android phones join it without requiring an account. During the current
+incremental UI phase, the Phone Join Room route renders the supplied illustrated
+code-entry surface and can open the QR route. It deliberately stops before
+identity collection or membership creation. Every other Phone, TV, and game
+surface remains on the centered clean-slate purpose label while its route and
+state seams stay intact.
 
 The first Phone to join becomes Host. The Host browses games, selects and
 configures one, manages the room, finalizes setup, participates in readiness,
@@ -35,8 +40,12 @@ installed game must not require game-specific branches in the Huddle platform.
 The current release proves the reusable platform loop with two installed
 launch-proof modules, Trivia and Voting. It does not yet ship full rounds,
 answers, votes, scoring, winners, or results. Each module proves that its own
-settings resolve into module-owned Phone and TV screens and that the Host can
-return every client to the same lobby.
+settings resolve into module-owned Phone and TV contracts and that the Host can
+return every client to the same lobby. The active presentation is deliberately
+incremental: the Join Room UI accepts a four-letter code and offers QR-route
+navigation, while the remaining surfaces expose resolved state as
+`PurposeScreen` text. Coordinators, subscriptions, credentials, presence, and
+Convex behavior remain in place for later interactive slices.
 
 The implementation should remain no larger than this milestone requires while
 keeping the platform/game boundary durable enough for later complete games.
@@ -60,6 +69,9 @@ keeping the platform/game boundary durable enough for later complete games.
 - The scanner handles camera permission, denial/settings, unavailable camera,
   malformed payloads, duplicate scans, and replacement navigation into the join
   route.
+- The current illustrated Join Room slice normalizes manual and linked codes to
+  four uppercase letters, enables its visual Join action for a complete code,
+  and opens the modal scan route. It does not call Convex or create a seat.
 - Joining requires a display name and one of the ten built-in avatars.
 - A room holds at most 10 seats; both installed games currently require 2–10
   players.
@@ -172,30 +184,35 @@ product.
 
 ## TV experience
 
-The current TV app provides:
+The current TV app resolves room opening/restoration, roster, browsing, setup,
+running-game, and expiry state through its existing subscriptions. The active
+visual for each state is one centered label: `Starting Huddle`, `Creating a
+room`, `Reconnecting to room`, `TV setup required`, `TV unavailable`, `Room
+invitation`, `Choose a game`, `Game setup`, `Game paused`, `Game unavailable`,
+`Game finished`, `Trivia game`, or `Voting game`.
 
-- room opening/restoration, room code, QR code, and a 2×5 seat grid;
-- Host, present, away, and just-joined roster treatments;
-- the game carousel driven by the Host Phone;
-- selected-game setup, locked settings, and readiness progress;
-- module-owned entered-game presentation;
-- player/TV disconnect and recovery presentation;
-- return to the shared lobby after the Host ends a game.
-
-Android TV is display-only for this milestone: it must expose no accidental
-focusable controls. Physical remote-focus verification remains a release gate.
+Android TV is display-only and the clean-slate renderer exposes no focusable
+controls. Physical remote-focus verification remains a release gate for the
+native shell.
 
 ## Phone experience
 
-The current Phone app provides:
+The current Phone app retains the route adapters, join/scan seams, guest
+profile, session credential, heartbeat, roster/presence, browsing/setup, and
+running-game subscriptions. The Join Room route is the sole illustrated and
+interactive exception: it presents `Join a game!`, accepts or prefills a
+four-letter room code, exposes a visual `Join Room` action, and pushes the modal
+scan route from `Scan QR Code`. Its running adapter supplies no backend join
+handler, so pressing Join does not create a seat or navigate.
 
-- manual-code and QR joining;
-- persistent guest name/avatar setup;
-- room status, roster, presence, readiness, and Leave confirmation;
-- Host player management and deliberate Host transfer;
-- Host catalog browsing, selection, settings, finalize/edit, Start, and End;
-- module-owned entered-game presentation;
-- session loss, player disconnect, TV disconnect, and recovery framing.
+All other active Phone states remain centered purpose labels: `Starting
+Huddle`, `Restoring your room`, `Scan a room code`, `Room lobby`, `Waiting for
+the Host`, `Choose a game`, `Game setup`, `Game paused`, `Game unavailable`,
+`Game finished`, `Trivia game`, or `Voting game`. The temporary scan screen
+does not mount the camera. Identity/avatar collection, membership mutation,
+session persistence, rejection/seat-loss presentation, camera scanning, and
+help content are deferred from this UI slice while their existing contracts
+remain available.
 
 The module screen is the extension point for future private answers, votes,
 secret information, cards, drawing, and other game-specific input. Those
@@ -220,11 +237,12 @@ gameplay controls are not shipped by the current proof modules.
 
 ## Release acceptance
 
-The milestone must prove room creation/restoration, manual and QR joining,
+The milestone must prove room creation/restoration, manual and QR route seams,
 persistent guest identity, first-player Host assignment, automatic succession,
-presence/reconnect behavior, game browsing and configuration, the full Ready
-gate, launch and End for both proof modules, structured rate limits, bundle
-isolation, and supported-platform builds.
+presence/reconnect behavior, game browsing and configuration state, the full
+Ready gate, launch and End for both proof modules, structured rate limits,
+bundle isolation, the illustrated Join Room exception, the clean-slate render
+contract for every other surface, and supported-platform builds.
 
 Physical evidence must cover a real Phone camera reading the TV QR code, mixed
 iOS/Android phones, and Android TV remote focus. The current evidence mapping is

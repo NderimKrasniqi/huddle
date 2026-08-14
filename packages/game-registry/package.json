@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "nativewind": "4.2.1",
     "typescript": "catalog:"
   }
 }

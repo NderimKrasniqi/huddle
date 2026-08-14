@@ -2,12 +2,11 @@
   "name": "@huddle/design-tokens",
   "version": "0.1.0",
   "private": true,
-  "description": "Canonical Soft Minimal semantic tokens and Tailwind preset.",
+  "description": "Huddle's two neutral presentation values.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./tailwind-preset": "./tailwind-preset.cjs"
+    ".": "./src/index.ts"
   },
   "scripts": { "typecheck": "tsc --noEmit" },
   "devDependencies": { "typescript": "catalog:" }
