@@ -16,39 +16,12 @@ from urllib.parse import unquote
 CURRENT_MARKDOWN = {
     "AGENTS.md",
     "convex/AGENTS.md",
-    "docs/README.md",
-    "docs/acceptance-matrix.md",
     "docs/architecture.md",
-    "docs/dependency-security.md",
-    "docs/design/qa/README.md",
-    "docs/design/reference/boards/SOURCE-MANIFEST.md",
-    "docs/design/soft-minimal-handoff.md",
     "docs/implementation-plan.md",
     "docs/project-scope.md",
     "docs/tech-stack.md",
     "packages/ui/assets/README.md",
 }
-CURRENT_MARKDOWN_PREFIXES = ("docs/design/qa/evidence/platform-consolidation/",)
-
-REUSABLE_SKILL_MARKDOWN = {
-    ".agents/skills/code-review/SKILL.md",
-    ".agents/skills/code-review/references/review-quality.md",
-    ".agents/skills/discover/SKILL.md",
-    ".agents/skills/discover/assets/detail-spec-templates.md",
-    ".agents/skills/discover/assets/project-scope-template.md",
-    ".agents/skills/discover/assets/tech-stack-template.md",
-    ".agents/skills/discover/references/scope-audit.md",
-    ".agents/skills/implement-task/SKILL.md",
-    ".agents/skills/implement-task/references/engineering-quality.md",
-    ".agents/skills/plan/SKILL.md",
-    ".agents/skills/plan/assets/architecture-template.md",
-    ".agents/skills/plan/assets/implementation-plan-template.md",
-    ".agents/skills/plan/references/architecture-audit.md",
-    ".agents/skills/plan/references/plan-audit.md",
-    ".agents/skills/security-review/SKILL.md",
-    ".agents/skills/security-review/references/security-review-quality.md",
-}
-
 GENERATED_MARKDOWN = {"convex/convex/_generated/ai/guidelines.md"}
 FORBIDDEN_DOC_ROOTS = ("docs/archive/", "docs/design/legacy/")
 STALE_PRODUCT_TERM = re.compile(
@@ -64,11 +37,6 @@ EXPLICIT_ANCHOR = re.compile(r"<(?:a|[^>]+\s)id=[\"']([^\"']+)[\"']", re.IGNOREC
 INLINE_CODE = re.compile(r"(?<!`)`([^`\n]+)`(?!`)")
 ROOT_PATH = re.compile(r"^(?:\.agents|apps|convex|docs|games|packages|tools)/")
 REQUIREMENT_ID = re.compile(r"\b(?:ARCH|DATA|DOC|GAME|ID|PLAT|RATE|READY|REL|UI)-\d{3}\b")
-MATRIX_ROW = re.compile(
-    r"^\|\s*((?:ARCH|DATA|DOC|GAME|ID|PLAT|RATE|READY|REL|UI)-\d{3})"
-    r"\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*$",
-    re.MULTILINE,
-)
 SHELL_FENCE = re.compile(r"```(?:sh|bash)\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
@@ -162,8 +130,6 @@ def validate_repo_paths(path: Path, root: Path, text: str) -> None:
         candidate = value.strip().rstrip(".,;:")
         if not ROOT_PATH.match(candidate):
             continue
-        if candidate in FORBIDDEN_DOC_ROOTS and rel == "docs/README.md":
-            continue
         if any(marker in candidate for marker in ("<", ">", "{", "}")):
             continue
         if "*" in candidate or "?" in candidate:
@@ -235,25 +201,11 @@ def validate_pnpm_commands(
                 raise SystemExit(f"unknown root pnpm script in {path.as_posix()}: {line}")
 
 
-def validate_requirements(root: Path, current_text: dict[str, str]) -> None:
-    matrix = current_text["docs/acceptance-matrix.md"]
-    rows = MATRIX_ROW.findall(matrix)
-    ids = [row[0] for row in rows]
-    duplicates = sorted(identifier for identifier, count in Counter(ids).items() if count > 1)
-    if duplicates:
-        raise SystemExit("duplicate acceptance requirement IDs: " + ", ".join(duplicates))
-    if not rows or any(not requirement.strip() or not evidence.strip() for _, requirement, evidence in rows):
-        raise SystemExit("every acceptance requirement must have requirement text and evidence")
+def validate_requirements(_root: Path, current_text: dict[str, str]) -> None:
+    plan = current_text.get("docs/implementation-plan.md")
+    if plan is None:
+        return
 
-    known = set(ids)
-    for rel, text in current_text.items():
-        if rel == "docs/acceptance-matrix.md":
-            continue
-        missing = sorted(set(REQUIREMENT_ID.findall(text)) - known)
-        if missing:
-            raise SystemExit(f"requirement IDs missing from traceability in {rel}: {', '.join(missing)}")
-
-    plan = current_text["docs/implementation-plan.md"]
     task_matches = list(re.finditer(r"^- \[(?: |~|!)\] \*\*(\d+(?:\.\d+){2,})\s+—", plan, re.MULTILINE))
     for index, match in enumerate(task_matches):
         end = task_matches[index + 1].start() if index + 1 < len(task_matches) else len(plan)
@@ -262,8 +214,10 @@ def validate_requirements(root: Path, current_text: dict[str, str]) -> None:
         if requirement_line is None:
             raise SystemExit(f"unfinished task {match.group(1)} has no requirement traceability")
         referenced = set(REQUIREMENT_ID.findall(requirement_line.group(1)))
-        if not referenced or not referenced.issubset(known):
-            raise SystemExit(f"unfinished task {match.group(1)} has invalid requirement traceability")
+        if not referenced:
+            raise SystemExit(f"unfinished task {match.group(1)} has no requirement IDs")
+
+
 def validate_markdown(root: Path) -> None:
     forbidden = [entry for prefix in FORBIDDEN_DOC_ROOTS for entry in (root / prefix).rglob("*") if entry.is_file()]
     if forbidden:
@@ -272,12 +226,7 @@ def validate_markdown(root: Path) -> None:
 
     paths = markdown_paths(root)
     actual = {path.relative_to(root).as_posix() for path in paths}
-    evidence = {
-        rel
-        for rel in actual
-        if any(rel.startswith(prefix) for prefix in CURRENT_MARKDOWN_PREFIXES)
-    }
-    expected = CURRENT_MARKDOWN | REUSABLE_SKILL_MARKDOWN | GENERATED_MARKDOWN | evidence
+    expected = CURRENT_MARKDOWN | GENERATED_MARKDOWN
     missing = sorted(expected - actual)
     extra = sorted(actual - expected)
     if missing or extra:
@@ -295,7 +244,7 @@ def validate_markdown(root: Path) -> None:
         text = path.read_text(encoding="utf-8")
         for target in MARKDOWN_LINK.findall(text):
             validate_link(path, root, target)
-        if rel not in CURRENT_MARKDOWN and rel not in evidence:
+        if rel not in CURRENT_MARKDOWN:
             continue
         current_text[rel] = text
         if STALE_PRODUCT_TERM.search(text):
@@ -311,15 +260,8 @@ def validate_markdown(root: Path) -> None:
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
-    skills = root / ".agents" / "skills"
-    expected = {"discover", "plan", "implement-task", "code-review", "security-review"}
-    actual = {path.name for path in skills.iterdir() if path.is_dir()} if skills.exists() else set()
-    if actual != expected:
-        missing = ", ".join(sorted(expected - actual)) or "—"
-        extra = ", ".join(sorted(actual - expected)) or "—"
-        raise SystemExit(f"workflow skills mismatch (missing: {missing}; extra: {extra})")
-
     forbidden = [
+        root / ".agents",
         root / ".claude",
         root / ".ai-workflow",
         root / "CLAUDE.md",
@@ -337,7 +279,6 @@ def main() -> int:
     validate_markdown(root)
 
     run([sys.executable, str(root / "tools" / "validate-architecture.py")], root)
-    run([sys.executable, str(skills / "plan" / "scripts" / "validate-plan.py"), str(root)], root)
     run(
         [
             sys.executable,
@@ -351,20 +292,6 @@ def main() -> int:
         ],
         root,
     )
-    run(
-        [
-            sys.executable,
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            str(skills / "implement-task" / "tests"),
-            "-p",
-            "test_*.py",
-        ],
-        root,
-    )
-    run([sys.executable, str(skills / "implement-task" / "scripts" / "task-state.py"), "status", str(root)], root)
     print("Workflow validation passed.")
     return 0
 
