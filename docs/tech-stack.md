@@ -121,7 +121,6 @@ pnpm validate:ui-stack
 pnpm validate:rate-limits
 pnpm validate:guest-profile
 pnpm validate:packs
-pnpm verify:dependency-security
 pnpm audit:prod
 git diff --check
 ```
@@ -154,8 +153,8 @@ Phone configuration must resolve to slug `huddle-phone`, package
 deep-link testing, remove earlier Huddle builds from test devices so
 `huddle://` resolution is unambiguous.
 
-## Dependency policy
+## Dependency Policy
 
-Current audit exceptions, patches, review dates, and production dependency
-policy are owned by [`dependency-security.md`](./dependency-security.md). Do
-not copy advisory lists into this document.
+Run `pnpm audit:prod` before release-sensitive dependency changes. Record any
+temporary audit exception in the task or pull request that introduces it, with a
+review date and removal condition.

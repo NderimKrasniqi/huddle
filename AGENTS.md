@@ -1,10 +1,9 @@
 # Huddle
 
-Start with [`docs/README.md`](docs/README.md). It defines documentation
-classification and precedence. Product behavior belongs in `project-scope.md`,
-runtime boundaries in `architecture.md`, technology/commands in
-`tech-stack.md`, current tasks in `implementation-plan.md`, evidence mapping in
-`acceptance-matrix.md`, and visuals in `design/soft-minimal-handoff.md`.
+Start with the remaining current documentation under `docs/`. Product behavior
+belongs in `project-scope.md`, runtime boundaries in `architecture.md`,
+technology/commands in `tech-stack.md`, and current tasks in
+`implementation-plan.md`.
 
 Keep Expo, Convex, pnpm workspaces, one Android TV codebase, the game-registry
 client/server seam, shared primitives, existing assets, and the warm living-room

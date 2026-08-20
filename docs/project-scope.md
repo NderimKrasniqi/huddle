@@ -254,8 +254,7 @@ contract for every other surface, the display-only illustrated TV Room
 Invitation projection, and supported-platform builds.
 
 Physical evidence must cover a real Phone camera reading the TV QR code, mixed
-iOS/Android phones, and Android TV remote focus. The current evidence mapping is
-[`acceptance-matrix.md`](./acceptance-matrix.md).
+iOS/Android phones, and Android TV remote focus.
 
 ## Known future capabilities — not current scope
 

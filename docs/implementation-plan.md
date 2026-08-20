@@ -8,12 +8,12 @@ older completed work remains available through Git history.
 ## Execution State
 
 **Current feature:** —
-**Presentation status:** Join Room and TV Room Invitation are implemented and locally verified; Android TV runtime proof and later membership/camera slices remain
+**Presentation status:** Join Room and TV Room Invitation are implemented and locally verified; the manual Android TV emulator smoke check passed, while physical remote evidence and later membership/camera slices remain
 **Current presentation:** The Phone join route owns illustrated four-letter code entry and QR-route navigation; the TV room owns an illustrated authoritative code, dynamic QR, and live roster; every other Phone, TV, and game-module screen remains on centered `PurposeScreen` labels.
 **Current phase:** 1.1 Deployment cutover and device proof
 **Current task:** 1.1.3
 **Last completed task:** 1.1.2
-**Blockers:** 1.1.3: The active Join Room adapter intentionally does not create a seat and the scan modal does not mount a camera, so the full physical party loop waits for later membership/camera slices; physical Android Phone and Android TV remote evidence are still required for the mixed-phone and physical-focus gates. The available Android TV emulator can prove the illustrated empty room and lack of software focus targets locally.
+**Blockers:** 1.1.3: The active Join Room adapter intentionally does not create a seat and the scan modal does not mount a camera, so the full physical party loop waits for later membership/camera slices; physical Android Phone and Android TV remote evidence are still required for the mixed-phone and physical-focus gates. The available Android TV emulator smoke check passed for the illustrated empty room; it is not a substitute for physical remote traversal.
 
 ## Phase 1.1 — Deployment cutover and device proof
 
@@ -26,7 +26,7 @@ platforms without touching production data.
   - **Work:** Deploy `developmentReset:audit`; enable both development-only reset gates; invoke the exact confirmation literal; audit zero; disable the gate; deploy the strict schema/runtime.
   - **Touches:** Convex development deployment only.
   - **Requirements:** DATA-001
-  - **Verify:** [Dated development deployment record](design/qa/evidence/platform-consolidation/2026-08-13-development-reset.md); production deployment remains untouched.
+  - **Verify:** Dated development deployment record; production deployment remains untouched.
   - **Depends on:** None
   - **Done when:** Zero active development rows are recorded and the reset gate is disabled.
 
@@ -35,7 +35,7 @@ platforms without touching production data.
   - **Work:** Build/export clients, inspect `huddle-phone` / `tv.huddle.phone`, and inspect Android TV Leanback launcher metadata.
   - **Touches:** `apps/phone`, `apps/tv`, generated native projects.
   - **Requirements:** REL-001, REL-002
-  - **Verify:** [Dated client build proof](design/qa/evidence/platform-consolidation/2026-08-13-client-builds.md).
+  - **Verify:** Dated client build proof.
   - **Depends on:** 1.1.1
   - **Done when:** Supported builds pass and experimental tvOS evidence is recorded separately.
 
@@ -44,7 +44,7 @@ platforms without touching production data.
   - **Work:** After the deferred membership and camera slices are connected, remove the old app, scan TV QR, join mixed phones, Ready every seat, Start/End both modules, exercise reconnect, and traverse Android TV focus. Until then, visually prove code entry and QR modal navigation on supported Phone layouts.
   - **Touches:** Development deployment and test devices.
   - **Requirements:** PLAT-001, PLAT-002, REL-003
-  - **Verify:** [Dated physical party checklist](design/qa/evidence/platform-consolidation/2026-08-13-physical-party-check.md) and local device captures under `docs/design/qa/evidence/platform-consolidation/`.
+  - **Verify:** Dated physical party checklist and local device captures.
   - **Depends on:** 1.1.2
   - **Done when:** Physical QR, lifecycle, reconnect, and focus gates all pass.
 
