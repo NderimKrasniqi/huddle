@@ -36,28 +36,18 @@ class MarkdownValidationTests(unittest.TestCase):
 
         validator.validate_link(source, root, "target.md#present")
 
-    def test_requirement_reference_must_exist_in_matrix(self) -> None:
+    def test_unfinished_task_requires_requirement_id(self) -> None:
         current = {
-            "docs/acceptance-matrix.md": (
-                "| ID | Requirement | Evidence |\n"
-                "| --- | --- | --- |\n"
-                "| DOC-001 | Docs validate | workflow gate |\n"
-            ),
             "docs/implementation-plan.md": (
                 "- [ ] **1.1.1 — Finish docs**\n"
-                "  - **Requirements:** DOC-002\n"
+                "  - **Requirements:** pending\n"
             ),
         }
-        with self.assertRaisesRegex(SystemExit, "missing from traceability"):
+        with self.assertRaisesRegex(SystemExit, "has no requirement IDs"):
             validator.validate_requirements(Path("."), current)
 
-    def test_unfinished_task_requires_requirement_mapping(self) -> None:
+    def test_unfinished_task_requires_requirement_line(self) -> None:
         current = {
-            "docs/acceptance-matrix.md": (
-                "| ID | Requirement | Evidence |\n"
-                "| --- | --- | --- |\n"
-                "| DOC-001 | Docs validate | workflow gate |\n"
-            ),
             "docs/implementation-plan.md": "- [ ] **1.1.1 — Finish docs**\n",
         }
         with self.assertRaisesRegex(SystemExit, "has no requirement traceability"):
