@@ -39,7 +39,26 @@ SERVER_CONTENT_IMPORT = re.compile(
 )
 PHONE_JOIN_RENDERER = Path("apps/phone/src/features/join/join-room-screen.tsx")
 TV_ROOM_RENDERER = Path("apps/tv/src/features/room/room-invitation-screen.tsx")
-APPROVED_ILLUSTRATED_RENDERERS = frozenset((PHONE_JOIN_RENDERER, TV_ROOM_RENDERER))
+TV_BOOT_RENDERER = Path("apps/tv/src/features/boot/tv-creating-room-screen.tsx")
+TV_RESTORE_RENDERER = Path("apps/tv/src/features/boot/tv-restoring-room-screen.tsx")
+TV_RESTORE_INDICATOR = Path("apps/tv/src/features/boot/tv-restore-indicator.tsx")
+TV_BOOT_RENDERERS = frozenset(
+    (TV_BOOT_RENDERER, TV_RESTORE_RENDERER, TV_RESTORE_INDICATOR)
+)
+TV_GAME_FLOW_RENDERERS = frozenset(
+    (
+        Path("apps/tv/src/features/game-flow/game-carousel-screen.tsx"),
+        Path("apps/tv/src/features/game-flow/game-art-reveal-screen.tsx"),
+        Path("apps/tv/src/features/game-flow/game-setup-screen.tsx"),
+        Path("apps/tv/src/features/game-flow/game-ready-screen.tsx"),
+    )
+)
+APPROVED_ILLUSTRATED_RENDERERS = frozenset(
+    (PHONE_JOIN_RENDERER, TV_ROOM_RENDERER, *TV_BOOT_RENDERERS, *TV_GAME_FLOW_RENDERERS)
+)
+TV_SVG_RENDERERS = frozenset(
+    (TV_ROOM_RENDERER, *TV_BOOT_RENDERERS)
+)
 TV_QR_DEPENDENCIES = {
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-svg": "15.15.4",
@@ -57,6 +76,58 @@ TV_ROOM_ASSET_SPECS = {
         (1254, 1254),
         "e801f7e7893f365fe450fc1663e850389e391cf9184527d8f3ae62b4af411da0",
     ),
+}
+TV_GAME_FLOW_ASSET_SPECS = {
+    "backgrounds": {
+        "huddle-playroom-1080p.png": (
+            (1920, 1080),
+            "9e040761d707a96fed6be9ff05b5117571e625c0fe30558faf5aee22b2c33635",
+        ),
+    },
+    "brand": {
+        "huddle-mark.png": (
+            (2048, 2048),
+            "f61064f28e47abac020e688cdda532d1aacc60c50bece922e4888bfbf3988df8",
+        ),
+    },
+    "carousel-cards": {
+        "trivia-card-source.png": (
+            (1086, 1448),
+            "950e64f06d7de68d6e133b1af754688ff968b4cc5069e95db24c681337094848",
+        ),
+        "voting-card-source.png": (
+            (1086, 1448),
+            "86b2278465ef3384e65605bbb6592dc38808f58478c679568e28cc8cfcc153c5",
+        ),
+        "word-battle-card-source.png": (
+            (1086, 1448),
+            "44f0b3c898ba37a5ce1df45a08ed852179902b60a920fe8f0378e8bfbe29f578",
+        ),
+        "more-games-card-source.png": (
+            (1086, 1448),
+            "3ab63a5ac47059df0c7a4629beecf83b5b23437311f14132e4842d1cdc036fb9",
+        ),
+    },
+    "game-art": {
+        "trivia-game-art-1080p.png": (
+            (1920, 1080),
+            "8ccd2cc0309521bb2186fc0144988ea12b5f40c78ee02b8120a94792e0a3fcf9",
+        ),
+        "voting-game-art-1080p.png": (
+            (1920, 1080),
+            "650f08c663cc60805547aa84a37f98c89aa93fad233d5ec94f131cdf94003a92",
+        ),
+    },
+    "setup-icons": {
+        "questions.png": (
+            (512, 512),
+            "d823d9c6b1d4d67580b355e4e3504bd93b418b5f485ac14dce1d9a84a88194e6",
+        ),
+        "rounds.png": (
+            (512, 512),
+            "78b782ec1ea3e2ec89131bd58cc39395c762f77f6e7acba1e993cb08459cc2f6",
+        ),
+    },
 }
 
 
@@ -88,7 +159,7 @@ def source_files(src: Path) -> list[Path]:
 
 
 def is_approved_illustrated_renderer(path: Path, root: Path = ROOT) -> bool:
-    """Allow artwork only in the two current incremental presentation slices."""
+    """Allow artwork only in the Phone, TV Room, TV boot, and TV game-flow seams."""
 
     return any(path.resolve() == (root / approved).resolve() for approved in APPROVED_ILLUSTRATED_RENDERERS)
 
@@ -97,6 +168,37 @@ def is_approved_interactive_renderer(path: Path, root: Path = ROOT) -> bool:
     """Compatibility name retained for isolated validator callers."""
 
     return is_approved_illustrated_renderer(path, root)
+
+
+def validate_presentation_renderer_scope(
+    source: Path, clean_source: str, root: Path = ROOT
+) -> None:
+    """Keep artwork and native presentation APIs inside their app-owned seams."""
+
+    resolved = source.resolve()
+    svg_renderers = {(root / renderer).resolve() for renderer in TV_SVG_RENDERERS}
+    room_renderer = (root / TV_ROOM_RENDERER).resolve()
+    boot_renderers = {(root / renderer).resolve() for renderer in TV_BOOT_RENDERERS}
+    game_flow_renderers = {(root / renderer).resolve() for renderer in TV_GAME_FLOW_RENDERERS}
+
+    if re.search(r"\breact-native-qrcode-svg\b", clean_source) and resolved != room_renderer:
+        fail(f"QR renderer import is outside TV Room: {relative(source, root)}")
+    if re.search(r"\breact-native-svg\b", clean_source) and resolved not in svg_renderers:
+        fail(f"SVG renderer import is outside approved TV renderers: {relative(source, root)}")
+
+    # The boot treatment is display-only. Animated/Image/SVG are intentionally
+    # allowed there, but controls, inputs, dialogs, and progress widgets are
+    # not part of this narrow presentation exception.
+    if resolved in boot_renderers or resolved in game_flow_renderers:
+        display_only_forbidden_names = (
+            r"Pressable|TextInput|CameraView|QRCode|Modal|ScrollView|"
+            r"Button|TouchableOpacity|TouchableWithoutFeedback"
+        )
+        if resolved == (root / TV_BOOT_RENDERER).resolve():
+            display_only_forbidden_names += r"|ActivityIndicator"
+        if re.search(rf"\b(?:{display_only_forbidden_names})\b", clean_source):
+            label = "TV boot" if resolved in boot_renderers else "TV game-flow"
+            fail(f"{label} renderer must remain display-only: {relative(source, root)}")
 
 
 def owner_for(path: Path, src: Path) -> Owner | None:
@@ -538,6 +640,29 @@ def validate_tv_room_assets(root: Path = ROOT) -> None:
     )
 
 
+def validate_tv_game_flow_assets(root: Path = ROOT) -> None:
+    """Keep the TV game-flow bundle on the approved optimized asset set."""
+
+    base = root / "apps" / "tv" / "assets" / "game-flow"
+    expected_paths: set[Path] = set()
+    for directory, specs in TV_GAME_FLOW_ASSET_SPECS.items():
+        validate_png_asset_set(base / directory, specs, f"TV Game Flow {directory}", root)
+        expected_paths.update((base / directory / name).resolve() for name in specs)
+
+    actual_paths = {
+        path.resolve()
+        for path in base.rglob("*")
+        if path.is_file() and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".svg"}
+    }
+    if actual_paths != expected_paths:
+        extras = sorted(relative(path, root) for path in actual_paths - expected_paths)
+        missing = sorted(relative(path, root) for path in expected_paths - actual_paths)
+        fail(
+            "TV Game Flow asset set differs from the approved optimized bundle: "
+            f"extras={extras}, missing={missing}"
+        )
+
+
 def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
     """The baked empty-room composite is reference-only and cannot enter Metro."""
 
@@ -587,7 +712,6 @@ def validate_consolidation(root: Path = ROOT) -> None:
         r"react-native-worklets|lucide-react-native|@react-native-community/netinfo|"
         r"@huddle/ui/(?:kit|fonts))"
     )
-    qr_modules = re.compile(r"(?:react-native-qrcode-svg|react-native-svg)")
     forbidden_renderers = re.compile(
         r"\b(?:Pressable|TextInput|CameraView|QRCode|Modal|Animated|Image|ImageBackground|"
         r"ScrollView|ActivityIndicator|Button|TouchableOpacity|TouchableWithoutFeedback)\b"
@@ -599,8 +723,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
             clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
             if forbidden_modules.search(clean):
                 fail(f"superseded presentation dependency remains: {relative(source, root)}")
-            if qr_modules.search(clean) and source.resolve() != (root / TV_ROOM_RENDERER).resolve():
-                fail(f"QR/SVG renderer import is outside TV Room: {relative(source, root)}")
+            validate_presentation_renderer_scope(source, clean, root)
             if forbidden_renderers.search(clean) and not is_approved_illustrated_renderer(source, root):
                 fail(f"interactive/artwork renderer remains: {relative(source, root)}")
 
@@ -687,6 +810,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
         root,
     )
     validate_tv_room_assets(root)
+    validate_tv_game_flow_assets(root)
     validate_reference_composite_exclusion(root)
 
     forbidden_asset_dirs = ("avatars", "game-art", "icons", "logo", "phone-backgrounds", "tv-backgrounds")

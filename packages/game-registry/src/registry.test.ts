@@ -47,6 +47,15 @@ describe('the Registry', () => {
     );
   });
 
+  it('uses the approved four-card lineup', () => {
+    expect(CAROUSEL_REGISTRY.map((game) => game.metadata.title)).toEqual([
+      'Trivia',
+      'Voting',
+      'Word Battle',
+      'More Games',
+    ]);
+  });
+
   it('gives every game a name of its own, since a room stores the id', () => {
     const ids = GAME_REGISTRY.map((game) => game.metadata.id);
 

@@ -102,7 +102,12 @@ async function drawUnusedRoomCode(ctx: MutationCtx): Promise<string> {
  */
 export const openRoom = mutation({
   args: { tvSessionToken: v.string() },
-  returns: v.object({ roomId: v.id('rooms'), code: v.string() }),
+  returns: v.object({
+    roomId: v.id('rooms'),
+    code: v.string(),
+    restored: v.boolean(),
+    hasRunningGame: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const token = args.tvSessionToken.trim();
     if (token.length === 0 || token.length > 256) {
@@ -124,7 +129,12 @@ export const openRoom = mutation({
         if (existing.away || existing.awayCheckGeneration === undefined) {
           await watchTvForSilence(ctx, existing._id, existing.awayCheckGeneration);
         }
-        return { roomId: room._id, code: room.code };
+        return {
+          roomId: room._id,
+          code: room.code,
+          restored: true,
+          hasRunningGame: room.game !== undefined,
+        };
       }
       // A stale session row is not an identity failure. Clean it and let this
       // same durable token open a replacement without spending a new-token
@@ -144,7 +154,7 @@ export const openRoom = mutation({
     });
     await watchTvForSilence(ctx, sessionId, undefined);
 
-    return { roomId, code };
+    return { roomId, code, restored: false, hasRunningGame: false };
   },
 });
 

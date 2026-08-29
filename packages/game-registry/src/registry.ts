@@ -12,7 +12,7 @@ import { votingGameModule } from '@huddle/game-voting';
  * parity and bundle-seam tests keep these two lists aligned without collapsing
  * their ownership.
  *
- * Hot Takes joining Trivia here is that promise kept: a whole second game — a
+ * Voting joining Trivia here is that promise kept: a whole second game — a
  * different loop, a different player range, private votes and no scoring — is
  * installed by one matching import/entry in each registry seam, with not a line
  * of the hub touched to carry it.

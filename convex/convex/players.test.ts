@@ -1471,7 +1471,12 @@ describe('leaveRoom', () => {
       await t.mutation(api.rooms.openRoom, {
         tvSessionToken: 'tv-stays-after-last-player',
       }),
-    ).toEqual(room);
+    ).toMatchObject({
+      roomId: room.roomId,
+      code: room.code,
+      restored: true,
+      hasRunningGame: false,
+    });
   });
 
   it('returns an emptied TV-owned proof room to its lobby without scheduling gameplay', async () => {

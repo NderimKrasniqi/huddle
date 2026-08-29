@@ -23,8 +23,10 @@ incremental UI phase, the Phone Join Room route renders the supplied illustrated
 code-entry surface and can open the QR route. It deliberately stops before
 identity collection or membership creation. The TV Room Invitation surface
 renders the supplied living-room lobby with the authoritative code, dynamic QR,
-and live ten-seat roster. Every other Phone, TV, and game surface remains on the
-centered clean-slate purpose label while its route and state seams stay intact.
+and live ten-seat roster. The TV also owns the display-only carousel, selected
+game-art reveal, setup, and ready handoff; unresolved Phone, TV, and game
+surfaces remain on the centered clean-slate purpose label while their route and
+state seams stay intact.
 
 The first Phone to join becomes Host. The Host browses games, selects and
 configures one, manages the room, finalizes setup, participates in readiness,
@@ -44,8 +46,9 @@ answers, votes, scoring, winners, or results. Each module proves that its own
 settings resolve into module-owned Phone and TV contracts and that the Host can
 return every client to the same lobby. The active presentation is deliberately
 incremental: the Join Room UI accepts a four-letter code and offers QR-route
-navigation, and the TV room UI projects the live invitation and roster, while
-the remaining surfaces expose resolved state as `PurposeScreen` text.
+navigation; the TV owns illustrated startup, restoration, Room Invitation, and
+the four-card pre-game flow; other unresolved surfaces expose `PurposeScreen`
+text.
 Coordinators, subscriptions, credentials, presence, and Convex behavior remain
 in place for later interactive slices.
 
@@ -132,6 +135,9 @@ keeping the platform/game boundary durable enough for later complete games.
 
 - The Host browses the installed catalog from the Phone.
 - The TV mirrors the Host’s current carousel position in real time.
+- The TV carousel keeps four stable positions: Trivia, Voting, Word Battle, and
+  More Games. Trivia and Voting are installed; Word Battle and More Games are
+  display-only `Coming soon` cards that cannot be selected or started.
 - The Host selects an installed game from the Phone; placeholder catalog cards
   may be browsed but cannot be selected or started.
 - Selected-game and browsing state are authoritative room state shared by every
@@ -148,6 +154,9 @@ keeping the platform/game boundary durable enough for later complete games.
   finalizes them, or reopens a locked setup.
 - Finalizing validates and locks the resolved settings. Settings cannot change
   while locked.
+- The TV passively mirrors the selected module’s mode and schema-defined
+  settings after a short 0.9-second selected-game art reveal. It never adds
+  fake difficulty, timer, bonus, category, or anonymous settings.
 - Each player controls only their own Ready flag; the Host must also Ready.
 - Start is never automatic. It requires locked settings, every seated player
   Ready, every seated player present, and the selected game’s player range.
@@ -189,19 +198,40 @@ product.
 ## TV experience
 
 The current TV app resolves room opening/restoration, roster, browsing, setup,
-running-game, and expiry state through its existing subscriptions. The room
-surface is the one illustrated TV exception: it shows `Room Code`, the spaced
-authoritative code, `Waiting for players to join...`, a dynamic join-link QR,
-the phone instruction, and ten live roster positions. Joined seats preserve
-server order and show an initial plus nickname; unoccupied positions stay as
-dashed circles. All other TV states remain centered labels: `Starting Huddle`,
-`Creating a room`, `Reconnecting to room`, `TV setup required`, `TV
-unavailable`, `Choose a game`, `Game setup`, `Game paused`, `Game unavailable`,
-`Game finished`, `Trivia game`, or `Voting game`.
+running-game, and expiry state through its existing subscriptions. Before a room
+code is available, `startup`, `opening`, and `reconnecting` use the app-owned
+animated living-room boot presentation: the exact existing TV background is
+reused while the lights, sparkles, Huddle mark, copy, and looping setup spinner
+assemble into the illustrated creating-room treatment. The renderer is
+display-only and has no controls or D-pad focus targets; Convex remains the
+authority for room creation and recovery. `misconfigured` and `deviceFailure`
+may remain centered purpose labels.
 
-Android TV is display-only. Neither the illustrated room nor the clean-slate
-renderer exposes buttons, inputs, or D-pad focus targets. Physical remote-focus
-verification remains a release gate for the native shell.
+`rooms.openRoom` returns `restored` and `hasRunningGame` with the authoritative
+room identity. A fresh room, including a replacement for a stale session,
+continues to the invitation surface. An existing room may briefly show the
+display-only restoration treatment; that treatment makes no roster, player
+count, or seat-presence claims. When `hasRunningGame` is true, the TV hands off
+immediately to the game-owned surface instead of showing the invitation or
+room lobby, including when that state is paused or unavailable.
+
+Once the room is open, the illustrated TV Room surface shows `Room Code`, the
+spaced authoritative code, `Waiting for players to join...`, a dynamic
+join-link QR, the phone instruction, and ten live roster positions. Joined seats
+preserve server order and show an initial plus nickname; unoccupied positions
+stay as dashed circles. When the Host starts browsing, the TV shows the four-card
+playroom carousel and derives its selected card from the authoritative browsing
+index. Selecting Trivia or Voting briefly reveals that game’s supplied 1080p
+artwork, then passively mirrors the installed module’s mode, schema-defined
+settings, roster initials, Host, away state, and Ready state. `Everyone is
+ready!` appears only when setup is locked, every current seat is ready and
+present, and the roster is within the selected module’s player range. An active,
+finished, paused, or unavailable runtime always outranks this pre-game
+presentation, including while a restored room’s runtime query is loading.
+
+Android TV is display-only. Neither the animated boot, illustrated room, nor
+the clean-slate renderer exposes buttons, inputs, or D-pad focus targets.
+Physical remote-focus verification remains a release gate for the native shell.
 
 ## Phone experience
 
@@ -251,7 +281,8 @@ presence/reconnect behavior, game browsing and configuration state, the full
 Ready gate, launch and End for both proof modules, structured rate limits,
 bundle isolation, the illustrated Join Room exception, the clean-slate render
 contract for every other surface, the display-only illustrated TV Room
-Invitation projection, and supported-platform builds.
+Invitation and four-stage TV game-flow projections, the exact optimized TV
+asset bundle, and supported-platform builds.
 
 Physical evidence must cover a real Phone camera reading the TV QR code, mixed
 iOS/Android phones, and Android TV remote focus.

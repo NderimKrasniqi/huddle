@@ -59,9 +59,9 @@ describe('the carousel window', () => {
   });
 
   it('reaches both reference-only cards and marks them as placeholders', () => {
-    expect(carouselWindow(2)?.focused.metadata.id).toBe('draw-battle');
+    expect(carouselWindow(2)?.focused.metadata.id).toBe('word-battle');
     expect(carouselWindow(2)?.focused.placeholder).toBe(true);
-    expect(carouselWindow(3)?.focused.metadata.id).toBe('word-sneak');
+    expect(carouselWindow(3)?.focused.metadata.id).toBe('more-games');
     expect(carouselWindow(3)?.focused.placeholder).toBe(true);
   });
 
@@ -90,7 +90,7 @@ describe('where the Host’s arrows go', () => {
 
   it('steps one card at a time when there is somewhere to step', () => {
     // Generic over the registry length even though the current build installs
-    // both Trivia and Hot Takes.
+    // both Trivia and Voting.
     if (CAROUSEL_REGISTRY.length > 1) {
       expect(nextIndex(0)).toBe(1);
       expect(previousIndex(1)).toBe(0);

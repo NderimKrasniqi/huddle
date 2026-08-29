@@ -12,7 +12,12 @@ import {
 import { TvIdentityError } from './tv-session';
 
 /** The room `openRoom` hands back, as the TV receives it. */
-const room: OpenRoom = { roomId: 'room-KWRD' as OpenRoom['roomId'], code: 'KWRD' };
+const room: OpenRoom = {
+  roomId: 'room-KWRD' as OpenRoom['roomId'],
+  code: 'KWRD',
+  restored: false,
+  hasRunningGame: false,
+};
 
 /** A promise plus the handles to settle it, so an attempt can be held mid-flight. */
 function deferred<T>() {
@@ -284,6 +289,8 @@ describe('roomOpener', () => {
       return Promise.resolve({
         roomId: `room-${minted}` as OpenRoom['roomId'],
         code: `ROO${minted}`,
+        restored: false,
+        hasRunningGame: false,
       });
     });
   }
@@ -315,7 +322,12 @@ describe('roomOpener', () => {
     const mint = mintRooms();
     const { openRoom, closeExpiredRoom } = roomOpener(mint);
 
-    closeExpiredRoom({ roomId: 'room-0' as OpenRoom['roomId'], code: 'KWRD' });
+    closeExpiredRoom({
+      roomId: 'room-0' as OpenRoom['roomId'],
+      code: 'KWRD',
+      restored: false,
+      hasRunningGame: false,
+    });
 
     expect(await openRoom()).toMatchObject({ code: 'ROO1' });
     expect(mint).toHaveBeenCalledTimes(1);

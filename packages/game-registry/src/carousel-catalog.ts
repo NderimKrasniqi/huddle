@@ -6,6 +6,6 @@
  * four positions on both sides of the app without importing React Native
  * screens into the server bundle.
  */
-export const CAROUSEL_PLACEHOLDER_IDS = ['draw-battle', 'word-sneak'] as const;
+export const CAROUSEL_PLACEHOLDER_IDS = ['word-battle', 'more-games'] as const;
 
 export const CAROUSEL_PLACEHOLDER_COUNT = CAROUSEL_PLACEHOLDER_IDS.length;

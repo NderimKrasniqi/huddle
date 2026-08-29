@@ -7,19 +7,20 @@ older completed work remains available through Git history.
 
 ## Execution State
 
-**Current feature:** —
-**Presentation status:** Join Room and TV Room Invitation are implemented and locally verified; the manual Android TV emulator smoke check passed, while physical remote evidence and later membership/camera slices remain
-**Current presentation:** The Phone join route owns illustrated four-letter code entry and QR-route navigation; the TV room owns an illustrated authoritative code, dynamic QR, and live roster; every other Phone, TV, and game-module screen remains on centered `PurposeScreen` labels.
+**Current feature:** TV game-flow presentation integration
+**Presentation status:** Phone Join Room, TV Creating Room boot, TV restoration handoff, TV Room Invitation, and the TV four-stage game-flow (carousel, selected-game art reveal, setup, ready) are implemented and locally verified; the manual Android TV emulator smoke check passed, while physical remote evidence and later membership/camera slices remain
+**Current presentation:** The Phone join route owns illustrated four-letter code entry and QR-route navigation; the TV startup, opening, and reconnecting states own an animated living-room boot presentation; a restored room gets a display-only restoration handoff, while any game state is handed directly to its game-owned surface; the resolved TV room owns an illustrated authoritative code, dynamic QR, and live roster; once browsing begins, the TV mirrors the four-card Trivia/Voting/Word Battle/More Games flow, reveals selected Trivia/Voting art for 0.9 seconds, and mirrors schema-only setup and the exact Ready gate. Remaining Phone, TV, and game-module screens stay on centered `PurposeScreen` labels.
 **Current phase:** 1.1 Deployment cutover and device proof
 **Current task:** 1.1.3
-**Last completed task:** 1.1.2
+**Last completed task:** TV game-flow presentation integration
 **Blockers:** 1.1.3: The active Join Room adapter intentionally does not create a seat and the scan modal does not mount a camera, so the full physical party loop waits for later membership/camera slices; physical Android Phone and Android TV remote evidence are still required for the mixed-phone and physical-focus gates. The available Android TV emulator smoke check passed for the illustrated empty room; it is not a substitute for physical remote traversal.
 
 ## Phase 1.1 — Deployment cutover and device proof
 
-**Outcome:** The locally verified presentation baseline and incremental Join
-Room exception are proven on the development deployment and supported physical
-platforms without touching production data.
+**Outcome:** The locally verified presentation baseline and incremental Phone
+Join Room, TV Creating Room boot, TV restoration handoff, TV Room Invitation,
+and display-only TV game-flow exceptions are proven on the development
+deployment and supported physical platforms without touching production data.
 
 - [x] **1.1.1 — Audit and reset development rooms**
   - **Outcome:** Development room, membership, TV-session, and game counts are recorded, then reach zero through lifecycle cleanup.
@@ -56,5 +57,6 @@ platforms without touching production data.
   Android TV remote listed above.
 - The reset gate is disabled and production was never targeted.
 - The active presentation keeps the intentional clean slate everywhere except
-  the approved Phone Join Room and TV Room Invitation renderers and their
-  app-specific supplied assets.
+  the approved Phone Join Room, TV Creating Room boot, TV restoration handoff,
+  TV Room Invitation, and TV game-flow renderers and their app-specific
+  optimized supplied assets.

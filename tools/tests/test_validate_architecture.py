@@ -94,18 +94,110 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files["src/features/one/BadName.ts"] = "export const bad = true;\n"
         self.assert_invalid(files, "authored filename must be kebab-case")
 
-    def test_only_the_two_incremental_renderers_have_illustrated_exceptions(self) -> None:
+    def test_only_the_approved_presentation_seams_have_illustrated_exceptions(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
 
         phone = root / "apps/phone/src/features/join/join-room-screen.tsx"
         tv = root / "apps/tv/src/features/room/room-invitation-screen.tsx"
+        boot = root / "apps/tv/src/features/boot/tv-creating-room-screen.tsx"
+        restore = root / "apps/tv/src/features/boot/tv-restoring-room-screen.tsx"
+        restore_indicator = root / "apps/tv/src/features/boot/tv-restore-indicator.tsx"
+        carousel = root / "apps/tv/src/features/game-flow/game-carousel-screen.tsx"
+        art = root / "apps/tv/src/features/game-flow/game-art-reveal-screen.tsx"
+        setup = root / "apps/tv/src/features/game-flow/game-setup-screen.tsx"
+        ready = root / "apps/tv/src/features/game-flow/game-ready-screen.tsx"
         neighboring = root / "apps/phone/src/features/join/another-screen.tsx"
 
         self.assertTrue(validator.is_approved_illustrated_renderer(phone, root))
         self.assertTrue(validator.is_approved_illustrated_renderer(tv, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(boot, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(restore, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(restore_indicator, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(carousel, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(art, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(setup, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(ready, root))
         self.assertFalse(validator.is_approved_illustrated_renderer(neighboring, root))
+
+    def test_tv_boot_renderer_allows_animation_artwork_and_svg(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        boot = root / "apps/tv/src/features/boot/tv-creating-room-screen.tsx"
+        boot.parent.mkdir(parents=True)
+
+        boot_source = (
+            "import { Animated, Image, ImageBackground, View } from 'react-native';\n"
+            "import { Circle } from 'react-native-svg';\n"
+        )
+        boot.write_text(boot_source, encoding="utf-8")
+        validator.validate_presentation_renderer_scope(boot, boot_source, root)
+
+        boot_source = "import QRCode from 'react-native-qrcode-svg';\n"
+        boot.write_text(boot_source, encoding="utf-8")
+        with self.assertRaisesRegex(SystemExit, "QR renderer import is outside TV Room"):
+            validator.validate_presentation_renderer_scope(boot, boot_source, root)
+
+        boot_source = "import { Pressable } from 'react-native';\n"
+        boot.write_text(boot_source, encoding="utf-8")
+        with self.assertRaisesRegex(SystemExit, "TV boot renderer must remain display-only"):
+            validator.validate_presentation_renderer_scope(boot, boot_source, root)
+
+        restore = root / "apps/tv/src/features/boot/tv-restoring-room-screen.tsx"
+        restore_source = (
+            "import { ActivityIndicator, Image, View } from 'react-native';\n"
+            "import { Circle } from 'react-native-svg';\n"
+        )
+        validator.validate_presentation_renderer_scope(restore, restore_source, root)
+
+        restore_source = "import { Pressable } from 'react-native';\n"
+        with self.assertRaisesRegex(SystemExit, "TV boot renderer must remain display-only"):
+            validator.validate_presentation_renderer_scope(restore, restore_source, root)
+
+        restore_source = "import QRCode from 'react-native-qrcode-svg';\n"
+        with self.assertRaisesRegex(SystemExit, "QR renderer import is outside TV Room"):
+            validator.validate_presentation_renderer_scope(restore, restore_source, root)
+
+        restore_indicator = root / "apps/tv/src/features/boot/tv-restore-indicator.tsx"
+        indicator_source = (
+            "import { Animated, View } from 'react-native';\n"
+            "import { Circle } from 'react-native-svg';\n"
+        )
+        validator.validate_presentation_renderer_scope(
+            restore_indicator, indicator_source, root
+        )
+
+        indicator_source = "import { TouchableOpacity } from 'react-native';\n"
+        with self.assertRaisesRegex(SystemExit, "TV boot renderer must remain display-only"):
+            validator.validate_presentation_renderer_scope(
+                restore_indicator, indicator_source, root
+            )
+
+    def test_svg_renderer_import_is_limited_to_tv_room_and_tv_boot(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        phone = root / "apps/phone/src/features/join/join-room-screen.tsx"
+        source = "import { Circle } from 'react-native-svg';\n"
+
+        with self.assertRaisesRegex(SystemExit, "SVG renderer import is outside approved TV renderers"):
+            validator.validate_presentation_renderer_scope(phone, source, root)
+
+    def test_tv_game_flow_renderers_allow_display_animation_but_no_controls(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        carousel = root / "apps/tv/src/features/game-flow/game-carousel-screen.tsx"
+        carousel.parent.mkdir(parents=True)
+
+        source = "import { Animated, Image, ImageBackground, View } from 'react-native';\n"
+        validator.validate_presentation_renderer_scope(carousel, source, root)
+
+        source = "import { Pressable } from 'react-native';\n"
+        with self.assertRaisesRegex(SystemExit, "TV game-flow renderer must remain display-only"):
+            validator.validate_presentation_renderer_scope(carousel, source, root)
 
     def package_root(self, manifests: dict[str, str]) -> Path:
         temporary = tempfile.TemporaryDirectory()
@@ -198,6 +290,9 @@ class ArchitectureFixtureTests(unittest.TestCase):
 
     def test_tv_room_assets_match_the_supplied_files(self) -> None:
         validator.validate_tv_room_assets(ROOT)
+
+    def test_tv_game_flow_assets_match_the_optimized_supplied_files(self) -> None:
+        validator.validate_tv_game_flow_assets(ROOT)
 
     def test_tv_reference_composite_cannot_be_imported(self) -> None:
         temporary = tempfile.TemporaryDirectory()

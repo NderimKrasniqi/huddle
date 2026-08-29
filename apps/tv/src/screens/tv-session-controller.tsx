@@ -4,6 +4,7 @@ import { PurposeScreen } from '@huddle/ui/native';
 import { useQuery } from 'convex/react';
 import { useEffect } from 'react';
 
+import { TvGameFlowStage, type TvGameSetupProjection } from '../features/game-flow/native';
 import { RoomStage } from '../features/room/native';
 import type { RosterSeat } from '../models';
 import type { OpenRoom, RoomOpening } from '../platform/room-session';
@@ -38,6 +39,8 @@ export function TvSessionController({
     runtime: runtime.kind,
     hasBrowsing,
     hasSetup: setup !== null && setup !== undefined,
+    runningPending: running === undefined,
+    hasRunningGame: room.hasRunningGame,
   });
 
   const gameId = runtime.kind === 'game' || runtime.kind === 'finished' ? runtime.module.metadata.id : undefined;
@@ -48,6 +51,8 @@ export function TvSessionController({
       gameId={gameId}
       roomCode={room.code}
       roster={roster ?? []}
+      browsingAt={browsingAt}
+      setup={setup}
     />
   );
 }
@@ -59,15 +64,33 @@ export function TvSessionPresentation({
   gameId,
   roomCode,
   roster,
+  browsingAt,
+  setup,
+  reduceMotion,
 }: {
   readonly surface: TvSurface;
   readonly runtime: 'game' | 'finished' | 'paused' | 'unavailable' | 'lobby';
   readonly gameId?: string;
   readonly roomCode: string;
   readonly roster: readonly RosterSeat[];
+  readonly browsingAt?: number | null;
+  readonly setup?: TvGameSetupProjection | null;
+  readonly reduceMotion?: boolean;
 }) {
   if (surface === 'room') {
     return <RoomStage roomCode={roomCode} roster={roster} />;
+  }
+
+  if (surface === 'carousel' || surface === 'setup') {
+    return (
+      <TvGameFlowStage
+        browsingAt={browsingAt}
+        setup={setup}
+        roster={roster}
+        roomCode={roomCode}
+        reduceMotion={reduceMotion}
+      />
+    );
   }
 
   return (

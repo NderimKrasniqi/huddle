@@ -1,7 +1,7 @@
 import type { GameMetadata } from '@huddle/domain';
 
 /**
- * Hot Takes' metadata: its whole carousel card, held apart from `./logic`.
+ * Voting's metadata: its whole carousel card, held apart from `./logic`.
  *
  * The same seam trivia draws (`./metadata` beside `./logic`), kept even though
  * this game has no secret to protect: its prompts are opinion, not answers, so
@@ -12,7 +12,7 @@ import type { GameMetadata } from '@huddle/domain';
  */
 export const votingMetadata: GameMetadata = {
   id: 'voting',
-  title: 'Hot Takes',
+  title: 'Voting',
   /**
    * The accent sets the second poster apart from Trivia's ink. The two installed
    * games use the palette's two strong card fills; future games should bring

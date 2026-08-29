@@ -20,9 +20,9 @@ convex ─> @huddle/game-registry/logic ─> game logic exports
   background and black text.
 - `@huddle/ui/native` exposes only `PurposeScreen`. It remains the sole shared
   renderer and accepts `platform` plus `purpose`, with no children or style
-  override. The illustrated Join Room and Room Invitation renderers are
-  app-owned under their respective apps and are not exported from a shared
-  package.
+  override. The illustrated Join Room, TV boot/restoration, Room Invitation,
+  and TV game-flow renderers are app-owned under their respective apps and are
+  not exported from a shared package.
 - `games/*` retain independent metadata, settings, logic, and Phone/TV module
   contracts. Their current screens resolve to the shared purpose renderer.
 - `@huddle/game-registry` remains the ordered client module list and the
@@ -43,9 +43,11 @@ state first, then pass one short purpose to `PurposeScreen`. The shared renderer
 always produces a white full-screen `View` and one centered, accessible black
 system-font `Text` label. Phone text is 24pt; TV text is 48pt. It accepts no
 controls, inputs, images, progress indicators, overlays, dialogs, animation,
-focus targets, or feature-specific styling.
+focus targets, or feature-specific styling. The app-owned TV boot, restoration,
+Room Invitation, and game-flow presentations below are narrow exceptions to
+this shared baseline.
 
-There are exactly two narrow app-owned exceptions:
+There are a small number of narrow app-owned exceptions:
 
 - `apps/phone/src/features/join/join-room-screen.tsx` may use ordinary React
   Native image, input, scrolling, keyboard, loading, and pressable primitives
@@ -60,6 +62,32 @@ There are exactly two narrow app-owned exceptions:
   retains the roster query and selects this renderer only for the resolved
   room surface. The renderer has no controls, focus targets, subscriptions, or
   room authority.
+- `apps/tv/src/features/boot/tv-creating-room-screen.tsx` owns the animated
+  living-room presentation for `startup`, `opening`, and `reconnecting`. It
+  reuses the exact existing TV background, may use built-in React Native
+  `Animated`/image primitives and `react-native-svg` for decorative motion, and
+  adds no packages, custom fonts, or new runtime artwork. It is a pure,
+  display-only renderer with no QR-code package, controls, focus targets,
+  subscriptions, or room authority; the TV session coordinator still owns
+  room creation and recovery.
+- `apps/tv/src/features/boot/tv-restoring-room-screen.tsx` owns the short,
+  display-only handoff shown when an existing TV room is restored. It may use
+  built-in React Native `Animated` and ordinary text/image primitives, plus the
+  existing `react-native-svg` runtime for ambient sparkles; its
+  `tv-restore-indicator.tsx` helper is part of the same allowlisted seam and
+  resolves the brand spinner into a green check. It does not query or claim a
+  roster, expose controls or focus targets, or decide whether the restored room
+  is a lobby or active game.
+- `apps/tv/src/features/game-flow/` owns the display-only carousel, selected
+  game-art reveal, schema-driven setup, and ready renderers. The carousel reads
+  the ordered `CAROUSEL_REGISTRY` and authoritative browsing index; the setup
+  renderer receives the installed module’s settings schema and the roster
+  projection; the ready renderer is mounted only after the coordinator mirrors
+  the server start gate. These renderers may use built-in `Animated`, image,
+  and system-font primitives, but never controls, pressables, inputs, QR,
+  subscriptions, phone presence authority, or game rules. The coordinator’s
+  only local state is the one-shot 0.9-second reveal timer, which is cleaned up
+  on phase changes and unmount.
 
 The state-to-label mapping is platform-owned:
 
@@ -69,10 +97,17 @@ The state-to-label mapping is platform-owned:
   game`, `Game setup`, `Game paused`, `Game unavailable`, `Game finished`,
   `Trivia game`, or `Voting game`.
 - TV boot/room states: `Starting Huddle`, `Creating a room`, `Reconnecting to
-  room`, `TV setup required`, or `TV unavailable`; the resolved room uses the
-  illustrated Room Invitation exception above.
-- TV selection/game states use `Choose a game`, `Game setup`, the shared
-  runtime labels, and the two module labels.
+  room`, `TV setup required`, or `TV unavailable`. `startup`, `opening`, and
+  `reconnecting` use the illustrated animated TV boot exception above;
+  `misconfigured` and `deviceFailure` may remain centered purpose labels. A
+  restored room may briefly use the TV restoration exception above before
+  handing off to the resolved surface; any game-owned state is handed off
+  directly to its game renderer rather than showing the lobby.
+- TV selection/game states use the illustrated four-card carousel, the short
+  selected-game art reveal, schema-only setup, and ready renderers. Word Battle
+  and More Games remain display-only `Coming soon` cards. The shared runtime
+  labels and the two module labels remain the fail-closed fallback for game
+  surfaces not yet implemented.
 
 This is a presentation reset, not a lifecycle reset. Convex queries and
 mutations, persisted identities, session tokens, roster/presence projections,
@@ -86,8 +121,28 @@ does not mount the camera.
 Convex owns one room record, optional setup, optional running game, seats, and
 TV credential. Clients subscribe to public projections; they never decide room
 phase. Setup still flows `configuring → ready → absent while running`. Ending
-still clears game, setup, selection, browsing, and readiness while keeping the
-room code, roster, and Host.
+clears the running game and setup while keeping the room code, roster, Host,
+and browsing index so the TV can return to its carousel.
+
+`rooms.openRoom` is the sole TV opening authority and returns the room identity
+plus `restored` and `hasRunningGame` flags. A newly minted room (including a
+replacement for a stale session) reports `restored: false`; an existing room
+recovered through its durable TV credential reports `restored: true`. The TV
+route uses those flags for handoff: fresh rooms continue to the invitation,
+restored rooms without game state may show the short restoration renderer, and
+any `hasRunningGame: true` state takes the TV directly to its game/paused/
+unavailable surface. The controller also suppresses a lobby flash while that
+running query is pending. The restoration presentation makes no roster,
+player-count, or seat-presence claims; roster subscriptions remain owned by the
+resolved session controller.
+
+Once the lobby is browsed, `games.browsing` and `games.setup` are the only
+projections passed to the TV game-flow seam. A game selection creates one local
+art-reveal handoff; cancelling setup unmounts it, and selecting the same game
+again mounts a fresh reveal. Ordinary setup updates do not replay the reveal.
+The selected module’s metadata player range, settings schema, mode, roster, and
+server `readyPlayerIds` remain authoritative. The TV derives no alternate
+settings or player readiness state.
 
 `GameModule` is the client-safe module contract. `GameLogic` provides runtime
 decode, initial state, reducer, deadline, and public/private projection. Proof
@@ -112,12 +167,17 @@ Shared checked-in bitmap assets remain limited to the neutral launcher, splash,
 adaptive-icon, monochrome, and Android TV banner resources under
 `packages/ui/assets/app-icons`. App configuration references only those neutral
 assets. Runtime product artwork is app-owned: the three supplied Phone PNGs
-under `apps/phone/assets/join-room`, plus the clean TV background and phone icon
-under `apps/tv/assets/room-invitation`. The third TV file,
-`tv-lobby-empty.png`, is the supplied baked visual reference and must never be
-imported into runtime code. Custom fonts and the former redesign importer remain
-absent, while Phone retains Expo Camera configuration for the platform
-capability.
+under `apps/phone/assets/join-room`, the clean TV background and phone icon
+under `apps/tv/assets/room-invitation`, and the optimized TV game-flow bundle
+under `apps/tv/assets/game-flow` (1080p playroom/game art, source-size four
+carousel cards, Huddle mark, and Questions/Rounds PNG icons). The TV boot, Room
+Invitation, and game-flow renderers reuse the approved background assets. The
+third Room file, `tv-lobby-empty.png`, is the supplied baked visual reference
+and must never be imported into runtime code. 4K/2K duplicates, Word Battle art,
+unused setup icons, SVG duplicates, fonts, and sample code remain excluded.
+Custom fonts and the former redesign importer remain absent, while Phone retains
+Expo Camera configuration for the platform capability. The architecture
+validator pins the game-flow asset names, dimensions, and SHA-256 digests.
 
 ## Migration constraints
 

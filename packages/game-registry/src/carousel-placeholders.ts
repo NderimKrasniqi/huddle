@@ -15,7 +15,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
     placeholder: true,
     metadata: {
       id: CAROUSEL_PLACEHOLDER_IDS[0],
-      title: 'Draw Battle',
+      title: 'Word Battle',
       keyArt: { color: 'sage' },
       playerRange: { min: 2, max: 10 },
       estimatedMinutes: 10,
@@ -31,7 +31,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
     placeholder: true,
     metadata: {
       id: CAROUSEL_PLACEHOLDER_IDS[1],
-      title: 'Word Sneak',
+      title: 'More Games',
       keyArt: { color: 'online' },
       playerRange: { min: 2, max: 10 },
       estimatedMinutes: 8,

@@ -45,9 +45,58 @@ describe('TvSessionPresentation', () => {
     expect(screen.queryByText('Room invitation')).toBeNull();
   });
 
+  it('selects the illustrated carousel renderer for a browsed room', async () => {
+    await render(
+      <TvSessionPresentation
+        surface="carousel"
+        runtime="lobby"
+        roomCode="KWRD"
+        roster={roster}
+        browsingAt={1}
+        setup={null}
+        reduceMotion
+      />,
+    );
+
+    expect(screen.getByTestId('tv-game-carousel')).toBeTruthy();
+    expect(screen.getByLabelText('Voting, selected')).toBeTruthy();
+    expect(screen.queryByTestId('room-invitation-background')).toBeNull();
+  });
+
+  it('selects the illustrated setup renderer from the authoritative draft', async () => {
+    await render(
+      <TvSessionPresentation
+        surface="setup"
+        runtime="lobby"
+        roomCode="KWRD"
+        roster={[
+          ...roster,
+          {
+            playerId: 'player-bo' as RosterSeat['playerId'],
+            nickname: 'Bo',
+            avatar: 'fox',
+            away: false,
+            host: false,
+          },
+        ]}
+        browsingAt={0}
+        setup={{
+          gameId: 'trivia',
+          settings: { questions: '10' },
+          mode: 'standard',
+          stage: 'configuring',
+          readyPlayerIds: [],
+        }}
+        reduceMotion
+      />,
+    );
+
+    expect(screen.getByTestId('tv-game-setup')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-setting-questions')).toBeTruthy();
+    expect(screen.queryByText('Game setup')).toBeNull();
+  });
+
   it.each([
-    ['carousel', 'lobby', undefined, 'Choose a game'],
-    ['setup', 'lobby', undefined, 'Game setup'],
     ['runtime-status', 'paused', undefined, 'Game paused'],
     ['runtime-status', 'unavailable', undefined, 'Game unavailable'],
     ['game', 'finished', 'trivia', 'Game finished'],
@@ -68,6 +117,7 @@ describe('TvSessionPresentation', () => {
 
       expect(screen.getByText(purpose)).toBeTruthy();
       expect(screen.queryByTestId('room-invitation-background')).toBeNull();
+      expect(screen.queryByTestId('tv-game-carousel')).toBeNull();
     },
   );
 });

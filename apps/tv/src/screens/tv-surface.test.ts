@@ -22,4 +22,17 @@ describe('TV surface', () => {
   it('shows the carousel once browsing exists', () => {
     expect(tvSurface({ runtime: 'lobby', hasBrowsing: true })).toBe('carousel');
   });
+
+  it('keeps the room invitation until browsing begins, even with a draft', () => {
+    expect(tvSurface({ runtime: 'lobby', hasBrowsing: false, hasSetup: true })).toBe('room');
+  });
+
+  it('keeps a restored running room off the lobby while its game query is pending', () => {
+    expect(tvSurface({
+      runtime: 'lobby',
+      hasBrowsing: false,
+      runningPending: true,
+      hasRunningGame: true,
+    })).toBe('runtime-status');
+  });
 });

@@ -11,7 +11,7 @@ in [`architecture.md`](./architecture.md); product behavior belongs in
 |---|---|---|---|
 | iOS Phone | Expo / React Native | Supported | Export, native identity, illustrated Join Room render |
 | Android Phone | Expo / React Native | Supported | Export, native identity, illustrated Join Room render |
-| Android TV | Expo / `react-native-tvos` | Supported | Export, release build, Leanback metadata, illustrated Room Invitation render |
+| Android TV | Expo / `react-native-tvos` | Supported | Export, release build, Leanback metadata, animated TV boot, Room Invitation, and display-only game-flow renders |
 | tvOS | Expo / `react-native-tvos` | Experimental | Compile and simulator evidence only |
 
 Web is not a supported client. Store submission and production release tooling
@@ -45,7 +45,7 @@ source directories.
 | React Native Safe Area | `~5.7.0` | Native inset provider |
 | React Native Screens | `~4.26.2` | Native navigation screens |
 | React Native QR Code SVG | `^6.3.21` | TV Room join-link QR only |
-| React Native SVG | `15.15.4` | TV QR renderer peer/runtime only |
+| React Native SVG | `15.15.4` | TV Room QR, TV boot motion, and TV restoration decoration only |
 
 Active renderers use ordinary React Native style objects and system fonts.
 `@huddle/design-tokens` contains only the white/black values used by the shared
@@ -54,7 +54,17 @@ clean-slate baseline, and `PurposeScreen` remains the only renderer exported by
 Native image, input, pressable, activity, keyboard, and scroll primitives plus
 `react-native-safe-area-context`; it adds no presentation dependency. The
 TV-owned Room Invitation renderer is the only consumer permitted to import the
-QR package, and only the TV app declares QR/SVG dependencies.
+QR package. The TV-owned Creating Room boot renderer may use built-in
+`Animated`/image primitives and `react-native-svg` for its display-only
+living-room motion; it has no QR package, controls, or focus targets. Only the
+TV app declares QR/SVG dependencies. The TV-owned restoration renderer uses
+`Animated`/image primitives and the same existing SVG runtime for a short,
+display-only handoff; it does not query a roster or claim player state.
+The TV-owned game-flow renderers use only built-in `Animated`, image, text, and
+system-font primitives. They contain no controls, focus targets, QR/SVG
+imports, or game rules; Convex and the game registry remain the authority for
+the browsing index, setup schema, roster, and readiness. No new package or
+custom font is approved for these TV treatments.
 NativeWind, Tailwind, CSS interop, custom fonts, Expo Image, Reanimated,
 Worklets, Lucide, NetInfo presentation, and global CSS are not direct workspace
 dependencies or active presentation APIs. Expo Router may retain
@@ -90,7 +100,7 @@ outside command rate buckets.
 | Tool | Baseline | Purpose |
 |---|---:|---|
 | Vitest | `4.1.10` | Domain, contracts, games, apps, and Convex tests |
-| Jest + React Native Testing Library | Jest `29.7` | Join Room, TV Room Invitation, and remaining purpose-screen render checks |
+| Jest + React Native Testing Library | Jest `29.7` | Join Room, TV Creating Room boot, TV restoration, TV Room Invitation, TV game-flow renderers, and remaining purpose-screen checks |
 | ESLint | `9.39` | TypeScript and forbidden presentation-boundary imports |
 | Expo export / Metro | SDK `57` | Platform bundle proof and bundle-seam inspection |
 | Xcode / Gradle | Project-native | Native compile, identifiers, and launcher metadata |
@@ -135,6 +145,11 @@ pnpm --filter @huddle/phone exec expo export --platform android --output-dir <ph
 EXPO_TV=1 pnpm --filter @huddle/tv exec expo export --platform android --output-dir <tv-android-export>
 pnpm verify:bundle-seam -- <export-directory>
 ```
+
+The TV architecture validator also checks the exact optimized game-flow PNG
+bundle (dimensions and SHA-256 digests): 1080p playroom/game art, source-size
+carousel cards, the Huddle mark, and Questions/Rounds icons. It rejects 4K/2K
+duplicates, unused setup art, SVG/font copies, and sample package files.
 
 Generate and inspect Android TV metadata, then compile a release artifact:
 

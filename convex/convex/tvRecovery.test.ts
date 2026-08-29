@@ -38,8 +38,32 @@ describe('durable TV room recovery', () => {
     const t = backend();
     const first = await t.mutation(api.rooms.openRoom, { tvSessionToken: 'tv-session-a' });
     const second = await t.mutation(api.rooms.openRoom, { tvSessionToken: 'tv-session-a' });
-    expect(second).toEqual(first);
+    expect(first).toMatchObject({ restored: false, hasRunningGame: false });
+    expect(second).toMatchObject({
+      roomId: first.roomId,
+      code: first.code,
+      restored: true,
+      hasRunningGame: false,
+    });
     expect(await t.run(async (ctx) => (await ctx.db.query('rooms').collect()).length)).toBe(1);
+  });
+
+  it('replaces a stale durable session without reporting a restoration', async () => {
+    const t = backend();
+    const first = await t.mutation(api.rooms.openRoom, {
+      tvSessionToken: 'tv-stale-session',
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.delete(first.roomId);
+    });
+
+    const replacement = await t.mutation(api.rooms.openRoom, {
+      tvSessionToken: 'tv-stale-session',
+    });
+
+    expect(replacement).toMatchObject({ restored: false, hasRunningGame: false });
+    expect(replacement.roomId).not.toBe(first.roomId);
   });
 
   it('rate-limits new room credentials while allowing an existing restore', async () => {
@@ -71,7 +95,12 @@ describe('durable TV room recovery', () => {
     const opened = await t.mutation(api.rooms.openRoom, { tvSessionToken: token });
     await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS);
     await t.mutation(api.rooms.tvHeartbeat, { tvSessionToken: token });
-    expect(await t.mutation(api.rooms.openRoom, { tvSessionToken: token })).toEqual(opened);
+    expect(await t.mutation(api.rooms.openRoom, { tvSessionToken: token })).toMatchObject({
+      roomId: opened.roomId,
+      code: opened.code,
+      restored: true,
+      hasRunningGame: false,
+    });
     await vi.advanceTimersByTimeAsync(ROOM_EXPIRY_MS + 1);
     await t.finishInProgressScheduledFunctions();
     expect(await t.query(api.rooms.stillOpen, { roomId: opened.roomId })).toBe(false);
@@ -98,6 +127,11 @@ describe('durable TV room recovery', () => {
       kind: 'running',
       state: { phase: 'entered' },
     });
-    expect(await t.mutation(api.rooms.openRoom, { tvSessionToken: token })).toEqual(opened);
+    expect(await t.mutation(api.rooms.openRoom, { tvSessionToken: token })).toMatchObject({
+      roomId: opened.roomId,
+      code: opened.code,
+      restored: true,
+      hasRunningGame: true,
+    });
   });
 });
