@@ -1,5 +1,5 @@
 import { CAROUSEL_REGISTRY, carouselWindow, gameModuleById } from '@huddle/game-registry';
-import { PurposeScreen } from '@huddle/ui/native';
+import { huddleAvatarSource, PurposeScreen } from '@huddle/ui/native';
 import { useMemo, useState, useEffect } from 'react';
 
 import type { RosterSeat } from '../../models';
@@ -137,6 +137,7 @@ function TvGameSetupHandoff({
     name: seat.nickname,
     isHost: seat.host,
     away: seat.away,
+    avatar: huddleAvatarSource(seat.avatar),
     ready: readyPlayerIds.includes(String(seat.playerId)) && !seat.away,
   }));
 

@@ -28,8 +28,9 @@ export type GuestIdFactory = () => string;
 /**
  * The remembered identity as its two fields, or nothing-remembered for anything
  * that is not a record this app would have written: no value, malformed JSON,
- * an old shape, an avatar no longer in the set, a name longer than a name may
- * be.
+ * an old shape, or an avatar no longer in the set. Names are normalized to the
+ * current field limit rather than discarded, so an older profile remains tied
+ * to the same guest UUID after an app update.
  *
  * The store is plain text on the device and outlives installs and updates, so
  * what it hands back is treated as input rather than as something this version
@@ -60,13 +61,13 @@ export function parseIdentity(raw: string | null): PlayerIdentity {
   };
 }
 
-/** A stored name, capped and un-blanked exactly as the join field holds it. */
+/** A stored name, trimmed and capped to the join field's limit. */
 function cleanNickname(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
   }
-  const capped = nicknameEntry(value);
-  return capped.trim() === '' ? null : capped;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : nicknameEntry(trimmed);
 }
 
 /** A stored avatar, kept only if it still names one this build offers. */
@@ -103,10 +104,24 @@ export async function loadGuestProfile(
         if (
           record.version === 1 &&
           isGuestId(record.guestId) &&
-          cleanNickname(record.displayName) !== null &&
+          typeof record.displayName === 'string' &&
           cleanAvatar(record.avatarId) !== null
         ) {
-          return candidate as GuestProfileV1;
+          const profile: GuestProfileV1 = {
+            version: 1,
+            guestId: record.guestId,
+            // A blank name is a valid first-launch profile. Keep the durable
+            // guest identity and let Join Room ask for the name later.
+            displayName: cleanNickname(record.displayName) ?? '',
+            avatarId: cleanAvatar(record.avatarId) as AvatarId,
+          };
+
+          // Keep the stored representation in the same normalized shape as
+          // the value returned to the renderer, without changing guestId.
+          if (JSON.stringify(candidate) !== JSON.stringify(profile)) {
+            await rememberProfile(store, profile);
+          }
+          return profile;
         }
       }
     }

@@ -7,13 +7,13 @@ older completed work remains available through Git history.
 
 ## Execution State
 
-**Current feature:** TV game-flow presentation integration
-**Presentation status:** Phone Join Room, TV Creating Room boot, TV restoration handoff, TV Room Invitation, and the TV four-stage game-flow (carousel, selected-game art reveal, setup, ready) are implemented and locally verified; the manual Android TV emulator smoke check passed, while physical remote evidence and later membership/camera slices remain
-**Current presentation:** The Phone join route owns illustrated four-letter code entry and QR-route navigation; the TV startup, opening, and reconnecting states own an animated living-room boot presentation; a restored room gets a display-only restoration handoff, while any game state is handed directly to its game-owned surface; the resolved TV room owns an illustrated authoritative code, dynamic QR, and live roster; once browsing begins, the TV mirrors the four-card Trivia/Voting/Word Battle/More Games flow, reveals selected Trivia/Voting art for 0.9 seconds, and mirrors schema-only setup and the exact Ready gate. Remaining Phone, TV, and game-module screens stay on centered `PurposeScreen` labels.
+**Current feature:** Phone Join, identity, and QR camera integration
+**Presentation status:** Phone Join Room now collects and remembers `GuestProfileV1`, resolves the ten approved avatar portraits, projects advisory room availability, calls the authoritative `joinRoom` mutation, persists the returned session token before seating, and mounts the focused branded QR camera route. TV Creating Room boot, restoration handoff, Room Invitation, and the four-stage Trivia/Voting/Word Battle/More Games game-flow remain implemented and locally verified; the Android TV emulator smoke check passed.
+**Current presentation:** The Phone join route owns illustrated four-letter code entry, inline display-name validation, a two-row ten-avatar picker, claimed-avatar/full-room feedback, loading/rejection copy, and QR-route navigation. The focused scan route mounts Expo `CameraView` with rear-camera QR-only settings, prompts for permission immediately, keeps malformed scans inline, locks accepted scans, and replaces itself with `/join/[code]`; manual entry remains available for denied/unavailable cameras. The TV startup, restoration, Room Invitation, and game-flow surfaces remain display-only projections of authoritative state. Remaining Phone Room/Roster, Host controls, and game-module screens stay on centered `PurposeScreen` labels.
 **Current phase:** 1.1 Deployment cutover and device proof
 **Current task:** 1.1.3
-**Last completed task:** TV game-flow presentation integration
-**Blockers:** 1.1.3: The active Join Room adapter intentionally does not create a seat and the scan modal does not mount a camera, so the full physical party loop waits for later membership/camera slices; physical Android Phone and Android TV remote evidence are still required for the mixed-phone and physical-focus gates. The available Android TV emulator smoke check passed for the illustrated empty room; it is not a substitute for physical remote traversal.
+**Last completed task:** Phone Join, identity, and QR camera integration
+**Blockers:** 1.1.3: physical Android Phone QR evidence, a second mixed phone, and physical Android TV remote traversal are still required. Local Convex, render, typecheck, lint, architecture, and asset gates cover the new join/scanner behavior, but they do not substitute for real camera permissions or remote focus traversal.
 
 ## Phase 1.1 — Deployment cutover and device proof
 
@@ -42,7 +42,7 @@ deployment and supported physical platforms without touching production data.
 
 - [!] **1.1.3 — Run physical end-to-end party check**
   - **Outcome:** The complete loop works with real camera, phones, and Android TV focus.
-  - **Work:** After the deferred membership and camera slices are connected, remove the old app, scan TV QR, join mixed phones, Ready every seat, Start/End both modules, exercise reconnect, and traverse Android TV focus. Until then, visually prove code entry and QR modal navigation on supported Phone layouts.
+  - **Work:** Remove the old app, scan the TV QR with a physical Phone, join mixed phones with names and avatars, Ready every seat, Start/End both modules, exercise reconnect, and traverse Android TV focus. The local membership and camera slices are now connected; this task is device evidence only.
   - **Touches:** Development deployment and test devices.
   - **Requirements:** PLAT-001, PLAT-002, REL-003
   - **Verify:** Dated physical party checklist and local device captures.
@@ -52,11 +52,11 @@ deployment and supported physical platforms without touching production data.
 ### Phase 1.1 Completion
 
 - Development data was reset only through the guarded lifecycle path.
-- All supported builds pass; the physical platform loop remains blocked on the
-  deferred membership/camera UI slices, second Android phone, and physical
-  Android TV remote listed above.
+- The Phone membership/camera UI slice and shared avatar bundle are locally
+  verified; the physical platform loop remains blocked on the second Android
+  phone and physical Android TV remote listed above.
 - The reset gate is disabled and production was never targeted.
 - The active presentation keeps the intentional clean slate everywhere except
-  the approved Phone Join Room, TV Creating Room boot, TV restoration handoff,
-  TV Room Invitation, and TV game-flow renderers and their app-specific
-  optimized supplied assets.
+  the approved Phone Join Room/scanner, shared avatar resolver and runtime
+  portraits, TV Creating Room boot, TV restoration handoff, TV Room Invitation,
+  and TV game-flow renderers and their optimized supplied assets.

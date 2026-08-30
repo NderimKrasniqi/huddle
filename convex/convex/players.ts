@@ -7,6 +7,7 @@ import {
   type JoinRejection,
   NICKNAME_MAX_LENGTH,
   normalizeRoomCode,
+  ROOM_CODE_LENGTH,
   ROOM_PLAYER_CAP,
 } from '@huddle/domain';
 import { ConvexError, v } from 'convex/values';
@@ -375,6 +376,52 @@ export const joinRoom = mutation({
     }
 
     return { playerId, roomId: room._id, code, nickname, avatar: args.avatar, sessionToken };
+  },
+});
+
+/**
+ * The non-sensitive join-form projection for a room code.
+ *
+ * A phone uses this to give immediate feedback while someone is choosing a
+ * name and avatar. It deliberately exposes only capacity and the avatars the
+ * room has claimed: names, presence, host state, room ids, and session tokens
+ * remain private to the authoritative join and roster surfaces.
+ */
+export const joinAvailability = query({
+  args: { code: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      full: v.boolean(),
+      takenAvatarIds: v.array(avatarValidator),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const code = normalizeRoomCode(args.code);
+
+    // Room codes are four letters. Returning null for other shapes avoids
+    // turning this lightweight availability probe into a general room lookup,
+    // while still accepting the same surrounding whitespace and casing as
+    // joinRoom.
+    if (code.length !== ROOM_CODE_LENGTH) {
+      return null;
+    }
+
+    const room = await ctx.db
+      .query('rooms')
+      .withIndex('by_code', (q) => q.eq('code', code))
+      .first();
+
+    if (room === null) {
+      return null;
+    }
+
+    const seated = await playersInRoom(ctx, room._id);
+
+    return {
+      full: seated.length >= ROOM_PLAYER_CAP,
+      takenAvatarIds: seated.map((player) => player.avatar),
+    };
   },
 });
 

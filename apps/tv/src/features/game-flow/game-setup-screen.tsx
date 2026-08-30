@@ -194,7 +194,13 @@ function PlayerChip({
     >
       <View style={[styles.avatar, { borderColor: player.away ? '#FFB24B' : ready ? '#5ED583' : 'rgba(255,255,255,0.45)' }]}>
         {player.avatar ? (
-          <Image source={player.avatar} resizeMode="cover" style={styles.avatarImage} accessible={false} />
+          <Image
+            source={player.avatar}
+            resizeMode="cover"
+            style={styles.avatarImage}
+            accessible={false}
+            testID={`tv-game-player-avatar-${player.id}`}
+          />
         ) : (
           <Text style={[styles.initial, { color: player.isHost ? '#FFB24B' : '#FFFFFF' }]} accessibilityElementsHidden>{initial}</Text>
         )}

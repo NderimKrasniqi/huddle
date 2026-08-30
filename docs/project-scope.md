@@ -18,10 +18,9 @@ games can concentrate on gameplay.
 Huddle is a native local multiplayer party-game platform. One TV is the shared
 social display and each player uses the Huddle Phone app as their personal
 companion surface. The TV creates a room with a four-character code and QR code;
-iOS and Android phones join it without requiring an account. During the current
-incremental UI phase, the Phone Join Room route renders the supplied illustrated
-code-entry surface and can open the QR route. It deliberately stops before
-identity collection or membership creation. The TV Room Invitation surface
+iOS and Android phones join it without requiring an account. The Phone Join Room
+route renders the supplied illustrated code-entry surface, inline display-name
+and avatar selection, and the branded QR scanner. The TV Room Invitation surface
 renders the supplied living-room lobby with the authoritative code, dynamic QR,
 and live ten-seat roster. The TV also owns the display-only carousel, selected
 game-art reveal, setup, and ready handoff; unresolved Phone, TV, and game
@@ -45,10 +44,10 @@ launch-proof modules, Trivia and Voting. It does not yet ship full rounds,
 answers, votes, scoring, winners, or results. Each module proves that its own
 settings resolve into module-owned Phone and TV contracts and that the Host can
 return every client to the same lobby. The active presentation is deliberately
-incremental: the Join Room UI accepts a four-letter code and offers QR-route
-navigation; the TV owns illustrated startup, restoration, Room Invitation, and
-the four-card pre-game flow; other unresolved surfaces expose `PurposeScreen`
-text.
+incremental: the Join Room UI accepts a four-letter code, remembers a guest
+profile, claims an avatar through `joinRoom`, and offers branded QR scanning; the
+TV owns illustrated startup, restoration, Room Invitation, and the four-card
+pre-game flow; other unresolved surfaces expose `PurposeScreen` text.
 Coordinators, subscriptions, credentials, presence, and Convex behavior remain
 in place for later interactive slices.
 
@@ -76,9 +75,11 @@ keeping the platform/game boundary durable enough for later complete games.
 - The scanner handles camera permission, denial/settings, unavailable camera,
   malformed payloads, duplicate scans, and replacement navigation into the join
   route.
-- The current illustrated Join Room slice normalizes manual and linked codes to
-  four uppercase letters, enables its visual Join action for a complete code,
-  and opens the modal scan route. It does not call Convex or create a seat.
+- The illustrated Join Room surface normalizes manual and linked codes to four
+  uppercase letters, pre-fills the remembered GuestProfileV1, lets the player
+  choose one of the ten avatars, and calls the authoritative `joinRoom`
+  mutation. A lightweight code availability projection dims claimed avatars and
+  reports capacity; the mutation remains authoritative for races.
 - Joining requires a display name and one of the ten built-in avatars.
 - A room holds at most 10 seats; both installed games currently require 2–10
   players.
@@ -218,8 +219,9 @@ room lobby, including when that state is paused or unavailable.
 Once the room is open, the illustrated TV Room surface shows `Room Code`, the
 spaced authoritative code, `Waiting for players to join...`, a dynamic
 join-link QR, the phone instruction, and ten live roster positions. Joined seats
-preserve server order and show an initial plus nickname; unoccupied positions
-stay as dashed circles. When the Host starts browsing, the TV shows the four-card
+preserve server order and show the selected avatar portrait plus nickname
+(falling back to an initial if artwork is unavailable); unoccupied positions stay
+as dashed circles. When the Host starts browsing, the TV shows the four-card
 playroom carousel and derives its selected card from the authoritative browsing
 index. Selecting Trivia or Voting briefly reveals that game’s supplied 1080p
 artwork, then passively mirrors the installed module’s mode, schema-defined
@@ -239,18 +241,19 @@ The current Phone app retains the route adapters, join/scan seams, guest
 profile, session credential, heartbeat, roster/presence, browsing/setup, and
 running-game subscriptions. The Join Room route is the Phone illustrated and
 interactive exception: it presents `Join a game!`, accepts or prefills a
-four-letter room code, exposes a visual `Join Room` action, and pushes the modal
-scan route from `Scan QR Code`. Its running adapter supplies no backend join
-handler, so pressing Join does not create a seat or navigate.
+four-letter room code, lets a player choose a display name and avatar, calls the
+authoritative membership mutation, persists the returned session/profile, and
+pushes the branded camera scanner from `Scan QR Code`. The scanner replaces
+itself with the linked join route only after a valid Huddle QR payload.
 
 All other active Phone states remain centered purpose labels: `Starting
-Huddle`, `Restoring your room`, `Scan a room code`, `Room lobby`, `Waiting for
-the Host`, `Choose a game`, `Game setup`, `Game paused`, `Game unavailable`,
-`Game finished`, `Trivia game`, or `Voting game`. The temporary scan screen
-does not mount the camera. Identity/avatar collection, membership mutation,
-session persistence, rejection/seat-loss presentation, camera scanning, and
-help content are deferred from this UI slice while their existing contracts
-remain available.
+Huddle`, `Restoring your room`, `Room lobby`, `Waiting for the Host`, `Choose a
+game`, `Game setup`, `Game paused`, `Game unavailable`,
+`Game finished`, `Trivia game`, or `Voting game`. The scanner now mounts
+`CameraView` only while its route is focused and handles permission, camera,
+payload, and navigation failures. The illustrated Phone Room/Roster, Host
+controls, game picker/setup controls, and help content remain subsequent UI
+slices while their existing contracts remain available.
 
 The module screen is the extension point for future private answers, votes,
 secret information, cards, drawing, and other game-specific input. Those

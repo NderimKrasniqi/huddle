@@ -1,0 +1,26 @@
+schemaVersion: 1
+enabledWorkflows:
+  - simulator
+  - ui-automation
+  - debugging
+sessionDefaultsProfiles:
+  phone:
+    workspacePath: ./apps/phone/ios/Huddle.xcworkspace
+    scheme: Huddle
+    configuration: Release
+    simulatorName: iPhone 17
+    arch: x86_64
+    preferXcodebuild: true
+    platform: iOS
+    bundleId: tv.huddle.phone
+    simulatorPlatform: iOS Simulator
+  tvos:
+    workspacePath: ./apps/tv/ios/Huddle.xcworkspace
+    scheme: Huddle
+    configuration: Release
+    simulatorName: Apple TV 4K (3rd generation) (at 1080p)
+    arch: x86_64
+    preferXcodebuild: true
+    platform: tvOS
+    bundleId: tv.huddle.hub
+activeSessionDefaultsProfile: phone

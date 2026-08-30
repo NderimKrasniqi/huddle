@@ -39,7 +39,11 @@ describe('JoinRoomScreen', () => {
 
   it('normalizes typed content and enables Join only for a complete four-letter code', async () => {
     const onJoinRoom = jest.fn();
-    await renderJoinRoom({ onJoinRoom });
+    await renderJoinRoom({
+      onJoinRoom,
+      initialProfile: { version: 1, guestId: '123e4567-e89b-42d3-a456-426614174000', displayName: 'Ada', avatarId: 'fox' },
+      availability: null,
+    });
 
     const joinButton = screen.getByRole('button', { name: 'Join Room' });
     expect(joinButton.props.accessibilityState).toEqual({ disabled: true, busy: false });
@@ -58,11 +62,15 @@ describe('JoinRoomScreen', () => {
     expect(joinButton.props.accessibilityState).toEqual({ disabled: false, busy: false });
 
     await fireEvent.press(joinButton);
-    await waitFor(() => expect(onJoinRoom).toHaveBeenCalledWith('KWRD'));
+    await waitFor(() => expect(onJoinRoom).toHaveBeenCalledWith({ code: 'KWRD', nickname: 'Ada', avatarId: 'fox' }));
   });
 
   it('normalizes a deep-link-prefilled code and makes it immediately joinable', async () => {
-    await renderJoinRoom({ initialCode: ' rjbi ' });
+    await renderJoinRoom({
+      initialCode: ' rjbi ',
+      initialProfile: { version: 1, guestId: '123e4567-e89b-42d3-a456-426614174000', displayName: 'Ada', avatarId: 'fox' },
+      availability: null,
+    });
 
     expect(within(screen.getByTestId('room-code-cell-1')).getByText('R')).toBeTruthy();
     expect(within(screen.getByTestId('room-code-cell-2')).getByText('J')).toBeTruthy();
@@ -72,6 +80,30 @@ describe('JoinRoomScreen', () => {
       disabled: false,
       busy: false,
     });
+  });
+
+  it('submits from the display-name keyboard Done action', async () => {
+    const onJoinRoom = jest.fn();
+    await renderJoinRoom({
+      initialCode: 'KWRD',
+      initialProfile: {
+        version: 1,
+        guestId: '123e4567-e89b-42d3-a456-426614174000',
+        displayName: 'Ada',
+        avatarId: 'fox',
+      },
+      availability: null,
+      onJoinRoom,
+    });
+
+    await fireEvent(screen.getByTestId('display-name-input'), 'submitEditing');
+    await waitFor(() =>
+      expect(onJoinRoom).toHaveBeenCalledWith({
+        code: 'KWRD',
+        nickname: 'Ada',
+        avatarId: 'fox',
+      }),
+    );
   });
 
   it('reports its busy state, disables Join, and renders the loading indicator', async () => {
@@ -94,5 +126,42 @@ describe('JoinRoomScreen', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Scan QR Code' }));
     expect(onScanQr).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the ten-avatar picker, marks claimed avatars, and submits the selected identity', async () => {
+    const onJoinRoom = jest.fn();
+    const avatarSource = jest.fn((avatarId: string) => ({ uri: `avatar://${avatarId}` }));
+    await renderJoinRoom({
+      initialCode: 'KWRD',
+      initialProfile: { version: 1, guestId: '123e4567-e89b-42d3-a456-426614174000', displayName: 'Ada', avatarId: 'fox' },
+      availability: { full: false, takenAvatarIds: ['green-alien'] },
+      avatarSource,
+      onJoinRoom,
+    });
+
+    await fireEvent.press(screen.getByTestId('selected-avatar-button'));
+    expect(screen.getAllByTestId(/avatar-option-/u)).toHaveLength(10);
+    expect(screen.getByTestId('avatar-option-green-alien').props.accessibilityState).toMatchObject({ disabled: true });
+
+    await fireEvent.press(screen.getByTestId('avatar-option-pink-bunny'));
+    expect(screen.queryByTestId('avatar-picker')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Join Room' }));
+    await waitFor(() => expect(onJoinRoom).toHaveBeenCalledWith({ code: 'KWRD', nickname: 'Ada', avatarId: 'pink-bunny' }));
+    expect(avatarSource).toHaveBeenCalledWith('pink-bunny');
+  });
+
+  it('surfaces loading and server feedback without losing the identity draft', async () => {
+    await renderJoinRoom({
+      initialCode: 'KWRD',
+      initialProfile: { version: 1, guestId: '123e4567-e89b-42d3-a456-426614174000', displayName: 'Ada', avatarId: 'fox' },
+      availability: { full: true, takenAvatarIds: [] },
+      error: 'That avatar is unavailable.',
+      isJoining: true,
+    });
+
+    expect(screen.getByTestId('room-full-feedback')).toBeTruthy();
+    expect(screen.getByTestId('join-error')).toBeTruthy();
+    expect(screen.getByDisplayValue('Ada')).toBeTruthy();
+    expect(screen.getByTestId('joining-indicator')).toBeTruthy();
   });
 });

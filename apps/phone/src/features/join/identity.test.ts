@@ -156,4 +156,46 @@ describe('GuestProfileV1', () => {
   it('rejects a non-UUID factory result', async () => {
     await expect(loadGuestProfile(phoneRemembering(), () => 'guest-1')).rejects.toThrow('non-UUID');
   });
+
+  it('preserves a blank-name v1 profile and its guest ID across reloads', async () => {
+    const store = phoneRemembering(JSON.stringify({
+      version: 1,
+      guestId: GUEST_ID,
+      displayName: '',
+      avatarId: 'fox',
+    }));
+
+    await expect(loadGuestProfile(store, () => { throw new Error('must not mint'); })).resolves.toEqual({
+      version: 1,
+      guestId: GUEST_ID,
+      displayName: '',
+      avatarId: 'fox',
+    });
+    await expect(loadGuestProfile(store, () => { throw new Error('must not mint on reload'); })).resolves.toMatchObject({
+      guestId: GUEST_ID,
+      avatarId: 'fox',
+    });
+  });
+
+  it('normalizes a v1 name while preserving its guest ID and avatar', async () => {
+    const store = phoneRemembering(JSON.stringify({
+      version: 1,
+      guestId: GUEST_ID,
+      displayName: `  ${'x'.repeat(25)}  `,
+      avatarId: 'teal-bear',
+    }));
+
+    await expect(loadGuestProfile(store, () => { throw new Error('must not mint'); })).resolves.toEqual({
+      version: 1,
+      guestId: GUEST_ID,
+      displayName: 'x'.repeat(20),
+      avatarId: 'teal-bear',
+    });
+    await expect(loadGuestProfile(store, () => { throw new Error('must not mint on reload'); })).resolves.toEqual({
+      version: 1,
+      guestId: GUEST_ID,
+      displayName: 'x'.repeat(20),
+      avatarId: 'teal-bear',
+    });
+  });
 });
