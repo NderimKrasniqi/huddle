@@ -18,11 +18,11 @@ convex ─> @huddle/game-registry/logic ─> game logic exports
   joining, and credential rules. It depends only on contracts.
 - `@huddle/design-tokens` exposes exactly two presentation values: white
   background and black text.
-- `@huddle/ui/native` exposes only `PurposeScreen`. It remains the sole shared
-  renderer and accepts `platform` plus `purpose`, with no children or style
-  override. The illustrated Join Room, TV boot/restoration, Room Invitation,
-  and TV game-flow renderers are app-owned under their respective apps and are
-  not exported from a shared package.
+- `@huddle/ui/native` exposes the neutral `PurposeScreen` plus the pure
+  `huddleAvatarSource` asset resolver. It does not own screen state or render
+  app-specific layouts. The illustrated Join Room, Phone scanner, TV
+  boot/restoration, Room Invitation, and TV game-flow renderers remain
+  app-owned under their respective apps.
 - `games/*` retain independent metadata, settings, logic, and Phone/TV module
   contracts. Their current screens resolve to the shared purpose renderer.
 - `@huddle/game-registry` remains the ordered client module list and the
@@ -35,6 +35,12 @@ convex ─> @huddle/game-registry/logic ─> game logic exports
 
 The dependency graph is acyclic and validated by
 `tools/validate-architecture.py`.
+
+Phone and TV explicitly pin `react-native-worklets@0.10.1` as a native build
+compatibility peer for Expo Router's transitive Reanimated 4.5.1 dependency.
+Neither package is an approved Huddle presentation API: source imports remain
+forbidden, and the architecture validator restricts the Worklets pin to the two
+native clients at that exact version.
 
 ## Presentation boundary
 
@@ -50,10 +56,17 @@ this shared baseline.
 There are a small number of narrow app-owned exceptions:
 
 - `apps/phone/src/features/join/join-room-screen.tsx` may use ordinary React
-  Native image, input, scrolling, keyboard, loading, and pressable primitives
-  with the three exact Phone PNGs. `JoinForm` remains its route-facing adapter,
-  seeds `linkedCode`, and owns `/scan` navigation. The renderer owns local entry
-  state only and never Convex authority, identity, credentials, or membership.
+  Native image, input, scrolling, keyboard, loading, picker, and pressable
+  primitives with the supplied Phone PNGs and shared avatar runtime assets.
+  `JoinForm` remains its route-facing adapter, seeds `linkedCode`, owns the
+  Convex/profile/session handoff, and owns `/scan` navigation. The renderer owns
+  only local draft and picker state.
+- `apps/phone/src/features/scan/scan-screen.tsx` may use the existing Expo
+  Camera capability and ordinary React Native modal/presentation primitives.
+  It requests permission on entry, filters to QR payloads, delegates protocol
+  validation to `decodeJoinQr`, and replaces itself with `/join/[code]`. It owns
+  no membership, identity, or session authority and unmounts the camera when
+  unfocused.
 - `apps/tv/src/features/room/room-invitation-screen.tsx` may use ordinary React
   Native image primitives and the TV app's QR/SVG dependencies with the exact
   TV PNGs. It is a pure display renderer accepting `roomCode`, `joinUrl`, and an
@@ -112,9 +125,9 @@ The state-to-label mapping is platform-owned:
 This is a presentation reset, not a lifecycle reset. Convex queries and
 mutations, persisted identities, session tokens, roster/presence projections,
 room expiry, heartbeat handling, route selection, `GameModule`, and the
-game-registry client/server seam remain intact. The scan route retains its
-parser and Expo Camera configuration, but the temporary clean-slate screen
-does not mount the camera.
+game-registry client/server seam remain intact. The scan route now mounts the
+existing Expo Camera capability only while it is focused; it never creates a
+seat or writes a session.
 
 ## State and authority
 
@@ -123,6 +136,10 @@ TV credential. Clients subscribe to public projections; they never decide room
 phase. Setup still flows `configuring → ready → absent while running`. Ending
 clears the running game and setup while keeping the room code, roster, Host,
 and browsing index so the TV can return to its carousel.
+
+`players.joinAvailability` is a deliberately narrow public projection keyed by
+the normalized room code. It returns only capacity and claimed avatar IDs, and
+is advisory UI state; `players.joinRoom` remains the sole membership authority.
 
 `rooms.openRoom` is the sole TV opening authority and returns the room identity
 plus `restored` and `hasRunningGame` flags. A newly minted room (including a
@@ -166,18 +183,22 @@ content out of clients.
 Shared checked-in bitmap assets remain limited to the neutral launcher, splash,
 adaptive-icon, monochrome, and Android TV banner resources under
 `packages/ui/assets/app-icons`. App configuration references only those neutral
-assets. Runtime product artwork is app-owned: the three supplied Phone PNGs
-under `apps/phone/assets/join-room`, the clean TV background and phone icon
-under `apps/tv/assets/room-invitation`, and the optimized TV game-flow bundle
-under `apps/tv/assets/game-flow` (1080p playroom/game art, source-size four
-carousel cards, Huddle mark, and Questions/Rounds PNG icons). The TV boot, Room
+assets. Runtime product artwork is app-owned or shared by an explicit
+resolver: the supplied Phone PNGs under `apps/phone/assets/join-room`, the
+generated high-quality avatar masters under
+`docs/design/assets/avatars/masters`, the optimized 512px avatar runtime PNGs
+under `packages/ui/assets/avatars`, the clean TV background and phone icon under
+`apps/tv/assets/room-invitation`, and the optimized TV game-flow bundle under
+`apps/tv/assets/game-flow` (1080p playroom/game art, source-size four carousel
+cards, Huddle mark, and Questions/Rounds PNG icons). The TV boot, Room
 Invitation, and game-flow renderers reuse the approved background assets. The
 third Room file, `tv-lobby-empty.png`, is the supplied baked visual reference
 and must never be imported into runtime code. 4K/2K duplicates, Word Battle art,
 unused setup icons, SVG duplicates, fonts, and sample code remain excluded.
 Custom fonts and the former redesign importer remain absent, while Phone retains
 Expo Camera configuration for the platform capability. The architecture
-validator pins the game-flow asset names, dimensions, and SHA-256 digests.
+validator pins the avatar and game-flow asset names, dimensions, and SHA-256
+digests.
 
 ## Migration constraints
 

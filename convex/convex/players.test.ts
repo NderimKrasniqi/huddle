@@ -326,6 +326,80 @@ describe('joinRoom', () => {
  * serializable OCC and the read set `joinRoom` deliberately builds (see
  * players.ts), the same property `openRoom` leans on for code uniqueness.
  */
+describe('joinAvailability', () => {
+  it('returns null when no four-letter room holds the normalized code', async () => {
+    const t = convexTest(schema, modules);
+    await openRoom(t);
+
+    expect(await t.query(api.players.joinAvailability, { code: 'ZZZZ' })).toBeNull();
+    expect(await t.query(api.players.joinAvailability, { code: ' ZZZ ' })).toBeNull();
+    expect(await t.query(api.players.joinAvailability, { code: 'ABC' })).toBeNull();
+  });
+
+  it('normalizes case and surrounding whitespace before looking up a room', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    expect(await t.query(api.players.joinAvailability, { code: ` ${room.code.toLowerCase()} ` })).toEqual({
+      full: false,
+      takenAvatarIds: [],
+    });
+  });
+
+  it('reports an empty room as available with no claimed avatars', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    expect(await t.query(api.players.joinAvailability, { code: room.code })).toEqual({
+      full: false,
+      takenAvatarIds: [],
+    });
+  });
+
+  it('returns only the avatars claimed in the room', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+    await join(t, room.code, 'Ada', 'fox');
+    await join(t, room.code, 'Grace', 'green-alien');
+
+    expect(await t.query(api.players.joinAvailability, { code: room.code })).toEqual({
+      full: false,
+      takenAvatarIds: ['fox', 'green-alien'],
+    });
+  });
+
+  it('updates immediately after a player joins', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    expect(await t.query(api.players.joinAvailability, { code: room.code })).toEqual({
+      full: false,
+      takenAvatarIds: [],
+    });
+
+    await join(t, room.code, 'Ada', 'fox');
+
+    expect(await t.query(api.players.joinAvailability, { code: room.code })).toEqual({
+      full: false,
+      takenAvatarIds: ['fox'],
+    });
+  });
+
+  it('marks the room full when all ten seats are claimed', async () => {
+    const t = convexTest(schema, modules);
+    const room = await openRoom(t);
+
+    for (const [index, avatar] of AVATAR_IDS.entries()) {
+      await join(t, room.code, `Player ${index + 1}`, avatar);
+    }
+
+    expect(await t.query(api.players.joinAvailability, { code: room.code })).toEqual({
+      full: true,
+      takenAvatarIds: [...AVATAR_IDS],
+    });
+  });
+});
+
 describe('joinRoom under simultaneous joins', () => {
   it('seats ten of twelve players who all join at once', async () => {
     const t = convexTest(schema, modules);

@@ -90,4 +90,18 @@ describe('TvGameFlowStage', () => {
     expect(screen.getByText('Everyone is ready!')).toBeTruthy();
     expect(screen.getByText('Room KWRD')).toBeTruthy();
   });
+
+  it('passes the stable seat artwork into the setup roster projection', async () => {
+    await render(
+      <TvGameFlowStage
+        browsingAt={0}
+        setup={setup}
+        roster={roster}
+        reduceMotion
+      />,
+    );
+
+    expect(screen.getByTestId('tv-game-player-avatar-ada').props.source).toBeTruthy();
+    expect(screen.getByTestId('tv-game-player-avatar-bo').props.source).toBeTruthy();
+  });
 });

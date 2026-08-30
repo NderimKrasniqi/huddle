@@ -38,6 +38,7 @@ SERVER_CONTENT_IMPORT = re.compile(
     r"(?:curated-pack|questions|server|node:[a-z0-9_/]+)", re.IGNORECASE
 )
 PHONE_JOIN_RENDERER = Path("apps/phone/src/features/join/join-room-screen.tsx")
+PHONE_SCAN_RENDERER = Path("apps/phone/src/features/scan/scan-screen.tsx")
 TV_ROOM_RENDERER = Path("apps/tv/src/features/room/room-invitation-screen.tsx")
 TV_BOOT_RENDERER = Path("apps/tv/src/features/boot/tv-creating-room-screen.tsx")
 TV_RESTORE_RENDERER = Path("apps/tv/src/features/boot/tv-restoring-room-screen.tsx")
@@ -54,7 +55,13 @@ TV_GAME_FLOW_RENDERERS = frozenset(
     )
 )
 APPROVED_ILLUSTRATED_RENDERERS = frozenset(
-    (PHONE_JOIN_RENDERER, TV_ROOM_RENDERER, *TV_BOOT_RENDERERS, *TV_GAME_FLOW_RENDERERS)
+    (
+        PHONE_JOIN_RENDERER,
+        PHONE_SCAN_RENDERER,
+        TV_ROOM_RENDERER,
+        *TV_BOOT_RENDERERS,
+        *TV_GAME_FLOW_RENDERERS,
+    )
 )
 TV_SVG_RENDERERS = frozenset(
     (TV_ROOM_RENDERER, *TV_BOOT_RENDERERS)
@@ -115,7 +122,7 @@ TV_GAME_FLOW_ASSET_SPECS = {
         ),
         "voting-game-art-1080p.png": (
             (1920, 1080),
-            "650f08c663cc60805547aa84a37f98c89aa93fad233d5ec94f131cdf94003a92",
+            "8d57b077243c5f93144b9a655fd7c0f18bce86aa1f4c6b0c36e6d603a6778936",
         ),
     },
     "setup-icons": {
@@ -128,6 +135,48 @@ TV_GAME_FLOW_ASSET_SPECS = {
             "78b782ec1ea3e2ec89131bd58cc39395c762f77f6e7acba1e993cb08459cc2f6",
         ),
     },
+}
+AVATAR_ASSET_SPECS = {
+    "fox.png": (
+        (512, 512),
+        "0f48a8961a48170555b72b61f039fd092b104b3ba35d8327bb2a3d55d97a1580",
+    ),
+    "green-alien.png": (
+        (512, 512),
+        "9602b30f96a8c196651107d427271cd8d0a3a39ee4fa5f517d424d1cd0268441",
+    ),
+    "pink-bunny.png": (
+        (512, 512),
+        "6ed03409e68843848a8f30e911f646a583127dfcafcbe8a913accfda80cba12c",
+    ),
+    "blue-robot.png": (
+        (512, 512),
+        "c114bffd717f7b1de6ceea3e5456de76949373fde486bea0f7f53f99b72351c1",
+    ),
+    "purple-owl.png": (
+        (512, 512),
+        "fc6f60ffb8f5792ea950ed63080fd6ee3ccde672d2ce8ce56ea80da1436af837",
+    ),
+    "yellow-robot.png": (
+        (512, 512),
+        "4f63088bb4290d39fb18351c5635d07eda4f24d52272a5f52b7f788c1e190031",
+    ),
+    "red-robot.png": (
+        (512, 512),
+        "2f52b699453d9e7ca34741e21b0cbeacff620b13b5141fcb4387e3f1adacdc32",
+    ),
+    "teal-bear.png": (
+        (512, 512),
+        "ca7baed5168bb2b28f4ba63637b4ed76ccdba533a8f0fed399bcc97d1e564539",
+    ),
+    "mint-cat.png": (
+        (512, 512),
+        "28b2902523fd3395225e0d7caf5449a274c2b158f1fce69beb3837aec2a02938",
+    ),
+    "puppy.png": (
+        (512, 512),
+        "4fafa1f496593cce5418574401f195a0b4d58840af2118be0aad662d231c8824",
+    ),
 }
 
 
@@ -663,6 +712,17 @@ def validate_tv_game_flow_assets(root: Path = ROOT) -> None:
         )
 
 
+def validate_avatar_assets(root: Path = ROOT) -> None:
+    """Keep the shared runtime avatar resolver on the exact ten-image bundle."""
+
+    validate_png_asset_set(
+        root / "packages" / "ui" / "assets" / "avatars",
+        AVATAR_ASSET_SPECS,
+        "Shared avatar",
+        root,
+    )
+
+
 def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
     """The baked empty-room composite is reference-only and cannot enter Metro."""
 
@@ -750,7 +810,6 @@ def validate_consolidation(root: Path = ROOT) -> None:
         "react-native-css-interop",
         "expo-image",
         "react-native-reanimated",
-        "react-native-worklets",
         "lucide-react-native",
         "@react-native-community/netinfo",
         "@expo-google-fonts/inter",
@@ -764,6 +823,25 @@ def validate_consolidation(root: Path = ROOT) -> None:
                 found = banned_dependencies.intersection(declared)
                 if found:
                     fail(f"removed presentation dependency remains: {relative(manifest, root)} -> {sorted(found)[0]}")
+
+    native_worklets_manifests = {
+        root / "apps" / "phone" / "package.json",
+        root / "apps" / "tv" / "package.json",
+    }
+    for manifest in manifests:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        declared_version = payload.get("dependencies", {}).get("react-native-worklets")
+        if manifest in native_worklets_manifests:
+            if declared_version != "0.10.1":
+                fail(
+                    "native clients must pin react-native-worklets 0.10.1 for "
+                    f"Reanimated compatibility: {relative(manifest, root)}"
+                )
+        elif declared_version is not None:
+            fail(
+                "react-native-worklets is limited to native client compatibility: "
+                f"{relative(manifest, root)}"
+            )
     validate_qr_dependency_scope(root)
 
     asset_specs = {
@@ -811,9 +889,10 @@ def validate_consolidation(root: Path = ROOT) -> None:
     )
     validate_tv_room_assets(root)
     validate_tv_game_flow_assets(root)
+    validate_avatar_assets(root)
     validate_reference_composite_exclusion(root)
 
-    forbidden_asset_dirs = ("avatars", "game-art", "icons", "logo", "phone-backgrounds", "tv-backgrounds")
+    forbidden_asset_dirs = ("game-art", "icons", "logo", "phone-backgrounds", "tv-backgrounds")
     for name in forbidden_asset_dirs:
         path = root / "packages" / "ui" / "assets" / name
         if path.exists():

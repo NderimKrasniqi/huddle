@@ -10,7 +10,8 @@
  * path the QR points at, and the name field takes the focus the code tiles
  * would have had.
  *
- * The phone's own camera opens the link; the Phone never asks for a camera
- * of its own, which is a permission prompt Huddle does not have to spend.
+ * A phone can arrive here from the in-app QR scanner or an external camera.
+ * Either way, the code is only a prefilled field; identity is still chosen on
+ * the Join Room surface before the authoritative join mutation runs.
  */
 export { default } from '../../src/screens/phone-screen';

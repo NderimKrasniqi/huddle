@@ -100,6 +100,7 @@ class ArchitectureFixtureTests(unittest.TestCase):
         root = Path(temporary.name)
 
         phone = root / "apps/phone/src/features/join/join-room-screen.tsx"
+        scanner = root / "apps/phone/src/features/scan/scan-screen.tsx"
         tv = root / "apps/tv/src/features/room/room-invitation-screen.tsx"
         boot = root / "apps/tv/src/features/boot/tv-creating-room-screen.tsx"
         restore = root / "apps/tv/src/features/boot/tv-restoring-room-screen.tsx"
@@ -111,6 +112,7 @@ class ArchitectureFixtureTests(unittest.TestCase):
         neighboring = root / "apps/phone/src/features/join/another-screen.tsx"
 
         self.assertTrue(validator.is_approved_illustrated_renderer(phone, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(scanner, root))
         self.assertTrue(validator.is_approved_illustrated_renderer(tv, root))
         self.assertTrue(validator.is_approved_illustrated_renderer(boot, root))
         self.assertTrue(validator.is_approved_illustrated_renderer(restore, root))
@@ -293,6 +295,9 @@ class ArchitectureFixtureTests(unittest.TestCase):
 
     def test_tv_game_flow_assets_match_the_optimized_supplied_files(self) -> None:
         validator.validate_tv_game_flow_assets(ROOT)
+
+    def test_shared_avatar_assets_match_the_optimized_bundle(self) -> None:
+        validator.validate_avatar_assets(ROOT)
 
     def test_tv_reference_composite_cannot_be_imported(self) -> None:
         temporary = tempfile.TemporaryDirectory()
