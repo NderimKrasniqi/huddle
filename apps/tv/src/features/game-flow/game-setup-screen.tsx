@@ -1,16 +1,21 @@
 import type { GameSettingsSchema } from '@huddle/domain';
+import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import {
+  AvatarPortrait,
+  HEARTBEAT_ARTWORK,
+  HuddleText,
+} from '@huddle/ui/native';
 import {
   Animated,
   Image,
   ImageBackground,
   StyleSheet,
-  Text,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 
-import { TV_GAME_FLOW_ASSETS, gameArtAsset } from './assets';
+import { gameArtAsset } from './assets';
 import {
   tvHostCopy,
   tvModeLabel,
@@ -37,7 +42,11 @@ export type TvGameSetupScreenProps = {
   readonly reduceMotion?: boolean;
 };
 
-/** The generic TV setup shell draws only module-projected settings and roster state. */
+/**
+ * Display-only setup projection. The phone owns every setting control; the TV
+ * gets a single readable setup panel over the selected game's world and a
+ * quiet readiness rail for the room.
+ */
 export function TvGameSetupScreen({
   gameId,
   gameTitle,
@@ -57,6 +66,8 @@ export function TvGameSetupScreen({
   const setupSettings = visibleTvSetupSettings(gameId, settings, settingsSchema);
   const readiness = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
   const art = gameArtAsset(gameId);
+  const inRange = playerRange !== undefined && players.length >= playerRange.min && players.length <= playerRange.max;
+  const isReadyStage = stage === 'ready';
   const [enter] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
   const animationRef = useRef<Animated.CompositeAnimation | undefined>(undefined);
 
@@ -66,105 +77,120 @@ export function TvGameSetupScreen({
       enter.setValue(1);
       return;
     }
-
     enter.setValue(0);
-    animationRef.current = Animated.spring(enter, {
+    animationRef.current = Animated.timing(enter, {
       toValue: 1,
+      duration: 420,
       useNativeDriver: true,
-      damping: 18,
-      stiffness: 145,
-      mass: 0.82,
     });
     animationRef.current.start();
     return () => animationRef.current?.stop();
   }, [enter, gameId, reduceMotion]);
 
   return (
-    <View style={styles.viewport} pointerEvents="none" testID="tv-game-setup">
-      <View style={[styles.stage, { transform: [{ scale }] }]} accessible focusable={false}>
+    <View
+      style={styles.viewport}
+      pointerEvents="none"
+      focusable={false}
+      accessible={false}
+      testID="tv-game-setup"
+    >
+      <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false} accessible={false}>
         {art ? (
-          <ImageBackground
-            source={art}
-            resizeMode="cover"
-            style={StyleSheet.absoluteFill}
-            accessible={false}
-            testID={`tv-setup-art-${gameId}`}
-          />
+          <ImageBackground source={art} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID={`tv-setup-art-${gameId}`} />
         ) : (
-          <ImageBackground
-            source={TV_GAME_FLOW_ASSETS.background}
-            resizeMode="cover"
-            style={StyleSheet.absoluteFill}
-            accessible={false}
-            testID="tv-setup-fallback-background"
-          />
+          <ImageBackground source={HEARTBEAT_ARTWORK.tv.platformLivingRoom} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID="tv-setup-fallback-background" />
         )}
-        {gameId === 'voting' ? <View style={styles.votingBadgeMask} testID="tv-setup-voting-art-badge-mask" /> : null}
-        <View style={[StyleSheet.absoluteFill, styles.scrim]} />
-
+        <View style={styles.worldShade} pointerEvents="none" focusable={false} />
         <Animated.View
           style={[
             styles.content,
             {
               opacity: enter,
-              transform: [
-                {
-                  translateY: enter.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [18, 0],
-                  }),
-                },
-              ],
+              transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
             },
           ]}
+          pointerEvents="none"
+          focusable={false}
+          accessible={false}
         >
-          <Text style={styles.eyebrow}>{title.toUpperCase()} • SETUP</Text>
-          <Text style={styles.title}>{title} is getting ready</Text>
-          <Text style={styles.subtitle}>{tvHostCopy(hostName, 'is choosing settings on the phone.')}</Text>
-
-          <View style={styles.modePill} testID="tv-game-setup-mode">
-            <Text style={styles.modeLabel}>MODE</Text>
-            <Text style={styles.modeValue}>{tvModeLabel(mode)}</Text>
-          </View>
-
-          <View style={styles.settingsRow} testID="tv-game-setup-settings">
-            {setupSettings.length === 0 ? (
-              <View style={styles.emptySettings}>
-                <Text style={styles.emptySettingsText}>Settings are being prepared on the phone.</Text>
-              </View>
-            ) : (
-              setupSettings.map((setting) => (
-                <View key={setting.key} style={styles.settingCard} testID={`tv-game-setting-${setting.key}`}>
-                  {iconForSetting(setting.key) ? (
-                    <Image
-                      source={iconForSetting(setting.key)}
-                      resizeMode="contain"
-                      style={styles.settingIcon}
-                      accessible={false}
-                    />
-                  ) : (
-                    <View style={styles.genericSettingIcon} accessible={false} />
-                  )}
-                  <View style={styles.settingCopy}>
-                    <Text style={styles.settingLabel}>{setting.label}</Text>
-                    <Text style={styles.settingValue}>{setting.value}</Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-
-          <View style={styles.readiness} testID="tv-game-setup-readiness">
-            <View style={styles.readinessCopy}>
-              <Text style={styles.readinessTitle}>
-                {readiness.allReady ? 'Everyone is ready!' : `${readiness.readyCount} of ${readiness.playerCount} players are ready`}
-              </Text>
-              <Text style={styles.readinessSubtitle}>
-                {readiness.allReady ? `Waiting for ${hostName?.trim() || 'the host'} to start.` : 'Waiting for everyone to get ready…'}
-              </Text>
+          <View style={styles.topBar} pointerEvents="none" focusable={false}>
+            <View style={styles.brandLockup} pointerEvents="none" focusable={false}>
+              <Image source={HEARTBEAT_ARTWORK.brand.displayMark} resizeMode="contain" style={styles.brandMark} accessible={false} />
+              <HuddleText variant="title" color="surface">Huddle</HuddleText>
             </View>
-            <View style={styles.players} testID="tv-game-setup-players">
-              {players.slice(0, 10).map((player) => <PlayerChip key={player.id} player={player} readyPlayerIds={readyPlayerIds} />)}
+            <View style={styles.topRight} pointerEvents="none" focusable={false}>
+              <HuddleText variant="caption" color="surface" style={styles.kicker}>{`${title.toUpperCase()} · SETUP`}</HuddleText>
+              <View style={styles.modePill} pointerEvents="none" focusable={false} testID="tv-game-setup-mode">
+                <HuddleText variant="caption" color="text">MODE</HuddleText>
+                <HuddleText variant="title" color="text">{tvModeLabel(mode)}</HuddleText>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.setupPanel} pointerEvents="none" focusable={false} accessible={false}>
+            <HuddleText variant="caption" color="text" style={styles.visuallyHidden}>{`${title} setup`}</HuddleText>
+            {!isReadyStage ? <HuddleText variant="caption" color="text" style={styles.visuallyHidden}>Setup is being finalized</HuddleText> : null}
+            <HuddleText variant="caption" color="text" style={styles.panelKicker}>{isReadyStage ? 'READY TO PLAY' : 'HOST SETUP'}</HuddleText>
+            <HuddleText variant="tvDisplay" color="text" style={styles.title}>
+              {isReadyStage ? `${title} is ready` : `Set up ${title}`}
+            </HuddleText>
+            <HuddleText variant="bodyLarge" color="text" style={styles.subtitle}>
+              {isReadyStage
+                ? tvHostCopy(hostName, 'is choosing when to start on the phone.')
+                : tvHostCopy(hostName, 'is finalizing settings on the phone.')}
+            </HuddleText>
+
+            <View style={styles.divider} pointerEvents="none" focusable={false} />
+            <HuddleText variant="title" color="text" style={styles.sectionLabel}>Game settings</HuddleText>
+            <View style={styles.settingsRow} pointerEvents="none" focusable={false} testID="tv-game-setup-settings">
+              {setupSettings.length === 0 ? (
+                <HuddleText variant="body" color="text" style={styles.noSettings}>This game has no extra settings.</HuddleText>
+              ) : setupSettings.map((setting) => (
+                <View key={setting.key} style={styles.setting} pointerEvents="none" focusable={false} testID={`tv-game-setting-${setting.key}`}>
+                  <HuddleText variant="caption" color="text" style={styles.settingLabel}>{setting.label ?? setting.key}</HuddleText>
+                  <HuddleText variant="title" color="text">{setting.value}</HuddleText>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.panelNotice} pointerEvents="none" focusable={false}>
+              <View style={[styles.noticeDot, isReadyStage && readiness.allReady ? styles.noticeReady : null]} pointerEvents="none" focusable={false} />
+              <HuddleText variant="body" color="text">
+                {isReadyStage
+                  ? readiness.allReady
+                    ? `Everyone is ready · waiting for ${hostName?.trim() || 'the host'} to start.`
+                    : inRange
+                      ? `${readiness.readyCount} of ${readiness.playerCount} players are ready.`
+                      : playerRange
+                        ? `Need ${playerRange.min}–${playerRange.max} players to start.`
+                        : 'Waiting for the host to finish setting up.'
+                  : 'The room will ready up on the phones when setup is locked.'}
+              </HuddleText>
+            </View>
+          </View>
+
+          <View style={styles.readinessRail} pointerEvents="none" focusable={false} testID="tv-game-setup-readiness">
+            <View style={styles.readinessCopy} pointerEvents="none" focusable={false}>
+              <HuddleText variant="title" color="surface">
+                {isReadyStage
+                  ? readiness.allReady
+                    ? 'Everyone is ready!'
+                    : `${readiness.readyCount} of ${readiness.playerCount} players are ready`
+                  : 'Players in the room'}
+              </HuddleText>
+              <HuddleText variant="body" color="surface" style={styles.readinessSubtitle}>
+                {isReadyStage
+                  ? readiness.allReady
+                    ? 'The game starts when the Host taps Start.'
+                    : 'Keep your phone close while the Host finishes setup.'
+                  : 'Ready status appears here once the Host locks the setup.'}
+              </HuddleText>
+            </View>
+            <View style={styles.players} pointerEvents="none" focusable={false} testID="tv-game-setup-players">
+              {players.slice(0, 10).map((player) => (
+                <PlayerChip key={player.id} player={player} readyPlayerIds={readyPlayerIds} stage={stage} />
+              ))}
             </View>
           </View>
         </Animated.View>
@@ -176,45 +202,47 @@ export function TvGameSetupScreen({
 function PlayerChip({
   player,
   readyPlayerIds,
+  stage,
 }: {
   readonly player: TvGamePlayer;
   readonly readyPlayerIds: readonly string[];
+  readonly stage: 'configuring' | 'ready';
 }) {
-  const ready = player.away !== true && readyPlayerIds.map(String).includes(String(player.id));
+  const readyStage = stage === 'ready';
+  const ready = readyStage && player.away !== true && readyPlayerIds.map(String).includes(String(player.id));
   const name = player.name.trim() || 'Player';
-  const initial = Array.from(name)[0]?.toLocaleUpperCase() ?? '?';
+  const status = player.away ? 'away' : ready ? 'ready' : 'waiting';
+  const statusLabel = player.away ? 'away' : readyStage ? ready ? 'ready' : 'not ready' : 'in room';
 
   return (
     <View
       accessible
       focusable={false}
-      accessibilityLabel={`${name}${player.isHost ? ', host' : ''}${player.away ? ', away' : ''}${ready ? ', ready' : ', not ready'}`}
+      accessibilityRole="text"
+      accessibilityLabel={`${name}${player.isHost ? ', host' : ''}, ${statusLabel}`}
       style={styles.playerChip}
+      pointerEvents="none"
       testID={`tv-game-player-${player.id}`}
     >
-      <View style={[styles.avatar, { borderColor: player.away ? '#FFB24B' : ready ? '#5ED583' : 'rgba(255,255,255,0.45)' }]}>
-        {player.avatar ? (
-          <Image
-            source={player.avatar}
-            resizeMode="cover"
-            style={styles.avatarImage}
-            accessible={false}
-            testID={`tv-game-player-avatar-${player.id}`}
-          />
-        ) : (
-          <Text style={[styles.initial, { color: player.isHost ? '#FFB24B' : '#FFFFFF' }]} accessibilityElementsHidden>{initial}</Text>
-        )}
+      {player.avatar ? (
+        <Image source={player.avatar} resizeMode="contain" style={styles.avatarImage} accessible={false} testID={`tv-game-player-avatar-${player.id}`} />
+      ) : player.avatarId ? (
+        <AvatarPortrait avatarId={player.avatarId} displayName={name} size={52} testID={`tv-game-player-avatar-${player.id}`} />
+      ) : (
+        <View style={styles.avatarFallback} pointerEvents="none" focusable={false}>
+          <HuddleText variant="title" color="text" accessibilityElementsHidden>{Array.from(name)[0]?.toLocaleUpperCase() ?? '?'}</HuddleText>
+        </View>
+      )}
+      <View style={styles.playerIdentity} pointerEvents="none" focusable={false}>
+        <HuddleText variant="body" color="surface" numberOfLines={1}>{name}</HuddleText>
+        <HuddleText variant="caption" color="surface" style={styles.playerStatus} numberOfLines={1}>
+          {player.isHost ? 'Host · ' : ''}{status === 'ready' ? 'Ready' : status === 'away' ? 'Away' : status === 'waiting' ? readyStage ? 'Waiting' : 'In room' : 'Ready'}
+        </HuddleText>
+        {!readyStage && !player.away ? <HuddleText variant="caption" color="surface" style={styles.visuallyHidden}>In room</HuddleText> : null}
       </View>
-      <Text style={styles.playerName} numberOfLines={1} accessibilityElementsHidden>{name}</Text>
-      {player.away ? <Text style={styles.awayLabel}>Away</Text> : null}
+      <View style={[styles.statusDot, status === 'ready' ? styles.readyDot : status === 'away' ? styles.awayDot : null]} pointerEvents="none" focusable={false} />
     </View>
   );
-}
-
-function iconForSetting(key: string) {
-  if (key === 'rounds') return TV_GAME_FLOW_ASSETS.setupIcons.rounds;
-  if (key === 'questions') return TV_GAME_FLOW_ASSETS.setupIcons.questions;
-  return undefined;
 }
 
 function titleForGame(gameId: string): string {
@@ -229,96 +257,40 @@ function safeScale(width: number, height: number): number {
 }
 
 const styles = StyleSheet.create({
-  viewport: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: '#110A2F',
-  },
+  viewport: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: semanticColors.text },
   stage: { width: STAGE_WIDTH, height: STAGE_HEIGHT, overflow: 'hidden' },
-  scrim: { backgroundColor: 'rgba(14,8,47,0.61)' },
-  votingBadgeMask: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 954,
-    height: 126,
-    backgroundColor: 'rgba(54,25,98,0.96)',
-  },
-  content: { flex: 1, paddingHorizontal: 116, paddingTop: 72, paddingBottom: 66 },
-  eyebrow: { color: '#A57BFF', fontSize: 18, fontWeight: '900', letterSpacing: 2.4 },
-  title: { color: '#FFF9F4', fontSize: 58, fontWeight: '900', letterSpacing: -1.6, marginTop: 5 },
-  subtitle: { color: 'rgba(255,249,244,0.82)', fontSize: 21, fontWeight: '600', marginTop: 7 },
-  modePill: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 24,
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-    borderRadius: 999,
-    backgroundColor: 'rgba(165,123,255,0.2)',
-    borderColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1,
-  },
-  modeLabel: { color: 'rgba(255,249,244,0.72)', fontSize: 14, fontWeight: '800', letterSpacing: 1.2 },
-  modeValue: { color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginLeft: 10 },
-  settingsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, width: '78%', marginTop: 34 },
-  settingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '48.5%',
-    minHeight: 144,
-    padding: 22,
-    borderRadius: 28,
-    backgroundColor: 'rgba(20,12,60,0.76)',
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-  },
-  settingIcon: { width: 56, height: 56 },
-  genericSettingIcon: {
-    width: 18,
-    height: 18,
-    marginHorizontal: 19,
-    borderRadius: 999,
-    backgroundColor: '#A57BFF',
-  },
-  settingCopy: { flex: 1, marginLeft: 18 },
-  settingLabel: { color: 'rgba(255,249,244,0.74)', fontSize: 18, fontWeight: '700' },
-  settingValue: { color: '#FFF9F4', fontSize: 32, fontWeight: '900', marginTop: 3 },
-  emptySettings: { padding: 26, borderRadius: 28, backgroundColor: 'rgba(20,12,60,0.76)' },
-  emptySettingsText: { color: '#FFF9F4', fontSize: 22, fontWeight: '700' },
-  readiness: {
-    marginTop: 'auto',
-    minHeight: 104,
-    paddingHorizontal: 28,
-    paddingVertical: 18,
-    borderRadius: 34,
-    backgroundColor: 'rgba(12,10,37,0.8)',
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  readinessCopy: { flexShrink: 1 },
-  readinessTitle: { color: '#FFF9F4', fontSize: 25, fontWeight: '900' },
-  readinessSubtitle: { color: 'rgba(255,249,244,0.74)', fontSize: 18, fontWeight: '600', marginTop: 4 },
-  players: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 24 },
-  playerChip: { alignItems: 'center', maxWidth: 74 },
-  avatar: {
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderRadius: 999,
-    borderWidth: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  avatarImage: { width: '100%', height: '100%' },
-  initial: { fontSize: 21, fontWeight: '900' },
-  playerName: { color: '#FFF9F4', fontSize: 14, fontWeight: '700', marginTop: 4, maxWidth: 74 },
-  awayLabel: { color: '#FFB24B', fontSize: 11, fontWeight: '800', marginTop: 2 },
+  worldShade: { ...StyleSheet.absoluteFill, backgroundColor: semanticColors.text, opacity: 0.24 },
+  content: { position: 'absolute', left: 96, right: 96, top: 54, bottom: 54 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  brandLockup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  brandMark: { width: 56, height: 56 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  kicker: { color: semanticColors.surface, letterSpacing: 2.4 },
+  modePill: { minWidth: 170, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill, backgroundColor: semanticColors.secondary, alignItems: 'center', gap: 2, ...shadows.card },
+  setupPanel: { position: 'absolute', left: 0, top: 118, width: 700, minHeight: 570, paddingHorizontal: spacing['2xl'], paddingVertical: spacing['2xl'], borderRadius: radii.xl, backgroundColor: 'rgba(249, 241, 230, 0.97)', ...shadows.floating },
+  visuallyHidden: { position: 'absolute', width: 1, height: 1, opacity: 0 },
+  panelKicker: { color: semanticColors.text, letterSpacing: 2.1 },
+  title: { marginTop: spacing.sm, color: semanticColors.text, fontSize: 58, lineHeight: 66 },
+  subtitle: { marginTop: spacing.sm, color: semanticColors.text, opacity: 0.72 },
+  divider: { height: 1, marginVertical: spacing.xl, backgroundColor: 'rgba(43,31,23,0.18)' },
+  sectionLabel: { color: semanticColors.text, fontSize: 22, lineHeight: 28 },
+  settingsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md },
+  setting: { minWidth: 180, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radii.lg, backgroundColor: 'rgba(255,255,255,0.48)', borderWidth: 1, borderColor: 'rgba(43,31,23,0.18)', gap: spacing.xs },
+  settingLabel: { color: semanticColors.text, opacity: 0.66 },
+  noSettings: { color: semanticColors.text, opacity: 0.68 },
+  panelNotice: { marginTop: spacing.xl, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radii.lg, backgroundColor: 'rgba(255,215,102,0.18)', flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  noticeDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: semanticColors.secondary },
+  noticeReady: { backgroundColor: semanticColors.success },
+  readinessRail: { position: 'absolute', left: 0, right: 0, bottom: 0, minHeight: 184, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderRadius: radii.xl, backgroundColor: 'rgba(43, 31, 23, 0.92)', borderWidth: 1, borderColor: 'rgba(249,241,230,0.32)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  readinessCopy: { flex: 1, paddingRight: spacing.xl },
+  readinessSubtitle: { marginTop: spacing.xs, color: semanticColors.surface, opacity: 0.7 },
+  players: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: spacing.sm, maxWidth: 1050 },
+  playerChip: { width: 180, minHeight: 70, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.lg, backgroundColor: 'rgba(249, 241, 230, 0.12)', flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  avatarImage: { width: 52, height: 52, borderRadius: 26 },
+  avatarFallback: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: semanticColors.primary },
+  playerIdentity: { flex: 1, minWidth: 0 },
+  playerStatus: { marginTop: 1, color: semanticColors.surface, opacity: 0.66 },
+  statusDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(249,241,230,0.62)' },
+  readyDot: { backgroundColor: semanticColors.success },
+  awayDot: { backgroundColor: semanticColors.highlight },
 });

@@ -16,6 +16,9 @@ export function RoomStage({
     id: String(seat.playerId),
     name: seat.nickname,
     avatar: huddleAvatarSource(seat.avatar),
+    avatarId: seat.avatar,
+    host: seat.host,
+    away: seat.away,
   }));
 
   return (

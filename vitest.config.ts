@@ -31,8 +31,9 @@ export default defineConfig({
         test: {
           name: 'packages',
           include: ['packages/**/src/**/*.test.ts', 'games/*/src/**/*.test.ts'],
-          exclude: ['**/node_modules/**', '**/future/**', '**/*.render.test.tsx'],
+          exclude: ['**/node_modules/**', '**/*.render.test.tsx'],
           environment: 'node',
+          server: { deps: { inline: [/^@huddle\//] } },
         },
       },
       // The apps are mostly React Native, which docs/tech-stack.md deliberately does

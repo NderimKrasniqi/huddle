@@ -2,7 +2,7 @@
   "name": "@huddle/game-voting",
   "version": "0.1.0",
   "private": true,
-  "description": "Voting Game Module: the deliberately simple second game — a prompt-and-vote loop that proves the platform is game-independent.",
+  "description": "Voting game module with private Phone choices and shared TV results.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "//exports": "`./logic` is the rules without the screens, so the Convex server imports them without bundling React Native — the same seam trivia draws, and for the same reason (see games/trivia/package.json).",
@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@huddle/design-tokens": "workspace:*",
     "@huddle/domain": "workspace:*",
     "@huddle/ui": "workspace:*",
     "zod": "catalog:"

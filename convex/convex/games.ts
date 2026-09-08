@@ -327,14 +327,19 @@ export const reopenGameSetup = mutation({
   },
 });
 
-/** Leave the picker and clear an unfinished draft. */
+/** Return the whole room to its lobby and clear any unfinished game draft. */
 export const cancelGameSetup = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
     await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
-    if (room.game === undefined) await ctx.db.patch(room._id, { setup: undefined });
+    if (room.game === undefined) {
+      await ctx.db.patch(room._id, {
+        setup: undefined,
+        browsingGameIndex: undefined,
+      });
+    }
     return null;
   },
 });
@@ -465,10 +470,14 @@ export const startGame = mutation({
  * it changes.
  *
  * The roster, the host and the Room Code are untouched on purpose — this is the
- * party deciding to play something else, not the party ending. Only the `game`
- * field is cleared, so there is no other state for an ending to get wrong.
+ * party deciding to play something else, not the party ending. The running
+ * game, draft and shared browse index are cleared together, so no stale game
+ * surface can be restored when the lobby redraws.
  *
- * A second tap is not refused; `phaseAfter` explains why.
+ * The shared browse index is cleared with the game draft so the next lobby
+ * starts at the first card rather than reopening the card that was selected
+ * for the game that just ended. A second tap is not refused; `phaseAfter`
+ * explains why.
  */
 export const endGame = mutation({
   args: { sessionToken: v.string() },
@@ -484,9 +493,14 @@ export const endGame = mutation({
     await stopGameClock(ctx, room);
     // Unconditional: ending has no refusal to check (see `refusalToStart`), so
     // there is nothing between the Host check and the patch. `undefined` is how
-    // Convex unsets an optional field, which is the whole of returning to the
-    // lobby — `phaseAfter('end')` is that field being absent.
-    await ctx.db.patch(room._id, { game: undefined, setup: undefined });
+    // Convex unsets an optional field. Clear all game-owned surfaces in one
+    // patch: the absent game is the lobby phase, while the absent setup and
+    // browse index prevent either client from reopening stale game state.
+    await ctx.db.patch(room._id, {
+      game: undefined,
+      setup: undefined,
+      browsingGameIndex: undefined,
+    });
     return null;
   },
 });

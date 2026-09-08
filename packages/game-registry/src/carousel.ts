@@ -4,7 +4,7 @@ import { clampBrowsingIndex } from './browsing';
 import { CAROUSEL_PLACEHOLDERS } from './carousel-placeholders';
 import { GAME_REGISTRY } from './registry';
 
-/** The installed games followed by the reference-only cards. */
+/** The installed games followed by the three Heartbeat reference cards. */
 export const CAROUSEL_REGISTRY: readonly GameModule[] = [
   ...GAME_REGISTRY,
   ...CAROUSEL_PLACEHOLDERS,
@@ -37,7 +37,8 @@ export type CarouselWindow = {
  *
  * Clamped rather than rejected. The index is a position in a list that can
  * change between builds — a phone that browsed to card three in a room whose
- * TV installs two games is not doing anything wrong — and the honest answer to
+ * TV installs two games plus the three reference cards is not doing anything
+ * wrong — and the honest answer to
  * an index off the end is the nearest card, not an error on a television.
  * `undefined` is a room nobody has browsed in yet, which is the first card.
  */
@@ -54,9 +55,10 @@ export function browsingIndex(stored: number | undefined | null): number {
  * A card's neighbours are its carousel siblings, and the list does not
  * wrap: the first card's `previous` and the last card's `next` are `undefined`,
  * so the Host's arrows die at the ends rather than looping the focus back to a
- * card already on screen. The installed games lead the list and the two
+ * card already on screen. The installed games lead the list and the three
  * reference-only cards keep the future carousel positions reachable without
- * making those games selectable.
+ * making those games selectable. The exact order is Trivia, Voting, Doodle
+ * Dash, Quick Poll, Hot Take.
  */
 export function carouselWindow(index: number): CarouselWindow | undefined {
   const at = browsingIndex(index);

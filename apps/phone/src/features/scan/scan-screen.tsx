@@ -1,12 +1,13 @@
+import { brandColors, radii, spacing } from '@huddle/design-tokens';
+import { HuddleButton, HuddleText, HEARTBEAT_ARTWORK } from '@huddle/ui/native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useIsFocused, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  Image,
   Linking,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,9 +34,6 @@ export function ScanScreen() {
 
   useEffect(() => {
     if (!focused) {
-      // A subsequent focus entry gets one fresh automatic permission attempt.
-      // Keeping this reset tied to the focus transition avoids re-prompting in
-      // response to the permission response object changing after a denial.
       wasFocusedRef.current = false;
       return;
     }
@@ -48,15 +46,7 @@ export function ScanScreen() {
       setCameraError(false);
     }
 
-    if (
-      permission == null ||
-      permission.granted ||
-      !permission.canAskAgain ||
-      requestedForFocusRef.current
-    ) {
-      return;
-    }
-
+    if (permission == null || permission.granted || !permission.canAskAgain || requestedForFocusRef.current) return;
     requestedForFocusRef.current = true;
     void requestPermission().catch(() => setCameraError(true));
   }, [focused, permission, requestPermission]);
@@ -82,114 +72,161 @@ export function ScanScreen() {
     router.back();
   }
 
+  const cameraSurface = cameraState === 'ready';
+
   return (
-    <View style={styles.root} testID="qr-scanner-screen">
-      {focused && cameraState === 'ready' ? (
+    <View style={[styles.root, cameraSurface ? styles.cameraRoot : styles.recoveryRoot]} testID="qr-scanner-screen">
+      {focused && cameraSurface ? (
         <CameraView
           style={StyleSheet.absoluteFill}
           facing="back"
           active={focused}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-          // Keep the callback mounted while the native preview is alive. The
-          // ref inside handleBarcode closes the tiny race before React can
-          // render a changed prop after the first accepted scan.
           onBarcodeScanned={handleBarcode}
           onMountError={() => setCameraError(true)}
           testID="qr-camera-view"
         />
       ) : null}
-
+      {cameraSurface ? <View pointerEvents="none" style={styles.cameraTint} /> : null}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topBar}>
           <Pressable
             onPress={goBack}
             accessibilityRole="button"
             accessibilityLabel="Back to Join Room"
-            style={styles.topButton}
+            style={styles.backButton}
             testID="scanner-back"
           >
-            <Text style={styles.topButtonText}>‹</Text>
+            <HuddleText variant="title" color={cameraSurface ? 'surface' : 'text'} align="center">×</HuddleText>
           </Pressable>
-          <Text style={styles.title}>Scan to join</Text>
+          <HuddleText variant="body" color={cameraSurface ? 'surface' : 'text'} align="center" style={styles.topTitle}>
+            {cameraSurface ? 'Point at the TV\nroom code' : 'Join with QR'}
+          </HuddleText>
           <View style={styles.topButtonSpacer} />
         </View>
 
         <View style={styles.content}>
           {cameraState === 'checking' ? (
-            <View style={styles.messageCard}>
-              <ActivityIndicator color="#FFFFFF" accessibilityLabel="Checking camera permission" />
-              <Text style={styles.messageTitle}>Starting camera…</Text>
+            <View style={styles.introContent} testID="scanner-intro">
+              <Image
+                source={HEARTBEAT_ARTWORK.phone.scanOwlPhone}
+                resizeMode="contain"
+                style={styles.introArtwork}
+                accessible
+                accessibilityLabel="An owl holding a phone"
+              />
+              <HuddleText variant="title" align="center">Scan the code shown on the TV</HuddleText>
+              <HuddleButton
+                title="Allow camera"
+                onPress={tryRequestPermission}
+                accessibilityLabel="Allow camera"
+                testID="scanner-allow-camera"
+                style={styles.recoveryAction}
+              />
+              <HuddleButton
+                title="Enter code instead"
+                variant="secondary"
+                onPress={goBack}
+                accessibilityLabel="Enter room code manually"
+                testID="scanner-intro-manual"
+                style={styles.recoverySecondaryAction}
+              />
             </View>
           ) : cameraState === 'permission' ? (
-            <View style={styles.messageCard} testID="scanner-permission-card">
-              <Text style={styles.messageTitle}>Camera access needed</Text>
-              <Text style={styles.messageBody}>Allow camera access to scan the room code on your TV.</Text>
+            <View style={styles.recoveryContent} testID="scanner-permission-card">
+              <Image
+                source={HEARTBEAT_ARTWORK.phone.cameraUnavailable}
+                resizeMode="contain"
+                style={styles.recoveryArtwork}
+                accessible
+                accessibilityLabel="Camera unavailable"
+              />
+              <HuddleText variant="title" align="center">Camera access is off</HuddleText>
+              <HuddleText variant="body" align="center" style={styles.recoveryMessage}>Enable it in Settings or enter the room code.</HuddleText>
               {permission?.canAskAgain ? (
-                <Pressable onPress={tryRequestPermission} style={styles.primaryButton} accessibilityRole="button" accessibilityLabel="Try camera permission again">
-                  <Text style={styles.primaryButtonText}>Try again</Text>
-                </Pressable>
+                <HuddleButton title="Allow camera" onPress={tryRequestPermission} accessibilityLabel="Try camera permission again" testID="scanner-permission-retry" style={styles.recoveryAction} />
               ) : (
-                <Pressable onPress={() => void Linking.openSettings()} style={styles.primaryButton} accessibilityRole="button" accessibilityLabel="Open camera settings">
-                  <Text style={styles.primaryButtonText}>Open Settings</Text>
-                </Pressable>
+                <HuddleButton title="Open Settings" onPress={() => void Linking.openSettings()} accessibilityLabel="Open camera settings" testID="scanner-open-settings" style={styles.recoveryAction} />
               )}
+              <HuddleButton title="Enter code instead" variant="secondary" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-permission-manual" style={styles.recoverySecondaryAction} />
             </View>
           ) : cameraState === 'error' ? (
-            <View style={styles.messageCard} testID="scanner-error-card">
-              <Text style={styles.messageTitle}>Camera unavailable</Text>
-              <Text style={styles.messageBody}>You can enter the room code manually instead.</Text>
-              <Pressable onPress={goBack} style={styles.primaryButton} accessibilityRole="button" accessibilityLabel="Enter room code manually">
-                <Text style={styles.primaryButtonText}>Enter code manually</Text>
-              </Pressable>
+            <View style={styles.recoveryContent} testID="scanner-error-card">
+              <Image
+                source={HEARTBEAT_ARTWORK.phone.cameraUnavailable}
+                resizeMode="contain"
+                style={styles.recoveryArtwork}
+                accessible
+                accessibilityLabel="Camera unavailable"
+              />
+              <HuddleText variant="title" align="center">Camera isn’t available</HuddleText>
+              <HuddleText variant="body" align="center" style={styles.recoveryMessage}>You can still join with the code from the TV.</HuddleText>
+              <HuddleButton title="Enter code manually" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-manual-fallback" style={styles.recoveryAction} />
+              <HuddleButton title="Try camera again" variant="secondary" onPress={() => {
+                setCameraError(false);
+                requestedForFocusRef.current = false;
+                tryRequestPermission();
+              }} accessibilityLabel="Try camera again" testID="scanner-camera-retry" style={styles.recoverySecondaryAction} />
             </View>
           ) : (
-            <View style={styles.frame} accessible accessibilityLabel="QR code scanner frame">
-              <View style={[styles.corner, styles.cornerTopLeft]} />
-              <View style={[styles.corner, styles.cornerTopRight]} />
-              <View style={[styles.corner, styles.cornerBottomLeft]} />
-              <View style={[styles.corner, styles.cornerBottomRight]} />
-            </View>
+            <>
+              {message ? (
+                <View style={styles.scanAlert} testID="scanner-alert">
+                  <HuddleText variant="title" align="center" style={styles.alertTitle}>That isn’t a Huddle room code.</HuddleText>
+                  <HuddleText variant="body" align="center" color="text" testID="scanner-message" accessibilityRole="alert">{message}</HuddleText>
+                  <HuddleButton title="Keep scanning" onPress={() => setMessage(undefined)} accessibilityLabel="Keep scanning" testID="scanner-keep-scanning" style={styles.recoveryAction} />
+                  <HuddleButton title="Enter code instead" variant="secondary" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-alert-manual" style={styles.recoverySecondaryAction} />
+                </View>
+              ) : (
+                <View style={styles.frame} accessible accessibilityLabel="QR code scanner frame" testID="scanner-frame">
+                  <View style={[styles.corner, styles.cornerTopLeft]} />
+                  <View style={[styles.corner, styles.cornerTopRight]} />
+                  <View style={[styles.corner, styles.cornerBottomLeft]} />
+                  <View style={[styles.corner, styles.cornerBottomRight]} />
+                  <HuddleText variant="caption" color="surface" align="center" style={styles.frameHint}>Place the TV code here</HuddleText>
+                </View>
+              )}
+            </>
           )}
-
-          <View style={styles.instructionCard}>
-            <Text style={styles.instructionTitle}>Point at the TV</Text>
-            <Text style={styles.instructionBody}>Place the Huddle QR code inside the frame.</Text>
-            {message ? <Text style={styles.scanError} accessibilityRole="alert" testID="scanner-message">{message}</Text> : null}
-          </View>
         </View>
 
-        <Pressable onPress={goBack} accessibilityRole="button" accessibilityLabel="Enter room code manually" style={styles.manualButton} testID="scanner-manual-code">
-          <Text style={styles.manualButtonText}>Enter code manually</Text>
-        </Pressable>
+        {cameraSurface ? (
+          <HuddleButton variant="ghost" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-manual-code" style={styles.manualButton}>
+            <HuddleText variant="body" color="surface">Enter code manually</HuddleText>
+          </HuddleButton>
+        ) : null}
       </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#10152F' },
+  root: { flex: 1 },
+  cameraRoot: { backgroundColor: brandColors.espresso },
+  recoveryRoot: { backgroundColor: brandColors.cream },
+  cameraTint: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: brandColors.espresso, opacity: 0.58 },
   safeArea: { flex: 1, justifyContent: 'space-between' },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10 },
-  topButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.16)' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  backButton: { width: 44, height: 44, borderRadius: radii.round, alignItems: 'center', justifyContent: 'center' },
   topButtonSpacer: { width: 44, height: 44 },
-  topButtonText: { color: '#FFFFFF', fontSize: 40, lineHeight: 38, fontWeight: '300' },
-  title: { color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
-  frame: { width: '100%', maxWidth: 340, aspectRatio: 1, borderRadius: 24 },
-  corner: { position: 'absolute', width: 56, height: 56, borderColor: '#FF765D' },
-  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 5, borderLeftWidth: 5, borderTopLeftRadius: 24 },
-  cornerTopRight: { top: 0, right: 0, borderTopWidth: 5, borderRightWidth: 5, borderTopRightRadius: 24 },
-  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 5, borderLeftWidth: 5, borderBottomLeftRadius: 24 },
-  cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 5, borderRightWidth: 5, borderBottomRightRadius: 24 },
-  messageCard: { width: '100%', maxWidth: 340, alignItems: 'center', padding: 26, borderRadius: 24, backgroundColor: 'rgba(13,19,64,0.84)' },
-  messageTitle: { marginTop: 10, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '800', textAlign: 'center' },
-  messageBody: { marginTop: 10, color: 'rgba(255,255,255,0.78)', fontSize: 16, lineHeight: 22, textAlign: 'center' },
-  primaryButton: { marginTop: 20, minHeight: 50, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 25, backgroundColor: '#FF765D' },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '800' },
-  instructionCard: { marginTop: 34, alignItems: 'center' },
-  instructionTitle: { color: '#FFFFFF', fontSize: 21, lineHeight: 26, fontWeight: '800', textAlign: 'center' },
-  instructionBody: { marginTop: 8, color: 'rgba(255,255,255,0.72)', fontSize: 15, lineHeight: 20, textAlign: 'center' },
-  scanError: { marginTop: 12, color: '#FFB7A9', fontSize: 14, lineHeight: 19, textAlign: 'center', fontWeight: '700' },
-  manualButton: { alignSelf: 'center', marginBottom: 18, padding: 12 },
-  manualButtonText: { color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '700', textDecorationLine: 'underline' },
+  topTitle: { flex: 1, fontWeight: '700' },
+  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
+  introContent: { width: '100%', maxWidth: 330, alignItems: 'center', gap: spacing.lg },
+  introArtwork: { width: '100%', height: 250, marginBottom: spacing.sm },
+  recoveryContent: { width: '100%', maxWidth: 330, alignItems: 'center', gap: spacing.md },
+  recoveryArtwork: { width: '100%', height: 190, marginBottom: spacing.sm },
+  recoveryMessage: { maxWidth: 270, opacity: 0.8 },
+  recoveryAction: { width: '100%', minHeight: 50, borderRadius: radii.md },
+  recoverySecondaryAction: { width: '100%', minHeight: 48, borderRadius: radii.md },
+  frame: { width: '100%', maxWidth: 320, aspectRatio: 1.08, borderRadius: radii.xl, alignItems: 'center', justifyContent: 'center' },
+  frameHint: { opacity: 0.8, marginTop: 230 },
+  corner: { position: 'absolute', width: 58, height: 58, borderColor: brandColors.cream },
+  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 5, borderLeftWidth: 5, borderTopLeftRadius: radii.lg },
+  cornerTopRight: { top: 0, right: 0, borderTopWidth: 5, borderRightWidth: 5, borderTopRightRadius: radii.lg },
+  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 5, borderLeftWidth: 5, borderBottomLeftRadius: radii.lg },
+  cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 5, borderRightWidth: 5, borderBottomRightRadius: radii.lg },
+  scanAlert: { width: '100%', maxWidth: 330, alignItems: 'center', gap: spacing.md, padding: spacing.xl, borderRadius: radii.xl, backgroundColor: 'rgba(230,163,177,0.92)' },
+  alertTitle: { color: brandColors.espresso },
+  alertDetail: { opacity: 0.72 },
+  manualButton: { alignSelf: 'center', marginBottom: spacing.lg, borderColor: brandColors.cream, opacity: 0.9 },
 });

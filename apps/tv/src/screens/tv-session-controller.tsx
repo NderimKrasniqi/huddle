@@ -1,10 +1,11 @@
 import { api } from '@huddle/convex';
-import { runningGameScreen } from '@huddle/game-registry';
-import { PurposeScreen } from '@huddle/ui/native';
+import { runningGameScreen, type RunningGameScreen } from '@huddle/game-registry';
+import { gamePlayersFrom } from '@huddle/domain';
 import { useQuery } from 'convex/react';
 import { useEffect } from 'react';
 
-import { TvGameFlowStage, type TvGameSetupProjection } from '../features/game-flow/native';
+import { TvGameFlowStage, TvPlatformStatusScreen, type TvGameSetupProjection } from '../features/game-flow/native';
+import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage } from '../features/room/native';
 import type { RosterSeat } from '../models';
 import type { OpenRoom, RoomOpening } from '../platform/room-session';
@@ -48,6 +49,7 @@ export function TvSessionController({
     <TvSessionPresentation
       surface={surface}
       runtime={runtime.kind}
+      runtimeScreen={runtime}
       gameId={gameId}
       roomCode={room.code}
       roster={roster ?? []}
@@ -61,6 +63,7 @@ export function TvSessionController({
 export function TvSessionPresentation({
   surface,
   runtime,
+  runtimeScreen,
   gameId,
   roomCode,
   roster,
@@ -69,7 +72,8 @@ export function TvSessionPresentation({
   reduceMotion,
 }: {
   readonly surface: TvSurface;
-  readonly runtime: 'game' | 'finished' | 'paused' | 'unavailable' | 'lobby';
+  readonly runtime: RunningGameScreen['kind'];
+  readonly runtimeScreen?: RunningGameScreen;
   readonly gameId?: string;
   readonly roomCode: string;
   readonly roster: readonly RosterSeat[];
@@ -77,6 +81,45 @@ export function TvSessionPresentation({
   readonly setup?: TvGameSetupProjection | null;
   readonly reduceMotion?: boolean;
 }) {
+  // Runtime state is authoritative. Keep a stale surface projection from
+  // flashing the invitation, picker, or setup while a game payload is ready.
+  if (runtimeScreen?.kind === 'game' || runtimeScreen?.kind === 'finished') {
+    return (
+      <GameStage
+        module={runtimeScreen.module}
+        state={runtimeScreen.state}
+        players={gamePlayersFrom(roster)}
+        clockRemainingMs={runtimeScreen.kind === 'game' ? runtimeScreen.clockRemainingMs : undefined}
+      />
+    );
+  }
+
+  if (runtimeScreen?.kind === 'paused' || runtimeScreen?.kind === 'unavailable') {
+    return (
+      <TvRuntimeStatus
+        kind={runtimeScreen.kind}
+        reason={runtimeScreen.kind === 'paused' ? runtimeScreen.reason : undefined}
+        gameId={runtimeScreen.gameId}
+        roomCode={roomCode}
+        players={roster}
+      />
+    );
+  }
+
+  // A restored room can briefly have a pending running query. Keep that
+  // handoff visibly distinct from a failed runtime while subscriptions settle.
+  if (runtimeScreen?.kind === 'lobby' && surface === 'runtime-status') {
+    return (
+      <TvPlatformStatusScreen
+        kind="loading"
+        title="Restoring the game"
+        message="Reconnecting to the live Huddle room."
+        testID="tv-runtime-pending"
+        roomCode={roomCode}
+      />
+    );
+  }
+
   if (surface === 'room') {
     return <RoomStage roomCode={roomCode} roster={roster} />;
   }
@@ -93,10 +136,15 @@ export function TvSessionPresentation({
     );
   }
 
-  return (
-    <PurposeScreen
-      platform="tv"
-      purpose={tvPurposeForSurface(surface, runtime, gameId)}
-    />
-  );
+  // Keep the presentation component total for direct previews and in-flight
+  // legacy callers that have only passed the resolved surface kind. The live
+  // controller always supplies `runtimeScreen` above.
+  const title = tvPurposeForSurface(surface, runtime, gameId);
+  return <TvPlatformStatusScreen
+    kind="error"
+    title={title}
+    message="Huddle is waiting for the authoritative room state."
+    testID="tv-runtime-fallback"
+    roomCode={roomCode}
+  />;
 }

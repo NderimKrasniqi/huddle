@@ -42,8 +42,8 @@ describe('the carousel window', () => {
 
   it('offers the neighbours the focused card actually has, and does not wrap', () => {
     // The list does not wrap: the first card has nothing to its left and the
-    // last nothing to its right, however many games are installed — two cards
-    // that wrapped would give the Host arrows that only ever changed the focus
+    // last nothing to its right, however many games are installed — wrapping
+    // would give the Host arrows that only ever changed the focus
     // to something already on screen. Between the ends, a card's neighbours are
     // its real Registry siblings.
     expect(carouselWindow(0)?.previous).toBeUndefined();
@@ -58,11 +58,13 @@ describe('the carousel window', () => {
     expect(carouselWindow(99)?.index).toBe(LAST);
   });
 
-  it('reaches both reference-only cards and marks them as placeholders', () => {
-    expect(carouselWindow(2)?.focused.metadata.id).toBe('word-battle');
+  it('reaches every reference-only card and marks them as placeholders', () => {
+    expect(carouselWindow(2)?.focused.metadata.id).toBe('doodle-dash');
     expect(carouselWindow(2)?.focused.placeholder).toBe(true);
-    expect(carouselWindow(3)?.focused.metadata.id).toBe('more-games');
+    expect(carouselWindow(3)?.focused.metadata.id).toBe('quick-poll');
     expect(carouselWindow(3)?.focused.placeholder).toBe(true);
+    expect(carouselWindow(4)?.focused.metadata.id).toBe('hot-take');
+    expect(carouselWindow(4)?.focused.placeholder).toBe(true);
   });
 
   it('always has a card for a build that installs a game', () => {

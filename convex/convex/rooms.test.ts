@@ -430,9 +430,13 @@ describe('room expiry', () => {
     // pass with the cancel deleted.
     const deadlines = await t.run(async (ctx) =>
       (await ctx.db.system.query('_scheduled_functions').collect()).filter(
-        (job) => job.name === 'games:reachDeadline',
+        (job) =>
+          job.name === 'games:reachDeadline' &&
+          (job.state.kind === 'pending' || job.state.kind === 'inProgress'),
       ),
     );
+    // convex-test retains canceled rows; no pending or active gameplay
+    // callback may survive room expiry.
     expect(deadlines).toHaveLength(0);
   });
 

@@ -125,7 +125,8 @@ describe('durable TV room recovery', () => {
     await t.mutation(api.rooms.tvHeartbeat, { tvSessionToken: token });
     expect(await t.query(api.games.running, { roomId: opened.roomId })).toMatchObject({
       kind: 'running',
-      state: { phase: 'entered' },
+      state: { phase: 'question' },
+      clockRemainingMs: expect.any(Number),
     });
     expect(await t.mutation(api.rooms.openRoom, { tvSessionToken: token })).toMatchObject({
       roomId: opened.roomId,

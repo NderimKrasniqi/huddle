@@ -104,9 +104,15 @@ importers:
 
   apps/phone:
     dependencies:
+      '@expo-google-fonts/nunito':
+        specifier: 0.4.2
+        version: 0.4.2
       '@huddle/convex':
         specifier: workspace:*
         version: link:../../convex
+      '@huddle/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@huddle/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -201,9 +207,15 @@ importers:
 
   apps/tv:
     dependencies:
+      '@expo-google-fonts/nunito':
+        specifier: 0.4.2
+        version: 0.4.2
       '@huddle/convex':
         specifier: workspace:*
         version: link:../../convex
+      '@huddle/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@huddle/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -332,6 +344,9 @@ importers:
 
   games/trivia:
     dependencies:
+      '@huddle/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@huddle/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -360,6 +375,9 @@ importers:
 
   games/voting:
     dependencies:
+      '@huddle/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@huddle/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -1307,6 +1325,9 @@ packages:
 
   '@expo-google-fonts/material-symbols@0.4.42':
     resolution: {integrity: sha512-KZmHZRcthJ3KFZZlpzHjopA9guZgWR9fb3uVZlTR0BNlvG2pw1bnYBCpkze2PB0vRllwGhAM7lWXsfmcWCbXYg==}
+
+  '@expo-google-fonts/nunito@0.4.2':
+    resolution: {integrity: sha512-1KCWphw/I2ugqfs9iRHUCkPTnomNgGPtF4AvqVquoEKxr0EL+mcLNLgeixsslbaSFevRR6/KJAE3sc8g0VaY0Q==}
 
   '@expo/cli@57.0.14':
     resolution: {integrity: sha512-yu3sie3cDPDXBTUMvivqguW+lT8jnLIF8Q6e75MRaq7BoAzihor0KrJwtXAtC4ep5eOYYC1otEvtOuctG1xf8Q==}
@@ -3289,6 +3310,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -6735,6 +6757,8 @@ snapshots:
 
   '@expo-google-fonts/material-symbols@0.4.42': {}
 
+  '@expo-google-fonts/nunito@0.4.2': {}
+
   '@expo/cli@57.0.14(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.7)(expo-constants@57.0.10)(expo-font@57.0.1)(expo-router@57.0.12)(expo@57.0.12)(react-native-tvos@0.86.0-2)(react@19.2.3)(typescript@5.9.3)':
     dependencies:
       '@expo/code-signing-certificates': 0.0.6
@@ -7756,7 +7780,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.86.0': {}
 

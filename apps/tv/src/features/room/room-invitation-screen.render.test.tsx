@@ -21,6 +21,9 @@ describe('RoomInvitationScreen', () => {
     expect(screen.getByTestId('room-invitation-background')).toBeTruthy();
     expect(screen.getByTestId('room-invitation-phone-icon')).toBeTruthy();
     expect(screen.getByText('Room Code')).toBeTruthy();
+    expect(screen.getByText('Open Huddle on your phone, then scan the QR or enter the room code.')).toBeTruthy();
+    expect(screen.queryByText(/huddle\.game/i)).toBeNull();
+    expect(screen.queryByText(/https?:\/\//i)).toBeNull();
     expect(screen.getByText('K W R D', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByLabelText('Room code K W R D').props.focusable).toBe(false);
     expect(screen.getByText('Waiting for players to join...')).toBeTruthy();
@@ -53,7 +56,7 @@ describe('RoomInvitationScreen', () => {
     expect(joined[0]?.props.accessibilityLabel).toBe('Player Ada joined');
     expect(joined[1]?.props.accessibilityLabel).toBe('Player Grace joined');
     expect(joined.every((slot) => slot.props.focusable === false)).toBe(true);
-    expect(screen.getByText('A', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getAllByText('A', { includeHiddenElements: true })).not.toHaveLength(0);
     expect(screen.getByText('Ada', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText('Grace', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('joined-player-avatar').props.source).toEqual({

@@ -1,11 +1,12 @@
+import { durationFor, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { HuddleText } from '@huddle/ui/native';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   ImageBackground,
   StyleSheet,
-  Text,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from 'react-native';
 
 import { gameArtAsset } from './assets';
@@ -13,6 +14,8 @@ import { tvHostCopy } from './game-flow-model';
 
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
+const OVERSCAN_X = 96;
+const OVERSCAN_Y = 54;
 export const TV_GAME_ART_REVEAL_DURATION_MS = 900;
 
 export type TvSelectedGameArtScreenProps = {
@@ -23,7 +26,7 @@ export type TvSelectedGameArtScreenProps = {
   readonly onComplete?: () => void;
 };
 
-/** A short, local reveal between the authoritative selection and setup draft. */
+/** The Heartbeat art reveal between authoritative selection and setup draft. */
 export function TvSelectedGameArtScreen({
   gameId,
   gameTitle,
@@ -56,7 +59,7 @@ export function TvSelectedGameArtScreen({
     animationRef.current = Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: TV_GAME_ART_REVEAL_DURATION_MS,
+        duration: durationFor('celebration', false) + 200,
         useNativeDriver: true,
       }),
       Animated.spring(zoom, {
@@ -75,15 +78,22 @@ export function TvSelectedGameArtScreen({
   }, [gameId, opacity, reduceMotion, zoom]);
 
   const art = gameArtAsset(gameId);
-  const title = gameTitle?.trim() || (gameId === 'trivia' ? 'Trivia' : gameId === 'voting' ? 'Voting' : 'Game');
+  const title = gameTitle?.trim() || titleForGame(gameId);
   const copy = tvHostCopy(hostName, 'is choosing settings on the phone.');
 
   return (
-    <View style={styles.viewport} pointerEvents="none" testID="tv-selected-game-art">
+    <View
+      style={styles.viewport}
+      pointerEvents="none"
+      focusable={false}
+      accessible={false}
+      testID="tv-selected-game-art"
+    >
       <Animated.View
         accessible
         focusable={false}
-        accessibilityLabel={`${title} selected`}
+        accessibilityRole="text"
+        accessibilityLabel={`${title} selected. ${copy}`}
         style={[styles.stage, { opacity, transform: [{ scale }, { scale: zoom }] }]}
       >
         {art ? (
@@ -95,15 +105,34 @@ export function TvSelectedGameArtScreen({
             testID={`tv-game-art-${gameId}`}
           />
         ) : (
-          <View style={styles.fallbackArt} testID="tv-game-art-fallback" />
+          <View style={styles.fallbackArt} pointerEvents="none" focusable={false} testID="tv-game-art-fallback" />
         )}
-        {gameId === 'voting' ? <View style={styles.votingBadgeMask} testID="tv-voting-art-badge-mask" /> : null}
-        <View style={styles.statusPill}>
-          <Text style={styles.statusText}>{copy}</Text>
+        <View style={styles.artWash} pointerEvents="none" focusable={false} />
+        {gameId === 'voting' ? (
+          <View style={styles.badgeMask} pointerEvents="none" focusable={false} testID="tv-voting-art-badge-mask" />
+        ) : null}
+        <View style={styles.statusPill} pointerEvents="none" focusable={false}>
+          <HuddleText variant="body" color="surface" align="center">
+            {copy}
+          </HuddleText>
         </View>
+        <HuddleText variant="caption" color="surface" style={styles.safeNote} accessibilityElementsHidden>
+          {title}
+        </HuddleText>
       </Animated.View>
     </View>
   );
+}
+
+function titleForGame(gameId: string): string {
+  switch (gameId) {
+    case 'trivia':
+      return 'Trivia';
+    case 'voting':
+      return 'Voting';
+    default:
+      return gameId.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
 }
 
 function safeScale(width: number, height: number): number {
@@ -117,32 +146,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    backgroundColor: '#110A2F',
+    backgroundColor: semanticColors.text,
   },
   stage: {
     width: STAGE_WIDTH,
     height: STAGE_HEIGHT,
     overflow: 'hidden',
   },
-  fallbackArt: { ...StyleSheet.absoluteFill, backgroundColor: '#110A2F' },
-  votingBadgeMask: {
+  fallbackArt: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: semanticColors.text,
+  },
+  artWash: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: semanticColors.text,
+    opacity: 0.28,
+  },
+  badgeMask: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: 126,
-    backgroundColor: 'rgba(54,25,98,0.96)',
+    height: 76,
+    backgroundColor: semanticColors.text,
+    opacity: 0.18,
   },
   statusPill: {
     position: 'absolute',
-    alignSelf: 'center',
-    bottom: 44,
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 999,
-    backgroundColor: 'rgba(8,15,45,0.76)',
+    left: OVERSCAN_X,
+    right: OVERSCAN_X,
+    bottom: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: semanticColors.text,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderColor: semanticColors.surface,
+    opacity: 0.92,
+    ...shadows.card,
   },
-  statusText: { color: '#FFFFFF', fontSize: 22, fontWeight: '700', letterSpacing: 0.1 },
+  safeNote: {
+    position: 'absolute',
+    left: OVERSCAN_X,
+    top: OVERSCAN_Y,
+    color: semanticColors.surface,
+    opacity: 0.78,
+  },
 });

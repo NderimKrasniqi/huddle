@@ -1575,9 +1575,13 @@ describe('leaveRoom', () => {
 
       const deadlines = await t.run(async (ctx) =>
         (await ctx.db.system.query('_scheduled_functions').collect()).filter(
-          (job) => job.name === 'games:reachDeadline',
+          (job) =>
+            job.name === 'games:reachDeadline' &&
+            (job.state.kind === 'pending' || job.state.kind === 'inProgress'),
         ),
       );
+      // convex-test keeps canceled scheduler rows for inspection. The
+      // lifecycle guarantee is that no gameplay deadline remains executable.
       expect(deadlines).toHaveLength(0);
     } finally {
       vi.useRealTimers();
@@ -1670,9 +1674,13 @@ describe('leaveRoom', () => {
       // the clock would pass with the cancel deleted.
       const deadlines = await t.run(async (ctx) =>
         (await ctx.db.system.query('_scheduled_functions').collect()).filter(
-          (job) => job.name === 'games:reachDeadline',
+          (job) =>
+            job.name === 'games:reachDeadline' &&
+            (job.state.kind === 'pending' || job.state.kind === 'inProgress'),
         ),
       );
+      // Cancellation is represented by a retained `canceled` row in
+      // convex-test; only pending or currently running callbacks are unsafe.
       expect(deadlines).toHaveLength(0);
 
       await vi.advanceTimersByTimeAsync(60_000);

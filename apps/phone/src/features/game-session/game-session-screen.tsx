@@ -1,13 +1,28 @@
 import type { GameModule } from '@huddle/domain';
-import { PurposeScreen } from '@huddle/ui/native';
+import { HuddleText, ScreenShell, StatusSurface } from '@huddle/ui/native';
+import { View } from 'react-native';
 
 export function InGameScreen({ module }: { readonly module: GameModule }) {
-  const purpose = module.metadata.id === 'trivia' ? 'Trivia game' : 'Voting game';
-  return <PurposeScreen platform="phone" purpose={purpose} />;
+  return (
+    <ScreenShell testID="phone-game-runtime">
+      <View accessible accessibilityRole="header">
+        <HuddleText variant="caption" align="center">NOW PLAYING</HuddleText>
+        <HuddleText variant="display" align="center">{module.metadata.title}</HuddleText>
+        <HuddleText variant="bodyLarge" align="center">Your game is ready on this phone.</HuddleText>
+      </View>
+    </ScreenShell>
+  );
 }
 
 export function FinishedScreen() {
-  return <PurposeScreen platform="phone" purpose="Game finished" />;
+  return (
+    <StatusSurface
+      variant="finished"
+      title="Game finished"
+      message="Nice work, everyone. Choose what to do next."
+      testID="phone-game-finished"
+    />
+  );
 }
 
 export function GameRuntimeStatusScreen({
@@ -16,9 +31,11 @@ export function GameRuntimeStatusScreen({
   readonly status: 'paused' | 'unavailable';
 }) {
   return (
-    <PurposeScreen
-      platform="phone"
-      purpose={status === 'paused' ? 'Game paused' : 'Game unavailable'}
+    <StatusSurface
+      variant={status}
+      title={status === 'paused' ? 'Game paused' : 'Game unavailable'}
+      message={status === 'paused' ? 'The room will continue when the phones and TV are ready.' : 'The Host can return the room to the lobby.'}
+      testID={`phone-game-${status}`}
     />
   );
 }

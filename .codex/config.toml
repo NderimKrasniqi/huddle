@@ -5,3 +5,6 @@ args = [
     "@upstash/context7-mcp",
 ]
 enabled_tools = ["resolve-library-id", "query-docs"]
+
+[sandbox_workspace_write]
+network_access = true

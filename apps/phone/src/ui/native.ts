@@ -1,3 +1,2 @@
-/** Phone UI seam; every state delegates to the shared neutral renderer. */
-export { PurposeScreen, type PurposeScreenProps } from '@huddle/ui/native';
+/** Phone UI seam for Heartbeat startup/recovery surfaces. */
 export { PhoneLoadingScreen } from './loading-screen';

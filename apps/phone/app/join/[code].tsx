@@ -14,4 +14,4 @@
  * Either way, the code is only a prefilled field; identity is still chosen on
  * the Join Room surface before the authoritative join mutation runs.
  */
-export { default } from '../../src/screens/phone-screen';
+export { default } from '../../src/screens/join-identity-screen';

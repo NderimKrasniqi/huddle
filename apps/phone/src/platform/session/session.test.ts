@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   alsoInMemory,
+  forgetSession,
   joinScreenState,
   type PlayerSession,
   rememberSession,
+  resumeReportState,
   resumeSession,
+  shouldClearRestoredCredential,
   type SessionTokenStore,
 } from './session';
 
@@ -186,6 +189,60 @@ describe('resumeSession', () => {
   });
 });
 
+describe('resumeReportState', () => {
+  it('restores a late seat together with the token that found it', () => {
+    expect(resumeReportState({
+      current: null,
+      currentToken: undefined,
+      candidateToken: 'adastoken',
+      late: ADAS_SEAT,
+      ignoreLateResume: false,
+    })).toEqual({ session: ADAS_SEAT, sessionToken: 'adastoken' });
+  });
+
+  it('keeps a newer joined seat and token over an old late answer', () => {
+    const newer: PlayerSession = { ...ADAS_SEAT, roomId: 'room_new' as PlayerSession['roomId'], code: 'NEWR', nickname: 'Grace' };
+
+    expect(resumeReportState({
+      current: newer,
+      currentToken: 'newertoken',
+      candidateToken: 'adastoken',
+      late: ADAS_SEAT,
+      ignoreLateResume: false,
+    })).toEqual({ session: newer, sessionToken: 'newertoken' });
+  });
+
+  it('does not resurrect a deliberately left seat', () => {
+    expect(resumeReportState({
+      current: null,
+      currentToken: undefined,
+      candidateToken: 'adastoken',
+      late: ADAS_SEAT,
+      ignoreLateResume: true,
+    })).toEqual({ session: null, sessionToken: undefined });
+  });
+});
+
+describe('shouldClearRestoredCredential', () => {
+  it('clears only after the room confirms the remembered token has no seat', () => {
+    expect(shouldClearRestoredCredential({
+      lookupResult: 'null',
+      reported: null,
+      current: null,
+      ignoreLateResume: false,
+    })).toBe(true);
+  });
+
+  it.each([
+    ['patience timeout', 'pending', null, null, false],
+    ['late valid seat', 'seat', ADAS_SEAT, ADAS_SEAT, false],
+    ['newer joined seat', 'null', null, ADAS_SEAT, true],
+    ['failed lookup', 'failed', null, null, false],
+  ] as const)('%s does not retire a potentially current credential', (_label, lookupResult, reported, current, ignoreLateResume) => {
+    expect(shouldClearRestoredCredential({ lookupResult, reported, current, ignoreLateResume })).toBe(false);
+  });
+});
+
 describe('rememberSession', () => {
   it('keeps the token for the next launch', async () => {
     const phone = phoneRemembering(null);
@@ -240,6 +297,37 @@ describe('alsoInMemory', () => {
     // and it can only decide that if it hears about it.
     await expect(alsoInMemory(brokenPhone()).write('adastoken')).rejects.toThrow();
   });
+
+  it('clears the in-memory token as part of a deliberate leave', async () => {
+    let remembered: string | null = null;
+    const phone = alsoInMemory({
+      read: () => Promise.resolve(remembered),
+      write: (token) => {
+        remembered = token;
+        return Promise.resolve();
+      },
+      clear: () => {
+        remembered = null;
+        return Promise.resolve();
+      },
+    });
+    await phone.write('adastoken');
+
+    await forgetSession(phone);
+
+    expect(await phone.read()).toBeNull();
+  });
+
+  it('does not turn a storage clear failure into a false leave failure', async () => {
+    const clear = vi.fn().mockRejectedValue(new Error('keychain unavailable'));
+
+    await expect(forgetSession({
+      read: () => Promise.resolve('adastoken'),
+      write: () => Promise.resolve(),
+      clear,
+    })).resolves.toBeUndefined();
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('joinScreenState', () => {
@@ -263,10 +351,9 @@ describe('joinScreenState', () => {
     expect(joinScreenState(ADAS_SEAT, 'kwrd')).toEqual({ kind: 'seated', session: ADAS_SEAT });
   });
 
-  it('lets a Join Link for another room through to the form', () => {
-    // The party moved to a second TV. A seat in the room they walked out of is
-    // no reason to refuse the room they are standing in — and with no leave
-    // control on the seated screen, refusing it would be permanent.
-    expect(joinScreenState(ADAS_SEAT, 'ABCD')).toEqual({ kind: 'joining' });
+  it('requires handoff before a Join Link for another room reaches the form', () => {
+    // The party moved to a second TV. The old seat must be authoritatively left
+    // before this phone can claim another one.
+    expect(joinScreenState(ADAS_SEAT, 'ABCD')).toEqual({ kind: 'handoff', session: ADAS_SEAT });
   });
 });

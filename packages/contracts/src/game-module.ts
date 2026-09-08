@@ -266,6 +266,20 @@ export type TvGameScreenProps<State> = {
 };
 
 /**
+ * Device insets owned by the Phone app and passed into a game renderer.
+ *
+ * Keeping this plain-data boundary in the contract prevents a game package
+ * from importing a second native safe-area context instance. The platform
+ * resolves the device provider once, then gives every game the same snapshot.
+ */
+export type PhoneSafeAreaInsets = {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+};
+
+/**
  * What the Phone screen of a running game is given: the same state the TV
  * is drawing, the player holding this phone, and the way back to the room.
  *
@@ -277,6 +291,20 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
   readonly state: State;
   readonly player: GamePlayer;
   readonly sendEvent: (event: Event) => void;
+  /** Device insets resolved by the Phone host; absent for legacy callers. */
+  readonly safeAreaInsets?: PhoneSafeAreaInsets;
+  /**
+   * Additional top space reserved by the Phone host for platform chrome, such
+   * as its Host-only Back to lobby control. This is intentionally plain data:
+   * game modules must not import or own platform navigation context.
+   */
+  readonly hostChromeInsetTop?: number;
+  /**
+   * The authoritative remainder of the active server deadline, when one is
+   * running. A phone may use this to animate a local display countdown, but
+   * only the room's deadline can advance the game.
+   */
+  readonly clockRemainingMs?: number;
 };
 
 /**

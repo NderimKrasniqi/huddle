@@ -13,8 +13,8 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(() => Promise.resolve()),
 }));
 
-// JoinForm is a route adapter; its Convex hooks are mocked in render tests so
-// those tests can focus on the form handoff without constructing a websocket.
+// Convex hooks are mocked in render tests so screen assertions can focus on
+// the session handoff without constructing a websocket.
 jest.mock('convex/react', () => {
   const actual = jest.requireActual('convex/react');
   return {

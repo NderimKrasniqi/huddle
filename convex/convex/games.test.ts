@@ -44,6 +44,19 @@ async function rejection(promise: Promise<unknown>) {
 }
 
 describe('locked setup and readiness', () => {
+  it('returns every client to the lobby by clearing the draft and shared browse index', async () => {
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+
+    expect(await t.query(api.games.setup, { roomId: room.roomId })).not.toBeNull();
+    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBe(0);
+
+    await t.mutation(api.games.cancelGameSetup, { sessionToken: room.host });
+
+    expect(await t.query(api.games.setup, { roomId: room.roomId })).toBeNull();
+    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
+  });
+
   it('requires a locked setup and every seated player, including Host, to Ready', async () => {
     const t = convexTest(schema, modules);
     const room = await party(t);
@@ -110,23 +123,32 @@ describe('locked setup and readiness', () => {
 describe.each([
   ['trivia', 'questions', 10],
   ['voting', 'rounds', 5],
-] as const)('%s launch proof', (gameId, setting, resolvedValue) => {
-  it('launches module-owned entered state and returns everyone to the same lobby', async () => {
+] as const)('%s playable launch', (gameId, setting, resolvedValue) => {
+  it('launches module-owned initial state and returns everyone to the same lobby', async () => {
     const t = convexTest(schema, modules);
     const room = await party(t, gameId);
+    await t.mutation(api.games.browseGame, { sessionToken: room.host, index: 4 });
     await lockAndReady(t, room);
     await t.mutation(api.games.startGame, { sessionToken: room.host });
 
     const running = await t.query(api.games.running, { roomId: room.roomId });
+    expect(running).toMatchObject({ kind: 'running', gameId });
+    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBe(4);
+
+    // Both installed modules own a playable v2 opening beat. The public
+    // projection exposes the server-owned intro clock and settled setup while
+    // each module keeps its content and rules behind the generic game seam.
     expect(running).toMatchObject({
-      kind: 'running',
-      gameId,
-      state: { phase: 'entered', resolvedSettings: { [setting]: resolvedValue } },
+      state: { phase: 'intro' },
+      settings: { [setting]: String(resolvedValue) },
+      clockRemainingMs: expect.any(Number),
     });
+    expect(running?.kind === 'running' ? running.clockRemainingMs : undefined).toBeGreaterThan(0);
 
     await t.mutation(api.games.endGame, { sessionToken: room.host });
     expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
     expect(await t.query(api.games.setup, { roomId: room.roomId })).toBeNull();
+    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
     expect((await t.query(api.players.roster, { roomId: room.roomId }))?.length).toBe(2);
   });
 });

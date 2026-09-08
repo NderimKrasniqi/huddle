@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 import { View } from 'react-native';
+import type { GameModule } from '@huddle/domain';
+import { GAME_REGISTRY, type RunningGameScreen } from '@huddle/game-registry';
 
 import type { RosterSeat } from '../models';
 import { TvSessionPresentation } from './tv-session-controller';
@@ -94,6 +96,41 @@ describe('TvSessionPresentation', () => {
     expect(screen.getByTestId('tv-game-setup')).toBeTruthy();
     expect(screen.getByTestId('tv-game-setting-questions')).toBeTruthy();
     expect(screen.queryByText('Game setup')).toBeNull();
+  });
+
+  it('mounts a running module generically with the authoritative game roster and clock', async () => {
+    const tvScreen = jest.fn(() => <View testID="generic-tv-game" />);
+    const installed = GAME_REGISTRY[0];
+    if (installed === undefined) throw new Error('The TV render test needs an installed game');
+    const module = {
+      ...installed,
+      screens: { ...installed.screens, tv: tvScreen },
+    } as unknown as GameModule;
+    const state = { phase: 'question' };
+    const runtimeScreen = {
+      kind: 'game' as const,
+      module,
+      state,
+      clockRemainingMs: 2_000,
+    } satisfies RunningGameScreen;
+
+    await render(
+      <TvSessionPresentation
+        // A stale pre-runtime surface must not outrank the running payload.
+        surface="carousel"
+        runtime="game"
+        runtimeScreen={runtimeScreen}
+        roomCode="KWRD"
+        roster={roster}
+      />,
+    );
+
+    expect(screen.getByTestId('generic-tv-game')).toBeTruthy();
+    expect(tvScreen).toHaveBeenCalledWith({
+      state,
+      players: [{ playerId: 'player-ada', nickname: 'Ada', away: false, avatar: 'fox' }],
+      clockRemainingMs: 2_000,
+    });
   });
 
   it.each([

@@ -79,6 +79,12 @@ describe('the server’s carousel clamp', () => {
     expect(browsingIndex(undefined)).toBe(0);
   });
 
+  it('keeps the server clamp at the five-card client carousel length', () => {
+    expect(GAME_LOGIC_REGISTRY.length + CAROUSEL_PLACEHOLDER_COUNT).toBe(5);
+    expect(browsingIndex(4)).toBe(4);
+    expect(browsingIndex(5)).toBe(4);
+  });
+
   it('is the same arithmetic the clients use', () => {
     for (const stored of [undefined, null, -1, 0, 1, 99, Number.NaN]) {
       expect(browsingIndex(stored)).toBe(

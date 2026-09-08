@@ -31,10 +31,61 @@ export type SessionTokenStore = {
   readonly read: () => Promise<string | null>;
   /** Remembers a token, replacing whatever was there. */
   readonly write: (sessionToken: string) => Promise<void>;
+  /** Clears the remembered credential when a player deliberately leaves. */
+  readonly clear?: () => Promise<void>;
 };
 
 /** Asking the room which seat a token holds — `players.session`, bound to a client. */
 export type SessionLookup = (sessionToken: string) => Promise<PlayerSession | null>;
+
+/**
+ * The state transition applied when a persisted-token lookup reports. The
+ * lookup may answer after the patience deadline, so the token that produced a
+ * late seat must travel with that seat; a newer join/leave decision always
+ * wins instead.
+ */
+export function resumeReportState({
+  current,
+  currentToken,
+  candidateToken,
+  late,
+  ignoreLateResume,
+}: {
+  readonly current: PlayerSession | null | undefined;
+  readonly currentToken: string | undefined;
+  readonly candidateToken: string | undefined;
+  readonly late: PlayerSession | null;
+  readonly ignoreLateResume: boolean;
+}): { readonly session: PlayerSession | null | undefined; readonly sessionToken: string | undefined } {
+  if (ignoreLateResume || (current !== undefined && current !== null)) {
+    return { session: current, sessionToken: currentToken };
+  }
+
+  return late === null
+    ? { session: null, sessionToken: undefined }
+    : { session: late, sessionToken: candidateToken };
+}
+
+export type ResumeLookupResult = 'pending' | 'seat' | 'null' | 'failed';
+
+/**
+ * A persisted credential is safe to retire only after the room, not the
+ * patience deadline, confirmed that it owns no seat. A newer join/leave wins
+ * even when that answer belongs to the original launch.
+ */
+export function shouldClearRestoredCredential({
+  lookupResult,
+  reported,
+  current,
+  ignoreLateResume,
+}: {
+  readonly lookupResult: ResumeLookupResult;
+  readonly reported: PlayerSession | null;
+  readonly current: PlayerSession | null | undefined;
+  readonly ignoreLateResume: boolean;
+}): boolean {
+  return lookupResult === 'null' && reported === null && current === null && !ignoreLateResume;
+}
 
 /** Whether the launch found a persisted credential before asking the room. */
 export type SessionTokenStatus = 'present' | 'missing';
@@ -66,7 +117,21 @@ export function alsoInMemory(store: SessionTokenStore): SessionTokenStore {
       mintedThisLaunch = sessionToken;
       await store.write(sessionToken);
     },
+    clear: async () => {
+      mintedThisLaunch = null;
+      await store.clear?.();
+    },
   };
+}
+
+/** Forget the local room credential after a deliberate Leave action. */
+export async function forgetSession(store: SessionTokenStore): Promise<void> {
+  try {
+    await store.clear?.();
+  } catch {
+    // Leaving the room is authoritative on the server. A storage failure must
+    // not put a player back into a room they intentionally left.
+  }
 }
 
 /**
@@ -179,14 +244,15 @@ export async function rememberSession(
   }
 }
 
-/** What the Join Screen is showing: nothing yet, the form, or the seat they hold. */
+/** What the Join route is showing while restoration and deep links settle. */
 export type JoinScreenState =
   | { readonly kind: 'restoring' }
   | { readonly kind: 'joining' }
+  | { readonly kind: 'handoff'; readonly session: PlayerSession }
   | { readonly kind: 'seated'; readonly session: PlayerSession };
 
 /**
- * Which of its three faces the Join Screen wears, given what `resumeSession` has
+ * Which face the Join route wears, given what `resumeSession` has
  * reported and the Room Code of a scanned Join Link (empty when the phone did
  * not arrive by one).
  *
@@ -218,6 +284,6 @@ export function joinScreenState(
     .join('');
 
   return scanned !== '' && scanned !== session.code
-    ? { kind: 'joining' }
+    ? { kind: 'handoff', session }
     : { kind: 'seated', session };
 }

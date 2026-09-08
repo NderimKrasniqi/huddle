@@ -1,62 +1,173 @@
-# Active implementation plan
+# Huddle Heartbeat implementation plan
 
-Only unfinished release work requiring deployment or physical-device authority
-is listed as tasks here. The execution state also names the latest completed
-local UI slice because it changes what the remaining device task can prove;
-older completed work remains available through Git history.
+## Execution state
 
-## Execution State
+**Current phase:** React Native visual and simulator/emulator fidelity complete;
+physical party check pending
 
-**Current feature:** Phone Join, identity, and QR camera integration
-**Presentation status:** Phone Join Room now collects and remembers `GuestProfileV1`, resolves the ten approved avatar portraits, projects advisory room availability, calls the authoritative `joinRoom` mutation, persists the returned session token before seating, and mounts the focused branded QR camera route. TV Creating Room boot, restoration handoff, Room Invitation, and the four-stage Trivia/Voting/Word Battle/More Games game-flow remain implemented and locally verified; the Android TV emulator smoke check passed.
-**Current presentation:** The Phone join route owns illustrated four-letter code entry, inline display-name validation, a two-row ten-avatar picker, claimed-avatar/full-room feedback, loading/rejection copy, and QR-route navigation. The focused scan route mounts Expo `CameraView` with rear-camera QR-only settings, prompts for permission immediately, keeps malformed scans inline, locks accepted scans, and replaces itself with `/join/[code]`; manual entry remains available for denied/unavailable cameras. The TV startup, restoration, Room Invitation, and game-flow surfaces remain display-only projections of authoritative state. Remaining Phone Room/Roster, Host controls, and game-module screens stay on centered `PurposeScreen` labels.
-**Current phase:** 1.1 Deployment cutover and device proof
-**Current task:** 1.1.3
-**Last completed task:** Phone Join, identity, and QR camera integration
-**Blockers:** 1.1.3: physical Android Phone QR evidence, a second mixed phone, and physical Android TV remote traversal are still required. Local Convex, render, typecheck, lint, architecture, and asset gates cover the new join/scanner behavior, but they do not substitute for real camera permissions or remote focus traversal.
+**Runtime milestone:** the platform/game behavior and Phone-controller /
+TV-stage handoff are implemented. The saved Huddle direction board and approved
+screen boards in `docs/design/heartbeat/reference/approved-screens/` are the
+visual references. The React Native implementation has completed its
+screen-by-screen fidelity pass against them on iPhone Simulator and Android TV
+Emulator. Runtime artwork remains checked-in implementation artwork rather than
+source-master design material.
 
-## Phase 1.1 — Deployment cutover and device proof
+## Completed implementation
 
-**Outcome:** The locally verified presentation baseline and incremental Phone
-Join Room, TV Creating Room boot, TV restoration handoff, TV Room Invitation,
-and display-only TV game-flow exceptions are proven on the development
-deployment and supported physical platforms without touching production data.
+### 1. Heartbeat foundation — complete
 
-- [x] **1.1.1 — Audit and reset development rooms**
-  - **Outcome:** Development room, membership, TV-session, and game counts are recorded, then reach zero through lifecycle cleanup.
-  - **Work:** Deploy `developmentReset:audit`; enable both development-only reset gates; invoke the exact confirmation literal; audit zero; disable the gate; deploy the strict schema/runtime.
-  - **Touches:** Convex development deployment only.
-  - **Requirements:** DATA-001
-  - **Verify:** Dated development deployment record; production deployment remains untouched.
-  - **Depends on:** None
-  - **Done when:** Zero active development rows are recorded and the reset gate is disabled.
+- [x] Exact board palette and semantic tokens in `@huddle/design-tokens`.
+- [x] Nunito Regular, Bold, and ExtraBold pinned at `0.4.2` and loaded before
+  the native splash hides on Phone and TV.
+- [x] Shared native shell, text, buttons, code tiles, portraits, player rows,
+  badges, chips, game cards, loading mark, status surfaces, and artwork map.
+- [x] Temporary Huddle brand derivatives, ten stable avatar assets, phone
+  environments, TV stage, five text-free game cards, and Trivia/Voting game
+  worlds are available to the runtime.
+- [x] Review the React Native brand, screen composition, and artwork screen by
+  screen against the approved reference boards; repair any fidelity gaps found.
+- [x] Tokenized motion with static reduced-motion fallbacks and TV
+  1920×1080/1280×720 overscan-safe composition.
 
-- [x] **1.1.2 — Build supported clients and experimental tvOS**
-  - **Outcome:** iOS Phone, Android Phone, and Android TV artifacts build with the new identity; the tvOS experiment is attempted and its platform limitation is recorded.
-  - **Work:** Build/export clients, inspect `huddle-phone` / `tv.huddle.phone`, and inspect Android TV Leanback launcher metadata.
-  - **Touches:** `apps/phone`, `apps/tv`, generated native projects.
-  - **Requirements:** REL-001, REL-002
-  - **Verify:** Dated client build proof.
-  - **Depends on:** 1.1.1
-  - **Done when:** Supported builds pass and experimental tvOS evidence is recorded separately.
+### 2. Phone platform lifecycle — complete
 
-- [!] **1.1.3 — Run physical end-to-end party check**
-  - **Outcome:** The complete loop works with real camera, phones, and Android TV focus.
-  - **Work:** Remove the old app, scan the TV QR with a physical Phone, join mixed phones with names and avatars, Ready every seat, Start/End both modules, exercise reconnect, and traverse Android TV focus. The local membership and camera slices are now connected; this task is device evidence only.
-  - **Touches:** Development deployment and test devices.
-  - **Requirements:** PLAT-001, PLAT-002, REL-003
-  - **Verify:** Dated physical party checklist and local device captures.
-  - **Depends on:** 1.1.2
-  - **Done when:** Physical QR, lifecycle, reconnect, and focus gates all pass.
+- [x] Root session provider for credential restoration, active seat, notices,
+  remembered profile, join handoff, leave, and seat-loss recovery.
+- [x] Root room-code screen with authoritative `joinAvailability` checks and
+  inline missing/full-room errors.
+- [x] Dedicated `/join/[code]` Pick your vibe identity route with remembered
+  profile, claimed-avatar disabling, authoritative join, persistence, and
+  replacement navigation. Same-room deep links are suppressed; different-room
+  links require an authoritative leave confirmation before identity can join.
+- [x] `/scan` modal camera route with permission, malformed-code, duplicate,
+  unavailable-camera, and manual-entry recovery states.
+- [x] Host/player lobby, live roster, presence/Ready state, Host transfer and
+  remove confirmations, Leave, synchronized picker, setup, locked readiness,
+  Start gating, pause, unavailable, finished, recovery, Host Back to room from
+  picker/setup, and Back to lobby from a running or finished game.
 
-### Phase 1.1 Completion
+### 3. TV platform lifecycle — complete
 
-- Development data was reset only through the guarded lifecycle path.
-- The Phone membership/camera UI slice and shared avatar bundle are locally
-  verified; the physical platform loop remains blocked on the second Android
-  phone and physical Android TV remote listed above.
-- The reset gate is disabled and production was never targeted.
-- The active presentation keeps the intentional clean slate everywhere except
-  the approved Phone Join Room/scanner, shared avatar resolver and runtime
-  portraits, TV Creating Room boot, TV restoration handoff, TV Room Invitation,
-  and TV game-flow renderers and their optimized supplied assets.
+- [x] Orbit loading mark, warm living-room boot, restore handoff, and static
+  reduced-motion fallback.
+- [x] Room Invitation with native Huddle mark, authoritative code, native QR,
+  and live ten-seat avatar roster arranged in two rows of five.
+- [x] Five-game registry carousel in the exact order Trivia, Voting, Doodle
+  Dash, Quick Poll, Hot Take; the five-game registry is shown through a
+  three-card viewport with the selected card centered, larger, and visually
+  forward, plus one neighboring card on each side. Only the first two are
+  selectable.
+- [x] Display-only art reveal, module-declared setup projection, roster
+  readiness, paused/unavailable/finished/device-failure status surfaces, and
+  1920×1080 overscan-safe scaling.
+
+### 4. Playable modules — complete
+
+- [x] Trivia question → private answer/lock → TV reveal/standings → next
+  question → final standings loop, with Flat/Speed scoring and its declared
+  Questions, Difficulty, Timer, Category, and Scoring settings.
+- [x] Voting prompt → private choice/lock → waiting or live aggregate → TV
+  reveal → next round → non-scored room-vibe recap loop, with Rounds, Timer,
+  Results, and Voter-label settings.
+- [x] Per-action busy guards, authoritative event/deadline handling, stale
+  event rejection, pause/recovery, and Host-only Back to lobby.
+- [x] Redacted Phone/TV projections: private controls stay on the owner Phone;
+  TV receives shared prompts, participation, aggregates, reveals, and recap
+  only. Future prompts, raw mappings, timings, and pre-reveal answer keys stay
+  server-side.
+- [x] Legacy persisted `entered` records remain safely decodable without being
+  silently reinterpreted as playable state.
+
+### 5. Cleanup and architecture guardrails — complete
+
+- [x] Removed the obsolete neutral purpose renderer and combined legacy join
+  adapter, tests, exports, and duplicate Phone/TV asset trees.
+- [x] Validator checks the exact Heartbeat palette, runtime asset set,
+  dimensions/alpha/digests, native identity derivatives, QR/camera scope, TV
+  display-only source, bundle boundaries, and absent NativeWind/Tailwind setup
+  without requiring a design manifest or source-master tree.
+- [x] Approved visual references are the retained `heartbeat-direction.png`
+  board and `approved-screens/` inventory; generated sources outside that set
+  are not treated as masters.
+- [x] Client seam protects both Trivia content and Voting prompts from client
+  runtime graphs and exported bundles.
+
+## Remaining release work
+
+### 6. Fresh bundle and static evidence — complete
+
+- [x] Export Phone (iOS/Android) and TV (Android) into fresh directories.
+- [x] Run `pnpm verify:bundle-seam -- <export-directory>` for each export and
+  retain the output with the release evidence.
+- [x] Capture the iPhone room-code/scanner surfaces and Android TV Room
+  Invitation at representative simulator/emulator sizes.
+- [x] Capture synchronized Phone identity/lobby/picker/setup/readiness and TV
+  roster/carousel/setup/readiness surfaces.
+- [x] Capture the two-player Trivia and Voting runtime/final surfaces on Phone
+  and TV. Recovery and reduced-motion behavior remain covered by focused
+  render/motion checks; physical-device observation stays in the party check.
+
+### 7. Simulator/emulator traversal — complete
+
+- [x] Build, install, and launch the iPhone 17 Release app; exercise the
+  Heartbeat room-code screen and QR scanner/manual fallback in runtime
+  traversal.
+- [x] Traverse the iPhone identity, Host lobby, synchronized picker, Trivia
+  setup lock, Ready toggle, minimum-player Start gate, and confirmed
+  authoritative Back-to-room against Android TV.
+- [x] Verify same-room deep links return to the active seat and different-room
+  deep links stop on the explicit handoff confirmation without leaving.
+- [x] Complete the two-seat iPhone flow for Host transfer/removal, Trivia,
+  Voting, and Back to lobby. Live QA exposed a stale picker after Host return;
+  the server now clears game/setup/browse state atomically and the Phone clears
+  stale local picker state from authoritative projections. Focused server and
+  Phone regressions cover the repaired return path.
+- [x] Build the Android TV x86_64 Release APK, install it on the dedicated
+  `huddle_tv` AVD, launch through Leanback, and exercise Room Invitation in
+  runtime traversal.
+- [x] Build the Android Phone Release APK. The product owner accepted the
+  Android Phone install/traversal checkpoint after the dedicated emulator
+  stalled during installation; this item is closed by direction rather than
+  recorded as captured device evidence.
+- [x] Verify Android TV has no remote focus target or hidden control and that
+  room code, QR, roster, prompts, timer, and recap stay inside overscan-safe
+  bounds.
+
+### 8. Physical party check and review — pending
+
+- [ ] Test a real camera permission and QR join with a mixed iOS/Android Phone
+  group.
+- [ ] Exercise ten-seat roster, Host transfer/removal, away/Ready, seat loss,
+  reconnect, both game loops, and Host return-to-lobby on physical devices.
+- [ ] Complete the mixed physical Phone + Android TV living-room check.
+- [x] Complete the first independent review and repair its Trivia privacy,
+  picker return, join handoff, navigation-motion, and contact-sheet findings.
+- [x] Obtain follow-up independent approval against the repaired implementation.
+
+## Validation ledger
+
+Focused implementation checks pass for contracts, Convex integration,
+Trivia/Voting logic, Phone/TV render suites, typecheck, lint, client seam,
+architecture fixtures, architecture/routes/UI-stack validation, and
+`git diff --check`. Fresh Phone iOS/Android and TV Android exports pass the
+bundle scanner. The iPhone Release app and Android TV Release APK both build,
+install, launch, and pass synchronized join, roster, picker, setup, Ready,
+two-player Trivia/Voting, Host transfer/removal, and TV display-only inspection.
+The Android Phone Release APK also builds successfully; device traversal was
+accepted without new captured evidence by product-owner direction after the
+test emulator stalled during installation. The Back-to-lobby repair passes its
+focused Convex and Phone regressions. Independent re-review previously approved
+the room-handoff availability gate and complete Trivia/Voting TV accessibility
+summaries after 18 focused render cases passed. Recovery/reduced-motion physical
+observation and the mixed physical party check remain open.
+
+## Non-negotiable constraints
+
+- Do not change Convex schema, session-token authority, room lifecycle, stable
+  avatar IDs, or the `GameModule` client/server seam.
+- TV remains presentation-only; Phone remains the controller.
+- Do not add Invite Friend, a web client, fake settings, or playable cards for
+  Doodle Dash, Quick Poll, or Hot Take.
+- Keep private player choices/timing and unrevealed game content off the TV
+  and out of other players' Phone projections.

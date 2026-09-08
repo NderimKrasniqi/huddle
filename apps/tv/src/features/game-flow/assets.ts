@@ -1,32 +1,32 @@
 import type { ImageSourcePropType } from 'react-native';
 
+import { HEARTBEAT_ARTWORK } from '@huddle/ui/native';
+
 /**
- * The TV flow owns only the pixels needed to present the installed games.
- * Server and registry state still supply the ids, titles, and settings.
+ * The TV flow owns no artwork. This map is the small display-only adapter
+ * from the registry ids to the reviewed Heartbeat asset manifest in the
+ * shared UI package. Server and registry state still supply ids, titles, and
+ * settings.
  */
 export const TV_GAME_FLOW_ASSETS = {
-  background: require('../../../assets/game-flow/backgrounds/huddle-playroom-1080p.png'),
-  mark: require('../../../assets/game-flow/brand/huddle-mark.png'),
+  background: HEARTBEAT_ARTWORK.tv.platformStage,
+  mark: HEARTBEAT_ARTWORK.brand.displayMark,
   cards: {
-    trivia: require('../../../assets/game-flow/carousel-cards/trivia-card-source.png'),
-    voting: require('../../../assets/game-flow/carousel-cards/voting-card-source.png'),
-    'word-battle': require('../../../assets/game-flow/carousel-cards/word-battle-card-source.png'),
-    'more-games': require('../../../assets/game-flow/carousel-cards/more-games-card-source.png'),
+    trivia: HEARTBEAT_ARTWORK.gameCards.trivia,
+    voting: HEARTBEAT_ARTWORK.gameCards.voting,
+    'doodle-dash': HEARTBEAT_ARTWORK.gameCards.doodleDash,
+    'quick-poll': HEARTBEAT_ARTWORK.gameCards.quickPoll,
+    'hot-take': HEARTBEAT_ARTWORK.gameCards.hotTake,
   },
   art: {
-    trivia: require('../../../assets/game-flow/game-art/trivia-game-art-1080p.png'),
-    voting: require('../../../assets/game-flow/game-art/voting-game-art-1080p.png'),
-  },
-  setupIcons: {
-    questions: require('../../../assets/game-flow/setup-icons/questions.png'),
-    rounds: require('../../../assets/game-flow/setup-icons/rounds.png'),
+    trivia: HEARTBEAT_ARTWORK.gameWorlds.trivia,
+    voting: HEARTBEAT_ARTWORK.gameWorlds.voting,
   },
 } as const satisfies {
   background: ImageSourcePropType;
   mark: ImageSourcePropType;
   cards: Record<string, ImageSourcePropType>;
   art: Record<string, ImageSourcePropType>;
-  setupIcons: Record<string, ImageSourcePropType>;
 };
 
 export type TvGameFlowGameId = keyof typeof TV_GAME_FLOW_ASSETS.cards;

@@ -1,118 +1,144 @@
-import { api } from '@huddle/convex';
-import { useConvex } from 'convex/react';
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { brandColors, radii, shadows, spacing } from '@huddle/design-tokens';
+import { HEARTBEAT_ARTWORK, HuddleButton, HuddleText, ScreenShell } from '@huddle/ui/native';
+import { ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { JoinForm } from '../features/join/native';
 import { SeatedPhone } from './seated-phone';
-import { joinScreenState, type PlayerSession, resumeSession } from '../platform/session';
-import { phoneSessionTokenStore } from '../platform/session/native';
+import { RoomCodeEntry } from '../features/join/room-code-entry';
+import { usePhoneSession } from '../platform/session';
 import { PhoneLoadingScreen } from '../ui/native';
 
+/** Root Phone coordinator: restore first, then seated room or manual entry. */
 export default function PhoneScreen() {
-  // The code a scanned Join Link brought with it, if the phone arrived that way
-  // (`app/join/[code].tsx`). It is the only difference a scanned join makes —
-  // the nickname is still typed.
-  const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();
-  const convex = useConvex();
+  const { session, restoringToken, notice, reportSeatLost, leave, clearNotice } = usePhoneSession();
 
-  // The seat this phone already holds: `undefined` while its Session Token and
-  // the room are still being asked, `null` once the answer is that it holds
-  // none. A player who force-quit mid-party is nobody's new arrival, so the
-  // join form is what this screen falls back to rather than what it opens with.
-  const [session, setSession] = useState<PlayerSession | null>();
-
-  // Why the phone is on the join form, when it landed there by losing a seat
-  // rather than by never having one. Carried from the seated screen to the form
-  // so a removed player is told they were removed instead of finding themselves
-  // inexplicably back at the start. `undefined` on an ordinary launch.
-  const [notice, setNotice] = useState<string>();
-
-  // A fresh phone has no credential to restore. Keep the Join form actionable
-  // while SecureStore answers, and only show the restore surface after a token
-  // is actually found. This prevents a new iPhone from getting stuck behind
-  // “Finding your room” while still protecting a returning player from taking
-  // a duplicate seat during a valid lookup.
-  const [restoringToken, setRestoringToken] = useState(false);
-
-  useEffect(() => {
-    // Safe on every mount, unlike the TV's `openRoom`: rejoining reads, so a
-    // remount asks the same question again instead of taking a second seat.
-    // It may answer twice — a bounded blank screen first, the room's real word
-    // whenever it lands (see `resumeSession`) — and this state takes both.
-    return resumeSession(
-      phoneSessionTokenStore,
-      (sessionToken) => convex.query(api.players.session, { sessionToken }),
-      // A late answer fills a blank, and never overwrites a seat. Between the
-      // deadline and the room finally answering, the player may have joined
-      // somewhere else — and the room they are in now beats the one they were
-      // in then, whichever order the two arrive in.
-      (late) => {
-        setRestoringToken(false);
-        setSession((current) => current ?? late);
-      },
-      undefined,
-      (status) => {
-        if (status === 'present') {
-          setRestoringToken(true);
-        } else {
-          setRestoringToken(false);
-          setSession(null);
-        }
-      },
-    );
-  }, [convex]);
-
-  // A scanned Join Link starting a fresh form is a fresh context: a seat-loss
-  // notice about the room this phone just left has nothing to say about the room
-  // a new link names, so it is dropped the moment the link changes rather than
-  // riding along to it. Adjusted during render — React's own way to reset state
-  // when an input changes — since the notice belongs to the code it arrived on.
-  const [noticeLink, setNoticeLink] = useState(linkedCode);
-  if (noticeLink !== linkedCode) {
-    setNoticeLink(linkedCode);
-    setNotice(undefined);
-  }
-
-  const state = joinScreenState(session, linkedCode ?? '');
-
-  if (state.kind === 'restoring') {
-    // Keep the initial launch neutral while storage answers. Once a persisted
-    // credential is found, the same renderer names the recovery state.
+  if (session === undefined) {
     return <PhoneLoadingScreen phase={restoringToken ? 'restoring' : 'startup'} />;
   }
 
-  if (state.kind === 'seated') {
-    // A seat can end without this phone doing anything: the Host removes this
-    // player, or the room expires after its TV has stayed away.
-    // Forgetting the seat here is what sends the phone back to the form — the
-    // screen below watches the room for it.
+  if (session !== null) {
     return (
       <SeatedPhone
-        session={state.session}
-        onSeatLost={(reason) => {
-          setNotice(reason);
-          setSession(null);
-        }}
-        // No notice. A phone that tapped Leave knows why it is here, and
-        // `seatLossNotice` has no true sentence for a departure nobody imposed.
-        onLeft={() => setSession(null)}
+        session={session}
+        onSeatLost={reportSeatLost}
+        onLeft={() => leave()}
       />
     );
   }
 
-  // Keyed by the link so a second Join Link scanned while this screen is
-  // already open starts the form over on the room it names, rather than leaving
-  // the first room's code in tiles the player thinks they just replaced — which
-  // covers the phone that already holds a seat and has just scanned another
-  // room's TV, since `joinScreenState` sends that scan here. A typed join has
-  // no link and so a constant key: nothing remounts under somebody's thumbs.
+  if (notice !== undefined) {
+    return <SeatLostRecoverySurface reason={notice} onJoinAnotherRoom={clearNotice} />;
+  }
+
+  return <RoomCodeEntry />;
+}
+
+function SeatLostRecoverySurface({
+  reason,
+  onJoinAnotherRoom,
+}: {
+  readonly reason: string;
+  readonly onJoinAnotherRoom: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <JoinForm
-      key={linkedCode ?? ''}
-      linkedCode={linkedCode ?? ''}
-      onSeated={setSession}
-      notice={notice}
-    />
+    <ScreenShell tone="background" style={styles.seatLostShell} testID="phone-seat-lost">
+      <ImageBackground
+        source={HEARTBEAT_ARTWORK.phone.seatLost}
+        resizeMode="cover"
+        style={StyleSheet.absoluteFill}
+        accessible={false}
+        testID="phone-seat-lost-art"
+      />
+      <View pointerEvents="none" style={styles.seatLostVeil} />
+      <HuddleText
+        variant="title"
+        align="center"
+        accessibilityRole="header"
+        style={[styles.seatLostHeader, { top: insets.top + spacing.lg }]}
+      >
+        Uh oh!
+      </HuddleText>
+      <ScrollView
+        contentContainerStyle={[
+          styles.seatLostScroll,
+          {
+            paddingTop: insets.top + spacing.lg,
+            paddingRight: insets.right + spacing.lg,
+            paddingBottom: insets.bottom + spacing.lg,
+            paddingLeft: insets.left + spacing.lg,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        testID="phone-seat-lost-scroll"
+      >
+        <View style={styles.seatLostContent}>
+          <View style={styles.seatLostSheet}>
+            <HuddleText variant="title" align="center" accessibilityRole="header">
+              Seat no longer available
+            </HuddleText>
+            <HuddleText
+              variant="body"
+              align="center"
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              testID="phone-seat-lost-reason"
+            >
+              {reason}
+            </HuddleText>
+            <HuddleButton
+              title="Join another room"
+              variant="primary"
+              onPress={onJoinAnotherRoom}
+              accessibilityLabel="Join another room"
+              testID="phone-seat-lost-join-another-room"
+              style={styles.seatLostAction}
+            />
+          </View>
+        </View>
+      </ScrollView>
+    </ScreenShell>
   );
 }
+
+const styles = StyleSheet.create({
+  seatLostShell: {
+    paddingHorizontal: 0,
+    overflow: 'hidden',
+  },
+  seatLostVeil: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: brandColors.cream,
+    opacity: 0.05,
+  },
+  seatLostHeader: {
+    position: 'absolute',
+    right: spacing.lg,
+    left: spacing.lg,
+    zIndex: 1,
+  },
+  seatLostScroll: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+  },
+  seatLostContent: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+  },
+  seatLostSheet: {
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    borderRadius: radii.xl,
+    backgroundColor: 'rgba(249,241,230,0.96)',
+    ...shadows.card,
+  },
+  seatLostAction: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: radii.lg,
+  },
+});

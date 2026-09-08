@@ -1,4 +1,4 @@
-import type { GameSettingsSchema } from '@huddle/domain';
+import type { AvatarId, GameSettingsSchema } from '@huddle/domain';
 import type { ImageSourcePropType } from 'react-native';
 
 import { gameCardAsset } from './assets';
@@ -15,8 +15,9 @@ export type TvGameCarouselCard = {
 export const DEFAULT_TV_CAROUSEL_CARDS: readonly TvGameCarouselCard[] = [
   { id: 'trivia', title: 'Trivia', subtitle: 'Test your knowledge', available: true },
   { id: 'voting', title: 'Voting', subtitle: 'Vote on fun topics', available: true },
-  { id: 'word-battle', title: 'Word Battle', subtitle: 'Coming soon', available: false },
-  { id: 'more-games', title: 'More Games', subtitle: 'Coming soon', available: false },
+  { id: 'doodle-dash', title: 'Doodle Dash', subtitle: 'Coming soon', available: false },
+  { id: 'quick-poll', title: 'Quick Poll', subtitle: 'Coming soon', available: false },
+  { id: 'hot-take', title: 'Hot Take', subtitle: 'Coming soon', available: false },
 ].map((card) => ({ ...card, image: gameCardAsset(card.id) }));
 
 export type TvGamePlayer = {
@@ -26,6 +27,7 @@ export type TvGamePlayer = {
   readonly ready?: boolean;
   readonly away?: boolean;
   readonly avatar?: ImageSourcePropType;
+  readonly avatarId?: AvatarId;
 };
 
 export type TvSetupSetting = {

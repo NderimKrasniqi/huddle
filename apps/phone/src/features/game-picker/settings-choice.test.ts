@@ -116,6 +116,18 @@ describe('the controls the Host is drawn', () => {
   it('draw nothing for a game that declares no settings', () => {
     expect(settingsControls([], 'settingless', undefined)).toEqual([]);
   });
+
+  it('honors a game presentation’s custom keys and option allowlists', () => {
+    const controls = settingsControls(MADE_UP_SCHEMA, 'made-up', undefined, {
+      customSettingKeys: ['rounds'],
+      customOptions: { rounds: ['7'] },
+    });
+
+    expect(controls.map((control) => control.key)).toEqual(['rounds']);
+    expect(optionsOf(controls, 'rounds')).toEqual([
+      { value: '7', label: 'Seven', chosen: false },
+    ]);
+  });
 });
 
 describe('what the room would start on', () => {

@@ -34,7 +34,7 @@ export function gameLogicById(gameId: string): GameLogic | undefined {
 /**
  * The carousel index, clamped for the server.
  *
- * The client carousel includes the two reference-only positions declared in
+ * The client carousel includes the three reference-only positions declared in
  * `./carousel-catalog`; keeping their count in this server-safe file means the
  * room never stores a position the two sides would reinterpret differently.
  *

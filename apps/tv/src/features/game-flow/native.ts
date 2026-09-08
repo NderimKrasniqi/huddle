@@ -1,6 +1,10 @@
 /** React Native entrypoint for the TV game's display-only pre-game flow. */
-export { TvGameFlowStage } from './game-flow-stage';
-export type { TvGameFlowStageProps, TvGameSetupProjection } from './game-flow-stage';
+export { TvGameFlowStage, TvPlatformStatusScreen } from './game-flow-stage';
+export type {
+  TvGameFlowStageProps,
+  TvGameSetupProjection,
+  TvPlatformStatusScreenProps,
+} from './game-flow-stage';
 export { TvGameCarouselScreen } from './game-carousel-screen';
 export type { TvGameCarouselScreenProps } from './game-carousel-screen';
 export { TvSelectedGameArtScreen, TV_GAME_ART_REVEAL_DURATION_MS } from './game-art-reveal-screen';

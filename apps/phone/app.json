@@ -6,7 +6,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#FFFFFF",
+    "backgroundColor": "#F9F1E6",
     "newArchEnabled": true,
     "android": {
       "package": "tv.huddle.phone",
@@ -14,7 +14,7 @@
       "adaptiveIcon": {
         "foregroundImage": "../../packages/ui/assets/app-icons/huddle-android-adaptive-foreground.png",
         "monochromeImage": "../../packages/ui/assets/app-icons/huddle-android-monochrome.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#F9F1E6"
       }
     },
     "ios": {
@@ -41,7 +41,7 @@
           "image": "../../packages/ui/assets/app-icons/huddle-splash.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#F9F1E6"
         }
       ]
     ],

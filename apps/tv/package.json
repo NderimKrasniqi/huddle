@@ -14,7 +14,9 @@
     "test:render": "jest --config jest.config.cjs --runInBand"
   },
   "dependencies": {
+    "@expo-google-fonts/nunito": "0.4.2",
     "@huddle/convex": "workspace:*",
+    "@huddle/design-tokens": "workspace:*",
     "@huddle/domain": "workspace:*",
     "@huddle/game-registry": "workspace:*",
     "@huddle/ui": "workspace:*",

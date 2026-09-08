@@ -47,12 +47,13 @@ describe('the Registry', () => {
     );
   });
 
-  it('uses the approved four-card lineup', () => {
+  it('uses the approved five-card Heartbeat lineup', () => {
     expect(CAROUSEL_REGISTRY.map((game) => game.metadata.title)).toEqual([
       'Trivia',
       'Voting',
-      'Word Battle',
-      'More Games',
+      'Doodle Dash',
+      'Quick Poll',
+      'Hot Take',
     ]);
   });
 
@@ -140,7 +141,8 @@ describe('the Registry the server reads', () => {
     // "No such game" is what a room turns into its refusal, so it has to be a
     // value the caller can look at.
     expect(gameLogicById('charades')).toBeUndefined();
-    expect(gameLogicById(CAROUSEL_PLACEHOLDER_IDS[0])).toBeUndefined();
-    expect(gameLogicById(CAROUSEL_PLACEHOLDER_IDS[1])).toBeUndefined();
+    for (const id of CAROUSEL_PLACEHOLDER_IDS) {
+      expect(gameLogicById(id)).toBeUndefined();
+    }
   });
 });

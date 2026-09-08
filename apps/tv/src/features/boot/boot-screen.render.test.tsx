@@ -20,12 +20,12 @@ describe('TvBootScreen', () => {
   });
 
   it.each([
-    ['misconfigured', 'TV setup required'],
-    ['deviceFailure', 'TV unavailable'],
-  ] as const)('keeps %s as the exact legible purpose label', async (phase, purpose) => {
+    ['misconfigured', 'Almost there!'],
+    ['deviceFailure', 'We can’t reach your TV right now'],
+  ] as const)('renders the approved %s recovery heading', async (phase, heading) => {
     await render(<TvBootScreen phase={phase} />);
 
-    expect(await screen.findByText(purpose)).toBeTruthy();
+    expect(await screen.findByText(heading)).toBeTruthy();
     expect(screen.queryByTestId('tv-boot-animated')).toBeNull();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);

@@ -25,19 +25,20 @@ source as the fallback; do not guess about version-sensitive behavior.
 
 ## Verification
 
-Use the smallest verification set that gives confidence, expanding it when a
-change crosses package or runtime boundaries. Preserve unrelated dirty-worktree
-changes and distinguish failures introduced by the current change from failures
-that were already present before editing.
+Use the smallest verification set that gives confidence. Validation is not a
+quota: do not create a new test or run every available command just because a
+file changed. Preserve unrelated dirty-worktree changes and distinguish failures
+introduced by the current change from failures that were already present.
 
-1. Run focused affected tests first. For example:
+1. When an existing focused test covers the changed behavior, run it first. For
+   example:
 
    ```bash
    pnpm exec vitest run <affected-test-file>
    ```
 
-2. Run the relevant specialized validation next. Use only checks that match the
-   changed area, such as:
+2. Otherwise choose the single most relevant specialized validation, typecheck,
+   build, inspection, or smoke test for the changed area. Examples include:
 
    - workflow changes: `pnpm validate:workflow`
    - architecture or boundary changes: `pnpm validate:architecture`, and when
@@ -49,12 +50,18 @@ that were already present before editing.
      `pnpm validate:guest-profile`
    - client/server bundle boundaries: `pnpm verify:bundle-seam`
 
-3. For typed or code changes, run `pnpm typecheck` and `pnpm lint` as
-   applicable. Use `pnpm test:unit` for unit coverage and `pnpm test:integration`
-   for Convex integration coverage when those suites are affected.
+   For typed code, use `pnpm typecheck` when it is the highest-signal check.
+   Use `pnpm lint`, `pnpm test:unit`, or `pnpm test:integration` only when the
+   changed area or failure mode makes that command relevant.
 
-4. Run the full `pnpm test` for cross-cutting changes, release-level work, or
-   when the narrower checks do not cover the affected paths. Use
+3. Add or update regression coverage only for a reproducible bug, meaningful
+   logic or contract change, security-sensitive behavior, or important state
+   transition. Copy, styling, documentation, configuration, simple wiring, and
+   behavior-preserving refactors normally do not justify new tests.
+
+4. Broaden to multiple checks or full `pnpm test` only for cross-cutting,
+   high-risk, release-level work, or when the narrower check does not cover the
+   affected paths. Use
    `pnpm verify:dependency-security` or `pnpm audit:prod` when dependency or
    production-security changes warrant them.
 

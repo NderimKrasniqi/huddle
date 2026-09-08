@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * 5.9's seam, guarded at the one place the other checks cannot see it.
  *
- * The trivia Question Pack stays out of the client bundle only while the files a
- * client bundles reach `./logic` — which deals from the pack — through *types
+ * Curated Trivia questions and Voting prompts stay out of the client bundle
+ * only while the files a client bundles reach server logic through *types
  * alone*. The catch is that `export { type X } from './logic'` (a value-export
  * block with an inline `type`) and `import { type X } from './logic'` keep the
  * module edge and pull the whole of `./logic`, and the pack behind it, into the
@@ -19,35 +19,43 @@ import { describe, expect, it } from 'vitest';
  * end-to-end proof is the esbuild module graph); this is the fast in-repo
  * tripwire.
  *
- * It scans *every* trivia source that can land in a client bundle — not just the
- * entry — because the leak this replaced came through the screens, not the
- * barrel. The only exemptions are the two server-only files that legitimately
- * hold the deal: `logic.ts` (the rules) and `questions.ts` (which imports the
- * pack). Any other file, present or added later, that reaches `./logic` or
- * `./questions` through a value edge fails here.
+ * It scans *every* game source that can land in a client bundle — not just the
+ * entry — because leaks can arrive through screens instead of the barrel. The
+ * only exemptions are each game's declared server-only rules and content
+ * files. Any other file, present or added later, that reaches one of those
+ * modules through a value edge fails here.
  *
  * It lives in `@huddle/game-registry` rather than beside the trivia source
  * because it reads files with `node:fs`, and the game packages are React Native
  * with no Node types — the registry owns the client entry these sources feed,
  * and already has the Node types.
  */
-const TRIVIA_SRC = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  'games',
-  'trivia',
-  'src',
-);
+const WORKSPACE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const REGISTRY_SRC = dirname(fileURLToPath(import.meta.url));
 
-/** The rules and the deal: the server's alone, and the only files that may reach the pack. */
-const SERVER_ONLY = new Set([
-  'logic.ts',
-]);
+type GameSeam = {
+  readonly name: string;
+  readonly sourceRoot: string;
+  readonly forbiddenModules: string;
+  readonly serverOnly: ReadonlySet<string>;
+};
 
-function triviaClientSources(): readonly string[] {
+const GAME_SEAMS: readonly GameSeam[] = [
+  {
+    name: 'trivia',
+    sourceRoot: join(WORKSPACE_ROOT, 'games', 'trivia', 'src'),
+    forbiddenModules: 'logic|questions',
+    serverOnly: new Set(['logic.ts', 'questions.ts']),
+  },
+  {
+    name: 'voting',
+    sourceRoot: join(WORKSPACE_ROOT, 'games', 'voting', 'src'),
+    forbiddenModules: 'logic|prompts',
+    serverOnly: new Set(['logic.ts', 'prompts.ts']),
+  },
+];
+
+function gameClientSources(game: GameSeam): readonly string[] {
   const names: string[] = [];
 
   function visit(directory: string, prefix = ''): void {
@@ -61,14 +69,14 @@ function triviaClientSources(): readonly string[] {
         /\.tsx?$/.test(entry.name) &&
         !entry.name.endsWith('.test.ts') &&
         !entry.name.endsWith('.test.tsx') &&
-        !SERVER_ONLY.has(relativeName)
+        !game.serverOnly.has(relativeName)
       ) {
         names.push(relativeName);
       }
     }
   }
 
-  visit(TRIVIA_SRC);
+  visit(game.sourceRoot);
   return names.sort();
 }
 
@@ -115,8 +123,8 @@ function resolveSourceImport(source: string, imported: string): string | undefin
   });
 }
 
-function clientRuntimeGraph(entryNames: readonly string[]): readonly string[] {
-  const pending = entryNames.map((name) => join(TRIVIA_SRC, name));
+function clientRuntimeGraph(sourceRoot: string, entryNames: readonly string[]): readonly string[] {
+  const pending = entryNames.map((name) => join(sourceRoot, name));
   const visited = new Set<string>();
 
   while (pending.length > 0) {
@@ -159,23 +167,23 @@ describe('the seam guard recognizes every runtime module edge', () => {
   });
 });
 
-describe('the trivia client sources keep the pack at arm’s length', () => {
-  it.each(triviaClientSources())('%s reaches ./logic and ./questions through types only', (name) => {
-    const text = readFileSync(join(TRIVIA_SRC, name), 'utf8');
+describe.each(GAME_SEAMS)('$name client sources keep curated content at arm’s length', (game) => {
+  it.each(gameClientSources(game))('%s reaches server-only modules through types only', (name) => {
+    const text = readFileSync(join(game.sourceRoot, name), 'utf8');
 
     // Default, namespace, side-effect, dynamic, `require`, and inline-type
     // imports/exports are all runtime edges. Only `import type` / `export type`
     // erase the statement and are allowed.
-    expect(valueEdgesTo(text, 'logic|questions')).toEqual([]);
+    expect(valueEdgesTo(text, game.forbiddenModules)).toEqual([]);
   });
 
-  it('keeps the production client graph away from pack JSON and server modules', () => {
-    const graph = clientRuntimeGraph(['index.ts', 'phone-screen.tsx', 'tv-screen.tsx']);
+  it('keeps the production client graph away from content JSON and server modules', () => {
+    const graph = clientRuntimeGraph(game.sourceRoot, ['index.ts', 'phone-screen.tsx', 'tv-screen.tsx']);
 
     for (const source of graph) {
-      const relativeName = source.slice(TRIVIA_SRC.length + 1);
-      expect(SERVER_ONLY, relativeName).not.toContain(relativeName);
-      expect(relativeName, 'client graph must not contain pack JSON').not.toMatch(/\.json$/);
+      const relativeName = source.slice(game.sourceRoot.length + 1);
+      expect(game.serverOnly, relativeName).not.toContain(relativeName);
+      expect(relativeName, 'client graph must not contain content JSON').not.toMatch(/\.json$/);
     }
   });
 });

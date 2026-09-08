@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+import binascii
 import importlib.util
 import json
 import struct
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 
@@ -67,6 +69,13 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files["src/models/index.ts"] = "import { View } from 'react-native'; export { View };\n"
         self.assert_invalid(files, "model entrypoint exposes renderer code")
 
+    def test_type_only_edges_do_not_pull_renderer_code_into_pure_entrypoints(self) -> None:
+        files = self.baseline()
+        files["src/features/one/index.ts"] = "import type { View } from './renderer'; export type { View };\n"
+        files["src/features/one/renderer.ts"] = "import { View } from 'react-native'; export const view = View;\n"
+        app, root = self.app(files)
+        validator.validate_app(app, root)
+
     def test_empty_entrypoint_is_rejected(self) -> None:
         files = self.baseline()
         files["src/features/one/index.ts"] = "// intentionally empty\n"
@@ -94,112 +103,67 @@ class ArchitectureFixtureTests(unittest.TestCase):
         files["src/features/one/BadName.ts"] = "export const bad = true;\n"
         self.assert_invalid(files, "authored filename must be kebab-case")
 
-    def test_only_the_approved_presentation_seams_have_illustrated_exceptions(self) -> None:
+    def test_heartbeat_capabilities_are_scoped_to_their_surfaces(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
+        room = root / "apps/tv/src/features/room/room-invitation-screen.tsx"
+        scan = root / "apps/phone/src/features/scan/scan-screen.tsx"
+        identity = root / "apps/phone/src/screens/join-identity-screen.tsx"
+        neighboring = root / "apps/phone/src/features/join/room-code-entry.tsx"
 
-        phone = root / "apps/phone/src/features/join/join-room-screen.tsx"
-        scanner = root / "apps/phone/src/features/scan/scan-screen.tsx"
-        tv = root / "apps/tv/src/features/room/room-invitation-screen.tsx"
-        boot = root / "apps/tv/src/features/boot/tv-creating-room-screen.tsx"
-        restore = root / "apps/tv/src/features/boot/tv-restoring-room-screen.tsx"
-        restore_indicator = root / "apps/tv/src/features/boot/tv-restore-indicator.tsx"
-        carousel = root / "apps/tv/src/features/game-flow/game-carousel-screen.tsx"
-        art = root / "apps/tv/src/features/game-flow/game-art-reveal-screen.tsx"
-        setup = root / "apps/tv/src/features/game-flow/game-setup-screen.tsx"
-        ready = root / "apps/tv/src/features/game-flow/game-ready-screen.tsx"
-        neighboring = root / "apps/phone/src/features/join/another-screen.tsx"
-
-        self.assertTrue(validator.is_approved_illustrated_renderer(phone, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(scanner, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(tv, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(boot, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(restore, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(restore_indicator, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(carousel, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(art, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(setup, root))
-        self.assertTrue(validator.is_approved_illustrated_renderer(ready, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(room, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(scan, root))
+        self.assertTrue(validator.is_approved_illustrated_renderer(identity, root))
         self.assertFalse(validator.is_approved_illustrated_renderer(neighboring, root))
 
-    def test_tv_boot_renderer_allows_animation_artwork_and_svg(self) -> None:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root = Path(temporary.name)
-        boot = root / "apps/tv/src/features/boot/tv-creating-room-screen.tsx"
-        boot.parent.mkdir(parents=True)
-
-        boot_source = (
-            "import { Animated, Image, ImageBackground, View } from 'react-native';\n"
-            "import { Circle } from 'react-native-svg';\n"
-        )
-        boot.write_text(boot_source, encoding="utf-8")
-        validator.validate_presentation_renderer_scope(boot, boot_source, root)
-
-        boot_source = "import QRCode from 'react-native-qrcode-svg';\n"
-        boot.write_text(boot_source, encoding="utf-8")
-        with self.assertRaisesRegex(SystemExit, "QR renderer import is outside TV Room"):
-            validator.validate_presentation_renderer_scope(boot, boot_source, root)
-
-        boot_source = "import { Pressable } from 'react-native';\n"
-        boot.write_text(boot_source, encoding="utf-8")
-        with self.assertRaisesRegex(SystemExit, "TV boot renderer must remain display-only"):
-            validator.validate_presentation_renderer_scope(boot, boot_source, root)
-
-        restore = root / "apps/tv/src/features/boot/tv-restoring-room-screen.tsx"
-        restore_source = (
-            "import { ActivityIndicator, Image, View } from 'react-native';\n"
-            "import { Circle } from 'react-native-svg';\n"
-        )
-        validator.validate_presentation_renderer_scope(restore, restore_source, root)
-
-        restore_source = "import { Pressable } from 'react-native';\n"
-        with self.assertRaisesRegex(SystemExit, "TV boot renderer must remain display-only"):
-            validator.validate_presentation_renderer_scope(restore, restore_source, root)
-
-        restore_source = "import QRCode from 'react-native-qrcode-svg';\n"
-        with self.assertRaisesRegex(SystemExit, "QR renderer import is outside TV Room"):
-            validator.validate_presentation_renderer_scope(restore, restore_source, root)
-
-        restore_indicator = root / "apps/tv/src/features/boot/tv-restore-indicator.tsx"
-        indicator_source = (
-            "import { Animated, View } from 'react-native';\n"
-            "import { Circle } from 'react-native-svg';\n"
+        validator.validate_presentation_renderer_scope(
+            room,
+            "import QRCode from 'react-native-qrcode-svg';\nimport { Circle } from 'react-native-svg';\n",
+            root,
         )
         validator.validate_presentation_renderer_scope(
-            restore_indicator, indicator_source, root
+            scan,
+            "import { CameraView } from 'expo-camera';\n",
+            root,
         )
 
-        indicator_source = "import { TouchableOpacity } from 'react-native';\n"
-        with self.assertRaisesRegex(SystemExit, "TV boot renderer must remain display-only"):
+        with self.assertRaisesRegex(SystemExit, "QR renderer is outside TV Room"):
             validator.validate_presentation_renderer_scope(
-                restore_indicator, indicator_source, root
+                identity,
+                "import QRCode from 'react-native-qrcode-svg';\n",
+                root,
+            )
+        with self.assertRaisesRegex(SystemExit, "CameraView is outside Phone Scan"):
+            validator.validate_presentation_renderer_scope(
+                identity,
+                "import { CameraView } from 'expo-camera';\n",
+                root,
+            )
+        with self.assertRaisesRegex(SystemExit, "SVG renderer import is outside approved TV renderers"):
+            validator.validate_presentation_renderer_scope(
+                neighboring,
+                "import { Circle } from 'react-native-svg';\n",
+                root,
             )
 
-    def test_svg_renderer_import_is_limited_to_tv_room_and_tv_boot(self) -> None:
+    def test_tv_sources_reject_controls_and_positive_focus(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
-        phone = root / "apps/phone/src/features/join/join-room-screen.tsx"
-        source = "import { Circle } from 'react-native-svg';\n"
+        renderer = root / "apps/tv/src/features/room/room-stage.tsx"
+        renderer.parent.mkdir(parents=True)
 
-        with self.assertRaisesRegex(SystemExit, "SVG renderer import is outside approved TV renderers"):
-            validator.validate_presentation_renderer_scope(phone, source, root)
+        renderer.write_text("import { Pressable } from 'react-native';\n", encoding="utf-8")
+        with self.assertRaisesRegex(SystemExit, "TV presentation must remain display-only"):
+            validator.validate_tv_display_only(root)
 
-    def test_tv_game_flow_renderers_allow_display_animation_but_no_controls(self) -> None:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        root = Path(temporary.name)
-        carousel = root / "apps/tv/src/features/game-flow/game-carousel-screen.tsx"
-        carousel.parent.mkdir(parents=True)
+        renderer.write_text("import { View } from 'react-native';\n<View focusable={false} />;\n", encoding="utf-8")
+        validator.validate_tv_display_only(root)
 
-        source = "import { Animated, Image, ImageBackground, View } from 'react-native';\n"
-        validator.validate_presentation_renderer_scope(carousel, source, root)
-
-        source = "import { Pressable } from 'react-native';\n"
-        with self.assertRaisesRegex(SystemExit, "TV game-flow renderer must remain display-only"):
-            validator.validate_presentation_renderer_scope(carousel, source, root)
+        renderer.write_text("<View focusable={true} />;\n", encoding="utf-8")
+        with self.assertRaisesRegex(SystemExit, "TV presentation must remain display-only"):
+            validator.validate_tv_display_only(root)
 
     def package_root(self, manifests: dict[str, str]) -> Path:
         temporary = tempfile.TemporaryDirectory()
@@ -253,9 +217,7 @@ class ArchitectureFixtureTests(unittest.TestCase):
     def test_qr_dependencies_are_exact_and_tv_only(self) -> None:
         root = self.package_root(
             {
-                "apps/tv/package.json": json.dumps(
-                    {"dependencies": validator.TV_QR_DEPENDENCIES}
-                ),
+                "apps/tv/package.json": json.dumps({"dependencies": validator.TV_QR_DEPENDENCIES}),
                 "apps/phone/package.json": '{"dependencies":{}}',
             }
         )
@@ -275,7 +237,13 @@ class ArchitectureFixtureTests(unittest.TestCase):
         assets = root / "assets"
         assets.mkdir()
 
-        payload = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 8) + struct.pack(">II", 12, 34) + b"proof"
+        payload = (
+            b"\x89PNG\r\n\x1a\n"
+            + (b"\x00" * 8)
+            + struct.pack(">II", 12, 34)
+            + bytes((8, 6))
+            + b"proof"
+        )
         digest = hashlib.sha256(payload).hexdigest()
         (assets / "supplied.png").write_bytes(payload)
         specs = {"supplied.png": ((12, 34), digest)}
@@ -290,14 +258,95 @@ class ArchitectureFixtureTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "differs from supplied PNG"):
             validator.validate_png_asset_set(assets, specs, "Fixture", root)
 
-    def test_tv_room_assets_match_the_supplied_files(self) -> None:
-        validator.validate_tv_room_assets(ROOT)
-
-    def test_tv_game_flow_assets_match_the_optimized_supplied_files(self) -> None:
-        validator.validate_tv_game_flow_assets(ROOT)
-
-    def test_shared_avatar_assets_match_the_optimized_bundle(self) -> None:
+    def test_heartbeat_runtime_bundle_is_current(self) -> None:
+        validator.validate_heartbeat_tokens(ROOT)
+        validator.validate_native_assets(ROOT)
+        validator.validate_heartbeat_runtime_assets(ROOT)
         validator.validate_avatar_assets(ROOT)
+
+    def test_heartbeat_mark_guard_rejects_the_obsolete_black_h_fixture(self) -> None:
+        def png(width: int, height: int, rows: list[bytes]) -> bytes:
+            def chunk(kind: bytes, payload: bytes) -> bytes:
+                return (
+                    struct.pack(">I", len(payload))
+                    + kind
+                    + payload
+                    + struct.pack(">I", binascii.crc32(kind + payload) & 0xFFFFFFFF)
+                )
+
+            raw = b"".join(b"\x00" + row for row in rows)
+            return (
+                b"\x89PNG\r\n\x1a\n"
+                + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(raw))
+                + chunk(b"IEND", b"")
+            )
+
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        old_h = root / "old-h.png"
+        old_h.write_bytes(png(4, 4, [b"\x00\x00\x00" * 4 for _ in range(4)]))
+        self.assertFalse(validator.png_has_heartbeat_mark(old_h, "Fixture", root))
+
+        current = root / "heartbeat.png"
+        current.write_bytes(
+            png(
+                4,
+                4,
+                [
+                    b"\xFF\x6F\x61" + b"\xFF\xD7\x66" + b"\x7F\xD2\xB6" + b"\x7C\xC6\xFF",
+                    b"\xFF\x6F\x61" * 4,
+                    b"\xFF\xD7\x66" * 4,
+                    b"\x7F\xD2\xB6" * 4,
+                ],
+            )
+        )
+        self.assertTrue(validator.png_has_heartbeat_mark(current, "Fixture", root))
+
+    def test_apple_tv_derivatives_keep_the_installed_config_contract(self) -> None:
+        apple_root = ROOT / "packages" / "ui" / "assets" / "app-icons" / "apple-tv"
+        for name, (dimensions, has_alpha) in validator.APPLE_TV_ASSET_SPECS.items():
+            path = apple_root / name
+            self.assertTrue(path.is_file(), name)
+            self.assertEqual(validator.png_dimensions_and_alpha(path, "Fixture", ROOT), (dimensions, has_alpha))
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), validator.APPLE_TV_ASSET_DIGESTS[name])
+
+    def test_removed_surface_references_are_rejected(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        source = root / "apps/phone/src/screens/legacy.tsx"
+        source.parent.mkdir(parents=True)
+        source.write_text("export const legacy = 'PurposeScreen';\n", encoding="utf-8")
+
+        with self.assertRaisesRegex(SystemExit, "obsolete Heartbeat surface reference"):
+            validator.validate_no_obsolete_surface_paths(root)
+
+    def test_rejected_tv_banner_brand_source_is_rejected(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        source = root / "docs/design/heartbeat/brand/huddle-tv-banner.svg"
+        source.parent.mkdir(parents=True)
+        source.write_text("<svg />\n", encoding="utf-8")
+
+        with self.assertRaisesRegex(SystemExit, "obsolete Heartbeat artwork"):
+            validator.validate_heartbeat_brand_source_set(root)
+
+    def test_rejected_tv_living_room_artwork_is_rejected(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        source = root / "docs/design/heartbeat/assets/tv/living-room.png"
+        runtime = root / "packages/ui/assets/heartbeat/tv/living-room.png"
+        source.parent.mkdir(parents=True)
+        runtime.parent.mkdir(parents=True)
+        source.write_bytes(b"obsolete source")
+        runtime.write_bytes(b"obsolete runtime")
+
+        with self.assertRaisesRegex(SystemExit, "obsolete Heartbeat artwork"):
+            validator.validate_heartbeat_brand_source_set(root)
 
     def test_tv_reference_composite_cannot_be_imported(self) -> None:
         temporary = tempfile.TemporaryDirectory()

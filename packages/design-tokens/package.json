@@ -2,7 +2,7 @@
   "name": "@huddle/design-tokens",
   "version": "0.1.0",
   "private": true,
-  "description": "Huddle's two neutral presentation values.",
+  "description": "Huddle's Heartbeat design tokens.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

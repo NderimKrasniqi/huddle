@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { AccessibilityInfo, Text } from 'react-native';
 
 import type { OpenRoom } from '../platform/room-session';
 import { TvScreen, shouldRestoreTvRoom } from './tv-screen';
@@ -40,6 +40,7 @@ jest.mock('./tv-session-controller', () => ({
 describe('TvScreen restoration handoff', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     mockUseRoomOpening.mockReturnValue({
       opening: { kind: 'open', room: freshRoom },
       reopen: jest.fn(),
@@ -48,6 +49,7 @@ describe('TvScreen restoration handoff', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 

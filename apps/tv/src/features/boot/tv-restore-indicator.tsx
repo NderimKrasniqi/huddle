@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { semanticColors } from '@huddle/design-tokens';
 import {
   Animated,
   Easing,
@@ -11,18 +12,18 @@ export type TvRestoreIndicatorStage = 'restoring' | 'reconnecting' | 'ready';
 export type TvRestoreIndicatorProps = {
   readonly stage: TvRestoreIndicatorStage;
   readonly size?: number;
+  /** Override motion for deterministic previews and reduced-motion devices. */
+  readonly reduceMotion?: boolean;
   /** Called once the ready check's spring has finished. */
   readonly onReadyAnimationComplete?: () => void;
 };
 
-const COLORS = {
-  coral: '#FF5B54',
-  orange: '#FFAA21',
-  blue: '#45A2F4',
-  purple: '#8C6DEB',
-  green: '#38A169',
-  cream: '#FFF8EC',
-} as const;
+const COLORS = [
+  semanticColors.primary,
+  semanticColors.secondary,
+  semanticColors.accent,
+  semanticColors.info,
+] as const;
 
 /** Nominal test window; production handoff waits for the spring callback. */
 export const TV_RESTORE_CHECK_DURATION_MS = 320;
@@ -31,6 +32,7 @@ export const TV_RESTORE_CHECK_DURATION_MS = 320;
 export function TvRestoreIndicator({
   stage,
   size = 82,
+  reduceMotion = false,
   onReadyAnimationComplete,
 }: TvRestoreIndicatorProps) {
   const [transition] = React.useState(
@@ -47,6 +49,17 @@ export function TvRestoreIndicator({
   }, [onReadyAnimationComplete, stage]);
 
   useEffect(() => {
+    if (reduceMotion) {
+      transition.stopAnimation();
+      rotation.stopAnimation();
+      transition.setValue(stage === 'ready' ? 1 : 0);
+      if (stage === 'ready' && !notified.current) {
+        notified.current = true;
+        readyCallback.current?.();
+      }
+      return;
+    }
+
     const transitionAnimation = Animated.spring(transition, {
       toValue: stage === 'ready' ? 1 : 0,
       useNativeDriver: true,
@@ -78,7 +91,7 @@ export function TvRestoreIndicator({
       transitionAnimation.stop();
       spinnerAnimation?.stop();
     };
-  }, [rotation, stage, transition]);
+  }, [reduceMotion, rotation, stage, transition]);
 
   const checkScale = transition.interpolate({
     inputRange: [0, 0.7, 1],
@@ -92,7 +105,6 @@ export function TvRestoreIndicator({
   const dotSize = size * 0.1;
   const center = size / 2;
   const radius = size * 0.31;
-  const colors = [COLORS.coral, COLORS.orange, COLORS.purple, COLORS.blue];
 
   return (
     <View
@@ -133,7 +145,7 @@ export function TvRestoreIndicator({
                 left: center + Math.cos(angle) * radius - dotSize / 2,
                 top: center + Math.sin(angle) * radius - dotSize / 2,
                 borderRadius: dotSize / 2,
-                backgroundColor: colors[index % colors.length],
+                backgroundColor: COLORS[index % COLORS.length],
                 opacity: 0.48 + (index / 8) * 0.52,
               }}
             />
@@ -203,18 +215,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkCircle: {
-    backgroundColor: COLORS.green,
+    backgroundColor: semanticColors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkLeft: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: COLORS.cream,
+    backgroundColor: semanticColors.surface,
   },
   checkRight: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: COLORS.cream,
+    backgroundColor: semanticColors.surface,
   },
 });
