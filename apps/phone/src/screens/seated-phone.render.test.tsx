@@ -7,7 +7,11 @@ import { CAROUSEL_REGISTRY } from '@huddle/game-registry';
 import { SeatedPhone, PickerSurface, SetupSurface } from './seated-phone';
 
 const mockEndGame = jest.fn();
+// One entry per `useMutation` call in `useSeatedRoom`, in call order: leave,
+// transfer, remove, browse, select, configure, finalize, reopen, cancel,
+// ready, startCountdown, stopCountdown, end, continue, event.
 const mockMutationFunctions = [
+  jest.fn(),
   jest.fn(),
   jest.fn(),
   jest.fn(),
