@@ -23,6 +23,8 @@ export {
   type DurationToken,
 } from './motion';
 export {
+  playroomAvatarCircles,
+  playroomAwayCircle,
   playroomColors,
   playroomFonts,
   playroomMotion,

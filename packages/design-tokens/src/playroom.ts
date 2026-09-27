@@ -28,6 +28,25 @@ export const playroomColors = {
 
 export type PlayroomColor = keyof typeof playroomColors;
 
+/**
+ * The pastel circle drawn behind each avatar portrait, keyed by stable avatar
+ * id (portraits ship without circles). An away player's circle turns grey.
+ */
+export const playroomAvatarCircles = {
+  fox: '#FFCCA5',
+  'green-alien': '#D4F1CC',
+  'pink-bunny': '#FFD8E3',
+  'blue-robot': '#E3D9FF',
+  'purple-owl': '#F4CEE4',
+  'yellow-robot': '#D8DCFF',
+  'red-robot': '#FFE0C2',
+  'teal-bear': '#F8E7BC',
+  'mint-cat': '#FFF0B3',
+  puppy: '#D2F0D5',
+} as const;
+
+export const playroomAwayCircle = '#DDD9DF';
+
 /** Nunito weights: Black for headings and codes, ExtraBold for actions and names. */
 export const playroomFonts = {
   black: fontFamilies.black,
