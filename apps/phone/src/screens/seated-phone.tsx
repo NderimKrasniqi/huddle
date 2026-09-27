@@ -1,12 +1,13 @@
 import { api } from '@huddle/convex';
-import { ROOM_PLAYER_CAP } from '@huddle/domain';
+import { ROOM_PLAYER_CAP, settingSummaryText } from '@huddle/domain';
 import type {
   GameEvent,
   GameModule,
   GamePlayer,
   GameSettings,
-  GameSettingsMode,
   GameSetting,
+  GameSettingIcon,
+  GameSettingsMode,
 } from '@huddle/domain';
 import { brandColors, fontFamilies, platformPhoneTheme, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import {
@@ -797,65 +798,32 @@ function SetupSettingRows({
   readonly module: GameModule;
   readonly settings: GameSettings;
 }) {
-  const order = module.metadata.id === 'trivia'
-    ? ['questions', 'difficulty', 'questionSeconds', 'category', 'scoring']
-    : ['rounds', 'voteSeconds', 'results', 'voterLabels'];
-  const orderedSettings = order
-    .map((key) => module.settingsSchema.find((setting) => setting.key === key))
-    .filter((setting): setting is GameSetting => setting !== undefined);
-
   return (
     <View style={styles.presetLines}>
-      {orderedSettings.map((setting) => {
-        const value = settings[setting.key] ?? setting.defaultValue;
-        const rawLabel = setting.options.find((option) => option.value === value)?.label ?? value;
-        const label = setupValueLabel(module, setting.key, rawLabel);
-        return (
-          <View key={setting.key} style={styles.presetSettingRow}>
-            <SetupSettingIcon settingKey={setting.key} />
-            <HuddleText variant="caption" style={styles.presetSettingLabel}>{label}</HuddleText>
-          </View>
-        );
-      })}
+      {module.settingsSchema.map((setting) => (
+        <View key={setting.key} style={styles.presetSettingRow}>
+          <SetupSettingIcon icon={setting.icon} />
+          <HuddleText variant="caption" style={styles.presetSettingLabel}>
+            {settingSummaryText(setting, settings[setting.key])}
+          </HuddleText>
+        </View>
+      ))}
     </View>
   );
 }
 
-function setupValueLabel(module: GameModule, key: string, label: string): string {
-  if (module.metadata.id === 'trivia') {
-    if (key === 'questions') return `${label} Questions`;
-    if (key === 'difficulty') return `${label} difficulty`;
-    if (key === 'questionSeconds') return `${label} per question`;
-    if (key === 'scoring') return label.startsWith('Speed') ? 'Speed bonus' : 'Classic scoring';
-  }
-  if (module.metadata.id === 'voting') {
-    if (key === 'rounds') return `${label} Rounds`;
-    if (key === 'voteSeconds') return `${label} to vote`;
-    if (key === 'voterLabels') return `Voter labels ${label.toLowerCase()}`;
-  }
-  return label;
-}
-
-function SetupSettingIcon({ settingKey }: { readonly settingKey: string }) {
-  const icon = settingKey === 'questions' || settingKey === 'rounds'
-    ? '5'
-    : settingKey === 'difficulty'
-      ? '✣'
-      : settingKey === 'questionSeconds' || settingKey === 'voteSeconds'
-        ? '◷'
-        : settingKey === 'category' || settingKey === 'results'
-          ? '▣'
-          : '♟';
-  const backgroundColor = settingKey === 'difficulty'
+function SetupSettingIcon({ icon }: { readonly icon: GameSettingIcon | undefined }) {
+  const glyph = icon === 'count' ? '5' : icon === 'difficulty' ? '✣' : icon === 'category' || icon === 'results' ? '▣' : '♟';
+  const backgroundColor = icon === 'difficulty'
     ? brandColors.butter
-    : settingKey === 'questionSeconds' || settingKey === 'voteSeconds'
+    : icon === 'timer'
       ? brandColors.sky
-      : settingKey === 'category' || settingKey === 'results'
+      : icon === 'category' || icon === 'results'
         ? brandColors.lilac
         : brandColors.mint;
   return (
     <View style={[styles.presetSettingIcon, { backgroundColor }]} accessible={false}>
-      {settingKey === 'questionSeconds' || settingKey === 'voteSeconds' ? <HuddleIcon name="clock" size={18} /> : settingKey === 'voterLabels' ? <HuddleIcon name="people" size={18} /> : <HuddleText variant="caption" style={styles.presetSettingIconText}>{icon}</HuddleText>}
+      {icon === 'timer' ? <HuddleIcon name="clock" size={18} /> : icon === 'players' ? <HuddleIcon name="people" size={18} /> : <HuddleText variant="caption" style={styles.presetSettingIconText}>{glyph}</HuddleText>}
     </View>
   );
 }
@@ -1174,9 +1142,7 @@ export function SetupSurface({
                     module={module}
                     label={selectedPreset.label}
                     settings={selectedPreset.settings}
-                    description={module.metadata.id === 'trivia'
-                      ? selectedPreset.mode === 'quick' ? 'Great for fast, casual rounds.' : 'Classic trivia night.'
-                      : selectedPreset.mode === 'quick' ? 'Fast, simple voting rounds.' : 'A relaxed room vote.'}
+                    description={selectedPreset.description ?? ''}
                   />
                 ) : null}
                 {setup.mode === 'custom' ? (

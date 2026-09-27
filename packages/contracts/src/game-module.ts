@@ -188,7 +188,30 @@ export type GameMetadata = {
 export type GameSettingOption = {
   readonly value: string;
   readonly label: string;
+  /**
+   * The value as a summary or tile shows it, beside the setting's `unit`:
+   * `20` of “20 seconds”. Absent means the label is short enough already.
+   */
+  readonly short?: string;
+  /** This option's own unit, replacing the setting's: “No” + “timer”. */
+  readonly unit?: string;
 };
+
+/**
+ * The pictures a setting can be drawn with. A closed set, so a game names a
+ * picture the platform owns rather than shipping artwork of its own.
+ */
+export const GAME_SETTING_ICONS = [
+  'count',
+  'difficulty',
+  'timer',
+  'category',
+  'scoring',
+  'results',
+  'players',
+] as const;
+
+export type GameSettingIcon = (typeof GAME_SETTING_ICONS)[number];
 
 /** Wire-safe settings storage used by rooms and module configuration. */
 export type GameSettings = Readonly<Record<string, string>>;
@@ -207,6 +230,10 @@ export type GameSetting = {
   readonly label: string;
   readonly options: readonly GameSettingOption[];
   readonly defaultValue: string;
+  /** The picture drawn beside the setting on the Phone and TV. */
+  readonly icon?: GameSettingIcon;
+  /** The word after a short value in summaries and tiles: “questions”. */
+  readonly unit?: string;
 };
 
 /** A game module's declaration of its host-tunable options. */
@@ -219,6 +246,8 @@ export type GameSettingsMode = 'quick' | 'standard' | 'custom';
 export type GameSettingsPreset = {
   readonly mode: Exclude<GameSettingsMode, 'custom'>;
   readonly label: string;
+  /** One line on what this preset is like, shown beside it during setup. */
+  readonly description?: string;
   readonly settings: Readonly<Record<string, string>>;
 };
 

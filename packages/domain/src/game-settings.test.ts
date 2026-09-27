@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { GameSettingsPresentation, GameSettingsSchema } from '@huddle/contracts';
-import { settingsFrom, settingsRefusal, settingsRefusalForMode } from './game-settings';
+import {
+  settingsFrom,
+  settingsRefusal,
+  settingsRefusalForMode,
+  settingSummary,
+  settingSummaryText,
+} from './game-settings';
 
 /**
  * The hub settling a Host's choices against a schema it cannot read.
@@ -147,5 +153,33 @@ describe('the settings a setup mode refuses', () => {
       value: '3',
     });
     expect(settingsRefusalForMode(coinToss, coinTossPresentation, { tosses: '3', coin: 'pound' }, 'standard')).toBeNull();
+  });
+});
+
+describe('a setting as a summary reads it', () => {
+  const timer = {
+    key: 'timer',
+    label: 'Timer',
+    unit: 'seconds',
+    defaultValue: '20',
+    options: [
+      { value: '20', label: '20 sec', short: '20' },
+      { value: 'none', label: 'No timer', short: 'No', unit: 'timer' },
+      { value: 'plain', label: 'Plain' },
+    ],
+  };
+
+  it('pairs the short value with the setting’s unit', () => {
+    expect(settingSummary(timer, '20')).toEqual({ value: '20', unit: 'seconds' });
+    expect(settingSummaryText(timer, undefined)).toBe('20 seconds');
+  });
+
+  it('lets an option name its own unit', () => {
+    expect(settingSummaryText(timer, 'none')).toBe('No timer');
+  });
+
+  it('falls back to the label, and to the raw value for anything undeclared', () => {
+    expect(settingSummary(timer, 'plain')).toEqual({ value: 'Plain', unit: 'seconds' });
+    expect(settingSummary(timer, 'gone')).toEqual({ value: 'gone' });
   });
 });
