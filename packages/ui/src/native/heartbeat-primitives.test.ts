@@ -1,15 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  AvatarPortrait,
-  Badge,
-  Chip,
-  CodeTiles,
-  GameCard,
-  HuddleButton,
-  PlayerRow,
-  StatusSurface,
-} from './index';
+import { AvatarPortrait } from './avatar-portrait';
+import { Badge } from './badge';
+import { Chip } from './chip';
+import { CodeTiles } from './code-tiles';
+import { GameCard } from './game-card';
+import { HuddleButton } from './huddle-button';
+import { PlayerRow } from './player-row';
+import { StatusSurface } from './status-surface';
 
 // The package's unit runner uses a minimal React Native stub. Replace its host
 // values here so the test can inspect the shared component contract without

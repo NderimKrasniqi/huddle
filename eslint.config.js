@@ -5,7 +5,6 @@ const forbiddenPresentationImports = [
   'nativewind',
   'react-native-css-interop',
   'expo-image',
-  'react-native-reanimated',
   'react-native-worklets',
   'lucide-react-native',
   '@react-native-community/netinfo',
@@ -14,6 +13,10 @@ const forbiddenPresentationImports = [
   '@huddle/ui/kit',
   '@huddle/ui/fonts',
 ];
+
+// Playroom platform motion runs on Reanimated; game modules own their own
+// presentation and stay without it.
+const forbiddenGameImports = [...forbiddenPresentationImports, 'react-native-reanimated'];
 
 module.exports = defineConfig([
   globalIgnores([
@@ -25,7 +28,7 @@ module.exports = defineConfig([
   ]),
   expoConfig,
   {
-    files: ['apps/**/*.{ts,tsx}', 'games/*/src/**/*.{ts,tsx}', 'packages/ui/src/**/*.{ts,tsx}'],
+    files: ['apps/**/*.{ts,tsx}', 'packages/ui/src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -33,6 +36,20 @@ module.exports = defineConfig([
           paths: forbiddenPresentationImports.map((name) => ({
             name,
             message: 'The clean-slate renderer has no presentation dependency.',
+          })),
+        },
+      ],
+    },
+  },
+  {
+    files: ['games/*/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: forbiddenGameImports.map((name) => ({
+            name,
+            message: 'Game modules own their presentation without platform motion dependencies.',
           })),
         },
       ],

@@ -39,7 +39,7 @@ draws its own Phone controller and TV stage in its own theme.
 | Lavender (pills, secondary buttons) | `#F0E8F8` |
 | Lavender strong (selected, Make host) | `#E1D2F4` |
 | Purple accent (selected card, dots) | `#6838DF` |
-| Ready green | `#12C24A` |
+| Ready green | `#0E9F3E` |
 | Remove red | `#D63B3B` |
 | Coming-soon grey | `#EFECF0` |
 
@@ -90,18 +90,32 @@ Each uses the matching status illustration.
 
 ## Motion
 
+Motion follows Emil Kowalski's design-engineering rules (the `emil-design-eng`
+and `animate-expo` skills): decide whether something should animate from how
+often it is seen, keep UI motion under 300 ms, enter with a strong ease-out
+(`cubic-bezier(0.23, 1, 0.32, 1)`), never grow from `scale(0)`, and keep
+motion on the UI thread with Reanimated.
+
 | Name | Timing | Where |
 | --- | --- | --- |
-| Screen enter | 450 ms, slight overshoot | every step change |
-| Hop-in | 600 ms spring | a player joining |
-| Card glide | 550 ms | the picker following the host |
-| Flash | 1.4 s | a setting the host just changed |
-| Tick | 1 s per number, 500 ms pop | countdown |
-| Wipe | 800 ms | handoff into the game |
-| Idle | 4–7 s loops | props float, burst dashes wiggle |
+| Press | 120 ms to scale 0.97 on press-in | every phone button and tappable row |
+| Toggle | 150 ms colour change, no movement | Quick / Standard / Custom, option rows |
+| Pop | 200 ms from scale 0.9 and opacity 0 | host crown, ready check, countdown number, toasts |
+| Surface enter | 250 ms fade with an 8 px rise | a TV surface replacing another |
+| Glide | 300 ms `cubic-bezier(0.77, 0, 0.175, 1)`, retargeted when the host browses again | TV carousel following the host |
+| Highlight | 600 ms fade | a setting the host just changed |
+| Arrive | spring, 400 ms, damping 0.8, from scale 0.9 | a player joining the room |
+| Stagger | 40 ms per seat | the avatar grid's first appearance |
+| Settle | props bob for 10 s after a surface appears, then drift over 11 s | TV decorative props (at most four moving) |
+| Go | confetti only on Go! | the end of the countdown |
 
-With reduced motion, props and dashes hold still, transitions are instant, and
-every number and label still changes.
+Phone screen transitions use the platform's own navigation animation, and the
+option sheet is a native form sheet. Haptics accompany, never replace, a
+visual change: a selection tick when a setting option is picked, a light
+impact on Ready and on Start, and success on Go!.
+
+With reduced motion, props and dashes hold still and movement and scale are
+dropped; opacity changes remain, and every number and label still changes.
 
 ## Artwork
 

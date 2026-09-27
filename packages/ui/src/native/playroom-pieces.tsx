@@ -1,9 +1,7 @@
 import type { GameSettingIcon } from '@huddle/contracts';
-import { playroomColors, playroomFonts } from '@huddle/design-tokens';
-import { useEffect, useState, type ReactNode } from 'react';
+import { playroomColors, playroomFonts, playroomMotion } from '@huddle/design-tokens';
+import { useEffect, type ReactNode } from 'react';
 import {
-  Animated,
-  Easing,
   Image,
   StyleSheet,
   View,
@@ -12,6 +10,17 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import {
   PLAYROOM_ARTWORK,
@@ -89,59 +98,74 @@ export type PlayroomFloatProps = {
   readonly height: number;
   /** Absolute placement inside the parent. */
   readonly style?: StyleProp<ViewStyle>;
-  readonly reduceMotion: boolean;
-  /** Loop length in ms; props at different speeds read as a room, not a pattern. */
+  /** Forces motion off (previews, tests); the system setting also applies. */
+  readonly reduceMotion?: boolean;
+  /**
+   * Whether this prop keeps drifting after the entrance. Keep this to three
+   * or four props per screen: constant motion on a screen left open for
+   * minutes becomes noise.
+   */
+  readonly drifts?: boolean;
+  /** Bob length in ms while the surface is new. */
   readonly duration?: number;
   readonly delay?: number;
   readonly tilt?: number;
 };
 
 /**
- * A decorative clay prop that bobs gently. Display-only and hidden from
- * assistive technology; with reduced motion it simply holds still.
+ * A decorative clay prop. It bobs while its surface is new, then either holds
+ * still or drifts very slowly. Display-only, hidden from assistive technology,
+ * and still under reduced motion.
  */
 export function PlayroomFloat({
   prop,
   width,
   height,
   style,
-  reduceMotion,
+  reduceMotion = false,
+  drifts = false,
   duration = 6000,
   delay = 0,
   tilt = 6,
 }: PlayroomFloatProps) {
-  const [phase] = useState(() => new Animated.Value(0));
+  const systemReduceMotion = useReducedMotion();
+  const still = reduceMotion || systemReduceMotion;
+  const phase = useSharedValue(0);
 
   useEffect(() => {
-    if (reduceMotion) {
-      phase.setValue(0);
+    if (still) {
+      cancelAnimation(phase);
+      phase.set(0);
       return undefined;
     }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(phase, { toValue: 1, duration: duration / 2, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(phase, { toValue: 0, duration: duration / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
+    const ease = Easing.inOut(Easing.sin);
+    const bob = (length: number) => withSequence(
+      withTiming(1, { duration: length / 2, easing: ease }),
+      withTiming(0, { duration: length / 2, easing: ease }),
     );
-    loop.start();
-    return () => loop.stop();
-  }, [delay, duration, phase, reduceMotion]);
+    const bobs = Math.max(1, Math.round(playroomMotion.settle / duration));
+    const settle = withRepeat(bob(duration), bobs, false);
+    phase.set(
+      drifts
+        ? withSequence(withTiming(0, { duration: delay }), settle, withRepeat(bob(playroomMotion.drift), -1, false))
+        : withSequence(withTiming(0, { duration: delay }), settle),
+    );
+    return () => cancelAnimation(phase);
+  }, [delay, drifts, duration, phase, still]);
+
+  const motion = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: -height * 0.06 * phase.get() },
+      { rotate: `${tilt * phase.get()}deg` },
+    ],
+  }));
 
   return (
     <Animated.View
       pointerEvents="none"
       accessible={false}
       importantForAccessibility="no-hide-descendants"
-      style={[
-        styles.float,
-        style,
-        {
-          transform: [
-            { translateY: phase.interpolate({ inputRange: [0, 1], outputRange: [0, -height * 0.06] }) },
-            { rotate: phase.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${tilt}deg`] }) },
-          ],
-        },
-      ]}
+      style={[styles.float, style, motion]}
     >
       <Image source={PLAYROOM_ARTWORK.props[prop]} style={{ width, height }} resizeMode="contain" accessible={false} />
     </Animated.View>

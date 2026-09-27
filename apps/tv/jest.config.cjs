@@ -4,6 +4,12 @@
 module.exports = {
   preset: 'jest-expo',
   rootDir: __dirname,
+  // Shared packages resolve their own Reanimated install under pnpm; point
+  // every import at the one published mock so no native initialiser runs.
+  moduleNameMapper: {
+    '^react-native-reanimated$': '<rootDir>/jest.reanimated.cjs',
+    '^react-native-worklets$': require.resolve('react-native-worklets/src/mock.ts'),
+  },
   testMatch: ['<rootDir>/src/**/*.render.test.tsx'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
 };

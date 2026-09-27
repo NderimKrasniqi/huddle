@@ -99,10 +99,10 @@ PLAYROOM_PALETTE = {
     "lavender": "#F0E8F8",
     "lavenderStrong": "#E1D2F4",
     "purple": "#6838DF",
-    "green": "#12C24A",
+    "green": "#0E9F3E",
     "red": "#D63B3B",
     "soonGrey": "#EFECF0",
-    "soonText": "#9E97AA",
+    "soonText": "#6F6680",
     "yellow": "#FFC532",
 }
 HEARTBEAT_RUNTIME_ROOT = Path("packages/ui/assets/heartbeat")
@@ -1532,7 +1532,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
             fail(f"superseded presentation setup remains: {relative(path, root)}")
 
     forbidden_modules = re.compile(
-        r"(?:nativewind|react-native-css-interop|tailwindcss|expo-image|react-native-reanimated|"
+        r"(?:nativewind|react-native-css-interop|tailwindcss|expo-image|"
         r"lucide-react-native|@react-native-community/netinfo|@huddle/ui/(?:kit|fonts))"
     )
     for base in (root / "apps", root / "packages" / "ui", root / "games"):
@@ -1542,6 +1542,10 @@ def validate_consolidation(root: Path = ROOT) -> None:
             clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
             if forbidden_modules.search(clean):
                 fail(f"superseded presentation dependency remains: {relative(source, root)}")
+            # Playroom platform motion runs on Reanimated; game modules keep
+            # their own presentation and do not take on the dependency.
+            if "games" in source.relative_to(root).parts[:1] and "react-native-reanimated" in clean:
+                fail(f"game modules must not import Reanimated: {relative(source, root)}")
             validate_presentation_renderer_scope(source, clean, root)
 
     validate_heartbeat_tokens(root)
@@ -1560,7 +1564,6 @@ def validate_consolidation(root: Path = ROOT) -> None:
         "tailwindcss",
         "react-native-css-interop",
         "expo-image",
-        "react-native-reanimated",
         "lucide-react-native",
         "@react-native-community/netinfo",
         "@expo-google-fonts/inter",
@@ -1579,6 +1582,13 @@ def validate_consolidation(root: Path = ROOT) -> None:
         payload = json.loads(manifest.read_text(encoding="utf-8"))
         if payload.get("dependencies", {}).get("@expo-google-fonts/nunito") != "0.4.2":
             fail(f"{app} must pin @expo-google-fonts/nunito@0.4.2")
+        if payload.get("dependencies", {}).get("react-native-reanimated") != "4.5.1":
+            fail(f"{app} must pin react-native-reanimated@4.5.1")
+    for name in ("trivia", "voting"):
+        payload = json.loads((root / "games" / name / "package.json").read_text(encoding="utf-8"))
+        for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
+            if "react-native-reanimated" in payload.get(field, {}):
+                fail(f"game modules must not depend on Reanimated: games/{name}/package.json")
 
     native_worklets_manifests = {
         root / "apps" / "phone" / "package.json",

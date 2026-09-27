@@ -19,10 +19,10 @@ export const playroomColors = {
   lavender: '#F0E8F8',
   lavenderStrong: '#E1D2F4',
   purple: '#6838DF',
-  green: '#12C24A',
+  green: '#0E9F3E',
   red: '#D63B3B',
   soonGrey: '#EFECF0',
-  soonText: '#9E97AA',
+  soonText: '#6F6680',
   yellow: '#FFC532',
 } as const;
 
@@ -114,12 +114,46 @@ export const playroomShadows = {
   },
 } as const;
 
-/** Playroom motion timings in milliseconds; reduced motion makes them instant. */
+/**
+ * Playroom motion, in milliseconds. UI motion stays under 300 ms; only rare
+ * moments (a player arriving, the countdown's Go) get more. Reduced motion
+ * keeps the opacity changes and drops movement and scale.
+ */
 export const playroomMotion = {
-  enter: 450,
-  hop: 600,
-  glide: 550,
-  flash: 1400,
+  /** Press-in scale feedback. */
+  press: 120,
+  /** A chip or segment changing colour. */
+  toggle: 150,
+  /** A badge, the countdown number, or a toast arriving. */
+  pop: 200,
+  /** A TV surface replacing another. */
+  enter: 250,
+  /** The TV carousel following the host. */
+  glide: 300,
+  /** A changed setting's highlight fading out. */
+  highlight: 600,
+  /** Delay between seats when a grid first appears. */
+  stagger: 40,
+  /** One countdown step. */
   tick: 1000,
-  wipe: 800,
+  /** One slow drift of a decorative prop. */
+  drift: 11000,
+  /** How long props bob after a screen appears before they settle. */
+  settle: 10000,
+} as const;
+
+/** Cubic-bezier control points; `Easing.bezier(...playroomEasing.out)`. */
+export const playroomEasing = {
+  /** Entering and exiting: starts fast, so it feels responsive. */
+  out: [0.23, 1, 0.32, 1],
+  /** Moving on screen. */
+  inOut: [0.77, 0, 0.175, 1],
+} as const;
+
+/** Spring configs in Apple's duration / damping-ratio form. */
+export const playroomSprings = {
+  /** Settles with no overshoot. */
+  settle: { duration: 400, dampingRatio: 1 },
+  /** A player arriving: a little life, still restrained. */
+  arrive: { duration: 400, dampingRatio: 0.8 },
 } as const;

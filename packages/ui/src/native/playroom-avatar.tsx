@@ -3,10 +3,21 @@ import {
   playroomAvatarCircles,
   playroomAwayCircle,
   playroomColors,
+  playroomEasing,
+  playroomMotion,
 } from '@huddle/design-tokens';
 import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
 import { PLAYROOM_ARTWORK, PLAYROOM_AVATARS } from './playroom-artwork';
+
+/** Badges arrive from 0.9, never from nothing; reduced motion shows them at once. */
+const BADGE_POP = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.9 }] },
+  100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
+})
+  .duration(playroomMotion.pop)
+  .reduceMotion(ReduceMotion.System);
 
 export type PlayroomAvatarProps = {
   readonly avatarId: AvatarId;
@@ -74,12 +85,12 @@ export function PlayroomAvatar({
         />
       </View>
       {host ? (
-        <View style={[styles.badge, badgeBox(badge, border), { backgroundColor: playroomColors.orange }]}>
+        <Animated.View entering={BADGE_POP} style={[styles.badge, badgeBox(badge, border), { backgroundColor: playroomColors.orange }]}>
           <Image source={PLAYROOM_ARTWORK.props.crown} style={{ width: badge * 0.66, height: badge * 0.55 }} resizeMode="contain" accessible={false} />
-        </View>
+        </Animated.View>
       ) : null}
       {ready ? (
-        <View style={[styles.badge, badgeBox(badge, border), { backgroundColor: playroomColors.green }]}>
+        <Animated.View entering={BADGE_POP} style={[styles.badge, badgeBox(badge, border), { backgroundColor: playroomColors.green }]}>
           <View
             style={{
               width: badge * 0.26,
@@ -91,10 +102,11 @@ export function PlayroomAvatar({
               transform: [{ rotate: '45deg' }],
             }}
           />
-        </View>
+        </Animated.View>
       ) : null}
       {waiting && !ready ? (
-        <View
+        <Animated.View
+          entering={BADGE_POP}
           style={[
             styles.waiting,
             { width: size * 0.46, height: size * 0.22, borderRadius: size * 0.11, gap: size * 0.035, right: -size * 0.12 },
@@ -103,7 +115,7 @@ export function PlayroomAvatar({
           {[0, 1, 2].map((dot) => (
             <View key={dot} style={[styles.dot, { width: size * 0.07, height: size * 0.07, borderRadius: size }]} />
           ))}
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );

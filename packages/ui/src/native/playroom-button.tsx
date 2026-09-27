@@ -1,5 +1,7 @@
 import {
   playroomColors,
+  playroomEasing,
+  playroomMotion,
   playroomPhone,
   playroomShadows,
 } from '@huddle/design-tokens';
@@ -12,6 +14,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { PlayroomBurst, PlayroomText } from './playroom-text';
 
@@ -50,6 +53,13 @@ export function PlayroomButton({
 }: PlayroomButtonProps) {
   const inactive = disabled || busy;
   const tone = inactive && variant === 'primary' ? toneFor('disabled') : toneFor(variant);
+  // Feedback on press-in, commit on press-out: the scale answers the finger
+  // before the action runs.
+  const scale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  const pressTo = (value: number) => {
+    scale.set(withTiming(value, { duration: playroomMotion.press, easing: Easing.bezier(...playroomEasing.out) }));
+  };
   const button = (
     <Pressable
       accessibilityRole="button"
@@ -58,18 +68,18 @@ export function PlayroomButton({
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
       onPress={onPress}
+      onPressIn={() => pressTo(0.97)}
+      onPressOut={() => pressTo(1)}
+      pressRetentionOffset={16}
       testID={testID}
-      style={({ pressed }) => [
-        variant === 'link' ? styles.link : styles.button,
-        tone.container,
-        pressed && !inactive ? styles.pressed : null,
-        bursts ? null : style,
-      ]}
+      style={bursts ? null : style}
     >
-      {busy ? <ActivityIndicator color={tone.spinner} style={styles.spinner} /> : null}
-      <PlayroomText color={tone.text} style={variant === 'link' ? styles.linkText : styles.label}>
-        {label}
-      </PlayroomText>
+      <Animated.View style={[variant === 'link' ? styles.link : styles.button, tone.container, pressStyle]}>
+        {busy ? <ActivityIndicator color={tone.spinner} style={styles.spinner} /> : null}
+        <PlayroomText color={tone.text} style={variant === 'link' ? styles.linkText : styles.label}>
+          {label}
+        </PlayroomText>
+      </Animated.View>
     </Pressable>
   );
   if (!bursts) return button;
@@ -120,7 +130,6 @@ const styles = StyleSheet.create({
   soft: { backgroundColor: playroomColors.lavender },
   danger: { backgroundColor: 'transparent', borderWidth: 2, borderColor: playroomColors.red },
   disabled: { backgroundColor: playroomColors.soonGrey },
-  pressed: { transform: [{ scale: 0.97 }] },
   label: { ...playroomPhone.type.button, textAlign: 'center' },
   linkText: { ...playroomPhone.type.body, textAlign: 'center' },
   spinner: { marginRight: 8 },
