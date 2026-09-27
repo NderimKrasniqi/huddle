@@ -8,7 +8,7 @@ import type {
   GameSettingsMode,
   GameSetting,
 } from '@huddle/domain';
-import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { brandColors, fontFamilies, platformPhoneTheme, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import {
   CAROUSEL_REGISTRY,
   carouselWindow,
@@ -24,6 +24,7 @@ import {
   GameCard,
   HuddleButton,
   HuddleText,
+  HuddleIcon,
   HEARTBEAT_ARTWORK,
   PlayerRow,
   ScreenShell,
@@ -62,6 +63,14 @@ const GAME_TONES = {
   'doodle-dash': 'doodleDash',
   'quick-poll': 'quickPoll',
   'hot-take': 'hotTake',
+} as const;
+
+const GAME_DESCRIPTIONS = {
+  trivia: 'Quiz',
+  voting: 'Party',
+  'doodle-dash': 'Sketch fast. Guess first.',
+  'quick-poll': 'Share a thought. See who wins.',
+  'hot-take': 'Spice it up. React together.',
 } as const;
 
 type BusyAction =
@@ -533,16 +542,22 @@ function LobbySurface({
   return (
     <ScreenShell tone="background" style={styles.shell} testID="phone-lobby">
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[styles.page, { flexGrow: 1, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
+        <View style={[styles.page, { flexGrow: 1, paddingTop: insets.top + spacing.sm, paddingBottom: insets.bottom + spacing.xl }]}>
           <View style={styles.roomNav}>
-            <View style={styles.navButton} />
+            <View style={styles.navButton}><HuddleText variant="body" style={styles.roomBack}>‹</HuddleText></View>
             <HuddleText variant="bodyLarge" style={styles.navTitle}>Room</HuddleText>
             <View style={styles.navButton} />
           </View>
 
           <View style={styles.roomSummary}>
-            <HuddleText variant="caption" style={styles.roomLabel}>ROOM CODE</HuddleText>
-            <CodeTiles code={session.code} testID="phone-room-code-tiles" accessibilityLabel={`Room code ${session.code}`} />
+            <CodeTiles
+              code={session.code}
+              testID="phone-room-code-tiles"
+              accessibilityLabel={`Room code ${session.code}`}
+              style={styles.lobbyCodeTiles}
+              tileStyle={styles.lobbyCodeTile}
+              valueStyle={styles.lobbyCodeValue}
+            />
             <Badge label={standing.youAreHost ? 'Host' : 'You'} tone={standing.youAreHost ? 'host' : 'neutral'} />
           </View>
 
@@ -560,6 +575,7 @@ function LobbySurface({
                     avatarId={seat.avatar}
                     status={seat.away ? 'away' : 'waiting'}
                     isHost={seat.host}
+                    compact
                     testID={`lobby-player-${seat.playerId}`}
                     style={styles.lobbyPlayerRow}
                   />
@@ -666,6 +682,184 @@ function PlayerManagementSheet({
   );
 }
 
+function PickerMetadata({ module }: { readonly module: GameModule }) {
+  return (
+    <View style={styles.pickerMetadata} accessible accessibilityRole="text">
+      <PickerMetaItem kind="people" label={`${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players`} />
+      <HuddleText variant="caption" style={styles.metadataSeparator}>•</HuddleText>
+      <PickerMetaItem kind="clock" label={`about ${module.metadata.estimatedMinutes} min`} />
+      <HuddleText variant="caption" style={styles.metadataSeparator}>•</HuddleText>
+      <PickerMetaItem kind="smile" label="all ages" />
+    </View>
+  );
+}
+
+function PickerMetaItem({
+  kind,
+  label,
+}: {
+  readonly kind: 'people' | 'clock' | 'smile';
+  readonly label: string;
+}) {
+  return (
+    <View style={styles.metadataItem}>
+      <PickerMetaIcon kind={kind} />
+      <HuddleText variant="caption">{label}</HuddleText>
+    </View>
+  );
+}
+
+function PickerMetaIcon({ kind }: { readonly kind: 'people' | 'clock' | 'smile' }) {
+  if (kind === 'people') {
+    return (
+      <View style={styles.peopleIcon} accessible={false}>
+        <View style={[styles.peopleHead, styles.peopleHeadPrimary]} />
+        <View style={[styles.peopleHead, styles.peopleHeadSecondary]} />
+        <View style={[styles.peopleBody, styles.peopleBodyPrimary]} />
+        <View style={[styles.peopleBody, styles.peopleBodySecondary]} />
+      </View>
+    );
+  }
+
+  if (kind === 'clock') {
+    return (
+      <View style={styles.clockIcon} accessible={false}>
+        <View style={styles.clockHandShort} />
+        <View style={styles.clockHandLong} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.smileIcon} accessible={false}>
+      <View style={[styles.smileEye, styles.smileEyeLeft]} />
+      <View style={[styles.smileEye, styles.smileEyeRight]} />
+      <View style={styles.smileMouth} />
+    </View>
+  );
+}
+
+type SetupMode = 'quick' | 'standard' | 'custom';
+
+function SetupModeControl({
+  value,
+  disabled,
+  onChange,
+}: {
+  readonly value: SetupMode;
+  readonly disabled: boolean;
+  readonly onChange: (mode: SetupMode) => void;
+}) {
+  return (
+    <View style={styles.modeControl} accessibilityRole="tablist">
+      {(['quick', 'standard', 'custom'] as const).map((mode, index) => (
+        <Pressable
+          key={mode}
+          onPress={() => onChange(mode)}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={setupModeLabel(mode)}
+          accessibilityState={{ selected: value === mode, disabled }}
+          testID={`setup-mode-${mode}`}
+          style={[styles.modeSegment, index < 2 ? styles.modeSegmentDivider : null, value === mode ? styles.modeSegmentSelected : null]}
+        >
+          <HuddleText variant="caption" style={value === mode ? styles.modeSegmentSelectedLabel : null}>{setupModeLabel(mode)}</HuddleText>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function SetupPresetSummary({
+  module,
+  label,
+  settings,
+  description,
+}: {
+  readonly module: GameModule;
+  readonly label: string;
+  readonly settings: GameSettings;
+  readonly description: string;
+}) {
+  return (
+    <View style={styles.presetSummary} testID="setup-preset-summary">
+      <HuddleText variant="title" style={styles.presetTitle}>{label}</HuddleText>
+      <HuddleText variant="caption" style={styles.presetDescription}>{description}</HuddleText>
+      <SetupSettingRows module={module} settings={settings} />
+    </View>
+  );
+}
+
+function SetupSettingRows({
+  module,
+  settings,
+}: {
+  readonly module: GameModule;
+  readonly settings: GameSettings;
+}) {
+  const order = module.metadata.id === 'trivia'
+    ? ['questions', 'difficulty', 'questionSeconds', 'category', 'scoring']
+    : ['rounds', 'voteSeconds', 'results', 'voterLabels'];
+  const orderedSettings = order
+    .map((key) => module.settingsSchema.find((setting) => setting.key === key))
+    .filter((setting): setting is GameSetting => setting !== undefined);
+
+  return (
+    <View style={styles.presetLines}>
+      {orderedSettings.map((setting) => {
+        const value = settings[setting.key] ?? setting.defaultValue;
+        const rawLabel = setting.options.find((option) => option.value === value)?.label ?? value;
+        const label = setupValueLabel(module, setting.key, rawLabel);
+        return (
+          <View key={setting.key} style={styles.presetSettingRow}>
+            <SetupSettingIcon settingKey={setting.key} />
+            <HuddleText variant="caption" style={styles.presetSettingLabel}>{label}</HuddleText>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function setupValueLabel(module: GameModule, key: string, label: string): string {
+  if (module.metadata.id === 'trivia') {
+    if (key === 'questions') return `${label} Questions`;
+    if (key === 'difficulty') return `${label} difficulty`;
+    if (key === 'questionSeconds') return `${label} per question`;
+    if (key === 'scoring') return label.startsWith('Speed') ? 'Speed bonus' : 'Classic scoring';
+  }
+  if (module.metadata.id === 'voting') {
+    if (key === 'rounds') return `${label} Rounds`;
+    if (key === 'voteSeconds') return `${label} to vote`;
+    if (key === 'voterLabels') return `Voter labels ${label.toLowerCase()}`;
+  }
+  return label;
+}
+
+function SetupSettingIcon({ settingKey }: { readonly settingKey: string }) {
+  const icon = settingKey === 'questions' || settingKey === 'rounds'
+    ? '5'
+    : settingKey === 'difficulty'
+      ? '✣'
+      : settingKey === 'questionSeconds' || settingKey === 'voteSeconds'
+        ? '◷'
+        : settingKey === 'category' || settingKey === 'results'
+          ? '▣'
+          : '♟';
+  const backgroundColor = settingKey === 'difficulty'
+    ? brandColors.butter
+    : settingKey === 'questionSeconds' || settingKey === 'voteSeconds'
+      ? brandColors.sky
+      : settingKey === 'category' || settingKey === 'results'
+        ? brandColors.lilac
+        : brandColors.mint;
+  return (
+    <View style={[styles.presetSettingIcon, { backgroundColor }]} accessible={false}>
+      {settingKey === 'questionSeconds' || settingKey === 'voteSeconds' ? <HuddleIcon name="clock" size={18} /> : settingKey === 'voterLabels' ? <HuddleIcon name="people" size={18} /> : <HuddleText variant="caption" style={styles.presetSettingIconText}>{icon}</HuddleText>}
+    </View>
+  );
+}
+
 export function PickerSurface({
   browsingAt,
   youAreHost,
@@ -737,8 +931,8 @@ export function PickerSurface({
           </View>
 
           <View style={styles.pickerHeading}>
-            <HuddleText variant="display" align="center">Pick a game</HuddleText>
-            <HuddleText variant="bodyLarge" align="center">What are we feeling?</HuddleText>
+            <HuddleText variant="display" align="center" style={styles.pickerTitle}>Pick a game</HuddleText>
+            <HuddleText variant="bodyLarge" align="center" style={styles.pickerSubtitle}>What are we feeling?</HuddleText>
           </View>
 
           {!youAreHost ? (
@@ -768,6 +962,7 @@ export function PickerSurface({
               {CAROUSEL_REGISTRY.map((module, index) => {
                 const id = module.metadata.id as keyof typeof GAME_ART;
                 const cardLabel = `${module.metadata.title}${module.placeholder ? ', coming soon' : ''}`;
+                const listDescription = GAME_DESCRIPTIONS[id];
                 return (
                   <Pressable
                     key={module.metadata.id}
@@ -782,8 +977,11 @@ export function PickerSurface({
                     <Image source={GAME_ART[id]} resizeMode="contain" style={styles.gameListArt} accessible={false} />
                     <View style={styles.gameListCopy}>
                       <HuddleText variant="bodyLarge">{module.metadata.title}</HuddleText>
-                      <HuddleText variant="caption">{module.metadata.category}</HuddleText>
-                      <HuddleText variant="caption" style={styles.helper}>{module.metadata.playerRange.min}–{module.metadata.playerRange.max} players&nbsp; · &nbsp;about {module.metadata.estimatedMinutes} min</HuddleText>
+                      {module.placeholder ? (
+                        <HuddleText variant="caption">{listDescription}</HuddleText>
+                      ) : (
+                        <HuddleText variant="caption" style={styles.helper}>{module.metadata.playerRange.min}–{module.metadata.playerRange.max} players&nbsp; · &nbsp;about {module.metadata.estimatedMinutes} min&nbsp; · &nbsp;all ages</HuddleText>
+                      )}
                     </View>
                     {module.placeholder ? <Badge label="Coming soon" tone="comingSoon" /> : <HuddleText variant="title" style={styles.listChevron}>›</HuddleText>}
                   </Pressable>
@@ -796,7 +994,7 @@ export function PickerSurface({
                 <HuddleButton title="‹" variant="secondary" disabled={busy !== null} onPress={() => {
                   const previous = previousIndex(selectedIndex) ?? lastCarouselIndex;
                   onBrowse(previous);
-                }} accessibilityLabel="Previous game" testID="picker-previous" style={styles.carouselArrow} />
+                }} accessibilityLabel="Previous game" testID="picker-previous" style={styles.carouselArrow} labelStyle={styles.carouselArrowLabel} />
                 <GameCard
                   title={focused.metadata.title}
                   image={GAME_ART[focusedId]}
@@ -805,18 +1003,25 @@ export function PickerSurface({
                   comingSoon={focused.placeholder === true}
                   disabled={controls.cardAction === null}
                   interactive={controls.cardAction !== null}
+                  titleAlign="center"
+                  artFrameStyle={styles.focusedArtFrame}
                   onPress={browseSelected}
                   testID={`phone-game-card-${focused.metadata.id}`}
-                  style={styles.focusedGameCard}
+                  style={[
+                    styles.focusedGameCard,
+                    focusedId === 'trivia' ? styles.focusedTrivia : null,
+                    focusedId === 'voting' ? styles.focusedVoting : null,
+                    focusedId === 'doodle-dash' ? styles.focusedDoodleDash : null,
+                    focusedId === 'quick-poll' ? styles.focusedQuickPoll : null,
+                    focusedId === 'hot-take' ? styles.focusedHotTake : null,
+                  ]}
                 />
                 <HuddleButton title="›" variant="secondary" disabled={busy !== null} onPress={() => {
                   const next = nextIndex(selectedIndex) ?? 0;
                   onBrowse(next);
-                }} accessibilityLabel="Next game" testID="picker-next" style={styles.carouselArrow} />
+                }} accessibilityLabel="Next game" testID="picker-next" style={styles.carouselArrow} labelStyle={styles.carouselArrowLabel} />
               </View>
-              <HuddleText variant="caption" align="center" style={styles.pickerMetadata}>
-                {gameMetadata.join(' • ')}
-              </HuddleText>
+              <PickerMetadata module={focused} />
               <View style={styles.carouselDots} accessibilityLabel={`Game ${selectedIndex + 1} of ${window?.total ?? CAROUSEL_REGISTRY.length}`}>
                 {CAROUSEL_REGISTRY.map((module, index) => <View key={module.metadata.id} style={[styles.dot, index === selectedIndex ? styles.dotSelected : null]} />)}
               </View>
@@ -836,9 +1041,9 @@ export function PickerSurface({
           {failure ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="picker-error">{failure}</HuddleText> : null}
           {failure && youAreHost ? <HuddleButton title="Try again" variant="primary" onPress={browseSelected} busy={busy === 'browse'} accessibilityLabel="Try again" testID="picker-retry" style={styles.fullWidthAction} /> : null}
           {youAreHost && !listMode ? focused.placeholder ? (
-            <HuddleButton title={`Set up ${focused.metadata.title}`} disabled onPress={() => undefined} accessibilityLabel={`${focused.metadata.title}, coming soon`} testID="picker-coming-soon" style={styles.pickerPrimaryAction} />
+            <HuddleButton title={`Set up ${focused.metadata.title}`} disabled onPress={() => undefined} accessibilityLabel={`${focused.metadata.title}, coming soon`} testID="picker-coming-soon" style={styles.pickerPrimaryAction} labelStyle={styles.pickerPrimaryLabel} />
           ) : (
-            <HuddleButton title={`Set up ${focused.metadata.title}`} onPress={() => onChoose(focused)} busy={busy === 'select'} disabled={!controls.selectEnabled} accessibilityLabel={`Set up ${focused.metadata.title}`} testID="picker-select" style={styles.pickerPrimaryAction} />
+            <HuddleButton title={`Set up ${focused.metadata.title}`} onPress={() => onChoose(focused)} busy={busy === 'select'} disabled={!controls.selectEnabled} accessibilityLabel={`Set up ${focused.metadata.title}`} testID="picker-select" style={styles.pickerPrimaryAction} labelStyle={styles.pickerPrimaryLabel} />
           ) : null}
         </View>
       </ScrollView>
@@ -945,7 +1150,7 @@ export function SetupSurface({
         <View style={[styles.page, styles.setupPage, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
           <View style={styles.setupNav}>
             {youAreHost ? (
-              <Pressable onPress={onCancel} accessibilityRole="button" accessibilityLabel="Back to room" testID="setup-nav-back" style={styles.backLink}>
+              <Pressable onPress={onCancel} accessibilityRole="button" accessibilityLabel="Back to room" testID="setup-nav-back" style={styles.setupBackLink}>
                 <HuddleText variant="body" color="primary">‹&nbsp; Back to room</HuddleText>
               </Pressable>
             ) : <View style={styles.navButton} />}
@@ -954,36 +1159,25 @@ export function SetupSurface({
 
           <View style={styles.setupHeading}>
             <Image source={HEARTBEAT_ARTWORK.brand.displayMark} resizeMode="contain" style={styles.setupBrandMark} accessible={false} testID="phone-game-setup-mark" />
-            <HuddleText variant="title" align="center">{setup.stage === 'ready' ? `${module.metadata.title} setup` : `Set up ${module.metadata.title}`}</HuddleText>
-            <HuddleText variant="caption" align="center">{setup.stage === 'ready' ? 'Get everyone ready to play.' : 'Choose a mode to get started.'}</HuddleText>
+            <HuddleText variant="title" align="center" style={styles.setupTitle}>{setup.stage === 'ready' ? `${module.metadata.title} setup` : `Set up ${module.metadata.title}`}</HuddleText>
+            <HuddleText variant="caption" align="center" style={styles.setupSubtitle}>{setup.stage === 'ready' ? "You're all set!" : 'Choose a mode to get started.'}</HuddleText>
           </View>
 
           {setup.stage === 'configuring' ? (
             <>
               <View style={styles.setupPanel}>
                 <View style={styles.modeRow}>
-                  {(['quick', 'standard', 'custom'] as const).map((mode) => (
-                    <Chip
-                      key={mode}
-                      label={setupModeLabel(mode)}
-                      selected={setup.mode === mode}
-                      disabled={!youAreHost}
-                      onPress={() => chooseMode(mode)}
-                      testID={`setup-mode-${mode}`}
-                    />
-                  ))}
+                  <SetupModeControl value={setup.mode} disabled={!youAreHost} onChange={chooseMode} />
                 </View>
                 {selectedPreset && setup.mode !== 'custom' ? (
-                  <View style={styles.presetSummary} testID="setup-preset-summary">
-                    <HuddleText variant="title" style={styles.presetTitle}>{selectedPreset.label}</HuddleText>
-                    <View style={styles.presetLines}>
-                      {module.settingsSchema.map((setting) => {
-                        const value = selectedPreset.settings[setting.key] ?? setting.defaultValue;
-                        const label = setting.options.find((option) => option.value === value)?.label ?? value;
-                        return <HuddleText key={setting.key} variant="caption">{setting.label}: {label}</HuddleText>;
-                      })}
-                    </View>
-                  </View>
+                  <SetupPresetSummary
+                    module={module}
+                    label={selectedPreset.label}
+                    settings={selectedPreset.settings}
+                    description={module.metadata.id === 'trivia'
+                      ? selectedPreset.mode === 'quick' ? 'Great for fast, casual rounds.' : 'Classic trivia night.'
+                      : selectedPreset.mode === 'quick' ? 'Fast, simple voting rounds.' : 'A relaxed room vote.'}
+                  />
                 ) : null}
                 {setup.mode === 'custom' ? (
                   <View style={styles.settingsList}>
@@ -1002,6 +1196,7 @@ export function SetupSurface({
                                 disabled={!youAreHost}
                                 onPress={() => chooseSetting(setting, option.value)}
                                 testID={`setup-option-${setting.key}-${option.value}`}
+                                style={{ borderRadius: radii.sm, minHeight: 44, flexGrow: 1 }}
                               />
                             ))}
                           </View>
@@ -1011,20 +1206,14 @@ export function SetupSurface({
                   </View>
                 ) : null}
               </View>
-              {youAreHost ? <HuddleButton title="Lock setup" onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" style={styles.setupPrimaryAction} /> : null}
-              <HuddleText variant="caption" align="center" style={styles.hostOnlyHint}>Host only</HuddleText>
+              {youAreHost ? <HuddleButton title="Next" onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" style={styles.setupPrimaryAction} labelStyle={styles.setupPrimaryLabel} /> : null}
+              <HuddleText variant="caption" align="center" style={[styles.hostOnlyHint, styles.setupHostOnlyHint]}>♟&nbsp; Host only</HuddleText>
             </>
           ) : (
             <>
               <View style={styles.readySummary} testID="setup-ready-summary">
                 <Badge label={setupModeLabel(setup.mode)} tone="ready" />
-                <View style={styles.presetLines}>
-                  {module.settingsSchema.map((setting) => {
-                    const value = settings[setting.key] ?? setting.defaultValue;
-                    const label = setting.options.find((option) => option.value === value)?.label ?? value;
-                    return <HuddleText key={setting.key} variant="caption">{setting.label}: {label}</HuddleText>;
-                  })}
-                </View>
+                <SetupSettingRows module={module} settings={settings} />
               </View>
               <View style={styles.playersHeading}>
                 <HuddleText variant="title">Players</HuddleText>
@@ -1091,27 +1280,26 @@ function PhoneRuntimeMount({
         player,
         sendEvent: onEvent,
         safeAreaInsets: insets,
-        // Keep the platform-owned Host affordance clear of each game module's
-        // own header and timer. This remains plain data at the contract seam;
-        // the module does not import navigation or platform context.
-        hostChromeInsetTop: youAreHost ? spacing['5xl'] : undefined,
+        // The gameplay references reserve only the native status area. Host
+        // navigation returns at the finished boundary, not over the private
+        // answer/vote controls.
+        hostChromeInsetTop: undefined,
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
       })}
-      {youAreHost ? (
+      {youAreHost && screen.kind === 'finished' ? (
         <View
           pointerEvents="box-none"
           style={[
-            styles.runtimeTopOverlay,
+            styles.runtimeFinishedOverlay,
             {
-              top: insets.top + spacing.sm,
-              left: insets.left + spacing.lg,
-              right: insets.right + spacing.lg,
+              bottom: insets.bottom + spacing.xl,
+              left: insets.left + spacing.xl,
+              right: insets.right + spacing.xl,
             },
           ]}
         >
           <HuddleButton
             title="Back to lobby"
-            variant="secondary"
             onPress={onBackToLobby}
             accessibilityLabel="Back to lobby"
             testID="runtime-back-to-lobby"
@@ -1235,8 +1423,8 @@ function ConfirmationSheet({
             </HuddleText>
           ) : null}
           <View style={styles.confirmationActions}>
-            <HuddleButton title={confirmation.confirmLabel} variant={confirmation.destructive ? 'destructive' : 'primary'} onPress={confirmation.onConfirm} busy={busy === confirmation.action} accessibilityLabel={confirmation.confirmLabel} testID="confirmation-confirm" />
-            <HuddleButton title="Cancel" variant="secondary" onPress={onCancel} disabled={busy !== null} accessibilityLabel="Cancel" testID="confirmation-cancel" />
+            <HuddleButton title={confirmation.confirmLabel} variant={confirmation.destructive ? 'destructive' : 'primary'} onPress={confirmation.onConfirm} busy={busy === confirmation.action} accessibilityLabel={confirmation.confirmLabel} testID="confirmation-confirm" style={{ minHeight: 52, borderRadius: radii.md }} />
+            <HuddleButton title="Cancel" variant="secondary" onPress={onCancel} disabled={busy !== null} accessibilityLabel="Cancel" testID="confirmation-cancel" style={{ minHeight: 52, borderRadius: radii.md }} />
           </View>
         </View>
       </View>
@@ -1247,80 +1435,126 @@ function ConfirmationSheet({
 const styles = StyleSheet.create({
   shell: { paddingHorizontal: 0 },
   runtimeTakeover: { flex: 1, backgroundColor: semanticColors.background },
-  runtimeTopOverlay: { position: 'absolute', alignItems: 'flex-end', zIndex: 2 },
-  runtimeBackAction: { minHeight: 40, paddingHorizontal: spacing.lg, ...shadows.card },
+  runtimeFinishedOverlay: { position: 'absolute', zIndex: 2 },
+  runtimeBackAction: { minHeight: 52, borderRadius: radii.md, paddingHorizontal: spacing.lg, ...shadows.card },
   runtimeBottomOverlay: { position: 'absolute', padding: spacing.sm, borderRadius: radii.lg, backgroundColor: semanticColors.surfaceRaised, gap: spacing.xs, ...shadows.card },
   statusShell: { paddingHorizontal: 0, alignItems: 'center', justifyContent: 'flex-end' },
   statusHeader: { position: 'absolute', right: spacing.lg, left: spacing.lg, zIndex: 1 },
   statusSheet: { width: '100%', paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.lg, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, backgroundColor: semanticColors.surfaceRaised, alignItems: 'center', gap: spacing.md, ...shadows.floating },
   statusArtworkVeil: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(249,241,230,0.08)' },
   scroll: { flexGrow: 1 },
-  page: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: spacing.lg, gap: spacing.md },
+  page: { width: '100%', maxWidth: platformPhoneTheme.geometry.maxContentWidth, alignSelf: 'center', paddingHorizontal: spacing.lg, gap: spacing.md },
   eyebrow: { letterSpacing: 1.2, opacity: 0.7 },
-  roomNav: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  roomNav: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: platformPhoneTheme.colors.line, paddingBottom: spacing.xs },
   navButton: { width: 64, minHeight: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  navTitle: { fontWeight: '800' },
-  roomSummary: { alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.sm },
+  navTitle: { fontWeight: '800', letterSpacing: 0.8 },
+  roomSummary: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.lg, borderBottomWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomColor: platformPhoneTheme.colors.ink },
+  roomBack: { fontSize: 26, lineHeight: 30, fontWeight: '700' },
+  lobbyCodeTiles: { gap: spacing.xs },
+  lobbyCodeTile: { width: 40, height: 42, borderRadius: radii.sm },
+  lobbyCodeValue: { fontSize: 24, lineHeight: 28 },
   roomLabel: { letterSpacing: 1.4, opacity: 0.7 },
   successBanner: { width: '100%', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(127,210,182,0.34)', borderWidth: 1, borderColor: 'rgba(49,129,93,0.38)' },
   rosterSection: { gap: spacing.sm },
   sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   rosterList: { gap: spacing.sm },
-  lobbyPlayerRow: { minHeight: 64, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1, borderColor: 'rgba(43,31,23,0.14)', backgroundColor: 'rgba(255,255,255,0.2)', ...shadows.none },
-  bottomActions: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.sm, marginTop: 'auto' },
-  bottomAction: { flex: 1, paddingHorizontal: spacing.sm },
-  hostWaitingPanel: { marginTop: 'auto', padding: spacing.lg, borderRadius: radii.lg, backgroundColor: 'rgba(124,198,255,0.24)', borderWidth: 1, borderColor: 'rgba(124,198,255,0.62)', alignItems: 'center', gap: spacing.xs },
-  primaryAction: { minHeight: 54 },
+  lobbyPlayerRow: { minHeight: 60, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, borderWidth: 0, borderBottomWidth: 1, borderBottomColor: platformPhoneTheme.colors.line, backgroundColor: platformPhoneTheme.colors.paper, ...shadows.none },
+  bottomActions: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.lg, marginTop: 'auto', borderTopWidth: 2, borderTopColor: brandColors.espresso },
+  bottomAction: { flex: 1, minHeight: 52, paddingHorizontal: spacing.sm, borderRadius: platformPhoneTheme.geometry.editorialRadius },
+  hostWaitingPanel: { marginTop: 'auto', padding: spacing.lg, borderRadius: platformPhoneTheme.geometry.editorialRadius, backgroundColor: 'rgba(124,198,255,0.18)', borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderColor: platformPhoneTheme.colors.info, alignItems: 'center', gap: spacing.xs },
+  primaryAction: { minHeight: 56 },
   leaveAction: { alignSelf: 'center', minWidth: 130 },
   pickerNav: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  setupNav: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  setupNav: { height: 0, minHeight: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', overflow: 'visible' },
   pickerPage: { flexGrow: 1 },
   setupPage: { flexGrow: 1 },
   backLink: { minHeight: 36, justifyContent: 'center' },
+  setupBackLink: { position: 'absolute', top: 0, left: 0, minWidth: 44, minHeight: 44, justifyContent: 'center', zIndex: 2 },
   viewToggle: { minHeight: 32, minWidth: 54, paddingHorizontal: spacing.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(43,31,23,0.2)', borderRadius: radii.pill },
-  pickerHeading: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm },
+  pickerHeading: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.lg, borderBottomWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomColor: platformPhoneTheme.colors.ink },
+  pickerTitle: { fontSize: 32, lineHeight: 38, color: brandColors.espresso },
+  pickerSubtitle: { fontSize: 16, lineHeight: 22 },
   guestPickerSurface: { alignItems: 'center', gap: spacing.md },
-  guestWaitingArt: { width: '100%', height: 218, borderRadius: radii.xl },
+  guestWaitingArt: { width: '100%', height: 218, borderRadius: 6, borderWidth: 2, borderColor: brandColors.espresso },
   guestWaitingCopy: { gap: spacing.xs },
   passivePickerAnchor: { position: 'absolute', width: 1, height: 1, minHeight: 1, opacity: 0, overflow: 'hidden' },
-  carouselStage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: 330 },
-  carouselArrow: { width: 42, minHeight: 42, paddingHorizontal: 0, paddingVertical: 0, borderRadius: radii.round },
-  focusedGameCard: { width: 260, minHeight: 346, padding: spacing.lg },
-  pickerMetadata: { marginTop: spacing.xs },
+  carouselStage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: 338 },
+  carouselArrow: { width: 48, minHeight: 48, paddingHorizontal: 0, paddingVertical: 0, borderRadius: platformPhoneTheme.geometry.editorialRadius, backgroundColor: platformPhoneTheme.colors.canvas, borderColor: platformPhoneTheme.colors.ink, borderWidth: platformPhoneTheme.geometry.editorialBorderWidth },
+  carouselArrowLabel: { fontFamily: fontFamilies.extraBold, fontSize: 24, lineHeight: 28, fontWeight: '800' },
+  focusedGameCard: { width: 278, minHeight: 326, padding: spacing.lg, borderRadius: 7, borderWidth: 2, borderBottomWidth: 6, backgroundColor: brandColors.cream, shadowOpacity: 0, elevation: 0 },
+  focusedTrivia: { borderColor: brandColors.mint },
+  focusedVoting: { borderColor: brandColors.dustyRose },
+  focusedDoodleDash: { borderColor: brandColors.lilac },
+  focusedQuickPoll: { borderColor: brandColors.lilac },
+  focusedHotTake: { borderColor: brandColors.coral },
+  focusedArtFrame: { height: 210 },
+  pickerMetadata: { marginTop: spacing.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.xs },
+  metadataItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  metadataSeparator: { opacity: 0.62 },
+  peopleIcon: { width: 16, height: 14, position: 'relative' },
+  peopleHead: { position: 'absolute', top: 0, width: 5, height: 5, borderRadius: radii.round, backgroundColor: brandColors.espresso },
+  peopleHeadPrimary: { left: 2 },
+  peopleHeadSecondary: { right: 2, opacity: 0.82 },
+  peopleBody: { position: 'absolute', bottom: 0, width: 8, height: 7, borderRadius: radii.sm, backgroundColor: brandColors.espresso },
+  peopleBodyPrimary: { left: 0 },
+  peopleBodySecondary: { right: 0, opacity: 0.82 },
+  clockIcon: { width: 14, height: 14, borderWidth: 1.5, borderColor: brandColors.espresso, borderRadius: radii.round, position: 'relative' },
+  clockHandShort: { position: 'absolute', width: 1.5, height: 4, top: 2, left: 5.5, backgroundColor: brandColors.espresso },
+  clockHandLong: { position: 'absolute', width: 4, height: 1.5, top: 6, left: 5.5, backgroundColor: brandColors.espresso, transform: [{ rotate: '25deg' }] },
+  smileIcon: { width: 14, height: 14, borderWidth: 1.5, borderColor: brandColors.espresso, borderRadius: radii.round, position: 'relative' },
+  smileEye: { position: 'absolute', top: 3, width: 1.5, height: 1.5, borderRadius: radii.round, backgroundColor: brandColors.espresso },
+  smileEyeLeft: { left: 3 },
+  smileEyeRight: { right: 3 },
+  smileMouth: { position: 'absolute', left: 3, bottom: 2, width: 6, height: 3, borderBottomWidth: 1.5, borderColor: brandColors.espresso, borderRadius: radii.round },
   carouselDots: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   dot: { width: 8, height: 8, borderRadius: radii.round, backgroundColor: 'rgba(43,31,23,0.18)' },
   dotSelected: { width: 10, height: 10, backgroundColor: semanticColors.primary },
   comingSoonBadge: { alignSelf: 'center' },
   gameList: { gap: spacing.sm },
-  gameListRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.sm, borderRadius: radii.lg, borderWidth: 1, borderColor: 'rgba(43,31,23,0.12)', backgroundColor: 'rgba(255,255,255,0.26)' },
+  gameListRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.sm, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(174,119,58,0.22)', backgroundColor: 'rgba(249,241,230,0.5)' },
   gameListRowSelected: { borderColor: semanticColors.primary, borderWidth: 2 },
   gameListRowDisabled: { opacity: 0.62 },
   gameListArt: { width: 62, height: 62, borderRadius: radii.md },
   gameListCopy: { flex: 1, gap: spacing['2xs'] },
   listChevron: { fontSize: 28, lineHeight: 30, fontWeight: '400' },
-  syncPanel: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radii.lg, borderWidth: 1, borderColor: 'rgba(127,210,182,0.72)', backgroundColor: 'rgba(127,210,182,0.2)' },
+  syncPanel: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: 6, borderWidth: 2, borderColor: brandColors.mint, backgroundColor: 'rgba(127,210,182,0.2)' },
   syncDots: { flexDirection: 'row', gap: spacing.xs },
   syncDot: { width: 7, height: 7, borderRadius: radii.round, backgroundColor: 'rgba(43,31,23,0.22)' },
   syncDotActive: { backgroundColor: semanticColors.success },
   syncCopy: { flex: 1, gap: spacing['2xs'] },
-  pickerPrimaryAction: { minHeight: 54, marginTop: 'auto' },
+  pickerPrimaryAction: { minHeight: 68, marginTop: 'auto', borderRadius: platformPhoneTheme.geometry.editorialRadius },
+  pickerPrimaryLabel: { fontFamily: fontFamilies.extraBold, fontSize: 22, lineHeight: 28, fontWeight: '800' },
   fullWidthAction: { width: '100%' },
-  setupHeading: { alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.sm },
-  setupBrandMark: { width: 48, height: 40 },
-  setupPanel: { padding: spacing.md, borderRadius: radii.xl, backgroundColor: 'rgba(255,255,255,0.28)', borderWidth: 1, borderColor: 'rgba(43,31,23,0.12)', gap: spacing.md },
-  modeRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xs },
+  setupHeading: { alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.lg, borderBottomWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomColor: platformPhoneTheme.colors.ink },
+  setupBrandMark: { width: 40, height: 36, transform: [{ scale: 1.4 }] },
+  setupTitle: { fontSize: 28, lineHeight: 34 },
+  setupSubtitle: { fontFamily: fontFamilies.regular, fontWeight: '400', fontSize: 14, lineHeight: 20 },
+  setupPanel: { gap: spacing.xl },
+  modeRow: { alignItems: 'center' },
+  modeControl: { width: '100%', maxWidth: 420, minHeight: 44, flexDirection: 'row', overflow: 'hidden', borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderColor: platformPhoneTheme.colors.ink, borderRadius: platformPhoneTheme.geometry.editorialRadius, backgroundColor: 'rgba(249,241,230,0.48)' },
+  modeSegment: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm },
+  modeSegmentDivider: { borderRightWidth: 1, borderRightColor: 'rgba(174,119,58,0.22)' },
+  modeSegmentSelected: { borderRightWidth: 0, borderRadius: 4, backgroundColor: platformPhoneTheme.colors.primary },
+  modeSegmentSelectedLabel: { color: brandColors.espresso },
   helper: { opacity: 0.68 },
-  settingsList: { gap: spacing.md },
+  settingsList: { gap: spacing.xl },
   settingBlock: { gap: spacing.sm },
   settingLabel: { fontWeight: '700', fontSize: 16, lineHeight: 22 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  presetSummary: { padding: spacing.md, borderRadius: radii.lg, backgroundColor: 'rgba(255,215,102,0.22)', borderWidth: 1, borderColor: 'rgba(255,215,102,0.58)', gap: spacing.sm },
-  presetTitle: { fontSize: 18, lineHeight: 24 },
-  presetLines: { gap: spacing['2xs'] },
-  readySummary: { width: '100%', padding: spacing.md, borderRadius: radii.xl, backgroundColor: 'rgba(255,255,255,0.34)', borderWidth: 1, borderColor: 'rgba(43,31,23,0.12)', alignItems: 'center', gap: spacing.sm },
+  presetSummary: { marginTop: spacing.xs, padding: spacing.lg, borderRadius: 7, backgroundColor: platformPhoneTheme.colors.canvas, borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomWidth: 6, borderColor: platformPhoneTheme.colors.ink, gap: spacing.xs },
+  presetTitle: { fontSize: 22, lineHeight: 28 },
+  presetDescription: { opacity: 0.74, marginBottom: spacing.xs },
+  presetLines: { gap: spacing.xs },
+  presetSettingRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  presetSettingIcon: { width: 28, height: 28, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
+  presetSettingIconText: { fontSize: 12, lineHeight: 16 },
+  presetSettingLabel: { flex: 1, fontFamily: fontFamilies.regular, fontWeight: '400', fontSize: 14, lineHeight: 20 },
+  readySummary: { width: '100%', padding: spacing.md, borderRadius: 7, backgroundColor: platformPhoneTheme.colors.canvas, borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderTopWidth: 6, borderColor: platformPhoneTheme.colors.ready, alignItems: 'center', gap: spacing.sm },
   playersHeading: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  setupPrimaryAction: { width: '100%', minHeight: 54, marginTop: 'auto' },
+  setupPrimaryAction: { width: '100%', maxWidth: 420, alignSelf: 'center', minHeight: 56, borderRadius: radii.md, marginTop: spacing.lg },
+  setupPrimaryLabel: { fontFamily: fontFamilies.extraBold, fontSize: 20, lineHeight: 26, fontWeight: '800' },
   hostOnlyHint: { opacity: 0.68 },
+  setupHostOnlyHint: { marginTop: spacing.sm },
   reopenAction: { minHeight: 44, paddingHorizontal: spacing.lg },
   setupRoster: { width: '100%', gap: spacing.sm },
   setupBottomActions: { gap: spacing.sm, paddingTop: spacing.xs },

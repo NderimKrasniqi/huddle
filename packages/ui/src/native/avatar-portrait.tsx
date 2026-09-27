@@ -6,6 +6,7 @@ import {
   Pressable,
   View,
   type ImageSourcePropType,
+  type ImageStyle,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -29,6 +30,7 @@ export type AvatarPortraitProps = {
   readonly onPress?: () => void;
   readonly testID?: string;
   readonly style?: StyleProp<ViewStyle>;
+  readonly imageStyle?: StyleProp<ImageStyle>;
 };
 
 /** Collectible avatar portrait that becomes a button only when requested. */
@@ -42,6 +44,7 @@ export function AvatarPortrait({
   onPress,
   testID,
   style,
+  imageStyle,
 }: AvatarPortraitProps) {
   const label = displayName === undefined ? `${avatarId} avatar` : `${displayName}'s avatar`;
   const image = (
@@ -55,7 +58,7 @@ export function AvatarPortrait({
       accessible={onPress === undefined}
       accessibilityRole={onPress === undefined ? 'image' : undefined}
       accessibilityLabel={onPress === undefined ? label : undefined}
-      style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
+      style={[styles.image, { width: size, height: size, borderRadius: size / 2 }, imageStyle]}
     />
   );
   const frameStyle = [

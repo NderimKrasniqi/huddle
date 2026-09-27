@@ -1,11 +1,12 @@
 import type { TvGameScreenProps } from '@huddle/domain';
-import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
-import { AvatarPortrait, Badge, HEARTBEAT_ARTWORK, HuddleText } from '@huddle/ui/native';
+import { spacing } from '@huddle/design-tokens';
+import { AvatarPortrait, HEARTBEAT_ARTWORK, HuddleText } from '@huddle/ui/native';
 import { ImageBackground, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useEffect, useState } from 'react';
 
-import { playableVotingState } from './state';
+import { INTRO_SECONDS, playableVotingState } from './state';
 import { votingOptionIcon, votingRecapIcon } from './option-icon';
+import { votingOptionTones, votingTvTheme } from './tv-theme';
 import type { VotingState } from './types';
 import { votingTvModel, type VotingTallyOption, type VotingTvModel } from './watching';
 
@@ -18,6 +19,11 @@ const OVERSCAN_Y = 54;
 export function VotingTvScreen({ state, players, clockRemainingMs }: TvGameScreenProps<VotingState>) {
   const viewport = useWindowDimensions();
   const current = playableVotingState(state);
+  const introCountdown = useCountdownSeconds(
+    current?.phase === 'intro' ? clockRemainingMs : undefined,
+    current?.phase === 'intro' ? INTRO_SECONDS : 0,
+    current === undefined ? 'legacy-intro' : `${current.roundIndex}:intro`,
+  );
   const countdown = useCountdownSeconds(
     current?.phase === 'vote' && current.voteSeconds !== 'none' ? clockRemainingMs : undefined,
     current?.phase === 'vote' && current.voteSeconds !== 'none' ? current.voteSeconds : 0,
@@ -34,10 +40,14 @@ export function VotingTvScreen({ state, players, clockRemainingMs }: TvGameScree
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="voting-tv-screen">
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
         <ImageBackground source={HEARTBEAT_ARTWORK.gameWorlds.voting} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID="voting-tv-world" />
+        <View style={styles.worldWash} pointerEvents="none" focusable={false} />
         <View style={styles.safeFrame} pointerEvents="none" focusable={false}>
-          <HuddleText variant="caption" color="text" style={styles.stageLabel} accessibilityElementsHidden>HUDDLE · VOTING</HuddleText>
+          <View style={styles.stageLabel} pointerEvents="none" focusable={false} accessibilityElementsHidden>
+            <View style={styles.stageLabelHeart} />
+            <HuddleText variant="caption" color="text" style={styles.stageLabelCopy}>VOTING · ROOM MOOD</HuddleText>
+          </View>
           {model.kind === 'legacy' ? <LegacyStage rounds={model.rounds} /> : null}
-          {model.kind === 'intro' ? <IntroStage model={model} players={players} /> : null}
+          {model.kind === 'intro' ? <IntroStage players={players} countdownSeconds={introCountdown} /> : null}
           {model.kind === 'vote' ? <VoteStage model={model} players={players} /> : null}
           {model.kind === 'reveal' ? <RevealStage model={model} /> : null}
           {model.kind === 'finished' ? <FinishedStage model={model} /> : null}
@@ -50,7 +60,7 @@ export function VotingTvScreen({ state, players, clockRemainingMs }: TvGameScree
 function LegacyStage({ rounds }: { readonly rounds: 3 | 5 }) {
   return (
     <View style={styles.legacyBoard} accessible accessibilityRole="text" accessibilityLabel={`Voting needs an update. Room needs an update. This earlier room was set for ${rounds} rounds. Return to the room to start again.`}>
-      <Badge label="VOTING" tone="away" />
+      <VotingTag label="VOTING" tone="muted" />
       <HuddleText variant="tvDisplay" color="text" align="center">Room needs an update</HuddleText>
       <HuddleText variant="bodyLarge" color="text" align="center">This earlier room was set for {rounds} rounds. Return to the room to start again.</HuddleText>
     </View>
@@ -58,28 +68,29 @@ function LegacyStage({ rounds }: { readonly rounds: 3 | 5 }) {
 }
 
 function IntroStage({
-  model,
   players,
+  countdownSeconds,
 }: {
-  readonly model: Extract<VotingTvModel, { kind: 'intro' }>;
   readonly players: TvGameScreenProps<VotingState>['players'];
+  readonly countdownSeconds: number;
 }) {
   return (
-    <View style={styles.introStage} accessible accessibilityRole="text" accessibilityLabel={`Voting ready. Get ready to vote! ${model.rounds} rounds. ${model.playerCount} players. Phones hold each private choice. The room shares the result here. ${model.voteSeconds === 'none' ? 'No visible timer' : `${model.voteSeconds} seconds`}. ${model.results === 'live' ? 'Live tally' : 'Reveal together'}. ${model.voterLabels === 'afterReveal' ? 'Names after reveal' : 'Labels hidden'}.`}>
+      <View style={styles.introStage} accessible accessibilityRole="text" accessibilityLabel={`Voting countdown. Get ready to vote. ${countdownSeconds} seconds remaining. Choices happen privately on the phones.`}>
+      <View style={styles.introHeart} pointerEvents="none" focusable={false}><View style={styles.heartLobe} /><View style={[styles.heartLobe, styles.heartLobeRight]} /><View style={styles.heartPoint} /></View>
       <View style={styles.introBoard} pointerEvents="none" focusable={false}>
         <View style={styles.gameBrand} pointerEvents="none" focusable={false}>
           <View style={styles.brandMark} />
-          <HuddleText variant="title" color="text">Voting</HuddleText>
+          <HuddleText variant="caption" color="text" style={styles.brandLabel}>VOTING / ROOM MOOD</HuddleText>
         </View>
-        <Badge label="VOTING" tone="host" />
         <HuddleText variant="tvDisplay" color="text" align="center">Get ready to vote!</HuddleText>
-        <HuddleText variant="bodyLarge" color="text" align="center">Phones hold each private choice. The room shares the result here.</HuddleText>
-        <View style={styles.introSettings} pointerEvents="none" focusable={false}>
-          <Badge label={`${model.rounds} rounds`} tone="neutral" />
-          <Badge label={model.voteSeconds === 'none' ? 'No visible timer' : `${model.voteSeconds} seconds`} tone="neutral" />
-          <Badge label={model.results === 'live' ? 'Live tally' : 'Reveal together'} tone="neutral" />
-          <Badge label={model.voterLabels === 'afterReveal' ? 'Names after reveal' : 'Labels hidden'} tone="neutral" />
+        <View style={styles.countdownMark} pointerEvents="none" focusable={false}>
+          <HuddleText variant="caption" color="text" align="center" style={styles.countdownLabel}>STARTING IN</HuddleText>
+          <HuddleText variant="hero" color="text" align="center" style={styles.countdownNumber}>{countdownSeconds}</HuddleText>
         </View>
+        <HuddleText variant="bodyLarge" color="text" align="center" style={styles.dimCopy}>Choices happen privately on the phones.</HuddleText>
+      </View>
+      <View style={styles.playerRibbon} pointerEvents="none" focusable={false}>
+        <HuddleText variant="caption" color="text" style={styles.ribbonLabel}>IN THE ROOM</HuddleText>
         <PlayerAvatarStrip players={players} testID="voting-tv-intro-avatars" />
       </View>
     </View>
@@ -97,11 +108,11 @@ function VoteStage({
     <View style={styles.content} accessible accessibilityRole="text" accessibilityLabel={voteAccessibilityLabel(model)}>
       <View style={styles.topRow} pointerEvents="none" focusable={false}>
         <View style={styles.headingCopy}>
-          <HuddleText variant="caption" color="text" style={styles.kicker}>ROUND {model.roundIndex + 1} OF {model.roundCount}</HuddleText>
-          <HuddleText variant="title" color="text">Choose on your phone</HuddleText>
+          <HuddleText variant="caption" color="text" style={styles.kicker}>ROUND {model.roundIndex + 1} / {model.roundCount}</HuddleText>
+          <HuddleText variant="title" color="text">Make your mark</HuddleText>
         </View>
         <View style={styles.topMeta}>
-          {model.live ? <Badge label="LIVE TALLY" tone="host" /> : <Badge label="REVEAL TOGETHER" tone="neutral" />}
+          {model.live ? <VotingTag label="LIVE TALLY" tone="live" /> : <VotingTag label="REVEAL TOGETHER" tone="muted" />}
           <View style={styles.timerPill}>
             <HuddleText variant="hero" color="surface">{model.countdownSeconds ?? '∞'}</HuddleText>
             <HuddleText variant="caption" color="surface">{model.countdownSeconds === undefined ? 'RELAXED' : 'SEC'}</HuddleText>
@@ -114,7 +125,7 @@ function VoteStage({
       </View>
       <View style={styles.participationRow} pointerEvents="none" focusable={false}>
         <View style={styles.participationCopy} pointerEvents="none" focusable={false}>
-          <Badge label={`${model.voted}/${model.playerCount} voted`} tone={model.voted === model.playerCount ? 'ready' : 'host'} />
+          <VotingTag label={`${model.voted}/${model.playerCount} voted`} tone={model.voted === model.playerCount ? 'ready' : 'paper'} />
           <HuddleText variant="bodyLarge" color="text">Votes stay private; only the room’s aggregate appears here.</HuddleText>
         </View>
         <PlayerAvatarStrip players={players} testID="voting-tv-vote-avatars" />
@@ -131,14 +142,14 @@ function RevealStage({ model }: { readonly model: Extract<VotingTvModel, { kind:
           <HuddleText variant="caption" color="text" style={styles.kicker}>ROUND {model.roundIndex + 1} OF {model.roundCount}</HuddleText>
           <HuddleText variant="title" color="text">The room has spoken</HuddleText>
         </View>
-        <Badge label={model.labelsShown ? 'NAMES AFTER REVEAL' : 'SHARED RESULT'} tone="ready" />
+        <VotingTag label={model.labelsShown ? 'NAMES AFTER REVEAL' : 'SHARED RESULT'} tone="ready" />
       </View>
       <View style={styles.promptPanel} pointerEvents="none" focusable={false}><HuddleText variant="display" color="text" align="center">{model.text}</HuddleText></View>
       <View style={styles.optionRow} pointerEvents="none" focusable={false} testID="voting-tv-reveal-grid">
         {model.options.map((option) => <OptionCard key={option.optionIndex} option={option} showResults showNames={model.labelsShown} />)}
       </View>
       <View style={styles.participationRow} pointerEvents="none" focusable={false}>
-        <Badge label={`${model.voted}/${model.playerCount} voted`} tone="ready" />
+        <VotingTag label={`${model.voted}/${model.playerCount} voted`} tone="ready" />
         <HuddleText variant="bodyLarge" color="text">No scores. No winner. Just the room’s vibe.</HuddleText>
       </View>
     </View>
@@ -148,7 +159,7 @@ function RevealStage({ model }: { readonly model: Extract<VotingTvModel, { kind:
 function OptionCard({ option, showResults, showNames = false }: { readonly option: VotingTallyOption; readonly showResults: boolean; readonly showNames?: boolean }) {
   const visibleNames = visibleVoterNames(option);
   return (
-    <View style={styles.optionCard} pointerEvents="none" focusable={false} testID={`voting-tv-option-${option.optionIndex}`}>
+    <View style={[styles.optionCard, { backgroundColor: votingOptionTones[option.optionIndex % votingOptionTones.length] }]} pointerEvents="none" focusable={false} testID={`voting-tv-option-${option.optionIndex}`}>
       <HuddleText variant="hero" style={styles.optionIcon} accessibilityElementsHidden>{votingOptionIcon(option.text)}</HuddleText>
       <HuddleText variant="title" color="text" align="center" numberOfLines={2}>{option.text}</HuddleText>
       {showResults ? (
@@ -166,6 +177,14 @@ function OptionCard({ option, showResults, showNames = false }: { readonly optio
       ) : (
         <HuddleText variant="body" color="text" align="center" style={styles.dimCopy}>Waiting for the room</HuddleText>
       )}
+    </View>
+  );
+}
+
+function VotingTag({ label, tone }: { readonly label: string; readonly tone: 'muted' | 'paper' | 'ready' | 'live' }) {
+  return (
+    <View style={[styles.tag, tone === 'ready' ? styles.readyTag : tone === 'live' ? styles.liveTag : tone === 'muted' ? styles.mutedTag : styles.paperTag]} pointerEvents="none" focusable={false}>
+      <HuddleText variant="caption" color="text" style={styles.tagCopy}>{label}</HuddleText>
     </View>
   );
 }
@@ -231,7 +250,7 @@ function FinishedStage({ model }: { readonly model: Extract<VotingTvModel, { kin
           <View style={[styles.vibeDot, styles.vibeDotMint]} />
           <View style={[styles.vibeDot, styles.vibeDotSky]} />
         </View>
-        <Badge label="ROOM RECAP" tone="ready" />
+        <VotingTag label="ROOM RECAP" tone="ready" />
         <HuddleText variant="tvDisplay" color="text" align="center">That’s the room’s vibe</HuddleText>
         <HuddleText variant="bodyLarge" color="text" align="center">Here’s what the room shared—no scores or winners.</HuddleText>
         <View style={styles.recapList} pointerEvents="none" focusable={false} testID="voting-tv-recap">
@@ -239,7 +258,7 @@ function FinishedStage({ model }: { readonly model: Extract<VotingTvModel, { kin
             <View style={styles.recapCard} pointerEvents="none" focusable={false}><HuddleText variant="title" color="text">Thanks for voting together.</HuddleText></View>
           ) : model.recap.map((item) => (
             <View key={item.kind} style={styles.recapCard} pointerEvents="none" focusable={false} testID={`voting-recap-${item.kind}`}>
-              <HuddleText variant="hero" style={styles.recapIcon} accessibilityElementsHidden>{votingRecapIcon(item.detail)}</HuddleText>
+        <HuddleText variant="hero" style={styles.recapIcon} accessibilityElementsHidden>{votingRecapIcon(item.detail)}</HuddleText>
               <View style={styles.recapCopy} pointerEvents="none" focusable={false}>
                 <HuddleText variant="caption" color="text" style={styles.kicker}>{item.title.toUpperCase()}</HuddleText>
                 <HuddleText variant="title" color="text">{item.detail}</HuddleText>
@@ -323,46 +342,64 @@ function useCountdownSeconds(clockRemainingMs: number | undefined, fallbackSecon
 }
 
 const styles = StyleSheet.create({
-  viewport: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: semanticColors.background },
+  viewport: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: votingTvTheme.blush },
   stage: { width: STAGE_WIDTH, height: STAGE_HEIGHT, overflow: 'hidden' },
+  worldWash: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255, 240, 222, 0.08)' },
   safeFrame: { flex: 1, paddingHorizontal: OVERSCAN_X, paddingVertical: OVERSCAN_Y, gap: spacing.sm },
-  stageLabel: { letterSpacing: 2, opacity: 0.72, paddingLeft: spacing.xs },
+  stageLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: 'rgba(255, 240, 222, 0.78)', borderBottomWidth: 2, borderBottomColor: votingTvTheme.plum },
+  stageLabelHeart: { width: 15, height: 15, backgroundColor: votingTvTheme.coral, transform: [{ rotate: '45deg' }], borderRadius: 3 },
+  stageLabelCopy: { color: votingTvTheme.plum, letterSpacing: 2 },
   introStage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'] },
-  introBoard: { width: 1200, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'], paddingVertical: spacing['3xl'], borderRadius: 40, backgroundColor: 'rgba(249, 241, 230, 0.86)', borderColor: semanticColors.primary, borderWidth: 4, gap: spacing.lg, ...shadows.floating },
-  legacyBoard: { flex: 1, width: 1120, maxWidth: '100%', alignSelf: 'center', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'], paddingVertical: spacing['3xl'], borderRadius: 40, backgroundColor: 'rgba(249, 241, 230, 0.9)', borderColor: semanticColors.primary, borderWidth: 4, gap: spacing.lg, ...shadows.floating },
+  introHeart: { position: 'absolute', left: 370, top: 152, width: 120, height: 120, alignItems: 'center', justifyContent: 'center', opacity: 0.9 },
+  heartLobe: { position: 'absolute', width: 54, height: 76, borderRadius: 42, backgroundColor: votingTvTheme.coral, transform: [{ rotate: '-42deg' }, { translateX: -18 }, { translateY: -18 }] },
+  heartLobeRight: { transform: [{ rotate: '42deg' }, { translateX: 18 }, { translateY: -18 }] },
+  heartPoint: { position: 'absolute', width: 72, height: 72, backgroundColor: votingTvTheme.coral, transform: [{ rotate: '45deg' }, { translateY: 20 }], borderRadius: 6 },
+  introBoard: { width: 930, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'], paddingVertical: spacing['3xl'], borderRadius: 10, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.plum, borderWidth: 2, borderTopWidth: 9, gap: spacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.44, shadowRadius: 18, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  playerRibbon: { position: 'absolute', bottom: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: votingTvTheme.plum },
+  ribbonLabel: { color: votingTvTheme.plum, letterSpacing: 1.8 },
+  legacyBoard: { flex: 1, width: 1120, maxWidth: '100%', alignSelf: 'center', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'], paddingVertical: spacing['3xl'], borderRadius: 10, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.coral, borderWidth: 2, borderTopWidth: 9, gap: spacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.38, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
   gameBrand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  brandMark: { width: 20, height: 20, borderRadius: radii.round, backgroundColor: semanticColors.primary, borderColor: semanticColors.text, borderWidth: 3 },
-  introSettings: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.md },
+  brandMark: { width: 20, height: 20, borderRadius: 3, backgroundColor: votingTvTheme.coral, borderColor: votingTvTheme.plum, borderWidth: 2, transform: [{ rotate: '45deg' }] },
+  brandLabel: { color: votingTvTheme.plum, letterSpacing: 2.1 },
+  countdownLabel: { marginTop: spacing.sm, letterSpacing: 3, color: votingTvTheme.plumSoft },
+  countdownMark: { minWidth: 320, alignItems: 'center', paddingVertical: spacing.sm, borderTopWidth: 2, borderBottomWidth: 2, borderColor: votingTvTheme.rule },
+  countdownNumber: { marginTop: -spacing.sm, fontSize: 168, lineHeight: 184, color: votingTvTheme.coralDark },
   content: { flex: 1, gap: spacing.lg },
   topRow: { minHeight: 112, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.xl },
   headingCopy: { gap: spacing.xs },
   topMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  kicker: { letterSpacing: 1.4, opacity: 0.72 },
-  timerPill: { width: 132, height: 92, paddingHorizontal: spacing.lg, borderRadius: radii.xl, backgroundColor: semanticColors.text, borderColor: semanticColors.primary, borderWidth: 3, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.xs, ...shadows.raised },
-  promptPanel: { minHeight: 196, paddingHorizontal: spacing['3xl'], paddingVertical: spacing.xl, borderRadius: 36, backgroundColor: 'rgba(249, 241, 230, 0.88)', borderColor: semanticColors.primary, borderWidth: 4, alignItems: 'center', justifyContent: 'center', ...shadows.floating },
+  kicker: { letterSpacing: 1.4, color: votingTvTheme.plumSoft },
+  timerPill: { width: 132, height: 92, paddingHorizontal: spacing.lg, borderRadius: 8, backgroundColor: votingTvTheme.plum, borderColor: votingTvTheme.coral, borderWidth: 3, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.xs, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
+  promptPanel: { minHeight: 196, paddingHorizontal: spacing['3xl'], paddingVertical: spacing.xl, borderRadius: 8, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.plum, borderWidth: 2, borderLeftWidth: 10, alignItems: 'center', justifyContent: 'center', shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.38, shadowRadius: 14, shadowOffset: { width: 0, height: 10 }, elevation: 7 },
   optionRow: { flex: 1, flexDirection: 'row', gap: spacing.md, alignItems: 'stretch' },
-  optionCard: { flex: 1, minWidth: 0, minHeight: 360, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, borderRadius: 28, backgroundColor: 'rgba(249, 241, 230, 0.94)', borderColor: 'rgba(43, 31, 23, 0.16)', borderWidth: 2, alignItems: 'center', justifyContent: 'center', gap: spacing.md, ...shadows.card },
-  optionIcon: { fontSize: 58, lineHeight: 68 },
-  tallyTrack: { width: '100%', height: 18, borderRadius: radii.round, overflow: 'hidden', backgroundColor: 'rgba(230, 163, 177, 0.44)' },
-  tallyFill: { height: '100%', borderRadius: radii.round, backgroundColor: semanticColors.primary },
+  optionCard: { flex: 1, minWidth: 0, minHeight: 360, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, borderRadius: 7, borderColor: votingTvTheme.plum, borderWidth: 2, borderBottomWidth: 9, alignItems: 'center', justifyContent: 'center', gap: spacing.md, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 7 }, elevation: 5 },
+  optionIcon: { fontSize: 58, lineHeight: 68, color: votingTvTheme.plum },
+  tallyTrack: { width: '100%', height: 18, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(99, 63, 85, 0.18)' },
+  tallyFill: { height: '100%', borderRadius: 3, backgroundColor: votingTvTheme.coralDark },
   voterLabels: { width: '100%', alignItems: 'center', gap: spacing.xs },
   voterAvatarStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  voterAvatarFallback: { width: 40, height: 40, borderRadius: radii.round, alignItems: 'center', justifyContent: 'center', backgroundColor: semanticColors.secondary },
-  dimCopy: { opacity: 0.64 },
+  voterAvatarFallback: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: votingTvTheme.butter },
+  dimCopy: { color: votingTvTheme.plumSoft },
   participationRow: { minHeight: 72, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.lg },
   participationCopy: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, flex: 1 },
   avatarStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.sm },
   finished: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'] },
-  finishBoard: { width: 1160, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing['2xl'], paddingVertical: spacing.xl, borderRadius: 40, backgroundColor: 'rgba(249, 241, 230, 0.9)', borderColor: semanticColors.primary, borderWidth: 4, ...shadows.floating },
+  finishBoard: { width: 1160, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing['2xl'], paddingVertical: spacing.xl, borderRadius: 9, backgroundColor: 'rgba(255, 240, 222, 0.95)', borderColor: votingTvTheme.plum, borderWidth: 2, borderTopWidth: 9, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.42, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
   vibeMark: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  vibeDot: { width: 28, height: 28, borderRadius: 10, transform: [{ rotate: '45deg' }] },
-  vibeDotCoral: { backgroundColor: semanticColors.primary },
-  vibeDotButter: { backgroundColor: semanticColors.secondary },
-  vibeDotMint: { backgroundColor: semanticColors.success },
-  vibeDotSky: { backgroundColor: semanticColors.info },
+  vibeDot: { width: 28, height: 28, borderRadius: 4, transform: [{ rotate: '45deg' }] },
+  vibeDotCoral: { backgroundColor: votingTvTheme.coral },
+  vibeDotButter: { backgroundColor: votingTvTheme.butter },
+  vibeDotMint: { backgroundColor: votingTvTheme.mint },
+  vibeDotSky: { backgroundColor: votingTvTheme.sky },
   recapList: { width: '100%', gap: spacing.sm },
-  recapCard: { minHeight: 96, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: 22, backgroundColor: 'rgba(255, 111, 97, 0.12)', borderColor: 'rgba(255, 111, 97, 0.32)', borderWidth: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg, ...shadows.card },
-  recapIcon: { width: 64, fontSize: 48, lineHeight: 58, textAlign: 'center' },
+  recapCard: { minHeight: 96, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: 6, backgroundColor: 'rgba(247, 207, 194, 0.62)', borderColor: votingTvTheme.plum, borderWidth: 2, borderLeftWidth: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.22, shadowRadius: 7, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
+  recapIcon: { width: 64, fontSize: 48, lineHeight: 58, textAlign: 'center', color: votingTvTheme.plum },
   recapCopy: { flex: 1, gap: spacing.xs },
   recapValue: { minWidth: 116, textAlign: 'right' },
+  tag: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 4, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  tagCopy: { color: votingTvTheme.plum, letterSpacing: 1.1 },
+  paperTag: { backgroundColor: votingTvTheme.cream, borderColor: votingTvTheme.plum },
+  readyTag: { backgroundColor: votingTvTheme.mint, borderColor: votingTvTheme.plum },
+  mutedTag: { backgroundColor: votingTvTheme.blush, borderColor: votingTvTheme.plum },
+  liveTag: { backgroundColor: votingTvTheme.coral, borderColor: votingTvTheme.plum },
 });

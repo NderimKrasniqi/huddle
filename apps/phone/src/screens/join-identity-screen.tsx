@@ -8,7 +8,7 @@ import {
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_LENGTH,
 } from '@huddle/domain';
-import { brandColors, radii, spacing, typography } from '@huddle/design-tokens';
+import { brandColors, fontFamilies, radii, spacing, typography } from '@huddle/design-tokens';
 import {
   AvatarPortrait,
   HuddleButton,
@@ -328,8 +328,8 @@ export default function JoinIdentityScreen() {
             </View>
 
             <View style={styles.headerCopy}>
-              <HuddleText variant="title" align="center">Pick your vibe</HuddleText>
-              <HuddleText variant="body" align="center" style={styles.subtitle}>Choose an avatar and a name</HuddleText>
+              <HuddleText variant="title" align="center" style={styles.identityTitle}>Pick your vibe</HuddleText>
+              {!showAllAvatars ? <HuddleText variant="body" align="center" style={styles.subtitle}>Choose an avatar and a name</HuddleText> : null}
             </View>
 
             {!showAllAvatars ? (
@@ -374,8 +374,10 @@ export default function JoinIdentityScreen() {
                         }}
                         displayName={avatarLabels[candidate]}
                         testID={`identity-avatar-${candidate}`}
-                        style={styles.avatarTile}
+                        style={[styles.avatarTile, selected && styles.selectedAvatarTile]}
+                        imageStyle={styles.avatarImage}
                       />
+                      {selected ? <View style={styles.selectionCheck} accessible={false}><HuddleText style={styles.selectionCheckText}>✓</HuddleText></View> : null}
                       {taken ? <HuddleText variant="caption" align="center" style={styles.taken}>Taken</HuddleText> : null}
                     </View>
                   );
@@ -383,7 +385,7 @@ export default function JoinIdentityScreen() {
               </View>
             ) : null}
 
-            <View style={styles.nameSection}>
+            <View style={[styles.nameSection, showAllAvatars && styles.expandedNameSection]}>
               <HuddleText variant="caption" style={styles.fieldLabel}>Name</HuddleText>
               <View style={styles.nameField}>
                 <TextInput
@@ -427,8 +429,10 @@ export default function JoinIdentityScreen() {
                           }}
                           displayName={avatarLabels[candidate]}
                           testID={`identity-avatar-${candidate}`}
-                          style={styles.avatarTile}
+                          style={[styles.avatarTile, selected && styles.selectedAvatarTile]}
+                          imageStyle={styles.avatarImage}
                         />
+                        {selected ? <View style={styles.selectionCheck} accessible={false}><HuddleText style={styles.selectionCheckText}>✓</HuddleText></View> : null}
                         {taken ? <HuddleText variant="caption" align="center" style={styles.taken}>Taken</HuddleText> : null}
                       </View>
                     );
@@ -463,14 +467,15 @@ export default function JoinIdentityScreen() {
             {error ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-error"><HuddleText variant="caption" align="center">{error}</HuddleText></View> : null}
 
             <HuddleButton
-              title={isJoining ? 'Joining room…' : 'Join room'}
               onPress={() => void submit()}
               busy={isJoining}
               disabled={!canJoin}
               accessibilityLabel="Join room"
               testID="identity-join"
               style={styles.joinButton}
-            />
+            >
+              <HuddleText style={styles.joinLabel}>{isJoining ? 'Joining room…' : 'Join room'}</HuddleText>
+            </HuddleButton>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -507,34 +512,41 @@ const styles = StyleSheet.create({
   eyebrow: { letterSpacing: 1.2, opacity: 0.68 },
   keyboard: { flex: 1 },
   scroll: { flexGrow: 1 },
-  content: { flexGrow: 1, width: '100%', maxWidth: 390, alignSelf: 'center', paddingHorizontal: spacing.xl, gap: spacing.md, opacity: 0.95 },
+  content: { flexGrow: 1, width: '100%', maxWidth: 430, alignSelf: 'center', paddingHorizontal: spacing.xl, gap: spacing.md, opacity: 0.95 },
   contentReady: { opacity: 1 },
   topRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backButton: { width: 40, height: 40, minHeight: 40, paddingHorizontal: 0, paddingVertical: 0, borderColor: 'rgba(43,31,23,0.16)', borderWidth: 1, borderRadius: radii.round },
   backArrow: { fontSize: 24, lineHeight: 24, fontWeight: '700' },
-  brandMark: { width: 44, height: 40 },
+  brandMark: { width: 44, height: 40, transform: [{ scale: 1.4 }] },
   headerSpacer: { width: 40, height: 40 },
   headerCopy: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
+  identityTitle: { fontSize: 32, lineHeight: 40 },
   subtitle: { maxWidth: 290, opacity: 0.9 },
-  heroFrame: { position: 'relative', width: '100%', height: 208, marginTop: spacing.xs, marginBottom: spacing.xs },
-  heroArtwork: { width: '100%', height: '100%' },
+  heroFrame: { position: 'relative', width: '100%', height: 232, marginTop: spacing.xs, marginBottom: spacing.xs, overflow: 'hidden' },
+  heroArtwork: { width: '100%', height: '100%', transform: [{ scale: 1.25 }] },
   welcomeBadge: { position: 'absolute', top: spacing.sm, right: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.34)' },
-  avatarPickerPrompt: { alignSelf: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.34)' },
-  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md, paddingVertical: spacing.sm },
+  avatarPickerPrompt: { alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.34)' },
+  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.sm },
   compactPicker: { alignItems: 'center', gap: spacing.sm },
   compactAvatarRow: { width: '100%', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   avatarCell: { width: '18%', minWidth: 48, alignItems: 'center', gap: spacing.xs },
-  avatarTile: { borderRadius: radii.md },
+  avatarTile: { width: '100%', height: 92, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(174,119,58,0.28)', backgroundColor: 'rgba(255,255,255,0.18)', shadowOpacity: 0, elevation: 0 },
+  selectedAvatarTile: { borderColor: brandColors.coral, borderWidth: 2 },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 0 },
+  selectionCheck: { position: 'absolute', bottom: -8, right: -4, width: 26, height: 26, borderRadius: radii.round, borderWidth: 2, borderColor: brandColors.cream, backgroundColor: brandColors.coral, alignItems: 'center', justifyContent: 'center' },
+  selectionCheckText: { color: brandColors.cream, fontSize: 18, lineHeight: 22 },
   taken: { color: brandColors.dustyRose, fontSize: 10, lineHeight: 12 },
-  avatarExpand: { minHeight: 32, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
+  avatarExpand: { minHeight: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   avatarExpandText: { color: brandColors.espresso, textDecorationLine: 'underline', opacity: 0.72 },
   nameSection: { gap: spacing.xs, marginTop: spacing.xs },
-  fieldLabel: { opacity: 0.88 },
+  expandedNameSection: { marginTop: spacing.xl },
+  fieldLabel: { fontFamily: fontFamilies.regular, fontWeight: '400', fontSize: 14, lineHeight: 20, opacity: 0.88 },
   nameField: { minHeight: 52, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(43,31,23,0.16)', borderRadius: radii.md, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: spacing.md },
-  nameInput: { ...typography.bodyLarge, flex: 1, color: brandColors.espresso, minHeight: 50, paddingVertical: spacing.sm },
+  nameInput: { ...typography.bodyLarge, fontFamily: fontFamilies.bold, fontWeight: '700', flex: 1, color: brandColors.espresso, minHeight: 50, paddingVertical: spacing.sm },
   editIcon: { fontSize: 18, lineHeight: 24, opacity: 0.82 },
   inlineError: { width: '100%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.28)' },
-  joinButton: { minHeight: 52, borderRadius: radii.md, marginTop: 'auto', marginBottom: spacing.lg },
+  joinButton: { minHeight: 68, borderRadius: radii.md, marginTop: 'auto', marginBottom: spacing.lg },
+  joinLabel: { fontFamily: fontFamilies.bold, fontWeight: '700', fontSize: 22, lineHeight: 28 },
   joiningOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(43,31,23,0.46)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   joiningPanel: { width: '100%', maxWidth: 330, minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, borderRadius: radii.xl, backgroundColor: brandColors.cream, padding: spacing.xl },
   joiningMark: { width: 68, height: 62 },

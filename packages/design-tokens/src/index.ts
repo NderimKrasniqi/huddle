@@ -22,3 +22,9 @@ export {
   reducedMotionDurations,
   type DurationToken,
 } from './motion';
+export {
+  platformPhoneTheme,
+  platformTheme,
+  type PlatformPhoneTheme,
+  type PlatformTheme,
+} from './platform';

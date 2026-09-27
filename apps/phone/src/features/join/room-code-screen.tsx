@@ -1,4 +1,4 @@
-import { brandColors, radii, spacing } from '@huddle/design-tokens';
+import { brandColors, fontFamilies, radii, spacing } from '@huddle/design-tokens';
 import { CodeTiles, HuddleButton, HuddleText, HEARTBEAT_ARTWORK, ScreenShell } from '@huddle/ui/native';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -48,6 +48,7 @@ export function RoomCodeScreen({
   const reducedMotion = usePhoneReducedMotion();
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState(() => codeEntry(initialCode));
+  const [inputFocused, setInputFocused] = useState(false);
   const [opacity] = useState(() => new Animated.Value(0));
   const complete = isCodeComplete(code);
   const pending = complete && availability === undefined;
@@ -107,13 +108,14 @@ export function RoomCodeScreen({
               />
               <HuddleText variant="title" align="center" style={styles.title}>Join a room</HuddleText>
               <HuddleText variant="body" align="center" style={styles.subtitle}>
-                Enter the 4-character code from the TV.
+                Enter the 4-character code from the TV
               </HuddleText>
             </View>
 
             <View style={styles.codeBlock}>
               <Pressable
                 onPress={focusCode}
+                style={styles.codeEntry}
                 accessibilityRole="button"
                 accessibilityLabel={code ? `Room code ${code.split('').join(' ')}` : 'Enter four-letter room code'}
                 accessibilityHint="Opens the keyboard to enter the room code"
@@ -121,16 +123,20 @@ export function RoomCodeScreen({
               >
                 <CodeTiles
                   code={code}
-                  focusedIndex={activeCodeCell(code)}
+                  focusedIndex={inputFocused ? activeCodeCell(code) : undefined}
                   error={missing || full}
                   testID="heartbeat-room-code"
                   style={styles.codeTiles}
+                  tileStyle={styles.codeTile}
+                  valueStyle={styles.codeValue}
                 />
               </Pressable>
               <TextInput
                 ref={inputRef}
                 value={code}
                 onChangeText={updateCode}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 autoComplete="off"
@@ -170,14 +176,15 @@ export function RoomCodeScreen({
 
             <View style={[styles.actions, !complete && styles.actionsEmpty]}>
               <HuddleButton
-                title="Continue"
                 variant={canContinue ? 'primary' : 'secondary'}
                 onPress={() => onContinue(code)}
                 disabled={!canContinue}
                 accessibilityLabel="Continue to pick your vibe"
                 testID="continue-to-vibe"
                 style={canContinue ? styles.primaryAction : styles.disabledAction}
-              />
+              >
+                <HuddleText variant="body" style={[styles.continueLabel, !canContinue && styles.disabledLabel]}>Continue</HuddleText>
+              </HuddleButton>
               <HuddleButton
                 title={full ? 'Try another code' : undefined}
                 variant="secondary"
@@ -188,9 +195,11 @@ export function RoomCodeScreen({
               >
                 {full ? null : (
                   <>
-                    <HuddleText variant="body" color="text" accessible={false} style={styles.qrGlyph}>
-                      ▦
-                    </HuddleText>
+                    <View style={styles.qrIcon} accessible={false}>
+                      <View style={styles.qrFinder} /><View style={styles.qrFinder} />
+                      <View style={styles.qrFinder} />
+                      <View style={styles.qrPixels}><View style={styles.qrPixel} /><View style={styles.qrPixel} /></View>
+                    </View>
                     <HuddleText variant="body" color="text" style={styles.buttonLabel}>
                       Scan QR code
                     </HuddleText>
@@ -209,16 +218,19 @@ const styles = StyleSheet.create({
   root: { paddingHorizontal: 0, overflow: 'hidden' },
   keyboard: { flex: 1 },
   scroll: { flexGrow: 1 },
-  content: { width: '100%', maxWidth: 390, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing['2xl'] },
+  content: { width: '100%', maxWidth: 430, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 10, gap: spacing['2xl'] },
   environmentArtwork: { backgroundColor: brandColors.cream },
   environmentImage: { top: '24%', height: '76%' },
   environmentVeil: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: brandColors.cream, opacity: 0.08 },
   brand: { alignItems: 'center', gap: spacing.sm },
-  brandMark: { width: 46, height: 42, marginBottom: spacing.sm },
-  title: { letterSpacing: -0.3 },
-  subtitle: { maxWidth: 300, opacity: 0.9 },
+  brandMark: { width: 46, height: 42, marginBottom: spacing.sm, transform: [{ scale: 1.45 }] },
+  title: { fontSize: 36, lineHeight: 44, letterSpacing: -0.3 },
+  subtitle: { fontSize: 16, lineHeight: 22, opacity: 0.9 },
   codeBlock: { alignItems: 'center', gap: spacing.lg },
-  codeTiles: { transform: [{ scale: 1.28 }] },
+  codeEntry: { width: '100%' },
+  codeTiles: { width: '100%', gap: spacing.md },
+  codeTile: { flex: 1, width: undefined, height: 76, borderRadius: radii.md, borderColor: 'rgba(174,119,58,0.46)', backgroundColor: 'rgba(255,255,255,0.18)', shadowOpacity: 0, elevation: 0 },
+  codeValue: { fontSize: 38, lineHeight: 46 },
   hiddenInput: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   notice: { minHeight: 42, width: '100%', borderRadius: radii.md, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   noticeNeutral: { backgroundColor: 'rgba(255,255,255,0.48)', borderColor: 'rgba(43,31,23,0.18)' },
@@ -226,11 +238,16 @@ const styles = StyleSheet.create({
   noticeError: { backgroundColor: 'rgba(230,163,177,0.32)', borderColor: brandColors.dustyRose },
   noticeFull: { backgroundColor: brandColors.butter, borderColor: brandColors.butter },
   statusIcon: { width: 22, height: 22, borderRadius: radii.round, alignItems: 'center', justifyContent: 'center', backgroundColor: brandColors.mint },
-  actions: { gap: spacing.lg, paddingBottom: spacing.lg },
-  actionsEmpty: { marginTop: spacing['4xl'] },
-  primaryAction: { minHeight: 52, borderRadius: radii.md },
-  disabledAction: { minHeight: 52, borderRadius: radii.md, backgroundColor: 'rgba(43,31,23,0.10)', borderColor: 'rgba(43,31,23,0.10)', opacity: 1 },
-  secondaryAction: { minHeight: 50, borderRadius: radii.md, backgroundColor: 'rgba(255,255,255,0.2)' },
-  qrGlyph: { fontSize: 18, lineHeight: 20, fontWeight: '800' },
-  buttonLabel: { fontWeight: '700' },
+  actions: { gap: spacing['2xl'], paddingBottom: spacing.lg },
+  actionsEmpty: { marginTop: spacing['3xl'] },
+  primaryAction: { minHeight: 64, borderRadius: radii.md },
+  disabledAction: { minHeight: 64, borderRadius: radii.md, backgroundColor: 'rgba(43,31,23,0.10)', borderWidth: 0, opacity: 1 },
+  secondaryAction: { minHeight: 60, borderRadius: radii.md, borderColor: 'rgba(43,31,23,0.8)', backgroundColor: 'rgba(255,255,255,0.2)', shadowOpacity: 0, elevation: 0 },
+  continueLabel: { fontFamily: fontFamilies.bold, fontSize: 22, lineHeight: 28, fontWeight: '700' },
+  disabledLabel: { color: 'rgba(43,31,23,0.5)' },
+  qrIcon: { width: 22, height: 22, flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
+  qrFinder: { width: 9, height: 9, borderWidth: 2, borderColor: brandColors.espresso, borderRadius: 1 },
+  qrPixels: { width: 9, height: 9, justifyContent: 'space-between' },
+  qrPixel: { width: 4, height: 4, backgroundColor: brandColors.espresso },
+  buttonLabel: { fontFamily: fontFamilies.bold, fontSize: 18, fontWeight: '700' },
 });

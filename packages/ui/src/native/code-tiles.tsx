@@ -1,5 +1,5 @@
 import { radii, semanticColors, shadows, spacing, typography } from '@huddle/design-tokens';
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 export type CodeTilesProps = {
   readonly code?: string;
@@ -10,6 +10,8 @@ export type CodeTilesProps = {
   readonly accessibilityLabel?: string;
   readonly testID?: string;
   readonly style?: StyleProp<ViewStyle>;
+  readonly tileStyle?: StyleProp<ViewStyle>;
+  readonly valueStyle?: StyleProp<TextStyle>;
 };
 
 /** Four-character room code presented as native, legible tiles. */
@@ -22,6 +24,8 @@ export function CodeTiles({
   accessibilityLabel,
   testID,
   style,
+  tileStyle,
+  valueStyle,
 }: CodeTilesProps) {
   const normalizedCode = code.toUpperCase();
   const tiles = Array.from({ length }, (_, index) => normalizedCode[index] ?? '');
@@ -30,11 +34,11 @@ export function CodeTiles({
       {tiles.map((value, index) => (
         <View
           key={`${index}-${value}`}
-          style={[styles.tile, focusedIndex === index ? styles.focused : null, error ? styles.error : null]}
+          style={[styles.tile, tileStyle, focusedIndex === index ? styles.focused : null, error ? styles.error : null]}
           accessible={false}
           focusable={false}
         >
-          <Text style={styles.value}>{value}</Text>
+          <Text style={[styles.value, valueStyle]}>{value}</Text>
         </View>
       ))}
     </View>

@@ -24,6 +24,8 @@ export type GameCardProps = {
   readonly disabled?: boolean;
   readonly onPress?: PressableProps['onPress'];
   readonly interactive?: boolean;
+  readonly titleAlign?: TextStyle['textAlign'];
+  readonly artFrameStyle?: StyleProp<ViewStyle>;
   readonly accessibilityLabel?: string;
   readonly testID?: string;
   readonly style?: StyleProp<ViewStyle>;
@@ -49,6 +51,8 @@ export function GameCard({
   disabled = false,
   onPress,
   interactive = true,
+  titleAlign,
+  artFrameStyle,
   accessibilityLabel,
   testID,
   style,
@@ -69,16 +73,16 @@ export function GameCard({
           <HuddleText variant="title" color="surface" style={styles.stateMarkText}>{comingSoon ? '−' : '✓'}</HuddleText>
         </View>
       ) : null}
-      <View style={styles.artFrame}>
+      <View style={[styles.artFrame, artFrameStyle]}>
         <Image source={image} resizeMode="contain" accessible={false} style={styles.art} />
       </View>
-      <View style={styles.copy}>
-        <View style={styles.headingRow}>
-          <HuddleText variant="title" color="text" numberOfLines={1}>{title}</HuddleText>
+      <View style={[styles.copy, titleAlign === 'center' ? styles.centerCopy : null]}>
+        <View style={[styles.headingRow, titleAlign === 'center' ? styles.centerHeading : null]}>
+          <HuddleText variant="title" color="text" numberOfLines={1} style={titleAlign === undefined ? null : { textAlign: titleAlign }}>{title}</HuddleText>
         </View>
-        {description ? <HuddleText variant="body" color="text" numberOfLines={2}>{description}</HuddleText> : null}
+        {description ? <HuddleText variant="body" color="text" numberOfLines={2} style={titleAlign === undefined ? null : { textAlign: titleAlign }}>{description}</HuddleText> : null}
         {metadata && metadata.length > 0 ? (
-          <HuddleText variant="caption" color="text">{metadata.join(' • ')}</HuddleText>
+          <HuddleText variant="caption" color="text" style={titleAlign === undefined ? null : { textAlign: titleAlign }}>{metadata.join(' • ')}</HuddleText>
         ) : null}
       </View>
     </>
@@ -139,6 +143,13 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  } satisfies ViewStyle,
+  centerCopy: {
+    alignItems: 'center',
+  } satisfies ViewStyle,
+  centerHeading: {
+    width: '100%',
+    justifyContent: 'center',
   } satisfies ViewStyle,
   stateMark: {
     width: 28,

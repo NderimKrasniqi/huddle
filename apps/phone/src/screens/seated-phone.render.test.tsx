@@ -249,7 +249,7 @@ describe('Heartbeat Phone picker', () => {
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
     expect(result.getByTestId('setup-nav-back')).toBeTruthy();
     expect(result.queryByTestId('setup-back-to-room')).toBeNull();
-    expect(result.getByText('Get everyone ready to play.')).toBeTruthy();
+    expect(result.getByText("You're all set!")).toBeTruthy();
     await fireEvent.press(ready);
     expect(onReady).toHaveBeenCalledTimes(1);
   });

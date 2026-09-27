@@ -1,6 +1,6 @@
 import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import type { AvatarId } from '@huddle/contracts';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { AvatarPortrait } from './avatar-portrait';
 import { Badge, type HuddleBadgeTone } from './badge';
@@ -23,6 +23,7 @@ export type PlayerRowProps = {
   readonly status?: PlayerPresence;
   readonly isHost?: boolean;
   readonly action?: PlayerRowAction;
+  readonly compact?: boolean;
   readonly style?: StyleProp<ViewStyle>;
   readonly testID?: string;
 };
@@ -41,20 +42,26 @@ export function PlayerRow({
   status = 'waiting',
   isHost = false,
   action,
+  compact = false,
   style,
   testID,
 }: PlayerRowProps) {
   const presence = presenceCopy[status];
   return (
-    <View testID={testID} focusable={false} style={[styles.row, style]}>
-      <AvatarPortrait avatarId={avatarId} displayName={displayName} size={48} />
-      <View focusable={false} style={styles.identity}>
-        <HuddleText variant="body" color="text" numberOfLines={1}>{displayName}</HuddleText>
-        <View focusable={false} style={styles.meta}>
-          <Badge label={presence.label} tone={presence.tone} />
-          {isHost ? <Badge label="Host" tone="host" /> : null}
-        </View>
+    <View testID={testID} focusable={false} style={[styles.row, compact ? styles.compactRow : null, style]}>
+      <AvatarPortrait avatarId={avatarId} displayName={displayName} size={compact ? 36 : 48} />
+      <View focusable={false} style={compact ? styles.compactIdentity : styles.identity}>
+        <HuddleText variant={compact ? 'body' : 'body'} color="text" numberOfLines={1}>{displayName}</HuddleText>
+        {compact ? (
+          <HuddleText variant="caption" style={styles.compactMeta}>{isHost ? 'Host' : presence.label}</HuddleText>
+        ) : (
+          <View focusable={false} style={styles.meta}>
+            <Badge label={presence.label} tone={presence.tone} />
+            {isHost ? <Badge label="Host" tone="host" /> : null}
+          </View>
+        )}
       </View>
+      {compact ? <HuddleText variant="title" style={[styles.compactStatus, isHost ? styles.compactHost : null]} accessibilityElementsHidden>{isHost ? '♛' : status === 'ready' ? '✓' : status === 'away' ? '◷' : '•'}</HuddleText> : null}
       {action ? (
         <HuddleButton
           title={action.label}
@@ -80,10 +87,33 @@ const styles = {
     alignItems: 'center',
     gap: spacing.md,
   } satisfies ViewStyle,
+  compactRow: {
+    minHeight: 56,
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: semanticColors.border,
+    borderRadius: radii.md,
+    gap: spacing.sm,
+  } satisfies ViewStyle,
   identity: {
     flex: 1,
     gap: spacing.xs,
   } satisfies ViewStyle,
+  compactIdentity: {
+    flex: 1,
+    gap: 0,
+  } satisfies ViewStyle,
+  compactMeta: {
+    opacity: 0.72,
+  } satisfies TextStyle,
+  compactStatus: {
+    fontSize: 18,
+    lineHeight: 22,
+    color: semanticColors.success,
+  } satisfies TextStyle,
+  compactHost: {
+    color: semanticColors.primary,
+  } satisfies TextStyle,
   meta: {
     flexDirection: 'row',
     alignItems: 'center',

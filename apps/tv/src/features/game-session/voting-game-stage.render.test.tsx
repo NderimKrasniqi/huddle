@@ -32,12 +32,29 @@ const liveState = {
   tally: [1, 1, 0, 0] as const,
 };
 
-function TvVoting({ state, stagePlayers = players }: { readonly state: unknown; readonly stagePlayers?: readonly GamePlayer[] }) {
-  return votingModule.screens.tv({ state, players: stagePlayers, clockRemainingMs: 12_500 });
+const introState = {
+  ...liveState,
+  phase: 'intro' as const,
+};
+
+function TvVoting({ state, stagePlayers = players, clockRemainingMs = 12_500 }: { readonly state: unknown; readonly stagePlayers?: readonly GamePlayer[]; readonly clockRemainingMs?: number }) {
+  return votingModule.screens.tv({ state, players: stagePlayers, clockRemainingMs });
 }
 
 describe('Voting TV game renderer', () => {
   afterEach(() => cleanup());
+
+  it('shows the game-specific start countdown without carrying setup settings into play', async () => {
+    const result = await render(<TvVoting state={introState} clockRemainingMs={2_400} />);
+
+    expect(result.getByText('Get ready to vote!')).toBeTruthy();
+    expect(result.getByText('STARTING IN')).toBeTruthy();
+    expect(result.getByText('3')).toBeTruthy();
+    expect(result.getByLabelText(/Voting countdown.*3 seconds remaining/)).toBeTruthy();
+    expect(result.queryByText('rounds')).toBeNull();
+    expect(result.queryByText('No visible timer')).toBeNull();
+    expect(result.queryAllByRole('button')).toHaveLength(0);
+  });
 
   it('shows aggregate live results with no controls or player-to-choice copy', async () => {
     const result = await render(<TvVoting state={liveState} />);

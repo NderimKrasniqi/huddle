@@ -1,4 +1,4 @@
-import { brandColors, radii, spacing } from '@huddle/design-tokens';
+import { brandColors, fontFamilies, radii, spacing } from '@huddle/design-tokens';
 import { HuddleButton, HuddleText, HEARTBEAT_ARTWORK } from '@huddle/ui/native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useIsFocused, useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import {
   Linking,
   Pressable,
   StyleSheet,
+  StatusBar,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -76,6 +77,7 @@ export function ScanScreen() {
 
   return (
     <View style={[styles.root, cameraSurface ? styles.cameraRoot : styles.recoveryRoot]} testID="qr-scanner-screen">
+      <StatusBar barStyle={cameraSurface ? 'light-content' : 'dark-content'} />
       {focused && cameraSurface ? (
         <CameraView
           style={StyleSheet.absoluteFill}
@@ -105,7 +107,7 @@ export function ScanScreen() {
           <View style={styles.topButtonSpacer} />
         </View>
 
-        <View style={styles.content}>
+        <View style={[styles.content, cameraSurface && !message ? styles.cameraContent : null]}>
           {cameraState === 'checking' ? (
             <View style={styles.introContent} testID="scanner-intro">
               <Image
@@ -183,7 +185,6 @@ export function ScanScreen() {
                   <View style={[styles.corner, styles.cornerTopRight]} />
                   <View style={[styles.corner, styles.cornerBottomLeft]} />
                   <View style={[styles.corner, styles.cornerBottomRight]} />
-                  <HuddleText variant="caption" color="surface" align="center" style={styles.frameHint}>Place the TV code here</HuddleText>
                 </View>
               )}
             </>
@@ -191,8 +192,8 @@ export function ScanScreen() {
         </View>
 
         {cameraSurface ? (
-          <HuddleButton variant="ghost" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-manual-code" style={styles.manualButton}>
-            <HuddleText variant="body" color="surface">Enter code manually</HuddleText>
+          <HuddleButton variant="secondary" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-manual-code" style={styles.manualButton}>
+            <HuddleText variant="body" style={styles.manualLabel}>Enter code instead</HuddleText>
           </HuddleButton>
         ) : null}
       </SafeAreaView>
@@ -209,8 +210,9 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   backButton: { width: 44, height: 44, borderRadius: radii.round, alignItems: 'center', justifyContent: 'center' },
   topButtonSpacer: { width: 44, height: 44 },
-  topTitle: { flex: 1, fontWeight: '700' },
+  topTitle: { flex: 1, fontFamily: fontFamilies.bold, fontWeight: '700' },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
+  cameraContent: { justifyContent: 'flex-start', paddingTop: spacing['4xl'] },
   introContent: { width: '100%', maxWidth: 330, alignItems: 'center', gap: spacing.lg },
   introArtwork: { width: '100%', height: 250, marginBottom: spacing.sm },
   recoveryContent: { width: '100%', maxWidth: 330, alignItems: 'center', gap: spacing.md },
@@ -219,7 +221,6 @@ const styles = StyleSheet.create({
   recoveryAction: { width: '100%', minHeight: 50, borderRadius: radii.md },
   recoverySecondaryAction: { width: '100%', minHeight: 48, borderRadius: radii.md },
   frame: { width: '100%', maxWidth: 320, aspectRatio: 1.08, borderRadius: radii.xl, alignItems: 'center', justifyContent: 'center' },
-  frameHint: { opacity: 0.8, marginTop: 230 },
   corner: { position: 'absolute', width: 58, height: 58, borderColor: brandColors.cream },
   cornerTopLeft: { top: 0, left: 0, borderTopWidth: 5, borderLeftWidth: 5, borderTopLeftRadius: radii.lg },
   cornerTopRight: { top: 0, right: 0, borderTopWidth: 5, borderRightWidth: 5, borderTopRightRadius: radii.lg },
@@ -228,5 +229,6 @@ const styles = StyleSheet.create({
   scanAlert: { width: '100%', maxWidth: 330, alignItems: 'center', gap: spacing.md, padding: spacing.xl, borderRadius: radii.xl, backgroundColor: 'rgba(230,163,177,0.92)' },
   alertTitle: { color: brandColors.espresso },
   alertDetail: { opacity: 0.72 },
-  manualButton: { alignSelf: 'center', marginBottom: spacing.lg, borderColor: brandColors.cream, opacity: 0.9 },
+  manualButton: { alignSelf: 'center', width: '80%', maxWidth: 320, minHeight: 50, marginBottom: spacing.lg, borderRadius: radii.md, borderColor: brandColors.cream, backgroundColor: brandColors.cream, shadowOpacity: 0, elevation: 0 },
+  manualLabel: { fontFamily: fontFamilies.bold, fontWeight: '700' },
 });

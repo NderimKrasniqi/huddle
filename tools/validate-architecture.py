@@ -131,6 +131,26 @@ HEARTBEAT_RUNTIME_ASSET_SPECS = {
         False,
         "d8a645d4e614097ba11fd895a6640ba5c49b1b81cf3b02a7ef0f4d480b859cad",
     ),
+    "phone/trivia-leaves.png": (
+        (853, 1844),
+        False,
+        "07fe1b4b59da47216122f217d065e9ec4fd6ef07bc59beb4811d0de610faf40c",
+    ),
+    "phone/trivia-tv-reveal.png": (
+        (853, 1844),
+        False,
+        "c3145fa6c991f76b6f1688f96be91c5a054ff03fa4b2a80c6021d1760d5c3870",
+    ),
+    "phone/voting-room-art.png": (
+        (863, 980),
+        False,
+        "ac2f4e2034aa16a28b6f4c0beac94fdd4930fb891068cc1458db85f6918da24b",
+    ),
+    "phone/voting-clouds.png": (
+        (935, 1683),
+        False,
+        "56392752938dddf3325e10f5545d7f66abe0d2a0897ffec6c6b88f7b30cdcae4",
+    ),
     "phone/join-environment.png": (
         (853, 1844),
         False,
@@ -159,7 +179,7 @@ HEARTBEAT_RUNTIME_ASSET_SPECS = {
     "tv/platform-living-room.png": (
         (1672, 941),
         False,
-        "6da8a6e181b189fb42d19b9df548a5591e7e1953ddc3ed6f2be5219794f644e5",
+        "b912d37a0c4d7c5be1f2589607d10e006916896711ccb33fa00d65ebc1413fd0",
     ),
     "tv/platform-stage.png": (
         (1672, 941),

@@ -136,7 +136,7 @@ describe('TvGameFlowStage', () => {
     await rendered.unmount();
   });
 
-  it('shows the ready surface only after every current player is ready', async () => {
+  it('keeps the selected game art and settings visible after everyone is ready', async () => {
     await render(
       <TvGameFlowStage
         browsingAt={0}
@@ -147,9 +147,11 @@ describe('TvGameFlowStage', () => {
       />,
     );
 
-    expect(screen.getByTestId('tv-game-ready')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-setup')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-setup-settings')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-setting-questions')).toBeTruthy();
     expect(screen.getByText('Everyone is ready!')).toBeTruthy();
-    expect(screen.getByText('Room KWRD')).toBeTruthy();
+    expect(screen.queryByTestId('tv-game-ready')).toBeNull();
   });
 
   it('passes the stable seat artwork into the setup roster projection', async () => {

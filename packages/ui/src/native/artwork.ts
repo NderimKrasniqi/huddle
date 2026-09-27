@@ -22,6 +22,10 @@ export const HEARTBEAT_ARTWORK = {
     launcherMark: nativeAsset(() => require('../../assets/heartbeat/brand/huddle-launcher-mark.png')),
   },
   phone: {
+    triviaLeaves: nativeAsset(() => require('../../assets/heartbeat/phone/trivia-leaves.png')),
+    triviaTvReveal: nativeAsset(() => require('../../assets/heartbeat/phone/trivia-tv-reveal.png')),
+    votingClouds: nativeAsset(() => require('../../assets/heartbeat/phone/voting-clouds.png')),
+    votingRoomArt: nativeAsset(() => require('../../assets/heartbeat/phone/voting-room-art.png')),
     joinEnvironment: nativeAsset(() => require('../../assets/heartbeat/phone/join-environment.png')),
     manualJoinRoom: nativeAsset(() => require('../../assets/heartbeat/phone/manual-join-room.png')),
     identityEnvironment: nativeAsset(() => require('../../assets/heartbeat/phone/identity-environment.png')),

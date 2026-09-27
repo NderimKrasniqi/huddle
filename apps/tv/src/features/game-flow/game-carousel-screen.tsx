@@ -1,16 +1,17 @@
-import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { radii, semanticColors, spacing } from '@huddle/design-tokens';
 import {
   HEARTBEAT_ARTWORK,
   HuddleText,
+  PlatformBrandLockup,
+  PlatformPortal,
+  PlatformStage,
 } from '@huddle/ui/native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Image,
-  ImageBackground,
   StyleSheet,
   View,
-  useWindowDimensions,
 } from 'react-native';
 
 import { gameCardAsset } from './assets';
@@ -19,9 +20,6 @@ import {
   tvHostCopy,
   type TvGameCarouselCard,
 } from './game-flow-model';
-
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
 
 export type TvGameCarouselScreenProps = {
   readonly hostName?: string;
@@ -51,8 +49,6 @@ export function TvGameCarouselScreen({
   cards = DEFAULT_TV_CAROUSEL_CARDS,
   reduceMotion = false,
 }: TvGameCarouselScreenProps) {
-  const viewport = useWindowDimensions();
-  const scale = safeScale(viewport.width, viewport.height);
   // The live registry always has five entries, but direct previews can pass
   // an empty list while data is resolving. Keep three real cards on screen.
   const catalog = cards.length > 0 ? cards : DEFAULT_TV_CAROUSEL_CARDS;
@@ -81,79 +77,70 @@ export function TvGameCarouselScreen({
       accessible={false}
       testID="tv-game-carousel"
     >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
+      <PlatformStage
+        testID="tv-game-carousel-stage"
+        backgroundTestID="tv-game-flow-background"
+        shadeOpacity={0.1}
         pointerEvents="none"
         focusable={false}
         accessible={false}
       >
-        <ImageBackground
-          source={HEARTBEAT_ARTWORK.tv.platformLivingRoom}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="tv-game-flow-background"
-        />
-        <View style={styles.atmosphereShade} pointerEvents="none" focusable={false} />
-        <View style={styles.screenFrame} pointerEvents="none" focusable={false}>
-          <View style={styles.screenInner} pointerEvents="none" focusable={false}>
-            <View style={styles.header} pointerEvents="none" focusable={false} accessible={false}>
-              <HuddleText variant="tvDisplay" color="surface" align="center" style={styles.heading}>
-                What shall we play?
-              </HuddleText>
-              <HuddleText
-                variant="bodyLarge"
-                color="surface"
-                align="center"
-                style={styles.subheading}
-                accessibilityLabel={`${spokenHost} is choosing a game`}
-              >
-                {tvHostCopy(hostName, 'is choosing a game.')}
-              </HuddleText>
-            </View>
-
-            <View
-              style={styles.carousel}
-              pointerEvents="none"
-              focusable={false}
-              accessible={false}
-              testID="tv-game-carousel-cards"
-            >
-              {slots.map((slot) => (
-                <CarouselCard
-                  key={`${slot.position}-${slot.card?.id ?? 'empty'}`}
-                  card={slot.card}
-                  selected={slot.position === 'selected'}
-                  reduceMotion={reduceMotion}
-                  position={slot.position}
-                />
-              ))}
-            </View>
-
-            <View style={styles.footer} pointerEvents="none" focusable={false} accessible={false}>
-              <HuddleText variant="body" color="surface" align="center" style={styles.selectedDescription}>
-                {selectedCard ? descriptionFor(selectedCard.id) : 'Choose a game on your phone.'}
-              </HuddleText>
-              <HuddleText variant="caption" color="surface" align="center" style={styles.selectedMeta}>
-                {selectedCard ? metadataFor(selectedCard.id) : '2 – 10 Players  •  All Ages'}
-              </HuddleText>
-              <View style={styles.dots} pointerEvents="none" focusable={false}>
-                {catalog.map((card, index) => (
-                  <View
-                    key={card.id}
-                    style={[styles.dot, index === safeIndex ? styles.activeDot : null]}
-                    pointerEvents="none"
-                    focusable={false}
-                  />
-                ))}
-              </View>
-              <HuddleText variant="caption" color="surface" align="center" style={styles.phoneHint}>
-                Use the Host phone to choose a game
-              </HuddleText>
-            </View>
-          </View>
+        <PlatformBrandLockup testID="tv-game-carousel-brand" style={styles.brandRow} />
+        <View style={styles.header} pointerEvents="none" focusable={false} accessible={false}>
+          <HuddleText variant="tvDisplay" color="surface" align="center" style={styles.heading}>
+            What shall we play?
+          </HuddleText>
+          <HuddleText
+            variant="bodyLarge"
+            color="surface"
+            align="center"
+            style={styles.subheading}
+            accessibilityLabel={`${spokenHost} is choosing a game`}
+          >
+            {tvHostCopy(hostName, 'is choosing a game.')}
+          </HuddleText>
         </View>
-      </View>
+
+        <View
+          style={styles.carousel}
+          pointerEvents="none"
+          focusable={false}
+          accessible={false}
+          testID="tv-game-carousel-cards"
+        >
+          {slots.map((slot) => (
+            <CarouselCard
+              key={`${slot.position}-${slot.card?.id ?? 'empty'}`}
+              card={slot.card}
+              selected={slot.position === 'selected'}
+              reduceMotion={reduceMotion}
+              position={slot.position}
+            />
+          ))}
+        </View>
+
+        <View style={styles.footer} pointerEvents="none" focusable={false} accessible={false}>
+          <HuddleText variant="body" color="surface" align="center" style={styles.selectedDescription}>
+            {selectedCard ? descriptionFor(selectedCard.id) : 'Choose a game on your phone.'}
+          </HuddleText>
+          <HuddleText variant="caption" color="surface" align="center" style={styles.selectedMeta}>
+            {selectedCard ? metadataFor(selectedCard.id) : '2 – 10 Players  •  All Ages'}
+          </HuddleText>
+          <View style={styles.dots} pointerEvents="none" focusable={false}>
+            {catalog.map((card, index) => (
+              <View
+                key={card.id}
+                style={[styles.dot, index === safeIndex ? styles.activeDot : null]}
+                pointerEvents="none"
+                focusable={false}
+              />
+            ))}
+          </View>
+          <HuddleText variant="caption" color="surface" align="center" style={styles.phoneHint}>
+            Use the Host phone to choose a game
+          </HuddleText>
+        </View>
+      </PlatformStage>
     </View>
   );
 }
@@ -215,28 +202,30 @@ function CarouselCard({
     <Animated.View
       pointerEvents="none"
       focusable={false}
-      accessible
-      accessibilityRole="image"
-      accessibilityLabel={label}
       style={[styles.cardSlot, selected ? styles.selectedSlot : position === 'previous' ? styles.previousSlot : styles.nextSlot, { transform }]}
-      testID={`tv-game-card-${resolvedCard.id}`}
     >
-      <View style={[styles.card, { backgroundColor: cardTone }]} pointerEvents="none" focusable={false}>
-        <View style={styles.cardTopLine} pointerEvents="none" focusable={false}>
-          <HuddleText variant="title" color="text" style={styles.cardTitle} numberOfLines={2}>
-            {resolvedCard.title}
-          </HuddleText>
-          {selected ? <View style={styles.selectedDot} pointerEvents="none" focusable={false} /> : null}
-        </View>
-        <View style={styles.cardArtworkFrame} pointerEvents="none" focusable={false}>
-          <Image source={image} resizeMode="contain" style={styles.cardArtwork} accessible={false} />
-        </View>
-        {resolvedCard.available === false ? (
-          <View style={styles.comingSoonBadge} pointerEvents="none" focusable={false}>
-            <HuddleText variant="caption" color="text">Coming soon</HuddleText>
-          </View>
-        ) : null}
-      </View>
+      <PlatformPortal
+        accentColor={cardTone}
+        selected={selected}
+        title={resolvedCard.title}
+        status={
+          resolvedCard.available === false ? (
+            <View style={styles.comingSoonBadge} pointerEvents="none" focusable={false}>
+              <HuddleText variant="caption" color="surface">Coming soon</HuddleText>
+            </View>
+          ) : null
+        }
+        accessibilityLabel={label}
+        testID={`tv-game-card-${resolvedCard.id}`}
+        style={styles.portal}
+      >
+        <Image
+          source={image}
+          resizeMode="contain"
+          style={selected ? styles.selectedArtwork : styles.edgeArtwork}
+          accessible={false}
+        />
+      </PlatformPortal>
     </Animated.View>
   );
 }
@@ -296,11 +285,6 @@ function wrapIndex(index: number, length: number): number {
   return normalized < 0 ? normalized + length : normalized;
 }
 
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
-}
-
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
@@ -309,42 +293,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: semanticColors.text,
   },
-  stage: {
-    width: STAGE_WIDTH,
-    height: STAGE_HEIGHT,
-    overflow: 'hidden',
-  },
-  atmosphereShade: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.24,
-  },
-  screenFrame: {
-    position: 'absolute',
-    left: 122,
-    right: 122,
+  brandRow: {
+    left: 104,
     top: 68,
-    bottom: 140,
-    borderRadius: radii.xl,
-    padding: 14,
-    backgroundColor: semanticColors.text,
-    borderWidth: 4,
-    borderColor: 'rgba(249,241,230,0.30)',
-    ...shadows.floating,
-  },
-  screenInner: {
-    flex: 1,
-    borderRadius: radii.lg,
-    backgroundColor: 'rgba(43,31,23,0.96)',
-    borderWidth: 1,
-    borderColor: 'rgba(249,241,230,0.35)',
-    overflow: 'hidden',
   },
   header: {
     position: 'absolute',
-    top: 48,
-    left: 380,
-    right: 380,
+    top: 94,
+    left: 420,
+    right: 420,
     alignItems: 'center',
   },
   heading: {
@@ -361,94 +318,56 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 212,
     right: 212,
-    top: 184,
-    height: 500,
+    top: 228,
+    height: 548,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 32,
+    gap: 40,
   },
   cardSlot: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  edgeSlot: {
-    width: 300,
-    height: 500,
-    opacity: 0.84,
-  },
   previousSlot: {
-    width: 300,
-    height: 420,
-    opacity: 0.84,
+    width: 320,
+    height: 448,
+    opacity: 0.76,
   },
   nextSlot: {
-    width: 300,
-    height: 420,
-    opacity: 0.84,
+    width: 320,
+    height: 448,
+    opacity: 0.76,
   },
   selectedSlot: {
-    width: 428,
-    height: 500,
+    width: 448,
+    height: 548,
     zIndex: 3,
   },
-  card: {
+  portal: {
     width: '100%',
     height: '100%',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    borderRadius: radii.xl,
-    borderWidth: 3,
-    borderColor: 'rgba(43,31,23,0.18)',
-    justifyContent: 'space-between',
-    ...shadows.raised,
   },
-  cardTopLine: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+  selectedArtwork: {
+    width: 410,
+    height: 430,
   },
-  cardTitle: {
-    color: semanticColors.text,
-    fontSize: 30,
-    lineHeight: 34,
-    maxWidth: 280,
-  },
-  selectedDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: semanticColors.surface,
-    borderWidth: 6,
-    borderColor: semanticColors.success,
-  },
-  cardArtworkFrame: {
-    flex: 1,
-    minHeight: 0,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardArtwork: {
-    width: '100%',
-    height: '100%',
+  edgeArtwork: {
+    width: 290,
+    height: 340,
   },
   comingSoonBadge: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(200,182,255,0.42)',
+    backgroundColor: 'rgba(249,241,230,0.18)',
   },
   footer: {
     position: 'absolute',
-    left: 240,
-    right: 240,
-    bottom: 34,
+    left: 420,
+    right: 420,
+    bottom: 48,
     alignItems: 'center',
   },
   selectedDescription: {

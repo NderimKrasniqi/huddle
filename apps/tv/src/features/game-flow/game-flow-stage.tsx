@@ -16,11 +16,9 @@ import {
   TvSelectedGameArtScreen,
 } from './game-art-reveal-screen';
 import {
-  tvReadiness,
   type TvGameCarouselCard,
   type TvGamePlayer,
 } from './game-flow-model';
-import { TvReadyToStartScreen } from './game-ready-screen';
 import { TvGameSetupScreen } from './game-setup-screen';
 
 /** The Convex setup projection consumed by the display-only flow. */
@@ -101,7 +99,6 @@ export function TvGameFlowStage({
       selectedGame={selectedGame}
       hostName={hostName}
       roster={roster}
-      roomCode={roomCode}
       reduceMotion={reduceMotion}
     />
   );
@@ -112,14 +109,12 @@ function TvGameSetupHandoff({
   selectedGame,
   hostName,
   roster,
-  roomCode,
   reduceMotion,
 }: {
   readonly setup: TvGameSetupProjection;
   readonly selectedGame: NonNullable<ReturnType<typeof gameModuleById>>;
   readonly hostName?: string;
   readonly roster: readonly RosterSeat[];
-  readonly roomCode?: string;
   readonly reduceMotion: boolean;
 }) {
   const artAvailable = gameArtAsset(setup.gameId) !== undefined;
@@ -178,27 +173,10 @@ function TvGameSetupHandoff({
     ready: readyPlayerIds.includes(String(seat.playerId)) && !seat.away,
   }));
 
-  const allReady = tvReadiness({
-    gameId: setup.gameId,
-    stage: setup.stage,
-    players,
-    readyPlayerIds,
-    playerRange: selectedGame.metadata.playerRange,
-  }).allReady;
-
-  if (allReady) {
-    return (
-      <TvReadyToStartScreen
-        gameId={setup.gameId}
-        gameTitle={selectedGame.metadata.title}
-        hostName={hostName}
-        roomCode={roomCode}
-        ready
-        reduceMotion={reduceMotion}
-      />
-    );
-  }
-
+  // The selected game's world owns both pre-start states. Keep the art and
+  // settings visible after every player is ready; the Host starts from the
+  // phone, which makes the running module replace this surface with its own
+  // countdown before the first playable beat.
   return (
     <TvGameSetupScreen
       gameId={setup.gameId}

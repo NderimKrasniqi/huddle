@@ -42,6 +42,11 @@ const questionState = {
   scoring: 'flat' as const,
 };
 
+const introState = {
+  ...questionState,
+  phase: 'intro' as const,
+};
+
 const revealState = {
   ...questionState,
   phase: 'reveal' as const,
@@ -60,15 +65,29 @@ const tenPlayerRevealState = {
 function TvTrivia({
   state,
   players: stagePlayers = players,
+  clockRemainingMs = 17_500,
 }: {
   readonly state: unknown;
   readonly players?: readonly GamePlayer[];
+  readonly clockRemainingMs?: number;
 }) {
-  return triviaModule.screens.tv({ state, players: stagePlayers, clockRemainingMs: 17_500 });
+  return triviaModule.screens.tv({ state, players: stagePlayers, clockRemainingMs });
 }
 
 describe('Trivia TV game renderer', () => {
   afterEach(() => cleanup());
+
+  it('shows the game-specific start countdown without carrying setup settings into play', async () => {
+    const result = await render(<TvTrivia state={introState} clockRemainingMs={2_400} />);
+
+    expect(result.getByText('Get ready!')).toBeTruthy();
+    expect(result.getByText('STARTING IN')).toBeTruthy();
+    expect(result.getByText('3')).toBeTruthy();
+    expect(result.getByLabelText(/Trivia countdown.*3 seconds remaining/)).toBeTruthy();
+    expect(result.queryByText('Game settings')).toBeNull();
+    expect(result.queryByText('Questions')).toBeNull();
+    expect(result.queryAllByRole('button')).toHaveLength(0);
+  });
 
   it('shows the shared prompt and neutral participation without TV controls or private choice copy', async () => {
     const result = await render(<TvTrivia state={questionState} />);

@@ -55,7 +55,9 @@ derivatives, not a release claim for tvOS.
 
 - `brand/` — display and launcher marks.
 - `phone/` — join and identity environment art.
-- `tv/` — selected platform-stage presentation background (`platform-stage.png`).
+- `tv/` — platform-stage presentation backgrounds. The current platform
+  lifecycle uses `platform-living-room.png`; `platform-stage.png` remains the
+  legacy game-flow fallback until the game-facing visual systems are refreshed.
 - `game-cards/` — text-free Trivia, Voting, Doodle Dash, Quick Poll, and Hot
   Take illustrations.
 - `game-worlds/` — Trivia and Voting 16:9 presentation artwork.

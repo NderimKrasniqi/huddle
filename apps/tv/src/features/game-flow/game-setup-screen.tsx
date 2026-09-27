@@ -1,5 +1,5 @@
 import type { GameSettingsSchema } from '@huddle/domain';
-import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { brandColors, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import {
   AvatarPortrait,
   HEARTBEAT_ARTWORK,
@@ -27,6 +27,51 @@ import {
 
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
+
+type TvGameSetupTheme = {
+  readonly ink: string;
+  readonly paper: string;
+  readonly accent: string;
+  readonly accentSoft: string;
+  readonly rail: string;
+  readonly railItem: string;
+  readonly shade: string;
+};
+
+/** Presentation-only themes keep the live setup data generic while the selected game owns the mood. */
+function setupThemeFor(gameId: string): TvGameSetupTheme {
+  if (gameId === 'voting') {
+      return {
+      ink: brandColors.espresso,
+      paper: brandColors.cream,
+      accent: brandColors.coral,
+      accentSoft: 'rgba(230, 163, 177, 0.84)',
+      rail: 'rgba(43, 31, 23, 0.96)',
+      railItem: 'rgba(249, 241, 230, 0.14)',
+      shade: 'rgba(43, 31, 23, 0.18)',
+    };
+  }
+  if (gameId === 'trivia') {
+    return {
+      ink: brandColors.espresso,
+      paper: brandColors.cream,
+      accent: brandColors.butter,
+      accentSoft: 'rgba(255, 215, 102, 0.22)',
+      rail: 'rgba(43, 31, 23, 0.96)',
+      railItem: 'rgba(249, 241, 230, 0.14)',
+      shade: 'rgba(43, 31, 23, 0.16)',
+    };
+  }
+  return {
+    ink: semanticColors.text,
+    paper: semanticColors.surface,
+    accent: semanticColors.secondary,
+    accentSoft: 'rgba(255, 215, 102, 0.18)',
+    rail: 'rgba(43, 31, 23, 0.92)',
+    railItem: 'rgba(249, 241, 230, 0.12)',
+    shade: 'rgba(43, 31, 23, 0.24)',
+  };
+}
 
 export type TvGameSetupScreenProps = {
   readonly gameId: string;
@@ -63,6 +108,7 @@ export function TvGameSetupScreen({
   const viewport = useWindowDimensions();
   const scale = safeScale(viewport.width, viewport.height);
   const title = gameTitle?.trim() || titleForGame(gameId);
+  const theme = setupThemeFor(gameId);
   const setupSettings = visibleTvSetupSettings(gameId, settings, settingsSchema);
   const readiness = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
   const art = gameArtAsset(gameId);
@@ -101,7 +147,7 @@ export function TvGameSetupScreen({
         ) : (
           <ImageBackground source={HEARTBEAT_ARTWORK.tv.platformLivingRoom} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID="tv-setup-fallback-background" />
         )}
-        <View style={styles.worldShade} pointerEvents="none" focusable={false} />
+        <View style={[styles.worldShade, { backgroundColor: theme.shade }]} pointerEvents="none" focusable={false} />
         <Animated.View
           style={[
             styles.content,
@@ -117,46 +163,46 @@ export function TvGameSetupScreen({
           <View style={styles.topBar} pointerEvents="none" focusable={false}>
             <View style={styles.brandLockup} pointerEvents="none" focusable={false}>
               <Image source={HEARTBEAT_ARTWORK.brand.displayMark} resizeMode="contain" style={styles.brandMark} accessible={false} />
-              <HuddleText variant="title" color="surface">Huddle</HuddleText>
+              <HuddleText variant="title" color="surface" style={{ color: theme.paper }}>Huddle</HuddleText>
             </View>
             <View style={styles.topRight} pointerEvents="none" focusable={false}>
-              <HuddleText variant="caption" color="surface" style={styles.kicker}>{`${title.toUpperCase()} · SETUP`}</HuddleText>
-              <View style={styles.modePill} pointerEvents="none" focusable={false} testID="tv-game-setup-mode">
+              <HuddleText variant="caption" color="surface" style={[styles.kicker, { color: theme.paper }]}>{`${title.toUpperCase()} · SETUP`}</HuddleText>
+              <View style={[styles.modePill, { backgroundColor: theme.accent, borderColor: theme.ink }]} pointerEvents="none" focusable={false} testID="tv-game-setup-mode">
                 <HuddleText variant="caption" color="text">MODE</HuddleText>
                 <HuddleText variant="title" color="text">{tvModeLabel(mode)}</HuddleText>
               </View>
             </View>
           </View>
 
-          <View style={styles.setupPanel} pointerEvents="none" focusable={false} accessible={false}>
+          <View style={[styles.setupPanel, { backgroundColor: theme.paper, borderColor: theme.ink }]} pointerEvents="none" focusable={false} accessible={false}>
             <HuddleText variant="caption" color="text" style={styles.visuallyHidden}>{`${title} setup`}</HuddleText>
             {!isReadyStage ? <HuddleText variant="caption" color="text" style={styles.visuallyHidden}>Setup is being finalized</HuddleText> : null}
-            <HuddleText variant="caption" color="text" style={styles.panelKicker}>{isReadyStage ? 'READY TO PLAY' : 'HOST SETUP'}</HuddleText>
-            <HuddleText variant="tvDisplay" color="text" style={styles.title}>
+            <HuddleText variant="caption" color="text" style={[styles.panelKicker, { color: theme.ink }]}>{isReadyStage ? 'READY TO PLAY' : 'HOST SETUP'}</HuddleText>
+            <HuddleText variant="tvDisplay" color="text" style={[styles.title, { color: theme.ink }]}>
               {isReadyStage ? `${title} is ready` : `Set up ${title}`}
             </HuddleText>
-            <HuddleText variant="bodyLarge" color="text" style={styles.subtitle}>
+            <HuddleText variant="bodyLarge" color="text" style={[styles.subtitle, { color: theme.ink }]}>
               {isReadyStage
                 ? tvHostCopy(hostName, 'is choosing when to start on the phone.')
                 : tvHostCopy(hostName, 'is finalizing settings on the phone.')}
             </HuddleText>
 
             <View style={styles.divider} pointerEvents="none" focusable={false} />
-            <HuddleText variant="title" color="text" style={styles.sectionLabel}>Game settings</HuddleText>
+            <HuddleText variant="title" color="text" style={[styles.sectionLabel, { color: theme.ink }]}>Game settings</HuddleText>
             <View style={styles.settingsRow} pointerEvents="none" focusable={false} testID="tv-game-setup-settings">
               {setupSettings.length === 0 ? (
                 <HuddleText variant="body" color="text" style={styles.noSettings}>This game has no extra settings.</HuddleText>
               ) : setupSettings.map((setting) => (
-                <View key={setting.key} style={styles.setting} pointerEvents="none" focusable={false} testID={`tv-game-setting-${setting.key}`}>
-                  <HuddleText variant="caption" color="text" style={styles.settingLabel}>{setting.label ?? setting.key}</HuddleText>
-                  <HuddleText variant="title" color="text">{setting.value}</HuddleText>
+                <View key={setting.key} style={[styles.setting, { borderColor: theme.ink, backgroundColor: theme.accentSoft }]} pointerEvents="none" focusable={false} testID={`tv-game-setting-${setting.key}`}>
+                  <HuddleText variant="caption" color="text" style={[styles.settingLabel, { color: theme.ink }]}>{setting.label ?? setting.key}</HuddleText>
+                  <HuddleText variant="title" color="text" style={{ color: theme.ink }}>{setting.value}</HuddleText>
                 </View>
               ))}
             </View>
 
-            <View style={styles.panelNotice} pointerEvents="none" focusable={false}>
-              <View style={[styles.noticeDot, isReadyStage && readiness.allReady ? styles.noticeReady : null]} pointerEvents="none" focusable={false} />
-              <HuddleText variant="body" color="text">
+            <View style={[styles.panelNotice, { backgroundColor: theme.accentSoft }]} pointerEvents="none" focusable={false}>
+              <View style={[styles.noticeDot, { backgroundColor: theme.accent }, isReadyStage && readiness.allReady ? styles.noticeReady : null]} pointerEvents="none" focusable={false} />
+              <HuddleText variant="body" color="text" style={{ color: theme.ink }}>
                 {isReadyStage
                   ? readiness.allReady
                     ? `Everyone is ready · waiting for ${hostName?.trim() || 'the host'} to start.`
@@ -170,16 +216,16 @@ export function TvGameSetupScreen({
             </View>
           </View>
 
-          <View style={styles.readinessRail} pointerEvents="none" focusable={false} testID="tv-game-setup-readiness">
+          <View style={[styles.readinessRail, { backgroundColor: theme.rail, borderColor: theme.paper }]} pointerEvents="none" focusable={false} testID="tv-game-setup-readiness">
             <View style={styles.readinessCopy} pointerEvents="none" focusable={false}>
-              <HuddleText variant="title" color="surface">
+              <HuddleText variant="title" color="surface" style={{ color: theme.paper }}>
                 {isReadyStage
                   ? readiness.allReady
                     ? 'Everyone is ready!'
                     : `${readiness.readyCount} of ${readiness.playerCount} players are ready`
                   : 'Players in the room'}
               </HuddleText>
-              <HuddleText variant="body" color="surface" style={styles.readinessSubtitle}>
+              <HuddleText variant="body" color="surface" style={[styles.readinessSubtitle, { color: theme.paper }]}>
                 {isReadyStage
                   ? readiness.allReady
                     ? 'The game starts when the Host taps Start.'
@@ -189,7 +235,7 @@ export function TvGameSetupScreen({
             </View>
             <View style={styles.players} pointerEvents="none" focusable={false} testID="tv-game-setup-players">
               {players.slice(0, 10).map((player) => (
-                <PlayerChip key={player.id} player={player} readyPlayerIds={readyPlayerIds} stage={stage} />
+                <PlayerChip key={player.id} player={player} readyPlayerIds={readyPlayerIds} stage={stage} theme={theme} />
               ))}
             </View>
           </View>
@@ -203,10 +249,12 @@ function PlayerChip({
   player,
   readyPlayerIds,
   stage,
+  theme,
 }: {
   readonly player: TvGamePlayer;
   readonly readyPlayerIds: readonly string[];
   readonly stage: 'configuring' | 'ready';
+  readonly theme: TvGameSetupTheme;
 }) {
   const readyStage = stage === 'ready';
   const ready = readyStage && player.away !== true && readyPlayerIds.map(String).includes(String(player.id));
@@ -220,7 +268,7 @@ function PlayerChip({
       focusable={false}
       accessibilityRole="text"
       accessibilityLabel={`${name}${player.isHost ? ', host' : ''}, ${statusLabel}`}
-      style={styles.playerChip}
+      style={[styles.playerChip, { backgroundColor: theme.railItem }]}
       pointerEvents="none"
       testID={`tv-game-player-${player.id}`}
     >
@@ -234,13 +282,13 @@ function PlayerChip({
         </View>
       )}
       <View style={styles.playerIdentity} pointerEvents="none" focusable={false}>
-        <HuddleText variant="body" color="surface" numberOfLines={1}>{name}</HuddleText>
-        <HuddleText variant="caption" color="surface" style={styles.playerStatus} numberOfLines={1}>
+        <HuddleText variant="body" color="surface" style={{ color: theme.paper }} numberOfLines={1}>{name}</HuddleText>
+        <HuddleText variant="caption" color="surface" style={[styles.playerStatus, { color: theme.paper }]} numberOfLines={1}>
           {player.isHost ? 'Host · ' : ''}{status === 'ready' ? 'Ready' : status === 'away' ? 'Away' : status === 'waiting' ? readyStage ? 'Waiting' : 'In room' : 'Ready'}
         </HuddleText>
         {!readyStage && !player.away ? <HuddleText variant="caption" color="surface" style={styles.visuallyHidden}>In room</HuddleText> : null}
       </View>
-      <View style={[styles.statusDot, status === 'ready' ? styles.readyDot : status === 'away' ? styles.awayDot : null]} pointerEvents="none" focusable={false} />
+      <View style={[styles.statusDot, { backgroundColor: theme.paper }, status === 'ready' ? [styles.readyDot, { backgroundColor: theme.accent }] : status === 'away' ? styles.awayDot : null]} pointerEvents="none" focusable={false} />
     </View>
   );
 }

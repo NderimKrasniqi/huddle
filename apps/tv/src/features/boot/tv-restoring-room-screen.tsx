@@ -1,13 +1,11 @@
 import { semanticColors, spacing } from '@huddle/design-tokens';
-import { HEARTBEAT_ARTWORK, HuddleText } from '@huddle/ui/native';
+import { HEARTBEAT_ARTWORK, HuddleText, PlatformStage } from '@huddle/ui/native';
 import React, { useEffect } from 'react';
 import {
   Animated,
   Easing,
-  ImageBackground,
   StyleSheet,
   View,
-  useWindowDimensions,
   type ImageSourcePropType,
 } from 'react-native';
 
@@ -46,11 +44,9 @@ export function TvRestoringRoomScreen({
   backgroundSource = HEARTBEAT_ARTWORK.tv.platformLivingRoom,
   reduceMotion: reduceMotionOverride,
 }: TvRestoringRoomScreenProps) {
-  const viewport = useWindowDimensions();
   const systemReduceMotion = useTvSystemReducedMotion();
   const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
   const motionPreferenceResolved = reduceMotionOverride !== undefined || systemReduceMotion !== undefined;
-  const scale = safeScale(viewport.width, viewport.height);
   const [internalStage, setInternalStage] = React.useState<TvRestoringRoomStage>('restoring');
   const readyCallback = onReadyAnimationComplete ?? onReady;
   const readyCallbackRef = React.useRef(readyCallback);
@@ -106,20 +102,15 @@ export function TvRestoringRoomScreen({
       accessibilityLabel={`Welcome back. ${title}. ${subtitle}. Room code ${spokenCode}.`}
       testID="tv-restoring-room-screen"
     >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
+      <PlatformStage
+        backgroundSource={backgroundSource}
+        backgroundTestID="tv-restoring-room-background"
+        shadeOpacity={0.32}
+        testID="tv-restoring-room-stage"
         pointerEvents="none"
         focusable={false}
         accessible={false}
       >
-        <ImageBackground
-          source={backgroundSource}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="tv-restoring-room-background"
-        />
-        <View style={styles.warmWash} pointerEvents="none" focusable={false} />
         <Animated.View
           style={[styles.content, { opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }] }]}
           pointerEvents="none"
@@ -139,14 +130,9 @@ export function TvRestoringRoomScreen({
             {subtitle}
           </HuddleText>
         </Animated.View>
-      </View>
+      </PlatformStage>
     </View>
   );
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / 1920, height / 1080);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({
@@ -156,16 +142,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     backgroundColor: semanticColors.text,
-  },
-  stage: {
-    width: 1920,
-    height: 1080,
-    overflow: 'hidden',
-  },
-  warmWash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.66,
   },
   content: {
     position: 'absolute',

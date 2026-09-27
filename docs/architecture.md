@@ -18,7 +18,12 @@ convex ─> @huddle/game-registry/logic ─> server game logic
 - `@huddle/domain` owns pure room, presence, joining, settings, lifecycle,
   readiness, and credential rules. It depends only on contracts.
 - `@huddle/design-tokens` owns the exact Heartbeat palette, semantic colors,
-  Nunito typography, spacing, radii, shadows, and reduced-motion durations.
+  Nunito typography, spacing, radii, shadows, reduced-motion durations, and
+  the separate platform-stage themes. The TV platform theme defines the shared
+  16:9 stage geometry, warm stage surfaces, direct-content rails, room-code
+  treatment, QR treatment, and carousel-portal light. The Phone platform theme
+  adds the touch-first editorial geometry used by the room, picker, setup, and
+  readiness flow. Game modules do not consume these platform tokens.
 - `@huddle/ui/native` owns shared native primitives: screen shell, text,
   buttons, code tiles, portraits, rows, chips, badges, game cards, loading,
   status, and artwork resolution. It does not own Convex state or game rules.
@@ -27,6 +32,11 @@ convex ─> @huddle/game-registry/logic ─> server game logic
   Poll, Hot Take; the last three are presentation-only entries.
 - `games/trivia` and `games/voting` own metadata, settings, prompts/content,
   state, deadlines, events, redacted projections, and their Phone/TV screens.
+  Their running-TV and private Phone presentation is intentionally game-local:
+  Trivia owns its storybook paper/ink theme in `games/trivia/src/tv-theme.ts`,
+  while Voting owns its poster/sticker room-mood theme in
+  `games/voting/src/tv-theme.ts`. These palettes are not platform tokens and
+  the game screens do not consume the platform stage primitives.
 - `apps/phone` owns Expo Router adapters, the root session provider, scan/join
   routes, subscriptions, presence, and Phone controller composition.
 - `apps/tv` owns room opening/restoration, subscriptions, and passive TV stage
@@ -97,6 +107,10 @@ roles, and focus behavior are native. Raster artwork is decorative and text-free
 - TV boot, room invitation, carousel, setup, ready, runtime, paused,
   unavailable, and finished surfaces are display-only. They do not render
   buttons, pressables, inputs, positive focus targets, or D-pad actions.
+- TV platform surfaces compose `PlatformStage`, `PlatformBrandLockup`,
+  `PlatformRail`, `PlatformRoomCode`, `PlatformQrFrame`, and `PlatformPortal`
+  from `@huddle/ui/native`. These primitives place native content directly on
+  the platform stage; they are not used by Trivia or Voting game worlds.
 - Phone lifecycle, Host management, setup, and game controls use native
   touch-targeted controls. No TV control is mirrored as a hidden focus target.
 - NativeWind, Tailwind, CSS interop, Reanimated, Expo Image, Lucide, and

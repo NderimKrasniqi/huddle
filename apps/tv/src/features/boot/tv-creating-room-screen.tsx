@@ -3,15 +3,14 @@ import {
   HEARTBEAT_ARTWORK,
   HuddleText,
   LoadingMark,
+  PlatformStage,
 } from '@huddle/ui/native';
 import { useEffect, useState } from 'react';
 import {
   Animated,
   Easing,
-  ImageBackground,
   StyleSheet,
   View,
-  useWindowDimensions,
   type ImageSourcePropType,
 } from 'react-native';
 
@@ -19,8 +18,6 @@ import type { TvAnimatedBootPhase } from './boot-state';
 import { tvBootAnimationCopy } from './boot-state';
 import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduced-motion';
 
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
 const OVERSCAN_X = 96;
 const OVERSCAN_Y = 54;
 
@@ -37,8 +34,6 @@ export function TvCreatingRoomScreen({
   backgroundSource = HEARTBEAT_ARTWORK.tv.platformLivingRoom,
   reduceMotion: reduceMotionOverride,
 }: TvCreatingRoomScreenProps) {
-  const { width, height } = useWindowDimensions();
-  const scale = safeScale(width, height);
   const systemReduceMotion = useTvSystemReducedMotion();
   const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
   const copy = tvBootAnimationCopy(phase);
@@ -84,20 +79,15 @@ export function TvCreatingRoomScreen({
       accessibilityLabel={`${copy.title}. ${copy.subtitle}`}
       testID="tv-boot-animated"
     >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
+      <PlatformStage
+        backgroundSource={backgroundSource}
+        backgroundTestID="tv-boot-background"
+        shadeOpacity={0.3}
+        testID="tv-boot-stage"
         pointerEvents="none"
         focusable={false}
         accessible={false}
       >
-        <ImageBackground
-          source={backgroundSource}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="tv-boot-background"
-        />
-        <View style={styles.warmWash} pointerEvents="none" focusable={false} />
         <Animated.View
           style={[styles.ambientGlow, { opacity: ambient }]}
           pointerEvents="none"
@@ -128,14 +118,9 @@ export function TvCreatingRoomScreen({
             {copy.subtitle}
           </HuddleText>
         </Animated.View>
-      </View>
+      </PlatformStage>
     </View>
   );
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({
@@ -145,16 +130,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     backgroundColor: semanticColors.text,
-  },
-  stage: {
-    width: STAGE_WIDTH,
-    height: STAGE_HEIGHT,
-    overflow: 'hidden',
-  },
-  warmWash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.62,
   },
   ambientGlow: {
     position: 'absolute',

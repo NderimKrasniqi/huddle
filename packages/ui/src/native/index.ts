@@ -20,3 +20,19 @@ export {
   type StatusSurfaceProps,
   type StatusSurfaceVariant,
 } from './status-surface';
+
+export { HuddleIcon, type HuddleIconName } from './huddle-icon';
+export {
+  PlatformBrandLockup,
+  PlatformPortal,
+  PlatformQrFrame,
+  PlatformRail,
+  PlatformRoomCode,
+  PlatformStage,
+  type PlatformBrandLockupProps,
+  type PlatformPortalProps,
+  type PlatformQrFrameProps,
+  type PlatformRailProps,
+  type PlatformRoomCodeProps,
+  type PlatformStageProps,
+} from './platform-stage';
