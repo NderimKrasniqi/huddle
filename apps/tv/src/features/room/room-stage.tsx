@@ -1,5 +1,4 @@
 import { ROOM_PLAYER_CAP, roomJoinLink } from '@huddle/domain';
-import { huddleAvatarSource } from '@huddle/ui/native';
 
 import type { RosterSeat } from '../../models';
 import { RoomInvitationScreen } from './room-invitation-screen';
@@ -15,7 +14,6 @@ export function RoomStage({
   const players = roster.slice(0, ROOM_PLAYER_CAP).map((seat) => ({
     id: String(seat.playerId),
     name: seat.nickname,
-    avatar: huddleAvatarSource(seat.avatar),
     avatarId: seat.avatar,
     host: seat.host,
     away: seat.away,
