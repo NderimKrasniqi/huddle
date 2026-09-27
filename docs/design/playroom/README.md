@@ -60,9 +60,9 @@ runtime.
 | Component | Notes |
 | --- | --- |
 | Wordmark | Top left on every TV platform screen, top left on phone screens. |
-| Chip | Lavender pill: `ROOM KJMP`, `KJMP · 10 players`. |
+| Chip | Lavender pill for context on later screens: `KJMP · 10 players`, `Room: KJMP`. The room screen has none; its code is already the biggest thing on it. |
 | Status pill | Wide lavender pill under the join card: `3 / 10 joined`, `Room full · 10 / 10`, `10 / 10 ready`. |
-| Join card | White card: “Join at” and the code, a divider, the native QR code and “Scan to join”. |
+| Join code | “Join at” and the code, with the native QR code and “Scan to join” beside it, straight on the cream with no card behind them. |
 | Avatar circle | Character on its pastel circle. Host gets an orange crown badge; Ready gets a green check; waiting shows three dots; away is greyscale. |
 | Player tile | Phone lobby: white card with avatar, name, and orange HOST tag, in two columns. |
 | Game card | TV picker: art, title, tagline, and an Available or Coming soon pill. The selected card has a purple outline. The window stops at each end instead of wrapping. |
@@ -77,7 +77,7 @@ runtime.
 | --- | --- | --- |
 | Splash | Splash illustration, wordmark, “Opening your room”. | Join a room: four code boxes, Join room, Scan the QR code. |
 | Identity | Room waiting for players. | Pick your look: 5×2 avatar grid with taken avatars dimmed, name field, Let's go!. |
-| Room | “Grab your phones!” → “Everyone's here!”, join card, status pill, 2×5 avatar grid, “Alex is choosing what's next”. | Host: Your room, code, count, player tiles, Choose a game, Leave room. Tapping a player opens Manage player. Guest: You're in!, host card, Hang tight. |
+| Room | “Grab your phones!” → “Everyone's here!”, join code and QR, status pill, 2×5 avatar grid, “Alex is choosing what's next”. | Host: Your room, code, count, player tiles, Choose a game, Leave room. Tapping a player opens Manage player. Guest: You're in!, host card, Hang tight. |
 | Pick a game | “Playroom — Pick a game”, three cards, labelled dot rail, split roster with “Alex is choosing a game”. | Host: featured card with Set up, list of the other games. Guest: Game night with the live selection. |
 | Set up | “Setting up Trivia”: art card and live setting rows that flash when changed. | Host: Quick / Standard / Custom, setting rows, option sheet, Lock settings. Guest: Setting up with the live summary. |
 | Ready check | “Ready for Trivia?”: setting tiles, avatars with checks or waiting dots, `7 / 10 ready · Waiting for …`. | Host: Settings locked, summary, Start (enabled when everyone is Ready), Edit setup. Guest: I'm ready! / You're ready!, I'm not ready. |
