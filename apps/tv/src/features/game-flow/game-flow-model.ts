@@ -1,4 +1,4 @@
-import type { AvatarId, GameSettingsSchema } from '@huddle/domain';
+import { readiness, type AvatarId, type GameSettingsSchema, type GameSetupStage } from '@huddle/domain';
 import type { ImageSourcePropType } from 'react-native';
 
 import { gameCardAsset } from './assets';
@@ -97,7 +97,7 @@ function fallbackSchemaFor(gameId: string): GameSettingsSchema {
 
 export type TvReadinessInput = {
   readonly gameId: string;
-  readonly stage?: 'configuring' | 'ready';
+  readonly stage?: GameSetupStage;
   readonly players: readonly TvGamePlayer[];
   readonly readyPlayerIds?: readonly string[];
   /** Prefer the selected module's authoritative range; the map is a legacy fallback for direct render tests. */
@@ -123,17 +123,17 @@ export function tvReadiness({
   readyPlayerIds = [],
   playerRange,
 }: TvReadinessInput): TvReadiness {
-  const ready = new Set(readyPlayerIds.map(String));
-  const readyCount = players.filter((player) => player.away !== true && ready.has(String(player.id))).length;
-  const range = playerRange ?? PLAYER_RANGES[gameId];
   // Without an installed module range there is no authoritative start gate to
-  // mirror, so fail closed rather than claiming an unknown game is playable.
-  const inRange = range !== undefined && players.length >= range.min && players.length <= range.max;
-  const nobodyAway = players.every((player) => player.away !== true);
-  const allReady = stage === 'ready' && players.length > 0 && inRange && nobodyAway &&
-    players.every((player) => ready.has(String(player.id)));
+  // mirror, so `readiness` fails closed rather than claiming an unknown game
+  // is playable.
+  const gate = readiness({
+    stage: stage ?? 'configuring',
+    seats: players.map((player) => ({ playerId: player.id, away: player.away === true })),
+    readyPlayerIds,
+    playerRange: playerRange ?? PLAYER_RANGES[gameId],
+  });
 
-  return { readyCount, playerCount: players.length, allReady };
+  return { readyCount: gate.readyCount, playerCount: gate.seatCount, allReady: gate.complete };
 }
 
 export function tvModeLabel(mode: string | undefined): string {
