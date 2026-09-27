@@ -86,6 +86,25 @@ HEARTBEAT_PALETTE = {
     "lilac": "#C8B6FF",
     "dustyRose": "#E6A3B1",
 }
+# The approved Playroom palette (docs/design/playroom/README.md).
+PLAYROOM_PALETTE = {
+    "cream": "#FCF6EF",
+    "card": "#FFFFFF",
+    "ink": "#1F0B3F",
+    "inkSoft": "#3B2B5E",
+    "muted": "#7A6E90",
+    "line": "#EFE6DF",
+    "orange": "#FC6221",
+    "orangeDeep": "#D94A10",
+    "lavender": "#F0E8F8",
+    "lavenderStrong": "#E1D2F4",
+    "purple": "#6838DF",
+    "green": "#12C24A",
+    "red": "#D63B3B",
+    "soonGrey": "#EFECF0",
+    "soonText": "#9E97AA",
+    "yellow": "#FFC532",
+}
 HEARTBEAT_RUNTIME_ROOT = Path("packages/ui/assets/heartbeat")
 # The original board is retained as a design reference, but runtime validation
 # must not depend on a design manifest or source-master tree. Keep the runtime
@@ -1100,11 +1119,25 @@ def validate_heartbeat_tokens(root: Path = ROOT) -> None:
 
     # Screen source may use only approved board colors. The legacy neutral map
     # is retained for persisted compatibility but is not a runtime surface.
+    playroom_path = root / "packages" / "design-tokens" / "src" / "playroom.ts"
+    if not playroom_path.is_file():
+        fail(f"Playroom color token source missing: {relative(playroom_path, root)}")
+    playroom_match = re.search(
+        r"export const playroomColors = \{(?P<body>.*?)\}\s+as const;",
+        playroom_path.read_text(encoding="utf-8"),
+        re.DOTALL,
+    )
+    if playroom_match is None:
+        fail("Playroom color token map is missing")
+    playroom = dict(re.findall(r"^\s*([A-Za-z][A-Za-z0-9]*):\s*['\"](#[0-9A-Fa-f]{6})['\"]", playroom_match.group("body"), re.MULTILINE))
+    if playroom != PLAYROOM_PALETTE:
+        fail(f"Playroom palette differs from the approved design: {playroom}")
+
     hex_literal = re.compile(r"#[0-9A-Fa-f]{6}")
-    approved_hexes = set(HEARTBEAT_PALETTE.values())
+    approved_hexes = set(HEARTBEAT_PALETTE.values()) | set(PLAYROOM_PALETTE.values())
     for base in (root / "apps", root / "games", root / "packages" / "ui"):
         for path in source_files(base):
-            if path == colors_path or ".test." in path.name:
+            if path in (colors_path, playroom_path) or ".test." in path.name:
                 continue
             clean = COMMENTS.sub("", path.read_text(encoding="utf-8"))
             literals = {value.upper() for value in hex_literal.findall(clean)}

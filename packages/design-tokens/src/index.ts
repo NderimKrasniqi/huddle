@@ -23,6 +23,15 @@ export {
   type DurationToken,
 } from './motion';
 export {
+  playroomColors,
+  playroomFonts,
+  playroomMotion,
+  playroomPhone,
+  playroomShadows,
+  playroomTv,
+  type PlayroomColor,
+} from './playroom';
+export {
   platformPhoneTheme,
   platformTheme,
   type PlatformPhoneTheme,
