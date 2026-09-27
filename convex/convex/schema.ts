@@ -56,8 +56,19 @@ export default defineSchema({
         gameId: v.string(),
         settings: v.record(v.string(), v.string()),
         mode: v.union(v.literal('quick'), v.literal('standard'), v.literal('custom')),
-        stage: v.optional(v.union(v.literal('configuring'), v.literal('ready'))),
+        stage: v.optional(
+          v.union(v.literal('configuring'), v.literal('ready'), v.literal('countdown')),
+        ),
         readyPlayerIds: v.optional(v.array(v.id('players'))),
+        /**
+         * While `stage` is `countdown`: when the scheduled start is due, and the
+         * scheduled function that will start it. Both are written and cleared
+         * together with the stage (see `lib/countdown.ts`). `countdownEndsAt`
+         * also tells a late scheduled start that it belongs to a countdown the
+         * room has since left.
+         */
+        countdownEndsAt: v.optional(v.number()),
+        countdownJob: v.optional(v.id('_scheduled_functions')),
       }),
     ),
     /**

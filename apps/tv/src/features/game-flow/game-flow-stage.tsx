@@ -26,8 +26,10 @@ export type TvGameSetupProjection = {
   readonly gameId: string;
   readonly settings: Readonly<Record<string, string>>;
   readonly mode: 'quick' | 'standard' | 'custom';
-  readonly stage: 'configuring' | 'ready';
+  readonly stage: 'configuring' | 'ready' | 'countdown';
   readonly readyPlayerIds: readonly string[];
+  /** Server epoch ms when the countdown's start is due; set only while counting down. */
+  readonly countdownEndsAt?: number;
 };
 
 export type TvGameFlowStageProps = {

@@ -83,7 +83,7 @@ export type TvGameSetupScreenProps = {
   readonly playerRange?: { readonly min: number; readonly max: number };
   readonly players?: readonly TvGamePlayer[];
   readonly readyPlayerIds?: readonly string[];
-  readonly stage?: 'configuring' | 'ready';
+  readonly stage?: 'configuring' | 'ready' | 'countdown';
   readonly reduceMotion?: boolean;
 };
 
@@ -253,7 +253,7 @@ function PlayerChip({
 }: {
   readonly player: TvGamePlayer;
   readonly readyPlayerIds: readonly string[];
-  readonly stage: 'configuring' | 'ready';
+  readonly stage: 'configuring' | 'ready' | 'countdown';
   readonly theme: TvGameSetupTheme;
 }) {
   const readyStage = stage === 'ready';

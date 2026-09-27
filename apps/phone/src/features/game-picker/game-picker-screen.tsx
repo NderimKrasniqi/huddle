@@ -2,7 +2,7 @@ import { HuddleText, ScreenShell, StatusSurface } from '@huddle/ui/native';
 import { View } from 'react-native';
 
 export type PickAGameScreenProps = {
-  readonly setupDraft: { readonly stage: 'configuring' | 'ready' } | null | undefined;
+  readonly setupDraft: { readonly stage: 'configuring' | 'ready' | 'countdown' } | null | undefined;
 };
 
 /**

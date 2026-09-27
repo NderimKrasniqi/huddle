@@ -37,6 +37,13 @@ import {
   runtimeFailure,
   validatedDeadline,
 } from './lib/gameRuntime';
+import {
+  beginCountdown,
+  cancelCountdownJob,
+  readyCheckComplete,
+  reconcileCountdown,
+  withoutCountdown,
+} from './lib/countdown';
 import { awayPlayerIds, gamePlayersInRoom } from './lib/presence';
 import { limitGameEvent, limitHostCommand, limitMemberCommand } from './lib/rateLimits';
 
@@ -184,16 +191,30 @@ export const setup = query({
       gameId: v.string(),
       settings: v.record(v.string(), v.string()),
       mode: setupModeValidator,
-      stage: v.union(v.literal('configuring'), v.literal('ready')),
+      stage: v.union(v.literal('configuring'), v.literal('ready'), v.literal('countdown')),
       readyPlayerIds: v.array(v.id('players')),
+      /**
+       * When the countdown's start is due, in server epoch milliseconds. An
+       * absolute time rather than a remainder, because a query must not read
+       * the clock: a cached answer would hand a late subscriber a stale
+       * remainder. Clients count down against their own clock.
+       */
+      countdownEndsAt: v.optional(v.number()),
     }),
   ),
   handler: async (ctx, args) => {
     const draft = (await ctx.db.get(args.roomId))?.setup;
-    return draft === undefined ? null : {
-      ...draft,
-      stage: draft.stage ?? 'configuring',
+    if (draft === undefined) return null;
+    const stage = draft.stage ?? 'configuring';
+    return {
+      gameId: draft.gameId,
+      settings: draft.settings,
+      mode: draft.mode,
+      stage,
       readyPlayerIds: draft.readyPlayerIds ?? [],
+      ...(stage === 'countdown' && draft.countdownEndsAt !== undefined
+        ? { countdownEndsAt: draft.countdownEndsAt }
+        : {}),
     };
   },
 });
@@ -252,7 +273,9 @@ export const configureGame = mutation({
     if (room.game !== undefined) throw new ConvexError({ kind: 'setupAlreadyRunning' });
     const gameId = args.gameId ?? room.setup?.gameId;
     if (gameId === undefined) throw new ConvexError({ kind: 'setupNotFound' });
-    if (room.setup?.stage === 'ready') throw new ConvexError({ kind: 'setupLocked' });
+    if (room.setup?.stage === 'ready' || room.setup?.stage === 'countdown') {
+      throw new ConvexError({ kind: 'setupLocked' });
+    }
     const game = gameLogicById(gameId);
     if (game === undefined) {
       throw new ConvexError<GameLifecycleRejection>({ kind: 'gameNotInstalled', gameId });
@@ -279,17 +302,25 @@ export const configureGame = mutation({
   },
 });
 
-/** Host validates and locks the shared setup before anybody can Ready. */
+/**
+ * Host validates and locks the shared setup, which starts the ready check.
+ *
+ * Starting the ready check is the Host saying they are ready, so the Host's
+ * seat starts Ready and everybody else starts waiting.
+ */
 export const finalizeGameSetup = mutation({
   args: { sessionToken: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
     await limitHostCommand(ctx, args.sessionToken);
-    const { room } = await requireRoomHost(ctx, args.sessionToken);
+    const { player, room } = await requireRoomHost(ctx, args.sessionToken);
     const draft = room.setup;
     if (draft === undefined) throw new ConvexError({ kind: 'setupNotFound' });
     setupForGame(draft.gameId, draft.mode, draft.settings);
-    await ctx.db.patch(room._id, { setup: { ...draft, stage: 'ready', readyPlayerIds: [] } });
+    await cancelCountdownJob(ctx, draft);
+    await ctx.db.patch(room._id, {
+      setup: { ...withoutCountdown(draft), stage: 'ready', readyPlayerIds: [player._id] },
+    });
     return null;
   },
 });
@@ -303,12 +334,16 @@ export const setGameReady = mutation({
     const { player, room } = await requirePlayerSession(ctx, args.sessionToken);
     const draft = room.setup;
     if (draft === undefined) throw new ConvexError({ kind: 'setupNotFound' });
-    if (draft.stage !== 'ready') throw new ConvexError({ kind: 'setupNotReady' });
+    if (draft.stage !== 'ready' && draft.stage !== 'countdown') {
+      throw new ConvexError({ kind: 'setupNotReady' });
+    }
     const current = draft.readyPlayerIds ?? [];
     const readyPlayerIds = args.ready
       ? current.includes(player._id) ? current : [...current, player._id]
       : current.filter((playerId) => playerId !== player._id);
-    await ctx.db.patch(room._id, { setup: { ...draft, stage: 'ready', readyPlayerIds } });
+    await ctx.db.patch(room._id, { setup: { ...draft, readyPlayerIds } });
+    // An un-Ready during the countdown stops it.
+    await reconcileCountdown(ctx, room._id);
     return null;
   },
 });
@@ -322,7 +357,10 @@ export const reopenGameSetup = mutation({
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     const draft = room.setup;
     if (draft === undefined) throw new ConvexError({ kind: 'setupNotFound' });
-    await ctx.db.patch(room._id, { setup: { ...draft, stage: 'configuring', readyPlayerIds: [] } });
+    await cancelCountdownJob(ctx, draft);
+    await ctx.db.patch(room._id, {
+      setup: { ...withoutCountdown(draft), stage: 'configuring', readyPlayerIds: [] },
+    });
     return null;
   },
 });
@@ -335,6 +373,7 @@ export const cancelGameSetup = mutation({
     await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
     if (room.game === undefined) {
+      await cancelCountdownJob(ctx, room.setup);
       await ctx.db.patch(room._id, {
         setup: undefined,
         browsingGameIndex: undefined,
@@ -372,98 +411,208 @@ export const startGame = mutation({
   handler: async (ctx, args) => {
     await limitHostCommand(ctx, args.sessionToken);
     const { room } = await requireRoomHost(ctx, args.sessionToken);
-
-    if (room.tvAway === true) {
-      throw new ConvexError({ kind: 'tvUnavailable' });
-    }
-
-    // Whether a game exists at all is a property of what was sent, not of any
-    // room — but it is asked after the Host check, so a non-Host learns only
-    // that it is not the Host.
-    const gameId = args.gameId ?? room.setup?.gameId;
-    if (gameId === undefined) {
-      throw new ConvexError({ kind: 'setupNotFound' });
-    }
-    const game = gameLogicById(gameId);
-
-    if (game === undefined) {
-      throw new ConvexError<GameLifecycleRejection>({
-        kind: 'gameNotInstalled',
-        gameId,
-      });
-    }
-
-    const players = await gamePlayersInRoom(ctx, room._id);
-    if (room.setup?.stage !== 'ready') throw new ConvexError({ kind: 'setupNotReady' });
-    const away = players.filter((player) => player.away).map((player) => player.playerId);
-    if (away.length > 0) throw new ConvexError({ kind: 'playersAway', playerIds: away });
-    const ready = new Set<string>((room.setup.readyPlayerIds ?? []).map(String));
-    const unready = players.filter((player) => !ready.has(player.playerId)).map((player) => player.playerId);
-    if (unready.length > 0) throw new ConvexError({ kind: 'playersNotReady', playerIds: unready });
-    const requestedSettings =
-      args.settings === undefined && room.setup?.settings === undefined
-        ? undefined
-        : { ...room.setup?.settings, ...args.settings };
-    // The room's own refusals first, then the settings': a party too small to
-    // play hears that before it hears about a setting, whatever it sent.
-    const mode = args.mode ?? room.setup?.mode;
-    const refusal =
-      refusalToStart(roomPhase(room.game, room.setup), players.length, game.metadata.playerRange) ??
-      (room.setup !== undefined || mode !== undefined
-        ? settingsRefusalForMode(
-            game.settingsSchema,
-            game.settingsPresentation,
-            requestedSettings,
-            mode ?? 'standard',
-          )
-        : settingsRefusal(game.settingsSchema, requestedSettings));
-
-    if (refusal !== null) {
-      throw new ConvexError<GameLifecycleRejection>(refusal);
-    }
-
-    let state: unknown;
-    try {
-      state = game.decodeState(
-        game.createInitialState({
-          players,
-          settings: settingsFrom(game.settingsSchema, requestedSettings),
-        }),
-      );
-      if (state === undefined) throw new Error('initial state decoder returned undefined');
-    } catch {
-      throw new ConvexError({ kind: 'gameUnavailable', gameId: game.metadata.id });
-    }
-    // The first beat's clock starts with the game, so a room that has been
-    // dealt a question is already being counted down at the moment every screen
-    // in it draws that question.
-    const clock = await windGameClock(
-      ctx,
-      room,
-      { gameId: game.metadata.id, stateVersion: game.stateVersion, state },
-      game,
-      state,
-    );
-
-    if (clock === undefined) {
-      throw new ConvexError({ kind: 'gameUnavailable', gameId: game.metadata.id });
-    }
-
-    await ctx.db.patch(room._id, {
-      game: {
-        gameId: game.metadata.id,
-        stateVersion: game.stateVersion,
-        state,
-        settings: settingsFrom(game.settingsSchema, requestedSettings),
-        mode: (args.mode ?? room.setup?.mode ?? 'standard') as GameSetupMode,
-        ...clock,
-      },
-      setup: undefined,
-    });
-
+    // A Host starting during the countdown skips the rest of it.
+    await startFromSetup(ctx, room, args);
     return null;
   },
 });
+
+/**
+ * The Host's Start: once everybody is Ready, the room counts down and then
+ * starts the game (`launchCountdown`). Refused exactly as a start would be, so
+ * the countdown only begins on a room that could start right now. A second tap
+ * during the countdown is not refused; the room is already doing what it asks.
+ */
+export const startCountdown = mutation({
+  args: { sessionToken: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
+    if (room.setup?.stage === 'countdown') return null;
+    await validatedStart(ctx, room, {});
+    await beginCountdown(ctx, room);
+    return null;
+  },
+});
+
+/** The Host stops the countdown; the room goes back to its ready check. */
+export const stopCountdown = mutation({
+  args: { sessionToken: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await limitHostCommand(ctx, args.sessionToken);
+    const { room } = await requireRoomHost(ctx, args.sessionToken);
+    const setup = room.setup;
+    if (setup?.stage !== 'countdown') return null;
+    await cancelCountdownJob(ctx, setup);
+    await ctx.db.patch(room._id, { setup: withoutCountdown(setup) });
+    return null;
+  },
+});
+
+/**
+ * The countdown running out: the room starts the game it has been counting
+ * down to, as long as the ready check still holds.
+ *
+ * `endsAt` names the countdown this call was scheduled for. A countdown that
+ * was stopped, restarted or skipped by the Host has a different one (or none),
+ * and this call then does nothing.
+ */
+export const launchCountdown = internalMutation({
+  args: { roomId: v.id('rooms'), endsAt: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+    const setup = room?.setup;
+    if (room === null || setup === undefined) return null;
+    if (setup.stage !== 'countdown' || setup.countdownEndsAt !== args.endsAt) return null;
+
+    // This call is the scheduled job, so it must not cancel itself: a running
+    // function that is cancelled also loses what it schedules, which would
+    // include the game's first clock.
+    const settled = { ...room, setup: { ...setup, countdownJob: undefined } };
+    if (!(await readyCheckComplete(ctx, settled))) {
+      await ctx.db.patch(room._id, { setup: withoutCountdown(setup) });
+      return null;
+    }
+
+    try {
+      await startFromSetup(ctx, settled, {});
+    } catch (error) {
+      // The start was refused after all (a setting no longer valid, a module
+      // that failed to deal). Nobody is waiting on this call to hear why, so
+      // the room goes back to its ready check where the Host can act.
+      if (!(error instanceof ConvexError)) throw error;
+      await ctx.db.patch(room._id, { setup: withoutCountdown(setup) });
+    }
+    return null;
+  },
+});
+
+/**
+ * Starts the room's game from its locked setup, or throws the refusal.
+ *
+ * Shared by the Host's `startGame` and the countdown's `launchCountdown`, so
+ * both starts are judged by the same rules.
+ */
+async function startFromSetup(
+  ctx: MutationCtx,
+  room: Doc<'rooms'>,
+  args: StartArgs,
+): Promise<void> {
+  const { game, players, requestedSettings } = await validatedStart(ctx, room, args);
+
+  let state: unknown;
+  try {
+    state = game.decodeState(
+      game.createInitialState({
+        players,
+        settings: settingsFrom(game.settingsSchema, requestedSettings),
+      }),
+    );
+    if (state === undefined) throw new Error('initial state decoder returned undefined');
+  } catch {
+    throw new ConvexError({ kind: 'gameUnavailable', gameId: game.metadata.id });
+  }
+
+  // Past every refusal, so a refused start leaves the countdown running.
+  await cancelCountdownJob(ctx, room.setup);
+
+  // The first beat's clock starts with the game, so a room that has been
+  // dealt a question is already being counted down at the moment every screen
+  // in it draws that question.
+  const clock = await windGameClock(
+    ctx,
+    room,
+    { gameId: game.metadata.id, stateVersion: game.stateVersion, state },
+    game,
+    state,
+  );
+
+  if (clock === undefined) {
+    throw new ConvexError({ kind: 'gameUnavailable', gameId: game.metadata.id });
+  }
+
+  await ctx.db.patch(room._id, {
+    game: {
+      gameId: game.metadata.id,
+      stateVersion: game.stateVersion,
+      state,
+      settings: settingsFrom(game.settingsSchema, requestedSettings),
+      mode: (args.mode ?? room.setup?.mode ?? 'standard') as GameSetupMode,
+      ...clock,
+    },
+    setup: undefined,
+  });
+}
+
+type StartArgs = {
+  readonly gameId?: string;
+  readonly settings?: Record<string, string>;
+  readonly mode?: GameSetupMode;
+};
+
+/**
+ * Every refusal a start can meet, in the order the room hears them, or the
+ * game, seats and settings the start would use. Shared by the Host's Start
+ * (which begins the countdown) and the start itself, so a countdown only ever
+ * begins on a room that could start right now.
+ */
+async function validatedStart(ctx: MutationCtx, room: Doc<'rooms'>, args: StartArgs) {
+  if (room.tvAway === true) {
+    throw new ConvexError({ kind: 'tvUnavailable' });
+  }
+
+  // Whether a game exists at all is a property of what was sent, not of any
+  // room — but it is asked after the Host check, so a non-Host learns only
+  // that it is not the Host.
+  const gameId = args.gameId ?? room.setup?.gameId;
+  if (gameId === undefined) {
+    throw new ConvexError({ kind: 'setupNotFound' });
+  }
+  const game = gameLogicById(gameId);
+
+  if (game === undefined) {
+    throw new ConvexError<GameLifecycleRejection>({
+      kind: 'gameNotInstalled',
+      gameId,
+    });
+  }
+
+  const players = await gamePlayersInRoom(ctx, room._id);
+  if (room.setup?.stage !== 'ready' && room.setup?.stage !== 'countdown') {
+    throw new ConvexError({ kind: 'setupNotReady' });
+  }
+  const away = players.filter((player) => player.away).map((player) => player.playerId);
+  if (away.length > 0) throw new ConvexError({ kind: 'playersAway', playerIds: away });
+  const ready = new Set<string>((room.setup.readyPlayerIds ?? []).map(String));
+  const unready = players.filter((player) => !ready.has(player.playerId)).map((player) => player.playerId);
+  if (unready.length > 0) throw new ConvexError({ kind: 'playersNotReady', playerIds: unready });
+  const requestedSettings =
+    args.settings === undefined && room.setup?.settings === undefined
+      ? undefined
+      : { ...room.setup?.settings, ...args.settings };
+  // The room's own refusals first, then the settings': a party too small to
+  // play hears that before it hears about a setting, whatever it sent.
+  const mode = args.mode ?? room.setup?.mode;
+  const refusal =
+    refusalToStart(roomPhase(room.game, room.setup), players.length, game.metadata.playerRange) ??
+    (room.setup !== undefined || mode !== undefined
+      ? settingsRefusalForMode(
+          game.settingsSchema,
+          game.settingsPresentation,
+          requestedSettings,
+          mode ?? 'standard',
+        )
+      : settingsRefusal(game.settingsSchema, requestedSettings));
+
+  if (refusal !== null) {
+    throw new ConvexError<GameLifecycleRejection>(refusal);
+  }
+
+  return { game, players, requestedSettings };
+}
 
 /**
  * The Host ends the game: the room returns to its lobby, and nothing else about
@@ -491,6 +640,7 @@ export const endGame = mutation({
     // again inside its countdown would watch its first question reveal itself
     // seconds after the room was dealt it.
     await stopGameClock(ctx, room);
+    await cancelCountdownJob(ctx, room.setup);
     // Unconditional: ending has no refusal to check (see `refusalToStart`), so
     // there is nothing between the Host check and the patch. `undefined` is how
     // Convex unsets an optional field. Clear all game-owned surfaces in one

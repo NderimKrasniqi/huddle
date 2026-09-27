@@ -1072,7 +1072,7 @@ export function SetupSurface({
     readonly gameId: string;
     readonly settings: Record<string, string>;
     readonly mode: GameSettingsMode;
-    readonly stage: 'configuring' | 'ready';
+    readonly stage: 'configuring' | 'ready' | 'countdown';
     readonly readyPlayerIds: readonly string[];
   };
   readonly roster: readonly RosterSeat[];
