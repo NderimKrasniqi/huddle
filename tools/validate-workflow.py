@@ -17,6 +17,7 @@ CURRENT_MARKDOWN = {
     "AGENTS.md",
     "convex/AGENTS.md",
     "docs/architecture.md",
+    "docs/design/huddle-pop/README.md",
     "docs/implementation-plan.md",
     "docs/project-scope.md",
     "docs/tech-stack.md",
