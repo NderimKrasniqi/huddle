@@ -1,7 +1,6 @@
 # Huddle technology stack
 
-This document records the technology choices used by the integrated Heartbeat
-release. Product behavior belongs in [`project-scope.md`](./project-scope.md);
+This document records the technology choices used by the Playroom release. Product behavior belongs in [`project-scope.md`](./project-scope.md);
 runtime boundaries belong in [`architecture.md`](./architecture.md).
 
 ## Supported platform matrix
@@ -34,11 +33,13 @@ Workspace roots are `apps/phone`, `apps/tv`, `games/*`, `packages/contracts`,
 `packages/game-registry`, and `convex`. Package exports, rather than source
 directory reach-through, enforce those boundaries.
 
-## Heartbeat presentation stack
+## Playroom presentation stack
 
 | Technology | Version | Use |
 |---|---:|---|
-| `@expo-google-fonts/nunito` | `0.4.2` | Nunito 400/700/800 on Phone and TV |
+| `@expo-google-fonts/nunito` | `0.4.2` | Nunito 400/700/800/900 on Phone and TV |
+| React Native Reanimated | `4.5.1` | platform motion in both apps and `@huddle/ui` |
+| Expo Haptics | `~57.0.3` | Phone selection, ready and countdown haptics |
 | Expo Camera | `~57.0.3` | Phone QR scanning only |
 | React Native QR Code SVG | `^6.3.21` | TV Room Invitation QR only |
 | React Native SVG | `15.15.4` | TV QR and decorative boot/restoration marks |
@@ -50,16 +51,17 @@ directory reach-through, enforce those boundaries.
 
 Both Expo layouts call `useFonts` for Nunito and keep the native splash visible
 until fonts and the first frame are ready. The shared
-`@huddle/design-tokens` package exports the exact board palette, semantic roles,
-typography, spacing, radii, shadows, and reduced-motion durations. Shared
-`@huddle/ui/native` primitives use ordinary React Native style objects and
-retain accessible labels, disabled/busy state, and 44-point Phone targets.
+`@huddle/design-tokens` package exports the Playroom palette, avatar circle
+colours, type scales, spacing, radii, shadows, and motion timings. Shared
+`@huddle/ui/native` pieces use ordinary React Native style objects and retain
+accessible labels, disabled/busy state, and 48-point Phone targets.
 
-NativeWind, Tailwind, CSS interop, Expo Image, Reanimated, Lucide, NetInfo
-presentation imports, and global CSS are intentionally absent. Styling is
-tokenized React Native code. `react-native-worklets@0.10.1` is pinned only in
-Phone and TV for the Expo toolchain's native compatibility; Huddle source does
-not import it.
+Reanimated drives press feedback, entrances, badges, row highlights and the
+ready lift, and respects the system reduced-motion setting. It is used in the
+apps and `@huddle/ui`, never in game modules; games import the neutral
+`@huddle/ui/game-kit` entry, which does not load it. NativeWind, Tailwind, CSS
+interop, Expo Image, Lucide, NetInfo presentation imports, and global CSS are
+intentionally absent. Styling is tokenized React Native code.
 
 The TV app owns the only QR/SVG dependencies. The Phone scanner owns the only
 `CameraView`. The TV source graph is checked for buttons, inputs, press handlers,
@@ -78,26 +80,26 @@ The game registry exposes five ordered catalog entries. Trivia and Voting are
 installed modules with complete loops; Doodle Dash, Quick Poll, and Hot Take
 are display-only Coming soon entries. Each playable module owns its settings,
 server rules, state/deadlines, redaction, Phone controller, TV presentation,
-and Back-to-lobby boundary. Convex remains the authority and no new server
-schemas are introduced by the design layer.
+and Back-to-lobby boundary. Convex remains the authority; the only schema
+addition is the optional countdown state on setup.
 
 ## Asset and motion pipeline
 
-The retained visual references are the Huddle direction board and approved
-screen set under `docs/design/heartbeat/reference/`. The React Native surfaces
-have completed their fidelity pass against that set. Runtime artwork is checked into
-`packages/ui/assets/heartbeat`; optimized stable avatar IDs are in
-`packages/ui/assets/avatars`, and launcher/splash derivatives are in
-`packages/ui/assets/app-icons`. These are implementation assets, not source
-masters. `tools/validate-architecture.py` validates the
-runtime bundle directly for its exact file set, dimensions, alpha, and
-SHA-256 digests without requiring a design manifest or source-master tree.
+The visual reference is the Playroom design under `docs/design/playroom/`.
+Platform artwork is checked into `packages/ui/assets/playroom` (avatars, game
+art, props, setting icons, status illustrations, brand); each game keeps its
+world art in its own `assets/`; launcher and splash derivatives are in
+`packages/ui/assets/app-icons`, produced by `tools/generate-app-icons.py` from
+the supplied Huddle-Platform app artwork. These are implementation assets, not
+source masters. `tools/validate-architecture.py` validates each runtime bundle
+directly for its exact file set, dimensions, alpha, and SHA-256 digests
+without requiring a design manifest or source-master tree.
 
 TV uses a 1920×1080 design stage and a 5% overscan-safe frame, scaling down to
-1280×720. Phone uses portrait-first Safe Area layouts. Tokenized motion covers
-startup orbit, room reveal, card selection, game-world handoff, and success.
-Reduced-motion devices get static marks and immediate state changes without
-losing status copy or accessibility semantics.
+1280×720. Phone uses portrait-first Safe Area layouts. Motion stays under
+300 ms: presses, entrances, card selection, badges, the ready lift, and one pop
+per countdown number. Reduced-motion devices get immediate state changes or
+brief fades without losing status copy or accessibility semantics.
 
 ## Verification commands
 
