@@ -31,7 +31,7 @@ export const PLAYROOM_ARTWORK = {
   status: {
     loading: nativeAsset(() => require('../../assets/playroom/status/loading.png')),
     waiting: nativeAsset(() => require('../../assets/playroom/status/waiting.png')),
-    lobby: nativeAsset(() => require('../../assets/playroom/status/lobby.png')),
+    roomFull: nativeAsset(() => require('../../assets/playroom/status/room-full.png')),
     roomNotFound: nativeAsset(() => require('../../assets/playroom/status/room-not-found.png')),
     disconnected: nativeAsset(() => require('../../assets/playroom/status/disconnected.png')),
     paused: nativeAsset(() => require('../../assets/playroom/status/paused.png')),

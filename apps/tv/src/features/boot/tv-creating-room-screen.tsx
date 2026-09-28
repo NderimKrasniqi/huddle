@@ -87,8 +87,8 @@ const styles = StyleSheet.create({
     paddingVertical: playroomTv.safeY,
   },
   splash: {
-    width: 640,
-    height: 461,
+    width: 500,
+    height: 500,
   },
   wordmark: {
     marginTop: 6,
