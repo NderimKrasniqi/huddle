@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { semanticColors } from '@huddle/design-tokens';
+import { playroomColors } from '@huddle/design-tokens';
 import {
   Animated,
   Easing,
@@ -19,10 +19,10 @@ export type TvRestoreIndicatorProps = {
 };
 
 const COLORS = [
-  semanticColors.primary,
-  semanticColors.secondary,
-  semanticColors.accent,
-  semanticColors.info,
+  playroomColors.orange,
+  playroomColors.yellow,
+  playroomColors.purple,
+  playroomColors.lavenderStrong,
 ] as const;
 
 /** Nominal test window; production handoff waits for the spring callback. */
@@ -215,18 +215,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkCircle: {
-    backgroundColor: semanticColors.success,
+    backgroundColor: playroomColors.green,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkLeft: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: semanticColors.surface,
+    backgroundColor: playroomColors.card,
   },
   checkRight: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: semanticColors.surface,
+    backgroundColor: playroomColors.card,
   },
 });
