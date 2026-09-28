@@ -1,72 +1,27 @@
-import { ROOM_PLAYER_CAP, settingSummaryText } from '@huddle/domain';
-import type {
-  GameEvent,
-  GameModule,
-  GamePlayer,
-  GameSettings,
-  GameSetting,
-  GameSettingIcon,
-  GameSettingsMode,
-} from '@huddle/domain';
-import { brandColors, fontFamilies, platformPhoneTheme, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
-import {
-  CAROUSEL_REGISTRY,
-  carouselWindow,
-  nextIndex,
-  previousIndex,
-  type RunningGameScreen,
-} from '@huddle/game-registry';
-import {
-  Badge,
-  Chip,
-  CodeTiles,
-  GameCard,
-  HuddleButton,
-  HuddleText,
-  HuddleIcon,
-  HEARTBEAT_ARTWORK,
-  PlayerRow,
-  ScreenShell,
-} from '@huddle/ui/native';
-import { Image, ImageBackground, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useState } from 'react';
+import type { GameEvent, GameModule, GamePlayer } from '@huddle/domain';
+import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
+import type { RunningGameScreen } from '@huddle/game-registry';
+import { PlayroomButton, PlayroomHeading, PlayroomStatusImage, PlayroomText } from '@huddle/ui/native';
+import { Modal, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  lobbyStanding,
-  rosterRowControls,
-  type RosterSeat,
-} from '../features/room';
-import { settingsControls } from '../features/game-picker/settings-choice';
+import type { RosterSeat } from '../features/room';
 import type { PlayerSession } from '../platform/session';
 import { PhoneLoadingScreen } from '../ui/native';
-import { pickerControlState, setupModeLabel, setupReadiness } from './seated-phone-model';
+import { LobbyScreen, ManagePlayerScreen } from './seated/lobby-screen';
+import { PhoneFrame, PhoneNotice } from './seated/phone-frame';
+import { PickerScreen } from './seated/picker-screen';
+import { SetupScreen } from './seated/setup-screen';
 import { useSeatedRoom, type BusyAction, type Confirmation } from './use-seated-room';
 
-const GAME_ART = {
-  trivia: HEARTBEAT_ARTWORK.gameCards.trivia,
-  voting: HEARTBEAT_ARTWORK.gameCards.voting,
-  'doodle-dash': HEARTBEAT_ARTWORK.gameCards.doodleDash,
-  'quick-poll': HEARTBEAT_ARTWORK.gameCards.quickPoll,
-  'hot-take': HEARTBEAT_ARTWORK.gameCards.hotTake,
-} as const;
+/** The picker and setup screens, under the names the render tests use. */
+export { PickerScreen as PickerSurface } from './seated/picker-screen';
+export { SetupScreen as SetupSurface } from './seated/setup-screen';
 
-const GAME_TONES = {
-  trivia: 'trivia',
-  voting: 'voting',
-  'doodle-dash': 'doodleDash',
-  'quick-poll': 'quickPoll',
-  'hot-take': 'hotTake',
-} as const;
-
-const GAME_DESCRIPTIONS = {
-  trivia: 'Quiz',
-  voting: 'Party',
-  'doodle-dash': 'Sketch fast. Guess first.',
-  'quick-poll': 'Share a thought. See who wins.',
-  'hot-take': 'Spice it up. React together.',
-} as const;
-
+/**
+ * A seated phone: routes the room's state to the Playroom screen for it.
+ * Everything it knows and can do comes from `useSeatedRoom`.
+ */
 export function SeatedPhone({
   session,
   onSeatLost,
@@ -78,7 +33,6 @@ export function SeatedPhone({
 }) {
   const room = useSeatedRoom({ session, onSeatLost, onLeft });
   const {
-    reduceMotion,
     roster,
     running,
     browsingAt,
@@ -93,73 +47,50 @@ export function SeatedPhone({
     success,
     confirmation,
     managedPlayer,
-    confirmLeave,
-    confirmTransfer,
-    confirmRemove,
-    openPicker,
-    browse,
-    chooseGame,
-    configure,
-    finalize,
-    reopen,
-    confirmReturnToRoom,
-    toggleReady,
-    start,
-    end,
-    continueGame,
-    event,
-    managePlayer,
   } = room;
+  const me = roster.find((seat) => seat.playerId === session.playerId);
+  const you = { nickname: me?.nickname ?? session.nickname, avatarId: me?.avatar ?? session.avatar };
+  const sheet = <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} onCancel={room.dismissConfirmation} />;
 
   if (screen.kind === 'game' || screen.kind === 'finished') {
     return (
       <>
-      <PhoneRuntimeMount
-        screen={screen}
-        roster={roster}
-        session={session}
-        failure={failure}
-        busy={busy}
-        youAreHost={standing.youAreHost}
-        onBackToLobby={end}
-        onEvent={event}
-      />
-      <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} reduceMotion={reduceMotion} onCancel={room.dismissConfirmation} />
+        <PhoneRuntimeMount
+          screen={screen}
+          roster={roster}
+          session={session}
+          failure={failure}
+          busy={busy}
+          youAreHost={standing.youAreHost}
+          onBackToLobby={room.end}
+          onEvent={room.event}
+        />
+        {sheet}
       </>
     );
   }
 
-  if (screen.kind === 'paused') {
+  if (screen.kind === 'paused' || screen.kind === 'unavailable') {
+    const disconnected = screen.kind === 'paused' && screen.reason === 'playerDisconnected';
     return (
       <>
-      <PhoneRuntimeStatus
-        variant="paused"
-        title="Game is paused"
-        message={screen.reason === 'playerDisconnected' ? 'A player’s phone went quiet. The room will resume when everyone is back.' : 'The TV is reconnecting. Keep Huddle open on the phones.'}
-        youAreHost={standing.youAreHost}
-        failure={failure}
-        busy={busy}
-        primary={screen.reason === 'playerDisconnected' ? { label: 'Continue without waiting', onPress: continueGame, disabled: false, action: 'continue' } : undefined}
-        onBackToLobby={end}
-      />
-      <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} reduceMotion={reduceMotion} onCancel={room.dismissConfirmation} />
-      </>
-    );
-  }
-
-  if (screen.kind === 'unavailable') {
-    return (
-      <>
-      <PhoneRuntimeStatus
-        variant="unavailable"
-        title="Game unavailable"
-        message="This game could not be restored on this phone. The Host can return the room to the lobby."
-        youAreHost={standing.youAreHost}
-        failure={failure}
-        busy={busy}
-        onBackToLobby={end}
-      />
-      <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} reduceMotion={reduceMotion} onCancel={room.dismissConfirmation} />
+        <PhoneRuntimeStatus
+          variant={screen.kind}
+          title={screen.kind === 'paused' ? 'Game paused' : 'Game unavailable'}
+          message={
+            screen.kind === 'unavailable'
+              ? 'This game could not be restored on this phone. The Host can return the room to the lobby.'
+              : disconnected
+                ? 'A player’s phone went quiet. The room will resume when everyone is back.'
+                : 'The TV is reconnecting. Keep Huddle open on the phones.'
+          }
+          youAreHost={standing.youAreHost}
+          failure={failure}
+          busy={busy}
+          primary={disconnected ? { label: 'Continue without waiting', onPress: room.continueGame, action: 'continue' } : undefined}
+          onBackToLobby={room.end}
+        />
+        {sheet}
       </>
     );
   }
@@ -172,762 +103,79 @@ export function SeatedPhone({
     if (setupDraft !== null && setupDraft !== undefined && installedOrSelectedModule !== undefined) {
       return (
         <>
-        <SetupSurface
-          module={installedOrSelectedModule}
-          setup={setupDraft}
-          roster={roster}
-          playerId={session.playerId}
-          youAreHost={standing.youAreHost}
-          busy={busy}
-          failure={failure}
-          onConfigure={configure}
-          onFinalize={finalize}
-          onReopen={reopen}
-          onCancel={() => confirmReturnToRoom(true)}
-          onReady={toggleReady}
-          onStart={start}
-          onLeave={confirmLeave}
-        />
-        <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} reduceMotion={reduceMotion} onCancel={room.dismissConfirmation} />
+          <SetupScreen
+            module={installedOrSelectedModule}
+            setup={setupDraft}
+            roster={roster}
+            playerId={session.playerId}
+            you={you}
+            youAreHost={standing.youAreHost}
+            busy={busy}
+            failure={failure}
+            onConfigure={room.configure}
+            onFinalize={room.finalize}
+            onReopen={room.reopen}
+            onCancel={() => room.confirmReturnToRoom(true)}
+            onReady={room.toggleReady}
+            onStart={room.start}
+            onStop={room.stopCountdown}
+            onLeave={room.confirmLeave}
+          />
+          {sheet}
         </>
       );
     }
     return (
       <>
-        <PickerSurface
+        <PickerScreen
           browsingAt={browsingAt ?? 0}
           youAreHost={standing.youAreHost}
           hostNickname={standing.hostNickname}
+          hostAvatar={standing.hostAvatar}
+          you={you}
           busy={busy}
           failure={failure}
-          onBrowse={browse}
-          onChoose={chooseGame}
-          onBackToRoom={() => confirmReturnToRoom(false)}
-          onLeave={confirmLeave}
+          onBrowse={room.browse}
+          onChoose={room.chooseGame}
+          onBackToRoom={() => room.confirmReturnToRoom(false)}
+          onLeave={room.confirmLeave}
         />
-      <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} reduceMotion={reduceMotion} onCancel={room.dismissConfirmation} />
+        {sheet}
+      </>
+    );
+  }
+
+  if (managedPlayer !== undefined) {
+    return (
+      <>
+        <ManagePlayerScreen
+          player={managedPlayer}
+          you={you}
+          busy={busy}
+          onBack={room.dismissManagedPlayer}
+          onTransfer={room.confirmTransfer}
+          onRemove={room.confirmRemove}
+        />
+        {sheet}
       </>
     );
   }
 
   return (
     <>
-    <LobbySurface
-      session={session}
-      roster={roster}
-      standing={standing}
-      busy={busy}
-      failure={failure}
-      success={success}
-      onOpenPicker={openPicker}
-      onManage={managePlayer}
-      onLeave={confirmLeave}
-      />
-      <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} reduceMotion={reduceMotion} onCancel={room.dismissConfirmation} />
-      <PlayerManagementSheet
-        player={managedPlayer}
+      <LobbyScreen
+        session={session}
+        roster={roster}
+        standing={standing}
         busy={busy}
-        onDismiss={room.dismissManagedPlayer}
-        onTransfer={confirmTransfer}
-        onRemove={confirmRemove}
+        failure={failure}
+        success={success}
+        onOpenPicker={room.openPicker}
+        onManage={room.managePlayer}
+        onLeave={room.confirmLeave}
       />
+      {sheet}
     </>
-  );
-}
-
-function LobbySurface({
-  session,
-  roster,
-  standing,
-  busy,
-  failure,
-  success,
-  onOpenPicker,
-  onManage,
-  onLeave,
-}: {
-  readonly session: PlayerSession;
-  readonly roster: readonly RosterSeat[];
-  readonly standing: ReturnType<typeof lobbyStanding>;
-  readonly busy: BusyAction;
-  readonly failure?: string;
-  readonly success?: string;
-  readonly onOpenPicker: () => void;
-  readonly onManage: (seat: RosterSeat) => void;
-  readonly onLeave: () => void;
-}) {
-  const insets = useSafeAreaInsets();
-  return (
-    <ScreenShell tone="background" style={styles.shell} testID="phone-lobby">
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[styles.page, { flexGrow: 1, paddingTop: insets.top + spacing.sm, paddingBottom: insets.bottom + spacing.xl }]}>
-          <View style={styles.roomNav}>
-            <View style={styles.navButton}><HuddleText variant="body" style={styles.roomBack}>‹</HuddleText></View>
-            <HuddleText variant="bodyLarge" style={styles.navTitle}>Room</HuddleText>
-            <View style={styles.navButton} />
-          </View>
-
-          <View style={styles.roomSummary}>
-            <CodeTiles
-              code={session.code}
-              testID="phone-room-code-tiles"
-              accessibilityLabel={`Room code ${session.code}`}
-              style={styles.lobbyCodeTiles}
-              tileStyle={styles.lobbyCodeTile}
-              valueStyle={styles.lobbyCodeValue}
-            />
-            <Badge label={standing.youAreHost ? 'Host' : 'You'} tone={standing.youAreHost ? 'host' : 'neutral'} />
-          </View>
-
-          <View style={styles.rosterSection}>
-            <View style={styles.sectionHeading}>
-              <HuddleText variant="title">Players</HuddleText>
-              <HuddleText variant="caption" style={styles.helper}>{roster.length} / {ROOM_PLAYER_CAP} players</HuddleText>
-            </View>
-            <View style={styles.rosterList}>
-              {roster.map((seat) => {
-                const manageable = standing.youAreHost && !seat.host;
-                const row = (
-                  <PlayerRow
-                    displayName={seat.nickname}
-                    avatarId={seat.avatar}
-                    status={seat.away ? 'away' : 'waiting'}
-                    isHost={seat.host}
-                    compact
-                    testID={`lobby-player-${seat.playerId}`}
-                    style={styles.lobbyPlayerRow}
-                  />
-                );
-                return manageable ? (
-                  <Pressable
-                    key={seat.playerId}
-                    onPress={() => onManage(seat)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Manage ${seat.nickname}`}
-                    accessibilityHint="Opens player actions"
-                    testID={`manage-player-${seat.playerId}`}
-                  >
-                    {row}
-                  </Pressable>
-                ) : (
-                  <View key={seat.playerId}>{row}</View>
-                );
-              })}
-            </View>
-          </View>
-
-          {failure ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="phone-lifecycle-error">{failure}</HuddleText> : null}
-          {success ? (
-            <View style={styles.successBanner} accessible accessibilityRole="alert" accessibilityLiveRegion="polite" testID="phone-lifecycle-success">
-              <HuddleText variant="body" align="center">{success}</HuddleText>
-            </View>
-          ) : null}
-          {standing.youAreHost ? (
-            <View style={styles.bottomActions}>
-              <HuddleButton title="Leave" variant="secondary" onPress={onLeave} busy={busy === 'leave'} accessibilityLabel="Leave room" testID="leave-room" style={styles.bottomAction} />
-              <HuddleButton title="Pick a game" onPress={onOpenPicker} busy={busy === 'browse'} accessibilityLabel="Pick a game" testID="open-game-picker" style={[styles.bottomAction, styles.primaryAction]} />
-            </View>
-          ) : (
-            <>
-              <View style={styles.hostWaitingPanel}>
-                <HuddleText variant="bodyLarge" align="center">Waiting for {standing.hostNickname ?? 'the Host'}</HuddleText>
-                <HuddleText variant="caption" align="center">They’ll choose a game for the room.</HuddleText>
-              </View>
-              <HuddleButton title="Leave" variant="secondary" onPress={onLeave} busy={busy === 'leave'} accessibilityLabel="Leave room" testID="leave-room" style={styles.leaveAction} />
-            </>
-          )}
-        </View>
-      </ScrollView>
-    </ScreenShell>
-  );
-}
-
-function PlayerManagementSheet({
-  player,
-  busy,
-  onDismiss,
-  onTransfer,
-  onRemove,
-}: {
-  readonly player: RosterSeat | undefined;
-  readonly busy: BusyAction;
-  readonly onDismiss: () => void;
-  readonly onTransfer: (seat: RosterSeat) => void;
-  readonly onRemove: (seat: RosterSeat) => void;
-}) {
-  const insets = useSafeAreaInsets();
-  if (player === undefined) return null;
-  const controls = rosterRowControls(player);
-  return (
-    <Modal
-      visible
-      transparent
-      animationType="none"
-      onRequestClose={onDismiss}
-      accessibilityViewIsModal
-      testID="player-management-modal"
-    >
-      <View style={[styles.confirmationScrim, { paddingBottom: insets.bottom }]}>
-        <View style={styles.managementSheet}>
-          <View style={styles.sheetHandle} />
-          <HuddleText variant="caption" style={styles.sheetEyebrow}>PLAYER</HuddleText>
-          <PlayerRow
-            displayName={player.nickname}
-            avatarId={player.avatar}
-            status={player.away ? 'away' : 'waiting'}
-            testID="managed-player"
-            style={styles.sheetPlayerRow}
-          />
-          {controls.map((control) => (
-            <View key={control.action} style={styles.sheetActionBlock}>
-              <HuddleButton
-                title={control.label}
-                variant={control.action === 'remove' ? 'destructive' : 'secondary'}
-                disabled={!control.enabled}
-                busy={busy === control.action}
-                onPress={() => control.action === 'transfer' ? onTransfer(player) : onRemove(player)}
-                accessibilityLabel={`${control.label} ${player.nickname}`}
-                testID={`manage-${control.action}-${player.playerId}`}
-                style={styles.sheetAction}
-              />
-              {control.disabledBecause ? <HuddleText variant="caption" align="center" style={styles.helper}>{control.disabledBecause}</HuddleText> : null}
-            </View>
-          ))}
-          <HuddleButton title="Cancel" variant="ghost" onPress={onDismiss} disabled={busy !== null} accessibilityLabel="Cancel" testID="manage-cancel" style={styles.sheetAction} />
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function PickerMetadata({ module }: { readonly module: GameModule }) {
-  return (
-    <View style={styles.pickerMetadata} accessible accessibilityRole="text">
-      <PickerMetaItem kind="people" label={`${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players`} />
-      <HuddleText variant="caption" style={styles.metadataSeparator}>•</HuddleText>
-      <PickerMetaItem kind="clock" label={`about ${module.metadata.estimatedMinutes} min`} />
-      <HuddleText variant="caption" style={styles.metadataSeparator}>•</HuddleText>
-      <PickerMetaItem kind="smile" label="all ages" />
-    </View>
-  );
-}
-
-function PickerMetaItem({
-  kind,
-  label,
-}: {
-  readonly kind: 'people' | 'clock' | 'smile';
-  readonly label: string;
-}) {
-  return (
-    <View style={styles.metadataItem}>
-      <PickerMetaIcon kind={kind} />
-      <HuddleText variant="caption">{label}</HuddleText>
-    </View>
-  );
-}
-
-function PickerMetaIcon({ kind }: { readonly kind: 'people' | 'clock' | 'smile' }) {
-  if (kind === 'people') {
-    return (
-      <View style={styles.peopleIcon} accessible={false}>
-        <View style={[styles.peopleHead, styles.peopleHeadPrimary]} />
-        <View style={[styles.peopleHead, styles.peopleHeadSecondary]} />
-        <View style={[styles.peopleBody, styles.peopleBodyPrimary]} />
-        <View style={[styles.peopleBody, styles.peopleBodySecondary]} />
-      </View>
-    );
-  }
-
-  if (kind === 'clock') {
-    return (
-      <View style={styles.clockIcon} accessible={false}>
-        <View style={styles.clockHandShort} />
-        <View style={styles.clockHandLong} />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.smileIcon} accessible={false}>
-      <View style={[styles.smileEye, styles.smileEyeLeft]} />
-      <View style={[styles.smileEye, styles.smileEyeRight]} />
-      <View style={styles.smileMouth} />
-    </View>
-  );
-}
-
-type SetupMode = 'quick' | 'standard' | 'custom';
-
-function SetupModeControl({
-  value,
-  disabled,
-  onChange,
-}: {
-  readonly value: SetupMode;
-  readonly disabled: boolean;
-  readonly onChange: (mode: SetupMode) => void;
-}) {
-  return (
-    <View style={styles.modeControl} accessibilityRole="tablist">
-      {(['quick', 'standard', 'custom'] as const).map((mode, index) => (
-        <Pressable
-          key={mode}
-          onPress={() => onChange(mode)}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={setupModeLabel(mode)}
-          accessibilityState={{ selected: value === mode, disabled }}
-          testID={`setup-mode-${mode}`}
-          style={[styles.modeSegment, index < 2 ? styles.modeSegmentDivider : null, value === mode ? styles.modeSegmentSelected : null]}
-        >
-          <HuddleText variant="caption" style={value === mode ? styles.modeSegmentSelectedLabel : null}>{setupModeLabel(mode)}</HuddleText>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function SetupPresetSummary({
-  module,
-  label,
-  settings,
-  description,
-}: {
-  readonly module: GameModule;
-  readonly label: string;
-  readonly settings: GameSettings;
-  readonly description: string;
-}) {
-  return (
-    <View style={styles.presetSummary} testID="setup-preset-summary">
-      <HuddleText variant="title" style={styles.presetTitle}>{label}</HuddleText>
-      <HuddleText variant="caption" style={styles.presetDescription}>{description}</HuddleText>
-      <SetupSettingRows module={module} settings={settings} />
-    </View>
-  );
-}
-
-function SetupSettingRows({
-  module,
-  settings,
-}: {
-  readonly module: GameModule;
-  readonly settings: GameSettings;
-}) {
-  return (
-    <View style={styles.presetLines}>
-      {module.settingsSchema.map((setting) => (
-        <View key={setting.key} style={styles.presetSettingRow}>
-          <SetupSettingIcon icon={setting.icon} />
-          <HuddleText variant="caption" style={styles.presetSettingLabel}>
-            {settingSummaryText(setting, settings[setting.key])}
-          </HuddleText>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function SetupSettingIcon({ icon }: { readonly icon: GameSettingIcon | undefined }) {
-  const glyph = icon === 'count' ? '5' : icon === 'difficulty' ? '✣' : icon === 'category' || icon === 'results' ? '▣' : '♟';
-  const backgroundColor = icon === 'difficulty'
-    ? brandColors.butter
-    : icon === 'timer'
-      ? brandColors.sky
-      : icon === 'category' || icon === 'results'
-        ? brandColors.lilac
-        : brandColors.mint;
-  return (
-    <View style={[styles.presetSettingIcon, { backgroundColor }]} accessible={false}>
-      {icon === 'timer' ? <HuddleIcon name="clock" size={18} /> : icon === 'players' ? <HuddleIcon name="people" size={18} /> : <HuddleText variant="caption" style={styles.presetSettingIconText}>{glyph}</HuddleText>}
-    </View>
-  );
-}
-
-export function PickerSurface({
-  browsingAt,
-  youAreHost,
-  hostNickname,
-  busy,
-  failure,
-  onBrowse,
-  onChoose,
-  onBackToRoom,
-  onLeave,
-}: {
-  readonly browsingAt: number;
-  readonly youAreHost: boolean;
-  readonly hostNickname?: string;
-  readonly busy: BusyAction;
-  readonly failure?: string;
-  readonly onBrowse: (index: number) => void;
-  readonly onChoose: (module: GameModule) => void;
-  readonly onBackToRoom: () => void;
-  readonly onLeave: () => void;
-}) {
-  const insets = useSafeAreaInsets();
-  const window = carouselWindow(browsingAt);
-  const selectedIndex = window?.index ?? 0;
-  const focused = window?.focused;
-  const [listMode, setListMode] = useState(false);
-  const controls = pickerControlState({
-    youAreHost,
-    focusedPlaceholder: focused?.placeholder === true,
-    busy: busy !== null,
-  });
-  const focusedId = focused?.metadata.id as keyof typeof GAME_ART | undefined;
-  const isUpdatingTv = busy === 'browse' || busy === 'select';
-  const lastCarouselIndex = Math.max(0, CAROUSEL_REGISTRY.length - 1);
-
-  if (focused === undefined || focusedId === undefined) return null;
-
-  const gameMetadata = [
-    `${focused.metadata.playerRange.min}–${focused.metadata.playerRange.max} players`,
-    `about ${focused.metadata.estimatedMinutes} min`,
-    'all ages',
-  ];
-
-  function browseSelected() {
-    if (controls.cardAction !== null) onBrowse(selectedIndex);
-  }
-
-  return (
-    <ScreenShell tone="background" style={styles.shell} testID="phone-game-picker">
-      <ScrollView contentContainerStyle={styles.scroll} horizontal={false} showsVerticalScrollIndicator={false}>
-        <View style={[styles.page, styles.pickerPage, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
-          <View style={styles.pickerNav}>
-            {youAreHost ? (
-              <Pressable onPress={onBackToRoom} accessibilityRole="button" accessibilityLabel="Back to room" testID="picker-back-top" style={styles.backLink}>
-                <HuddleText variant="body" color="primary">‹&nbsp; Back to room</HuddleText>
-              </Pressable>
-            ) : <View style={styles.navButton} />}
-            {youAreHost ? (
-              <Pressable
-                onPress={() => setListMode((current) => !current)}
-                accessibilityRole="button"
-                accessibilityLabel={listMode ? 'Show game carousel' : 'Show game list'}
-                testID="picker-view-toggle"
-                style={styles.viewToggle}
-              >
-                <HuddleText variant="caption">{listMode ? 'Carousel' : 'List'}</HuddleText>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={styles.pickerHeading}>
-            <HuddleText variant="display" align="center" style={styles.pickerTitle}>Pick a game</HuddleText>
-            <HuddleText variant="bodyLarge" align="center" style={styles.pickerSubtitle}>What are we feeling?</HuddleText>
-          </View>
-
-          {!youAreHost ? (
-            <View style={styles.guestPickerSurface}>
-              <Image source={HEARTBEAT_ARTWORK.phone.guestWaiting} resizeMode="cover" style={styles.guestWaitingArt} accessible={false} />
-              <View style={styles.guestWaitingCopy}>
-                <HuddleText variant="title" align="center">{hostNickname ?? 'The Host'} is choosing a game</HuddleText>
-                <HuddleText variant="body" align="center">Hang tight! The fun’s coming.</HuddleText>
-              </View>
-              {/* Kept as a passive accessibility anchor for the shared selected game. */}
-              <GameCard
-                title={focused.metadata.title}
-                description={focused.metadata.category}
-                metadata={gameMetadata}
-                image={GAME_ART[focusedId]}
-                tone={GAME_TONES[focusedId]}
-                selected
-                disabled
-                interactive={false}
-                testID={`phone-game-card-${focused.metadata.id}`}
-                style={styles.passivePickerAnchor}
-              />
-              <HuddleButton title="Leave room" variant="secondary" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" style={styles.fullWidthAction} />
-            </View>
-          ) : listMode ? (
-            <View style={styles.gameList}>
-              {CAROUSEL_REGISTRY.map((module, index) => {
-                const id = module.metadata.id as keyof typeof GAME_ART;
-                const cardLabel = `${module.metadata.title}${module.placeholder ? ', coming soon' : ''}`;
-                const listDescription = GAME_DESCRIPTIONS[id];
-                return (
-                  <Pressable
-                    key={module.metadata.id}
-                    onPress={() => onBrowse(index)}
-                    disabled={busy !== null}
-                    accessibilityRole="button"
-                    accessibilityLabel={cardLabel}
-                    accessibilityState={{ selected: index === selectedIndex, disabled: busy !== null || module.placeholder === true }}
-                    testID={`phone-game-card-${module.metadata.id}`}
-                    style={[styles.gameListRow, index === selectedIndex ? styles.gameListRowSelected : null, module.placeholder ? styles.gameListRowDisabled : null]}
-                  >
-                    <Image source={GAME_ART[id]} resizeMode="contain" style={styles.gameListArt} accessible={false} />
-                    <View style={styles.gameListCopy}>
-                      <HuddleText variant="bodyLarge">{module.metadata.title}</HuddleText>
-                      {module.placeholder ? (
-                        <HuddleText variant="caption">{listDescription}</HuddleText>
-                      ) : (
-                        <HuddleText variant="caption" style={styles.helper}>{module.metadata.playerRange.min}–{module.metadata.playerRange.max} players&nbsp; · &nbsp;about {module.metadata.estimatedMinutes} min&nbsp; · &nbsp;all ages</HuddleText>
-                      )}
-                    </View>
-                    {module.placeholder ? <Badge label="Coming soon" tone="comingSoon" /> : <HuddleText variant="title" style={styles.listChevron}>›</HuddleText>}
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <>
-              <View style={styles.carouselStage}>
-                <HuddleButton title="‹" variant="secondary" disabled={busy !== null} onPress={() => {
-                  const previous = previousIndex(selectedIndex) ?? lastCarouselIndex;
-                  onBrowse(previous);
-                }} accessibilityLabel="Previous game" testID="picker-previous" style={styles.carouselArrow} labelStyle={styles.carouselArrowLabel} />
-                <GameCard
-                  title={focused.metadata.title}
-                  image={GAME_ART[focusedId]}
-                  tone={GAME_TONES[focusedId]}
-                  selected
-                  comingSoon={focused.placeholder === true}
-                  disabled={controls.cardAction === null}
-                  interactive={controls.cardAction !== null}
-                  titleAlign="center"
-                  artFrameStyle={styles.focusedArtFrame}
-                  onPress={browseSelected}
-                  testID={`phone-game-card-${focused.metadata.id}`}
-                  style={[
-                    styles.focusedGameCard,
-                    focusedId === 'trivia' ? styles.focusedTrivia : null,
-                    focusedId === 'voting' ? styles.focusedVoting : null,
-                    focusedId === 'doodle-dash' ? styles.focusedDoodleDash : null,
-                    focusedId === 'quick-poll' ? styles.focusedQuickPoll : null,
-                    focusedId === 'hot-take' ? styles.focusedHotTake : null,
-                  ]}
-                />
-                <HuddleButton title="›" variant="secondary" disabled={busy !== null} onPress={() => {
-                  const next = nextIndex(selectedIndex) ?? 0;
-                  onBrowse(next);
-                }} accessibilityLabel="Next game" testID="picker-next" style={styles.carouselArrow} labelStyle={styles.carouselArrowLabel} />
-              </View>
-              <PickerMetadata module={focused} />
-              <View style={styles.carouselDots} accessibilityLabel={`Game ${selectedIndex + 1} of ${window?.total ?? CAROUSEL_REGISTRY.length}`}>
-                {CAROUSEL_REGISTRY.map((module, index) => <View key={module.metadata.id} style={[styles.dot, index === selectedIndex ? styles.dotSelected : null]} />)}
-              </View>
-              {focused.placeholder ? <Badge label="Coming soon" tone="comingSoon" style={styles.comingSoonBadge} /> : null}
-            </>
-          )}
-
-          {youAreHost && isUpdatingTv ? (
-            <View style={styles.syncPanel} accessibilityRole="alert" accessibilityLiveRegion="polite" testID="picker-syncing">
-              <View style={styles.syncDots}>{[0, 1, 2, 3].map((dot) => <View key={dot} style={[styles.syncDot, dot === 0 ? styles.syncDotActive : null]} />)}</View>
-              <View style={styles.syncCopy}>
-                <HuddleText variant="bodyLarge">Showing {focused.metadata.title} on the TV…</HuddleText>
-                <HuddleText variant="caption">This may take a few seconds.</HuddleText>
-              </View>
-            </View>
-          ) : null}
-          {failure ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="picker-error">{failure}</HuddleText> : null}
-          {failure && youAreHost ? <HuddleButton title="Try again" variant="primary" onPress={browseSelected} busy={busy === 'browse'} accessibilityLabel="Try again" testID="picker-retry" style={styles.fullWidthAction} /> : null}
-          {youAreHost && !listMode ? focused.placeholder ? (
-            <HuddleButton title={`Set up ${focused.metadata.title}`} disabled onPress={() => undefined} accessibilityLabel={`${focused.metadata.title}, coming soon`} testID="picker-coming-soon" style={styles.pickerPrimaryAction} labelStyle={styles.pickerPrimaryLabel} />
-          ) : (
-            <HuddleButton title={`Set up ${focused.metadata.title}`} onPress={() => onChoose(focused)} busy={busy === 'select'} disabled={!controls.selectEnabled} accessibilityLabel={`Set up ${focused.metadata.title}`} testID="picker-select" style={styles.pickerPrimaryAction} labelStyle={styles.pickerPrimaryLabel} />
-          ) : null}
-        </View>
-      </ScrollView>
-    </ScreenShell>
-  );
-}
-
-export function SetupSurface({
-  module,
-  setup,
-  roster,
-  playerId,
-  youAreHost,
-  busy,
-  failure,
-  onConfigure,
-  onFinalize,
-  onReopen,
-  onCancel,
-  onReady,
-  onStart,
-  onLeave,
-}: {
-  readonly module: GameModule;
-  readonly setup: {
-    readonly gameId: string;
-    readonly settings: Record<string, string>;
-    readonly mode: GameSettingsMode;
-    readonly stage: 'configuring' | 'ready' | 'countdown';
-    readonly readyPlayerIds: readonly string[];
-  };
-  readonly roster: readonly RosterSeat[];
-  readonly playerId: string;
-  readonly youAreHost: boolean;
-  readonly busy: BusyAction;
-  readonly failure?: string;
-  readonly onConfigure: (mode: GameSettingsMode, settings: GameSettings) => void;
-  readonly onFinalize: () => void;
-  readonly onReopen: () => void;
-  readonly onCancel: () => void;
-  readonly onReady: () => void;
-  readonly onStart: () => void;
-  readonly onLeave: () => void;
-}) {
-  const insets = useSafeAreaInsets();
-  const presentation = module.settingsPresentation;
-  const selectedPreset = presentation?.presets?.find((preset) => preset.mode === setup.mode);
-  const settings = setup.settings;
-  const customControls = settingsControls(
-    module.settingsSchema,
-    setup.gameId,
-    { gameId: setup.gameId, settings },
-    presentation,
-  );
-  const readiness = setupReadiness({
-    stage: setup.stage,
-    playerRange: module.metadata.playerRange,
-    roster,
-    readyPlayerIds: setup.readyPlayerIds,
-    playerId,
-  });
-  const { allReady, canStart, readyCount, currentReady } = readiness;
-  const awayCount = roster.filter((seat) => seat.away).length;
-  const countInRange = roster.length >= module.metadata.playerRange.min && roster.length <= module.metadata.playerRange.max;
-  const readyStatus = awayCount > 0
-    ? `${awayCount} player${awayCount === 1 ? '' : 's'} away. Waiting for them to reconnect.`
-    : !countInRange
-      ? `Need ${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players to start.`
-      : allReady
-        ? 'Everyone is ready. The Host can start.'
-        : 'Everyone here needs to tap Ready.';
-
-  function defaultsFor(schema: readonly GameSetting[]): GameSettings {
-    return Object.fromEntries(schema.map((setting) => [setting.key, settings[setting.key] ?? setting.defaultValue]));
-  }
-
-  function chooseMode(mode: GameSettingsMode) {
-    const preset = presentation?.presets?.find((candidate) => candidate.mode === mode);
-    onConfigure(mode, mode === 'custom' ? customSettings() : preset?.settings ?? defaultsFor(module.settingsSchema));
-  }
-
-  function chooseSetting(setting: GameSetting, value: string) {
-    onConfigure('custom', { ...customSettings(), [setting.key]: value });
-  }
-
-  function customSettings(): GameSettings {
-    return Object.fromEntries(module.settingsSchema.map((setting) => {
-      const visible = presentation?.customSettingKeys === undefined || presentation.customSettingKeys.includes(setting.key);
-      const allowed = presentation?.customOptions?.[setting.key];
-      const options = allowed === undefined
-        ? setting.options
-        : setting.options.filter((option) => allowed.includes(option.value));
-      const current = visible ? settings[setting.key] : undefined;
-      const selected = current !== undefined && options.some((option) => option.value === current)
-        ? current
-        : options[0]?.value ?? setting.defaultValue;
-      return [setting.key, selected];
-    }));
-  }
-
-  return (
-    <ScreenShell tone="background" style={styles.shell} testID="phone-game-setup">
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[styles.page, styles.setupPage, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
-          <View style={styles.setupNav}>
-            {youAreHost ? (
-              <Pressable onPress={onCancel} accessibilityRole="button" accessibilityLabel="Back to room" testID="setup-nav-back" style={styles.setupBackLink}>
-                <HuddleText variant="body" color="primary">‹&nbsp; Back to room</HuddleText>
-              </Pressable>
-            ) : <View style={styles.navButton} />}
-            <View style={styles.navButton} />
-          </View>
-
-          <View style={styles.setupHeading}>
-            <Image source={HEARTBEAT_ARTWORK.brand.displayMark} resizeMode="contain" style={styles.setupBrandMark} accessible={false} testID="phone-game-setup-mark" />
-            <HuddleText variant="title" align="center" style={styles.setupTitle}>{setup.stage === 'ready' ? `${module.metadata.title} setup` : `Set up ${module.metadata.title}`}</HuddleText>
-            <HuddleText variant="caption" align="center" style={styles.setupSubtitle}>{setup.stage === 'ready' ? "You're all set!" : 'Choose a mode to get started.'}</HuddleText>
-          </View>
-
-          {setup.stage === 'configuring' ? (
-            <>
-              <View style={styles.setupPanel}>
-                <View style={styles.modeRow}>
-                  <SetupModeControl value={setup.mode} disabled={!youAreHost} onChange={chooseMode} />
-                </View>
-                {selectedPreset && setup.mode !== 'custom' ? (
-                  <SetupPresetSummary
-                    module={module}
-                    label={selectedPreset.label}
-                    settings={selectedPreset.settings}
-                    description={selectedPreset.description ?? ''}
-                  />
-                ) : null}
-                {setup.mode === 'custom' ? (
-                  <View style={styles.settingsList}>
-                    {customControls.map((control) => {
-                      const setting = module.settingsSchema.find((candidate) => candidate.key === control.key);
-                      if (setting === undefined) return null;
-                      return (
-                        <View key={control.key} style={styles.settingBlock}>
-                          <HuddleText variant="bodyLarge" style={styles.settingLabel}>{control.label}</HuddleText>
-                          <View style={styles.optionRow}>
-                            {control.options.map((option) => (
-                              <Chip
-                                key={option.value}
-                                label={option.label}
-                                selected={option.chosen}
-                                disabled={!youAreHost}
-                                onPress={() => chooseSetting(setting, option.value)}
-                                testID={`setup-option-${setting.key}-${option.value}`}
-                                style={{ borderRadius: radii.sm, minHeight: 44, flexGrow: 1 }}
-                              />
-                            ))}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ) : null}
-              </View>
-              {youAreHost ? <HuddleButton title="Next" onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" style={styles.setupPrimaryAction} labelStyle={styles.setupPrimaryLabel} /> : null}
-              <HuddleText variant="caption" align="center" style={[styles.hostOnlyHint, styles.setupHostOnlyHint]}>♟&nbsp; Host only</HuddleText>
-            </>
-          ) : (
-            <>
-              <View style={styles.readySummary} testID="setup-ready-summary">
-                <Badge label={setupModeLabel(setup.mode)} tone="ready" />
-                <SetupSettingRows module={module} settings={settings} />
-              </View>
-              <View style={styles.playersHeading}>
-                <HuddleText variant="title">Players</HuddleText>
-                <HuddleText variant="caption" style={styles.helper}>{readyCount}/{roster.length} ready</HuddleText>
-              </View>
-              <HuddleText variant="body" align="center" style={styles.helper}>{readyStatus}</HuddleText>
-              <View style={styles.setupRoster}>
-                {roster.map((seat) => (
-                  <PlayerRow key={seat.playerId} displayName={seat.nickname} avatarId={seat.avatar} status={seat.away ? 'away' : setup.readyPlayerIds.includes(seat.playerId) ? 'ready' : 'waiting'} isHost={seat.host} testID={`setup-player-${seat.playerId}`} />
-                ))}
-              </View>
-              <HuddleButton title={currentReady ? 'Ready ✓' : 'I’m ready'} variant="secondary" onPress={onReady} busy={busy === 'ready'} accessibilityLabel={currentReady ? 'Mark not ready' : 'Mark ready'} testID="toggle-game-ready" style={styles.fullWidthAction} />
-              {youAreHost ? (
-                <>
-                  <HuddleButton title={`Start ${module.metadata.title}`} onPress={onStart} busy={busy === 'start'} disabled={!canStart} accessibilityLabel={`Start ${module.metadata.title}`} testID="start-game" style={styles.primaryAction} />
-                  <HuddleButton title="Reopen setup" variant="secondary" onPress={onReopen} busy={busy === 'reopen'} accessibilityLabel="Reopen game setup" testID="reopen-game-setup" style={styles.reopenAction} />
-                  <HuddleText variant="caption" align="center" style={styles.hostOnlyHint}>Host only</HuddleText>
-                </>
-              ) : null}
-            </>
-          )}
-
-          {failure ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="setup-error">{failure}</HuddleText> : null}
-          {!youAreHost ? (
-            <View style={styles.setupBottomActions}>
-              <HuddleButton title="Leave" variant="ghost" onPress={onLeave} accessibilityLabel="Leave room" testID="setup-leave" style={styles.fullWidthAction} />
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
-    </ScreenShell>
   );
 }
 
@@ -952,58 +200,32 @@ function PhoneRuntimeMount({
 }) {
   const insets = useSafeAreaInsets();
   const seat = roster.find((candidate) => candidate.playerId === session.playerId);
-  const player: GamePlayer = seat === undefined
-    ? { playerId: session.playerId, nickname: session.nickname, away: false, avatar: session.avatar }
-    : { playerId: seat.playerId, nickname: seat.nickname, away: seat.away, avatar: seat.avatar };
+  const player: GamePlayer =
+    seat === undefined
+      ? { playerId: session.playerId, nickname: session.nickname, away: false, avatar: session.avatar }
+      : { playerId: seat.playerId, nickname: seat.nickname, away: seat.away, avatar: seat.avatar };
   const module = screen.module as GameModule<unknown, GameEvent>;
   return (
-    <View style={styles.runtimeTakeover} testID={`phone-runtime-${module.metadata.id}`}>
+    <View style={styles.runtime} testID={`phone-runtime-${module.metadata.id}`}>
       {module.screens.phone({
         state: screen.state,
         player,
         sendEvent: onEvent,
         safeAreaInsets: insets,
-        // The gameplay references reserve only the native status area. Host
-        // navigation returns at the finished boundary, not over the private
-        // answer/vote controls.
+        // The game draws its own controls; host navigation returns only at the
+        // finished boundary, never over private answer or vote controls.
         hostChromeInsetTop: undefined,
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
       })}
       {youAreHost && screen.kind === 'finished' ? (
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.runtimeFinishedOverlay,
-            {
-              bottom: insets.bottom + spacing.xl,
-              left: insets.left + spacing.xl,
-              right: insets.right + spacing.xl,
-            },
-          ]}
-        >
-          <HuddleButton
-            title="Back to lobby"
-            onPress={onBackToLobby}
-            accessibilityLabel="Back to lobby"
-            testID="runtime-back-to-lobby"
-            style={styles.runtimeBackAction}
-          />
+        <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + 24, left: insets.left + 24, right: insets.right + 24 }]}>
+          <PlayroomButton label="Back to lobby" onPress={onBackToLobby} accessibilityLabel="Back to lobby" testID="runtime-back-to-lobby" />
         </View>
       ) : null}
       {busy === 'event' || failure ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.runtimeBottomOverlay,
-            {
-              bottom: insets.bottom + spacing.sm,
-              left: insets.left + spacing.lg,
-              right: insets.right + spacing.lg,
-            },
-          ]}
-        >
-          {busy === 'event' ? <HuddleText variant="caption" align="center">Sending…</HuddleText> : null}
-          {failure ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="runtime-error">{failure}</HuddleText> : null}
+        <View pointerEvents="none" style={[styles.runtimeOverlay, { bottom: insets.bottom + 8, left: insets.left + 16, right: insets.right + 16 }]}>
+          {busy === 'event' ? <PlayroomText style={[playroomPhone.type.caption, styles.center]}>Sending…</PlayroomText> : null}
+          {failure ? <PhoneNotice testID="runtime-error">{failure}</PhoneNotice> : null}
         </View>
       ) : null}
     </View>
@@ -1020,95 +242,87 @@ function PhoneRuntimeStatus({
   primary,
   onBackToLobby,
 }: {
-  readonly variant: 'paused' | 'unavailable' | 'finished';
+  readonly variant: 'paused' | 'unavailable';
   readonly title: string;
   readonly message: string;
   readonly youAreHost: boolean;
   readonly failure?: string;
   readonly busy: BusyAction;
-  readonly primary?: { readonly label: string; readonly onPress: () => void; readonly disabled: boolean; readonly action: Exclude<BusyAction, null> };
+  readonly primary?: { readonly label: string; readonly onPress: () => void; readonly action: Exclude<BusyAction, null> };
   readonly onBackToLobby: () => void;
 }) {
-  const insets = useSafeAreaInsets();
-  const artwork = variant === 'paused'
-    ? HEARTBEAT_ARTWORK.phone.gamePaused
-    : variant === 'finished'
-      ? HEARTBEAT_ARTWORK.phone.gameFinished
-      : HEARTBEAT_ARTWORK.phone.seatLost;
   return (
-    <ScreenShell tone="background" style={[styles.statusShell, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]} testID={`phone-runtime-${variant}`}>
-      <ImageBackground
-        source={artwork}
-        resizeMode="cover"
-        style={StyleSheet.absoluteFill}
-        accessible={false}
-        testID={`phone-runtime-${variant}-artwork`}
-      />
-      <View pointerEvents="none" style={styles.statusArtworkVeil} />
-      <HuddleText
-        variant="title"
-        align="center"
-        accessibilityRole="header"
-        style={[styles.statusHeader, { top: insets.top + spacing.lg }]}
-      >
-        {variant === 'paused' ? 'Game paused' : variant === 'finished' ? 'Great game!' : 'Uh oh!'}
-      </HuddleText>
-      <View style={styles.statusSheet}>
-        <HuddleText variant="title" align="center" accessibilityRole="header">{title}</HuddleText>
-        <HuddleText variant="body" align="center">{message}</HuddleText>
-        {failure ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="runtime-status-error">{failure}</HuddleText> : null}
-        {youAreHost && primary ? <HuddleButton title={primary.label} onPress={primary.onPress} busy={busy === primary.action} disabled={primary.disabled} accessibilityLabel={primary.label} testID={`runtime-${primary.action}`} style={styles.fullWidthAction} /> : null}
-        {youAreHost ? <HuddleButton title="Back to lobby" variant="secondary" onPress={onBackToLobby} busy={busy === 'end'} accessibilityLabel="Back to lobby" testID="runtime-status-back-to-lobby" style={styles.fullWidthAction} /> : <HuddleText variant="caption" align="center">Waiting for the Host to return to the room.</HuddleText>}
-      </View>
-    </ScreenShell>
+    <PhoneFrame
+      testID={`phone-runtime-${variant}`}
+      contentStyle={styles.status}
+      footer={
+        youAreHost ? (
+          <>
+            {primary ? (
+              <PlayroomButton label={primary.label} onPress={primary.onPress} busy={busy === primary.action} accessibilityLabel={primary.label} testID={`runtime-${primary.action}`} />
+            ) : null}
+            <PlayroomButton
+              label="Back to lobby"
+              variant={primary ? 'secondary' : 'primary'}
+              onPress={onBackToLobby}
+              busy={busy === 'end'}
+              accessibilityLabel="Back to lobby"
+              testID="runtime-status-back-to-lobby"
+            />
+          </>
+        ) : undefined
+      }
+    >
+      <PlayroomStatusImage art={variant === 'paused' ? 'paused' : 'disconnected'} width={220} height={220} />
+      <PlayroomHeading type={playroomPhone.type.heading}>{title}</PlayroomHeading>
+      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+        {message}
+      </PlayroomText>
+      {youAreHost ? null : (
+        <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.center]}>
+          Waiting for the Host to return to the room.
+        </PlayroomText>
+      )}
+      {failure ? <PhoneNotice testID="runtime-status-error">{failure}</PhoneNotice> : null}
+    </PhoneFrame>
   );
 }
 
-/** Branded confirmation sheet for destructive room/lifecycle actions. */
+/** Confirmation sheet for destructive room and lifecycle actions. */
 function ConfirmationSheet({
   confirmation,
   busy,
   failure,
-  reduceMotion,
   onCancel,
 }: {
   readonly confirmation: Confirmation | undefined;
   readonly busy: BusyAction;
   readonly failure?: string;
-  readonly reduceMotion: boolean | undefined;
   readonly onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
   if (confirmation === undefined) return null;
   return (
-    <Modal
-      visible
-      transparent
-      animationType={reduceMotion === false ? 'fade' : 'none'}
-      onRequestClose={onCancel}
-      accessibilityViewIsModal
-      testID="heartbeat-confirmation-modal"
-    >
-      <View style={[styles.confirmationScrim, { paddingBottom: insets.bottom }]}>
-        <View style={styles.confirmationCard}>
-          <View style={styles.sheetHandle} />
-          <HuddleText variant="title" align="center" accessibilityRole="header">{confirmation.title}</HuddleText>
-          <HuddleText variant="body" align="center" accessibilityRole="text">{confirmation.message}</HuddleText>
-          {failure ? (
-            <HuddleText
-              variant="caption"
-              align="center"
-              accessibilityRole="alert"
-              accessibilityLiveRegion="assertive"
-              testID="confirmation-error"
-            >
-              {failure}
-            </HuddleText>
-          ) : null}
-          <View style={styles.confirmationActions}>
-            <HuddleButton title={confirmation.confirmLabel} variant={confirmation.destructive ? 'destructive' : 'primary'} onPress={confirmation.onConfirm} busy={busy === confirmation.action} accessibilityLabel={confirmation.confirmLabel} testID="confirmation-confirm" style={{ minHeight: 52, borderRadius: radii.md }} />
-            <HuddleButton title="Cancel" variant="secondary" onPress={onCancel} disabled={busy !== null} accessibilityLabel="Cancel" testID="confirmation-cancel" style={{ minHeight: 52, borderRadius: radii.md }} />
-          </View>
+    <Modal visible transparent animationType="fade" onRequestClose={onCancel} accessibilityViewIsModal testID="heartbeat-confirmation-modal">
+      <View style={[styles.scrim, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={styles.sheet}>
+          <View style={styles.grab} />
+          <PlayroomText accessibilityRole="header" style={[playroomPhone.type.heading, styles.center]}>
+            {confirmation.title}
+          </PlayroomText>
+          <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+            {confirmation.message}
+          </PlayroomText>
+          {failure ? <PhoneNotice testID="confirmation-error">{failure}</PhoneNotice> : null}
+          <PlayroomButton
+            label={confirmation.confirmLabel}
+            variant={confirmation.destructive ? 'destructive' : 'primary'}
+            onPress={confirmation.onConfirm}
+            busy={busy === confirmation.action}
+            accessibilityLabel={confirmation.confirmLabel}
+            testID="confirmation-confirm"
+          />
+          <PlayroomButton label="Cancel" variant="secondary" onPress={onCancel} disabled={busy !== null} accessibilityLabel="Cancel" testID="confirmation-cancel" />
         </View>
       </View>
     </Modal>
@@ -1116,138 +330,37 @@ function ConfirmationSheet({
 }
 
 const styles = StyleSheet.create({
-  shell: { paddingHorizontal: 0 },
-  runtimeTakeover: { flex: 1, backgroundColor: semanticColors.background },
-  runtimeFinishedOverlay: { position: 'absolute', zIndex: 2 },
-  runtimeBackAction: { minHeight: 52, borderRadius: radii.md, paddingHorizontal: spacing.lg, ...shadows.card },
-  runtimeBottomOverlay: { position: 'absolute', padding: spacing.sm, borderRadius: radii.lg, backgroundColor: semanticColors.surfaceRaised, gap: spacing.xs, ...shadows.card },
-  statusShell: { paddingHorizontal: 0, alignItems: 'center', justifyContent: 'flex-end' },
-  statusHeader: { position: 'absolute', right: spacing.lg, left: spacing.lg, zIndex: 1 },
-  statusSheet: { width: '100%', paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.lg, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, backgroundColor: semanticColors.surfaceRaised, alignItems: 'center', gap: spacing.md, ...shadows.floating },
-  statusArtworkVeil: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(249,241,230,0.08)' },
-  scroll: { flexGrow: 1 },
-  page: { width: '100%', maxWidth: platformPhoneTheme.geometry.maxContentWidth, alignSelf: 'center', paddingHorizontal: spacing.lg, gap: spacing.md },
-  eyebrow: { letterSpacing: 1.2, opacity: 0.7 },
-  roomNav: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: platformPhoneTheme.colors.line, paddingBottom: spacing.xs },
-  navButton: { width: 64, minHeight: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  navTitle: { fontWeight: '800', letterSpacing: 0.8 },
-  roomSummary: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.lg, borderBottomWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomColor: platformPhoneTheme.colors.ink },
-  roomBack: { fontSize: 26, lineHeight: 30, fontWeight: '700' },
-  lobbyCodeTiles: { gap: spacing.xs },
-  lobbyCodeTile: { width: 40, height: 42, borderRadius: radii.sm },
-  lobbyCodeValue: { fontSize: 24, lineHeight: 28 },
-  roomLabel: { letterSpacing: 1.4, opacity: 0.7 },
-  successBanner: { width: '100%', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(127,210,182,0.34)', borderWidth: 1, borderColor: 'rgba(49,129,93,0.38)' },
-  rosterSection: { gap: spacing.sm },
-  sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  rosterList: { gap: spacing.sm },
-  lobbyPlayerRow: { minHeight: 60, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, borderWidth: 0, borderBottomWidth: 1, borderBottomColor: platformPhoneTheme.colors.line, backgroundColor: platformPhoneTheme.colors.paper, ...shadows.none },
-  bottomActions: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.lg, marginTop: 'auto', borderTopWidth: 2, borderTopColor: brandColors.espresso },
-  bottomAction: { flex: 1, minHeight: 52, paddingHorizontal: spacing.sm, borderRadius: platformPhoneTheme.geometry.editorialRadius },
-  hostWaitingPanel: { marginTop: 'auto', padding: spacing.lg, borderRadius: platformPhoneTheme.geometry.editorialRadius, backgroundColor: 'rgba(124,198,255,0.18)', borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderColor: platformPhoneTheme.colors.info, alignItems: 'center', gap: spacing.xs },
-  primaryAction: { minHeight: 56 },
-  leaveAction: { alignSelf: 'center', minWidth: 130 },
-  pickerNav: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  setupNav: { height: 0, minHeight: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', overflow: 'visible' },
-  pickerPage: { flexGrow: 1 },
-  setupPage: { flexGrow: 1 },
-  backLink: { minHeight: 36, justifyContent: 'center' },
-  setupBackLink: { position: 'absolute', top: 0, left: 0, minWidth: 44, minHeight: 44, justifyContent: 'center', zIndex: 2 },
-  viewToggle: { minHeight: 32, minWidth: 54, paddingHorizontal: spacing.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(43,31,23,0.2)', borderRadius: radii.pill },
-  pickerHeading: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.lg, borderBottomWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomColor: platformPhoneTheme.colors.ink },
-  pickerTitle: { fontSize: 32, lineHeight: 38, color: brandColors.espresso },
-  pickerSubtitle: { fontSize: 16, lineHeight: 22 },
-  guestPickerSurface: { alignItems: 'center', gap: spacing.md },
-  guestWaitingArt: { width: '100%', height: 218, borderRadius: 6, borderWidth: 2, borderColor: brandColors.espresso },
-  guestWaitingCopy: { gap: spacing.xs },
-  passivePickerAnchor: { position: 'absolute', width: 1, height: 1, minHeight: 1, opacity: 0, overflow: 'hidden' },
-  carouselStage: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: 338 },
-  carouselArrow: { width: 48, minHeight: 48, paddingHorizontal: 0, paddingVertical: 0, borderRadius: platformPhoneTheme.geometry.editorialRadius, backgroundColor: platformPhoneTheme.colors.canvas, borderColor: platformPhoneTheme.colors.ink, borderWidth: platformPhoneTheme.geometry.editorialBorderWidth },
-  carouselArrowLabel: { fontFamily: fontFamilies.extraBold, fontSize: 24, lineHeight: 28, fontWeight: '800' },
-  focusedGameCard: { width: 278, minHeight: 326, padding: spacing.lg, borderRadius: 7, borderWidth: 2, borderBottomWidth: 6, backgroundColor: brandColors.cream, shadowOpacity: 0, elevation: 0 },
-  focusedTrivia: { borderColor: brandColors.mint },
-  focusedVoting: { borderColor: brandColors.dustyRose },
-  focusedDoodleDash: { borderColor: brandColors.lilac },
-  focusedQuickPoll: { borderColor: brandColors.lilac },
-  focusedHotTake: { borderColor: brandColors.coral },
-  focusedArtFrame: { height: 210 },
-  pickerMetadata: { marginTop: spacing.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.xs },
-  metadataItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  metadataSeparator: { opacity: 0.62 },
-  peopleIcon: { width: 16, height: 14, position: 'relative' },
-  peopleHead: { position: 'absolute', top: 0, width: 5, height: 5, borderRadius: radii.round, backgroundColor: brandColors.espresso },
-  peopleHeadPrimary: { left: 2 },
-  peopleHeadSecondary: { right: 2, opacity: 0.82 },
-  peopleBody: { position: 'absolute', bottom: 0, width: 8, height: 7, borderRadius: radii.sm, backgroundColor: brandColors.espresso },
-  peopleBodyPrimary: { left: 0 },
-  peopleBodySecondary: { right: 0, opacity: 0.82 },
-  clockIcon: { width: 14, height: 14, borderWidth: 1.5, borderColor: brandColors.espresso, borderRadius: radii.round, position: 'relative' },
-  clockHandShort: { position: 'absolute', width: 1.5, height: 4, top: 2, left: 5.5, backgroundColor: brandColors.espresso },
-  clockHandLong: { position: 'absolute', width: 4, height: 1.5, top: 6, left: 5.5, backgroundColor: brandColors.espresso, transform: [{ rotate: '25deg' }] },
-  smileIcon: { width: 14, height: 14, borderWidth: 1.5, borderColor: brandColors.espresso, borderRadius: radii.round, position: 'relative' },
-  smileEye: { position: 'absolute', top: 3, width: 1.5, height: 1.5, borderRadius: radii.round, backgroundColor: brandColors.espresso },
-  smileEyeLeft: { left: 3 },
-  smileEyeRight: { right: 3 },
-  smileMouth: { position: 'absolute', left: 3, bottom: 2, width: 6, height: 3, borderBottomWidth: 1.5, borderColor: brandColors.espresso, borderRadius: radii.round },
-  carouselDots: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
-  dot: { width: 8, height: 8, borderRadius: radii.round, backgroundColor: 'rgba(43,31,23,0.18)' },
-  dotSelected: { width: 10, height: 10, backgroundColor: semanticColors.primary },
-  comingSoonBadge: { alignSelf: 'center' },
-  gameList: { gap: spacing.sm },
-  gameListRow: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.sm, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(174,119,58,0.22)', backgroundColor: 'rgba(249,241,230,0.5)' },
-  gameListRowSelected: { borderColor: semanticColors.primary, borderWidth: 2 },
-  gameListRowDisabled: { opacity: 0.62 },
-  gameListArt: { width: 62, height: 62, borderRadius: radii.md },
-  gameListCopy: { flex: 1, gap: spacing['2xs'] },
-  listChevron: { fontSize: 28, lineHeight: 30, fontWeight: '400' },
-  syncPanel: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: 6, borderWidth: 2, borderColor: brandColors.mint, backgroundColor: 'rgba(127,210,182,0.2)' },
-  syncDots: { flexDirection: 'row', gap: spacing.xs },
-  syncDot: { width: 7, height: 7, borderRadius: radii.round, backgroundColor: 'rgba(43,31,23,0.22)' },
-  syncDotActive: { backgroundColor: semanticColors.success },
-  syncCopy: { flex: 1, gap: spacing['2xs'] },
-  pickerPrimaryAction: { minHeight: 68, marginTop: 'auto', borderRadius: platformPhoneTheme.geometry.editorialRadius },
-  pickerPrimaryLabel: { fontFamily: fontFamilies.extraBold, fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  fullWidthAction: { width: '100%' },
-  setupHeading: { alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.lg, borderBottomWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomColor: platformPhoneTheme.colors.ink },
-  setupBrandMark: { width: 40, height: 36, transform: [{ scale: 1.4 }] },
-  setupTitle: { fontSize: 28, lineHeight: 34 },
-  setupSubtitle: { fontFamily: fontFamilies.regular, fontWeight: '400', fontSize: 14, lineHeight: 20 },
-  setupPanel: { gap: spacing.xl },
-  modeRow: { alignItems: 'center' },
-  modeControl: { width: '100%', maxWidth: 420, minHeight: 44, flexDirection: 'row', overflow: 'hidden', borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderColor: platformPhoneTheme.colors.ink, borderRadius: platformPhoneTheme.geometry.editorialRadius, backgroundColor: 'rgba(249,241,230,0.48)' },
-  modeSegment: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm },
-  modeSegmentDivider: { borderRightWidth: 1, borderRightColor: 'rgba(174,119,58,0.22)' },
-  modeSegmentSelected: { borderRightWidth: 0, borderRadius: 4, backgroundColor: platformPhoneTheme.colors.primary },
-  modeSegmentSelectedLabel: { color: brandColors.espresso },
-  helper: { opacity: 0.68 },
-  settingsList: { gap: spacing.xl },
-  settingBlock: { gap: spacing.sm },
-  settingLabel: { fontWeight: '700', fontSize: 16, lineHeight: 22 },
-  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  presetSummary: { marginTop: spacing.xs, padding: spacing.lg, borderRadius: 7, backgroundColor: platformPhoneTheme.colors.canvas, borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderBottomWidth: 6, borderColor: platformPhoneTheme.colors.ink, gap: spacing.xs },
-  presetTitle: { fontSize: 22, lineHeight: 28 },
-  presetDescription: { opacity: 0.74, marginBottom: spacing.xs },
-  presetLines: { gap: spacing.xs },
-  presetSettingRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  presetSettingIcon: { width: 28, height: 28, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
-  presetSettingIconText: { fontSize: 12, lineHeight: 16 },
-  presetSettingLabel: { flex: 1, fontFamily: fontFamilies.regular, fontWeight: '400', fontSize: 14, lineHeight: 20 },
-  readySummary: { width: '100%', padding: spacing.md, borderRadius: 7, backgroundColor: platformPhoneTheme.colors.canvas, borderWidth: platformPhoneTheme.geometry.editorialBorderWidth, borderTopWidth: 6, borderColor: platformPhoneTheme.colors.ready, alignItems: 'center', gap: spacing.sm },
-  playersHeading: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  setupPrimaryAction: { width: '100%', maxWidth: 420, alignSelf: 'center', minHeight: 56, borderRadius: radii.md, marginTop: spacing.lg },
-  setupPrimaryLabel: { fontFamily: fontFamilies.extraBold, fontSize: 20, lineHeight: 26, fontWeight: '800' },
-  hostOnlyHint: { opacity: 0.68 },
-  setupHostOnlyHint: { marginTop: spacing.sm },
-  reopenAction: { minHeight: 44, paddingHorizontal: spacing.lg },
-  setupRoster: { width: '100%', gap: spacing.sm },
-  setupBottomActions: { gap: spacing.sm, paddingTop: spacing.xs },
-  sheetHandle: { width: 42, height: 5, borderRadius: radii.pill, backgroundColor: 'rgba(43,31,23,0.2)', marginBottom: spacing.xs },
-  sheetEyebrow: { letterSpacing: 1.2, opacity: 0.66, alignSelf: 'flex-start' },
-  sheetPlayerRow: { width: '100%', minHeight: 68, borderWidth: 1, borderColor: 'rgba(43,31,23,0.12)', backgroundColor: 'rgba(255,255,255,0.3)' },
-  sheetActionBlock: { width: '100%', gap: spacing.xs },
-  sheetAction: { width: '100%' },
-  managementSheet: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.lg, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, backgroundColor: semanticColors.surfaceRaised, alignItems: 'center', gap: spacing.md, ...shadows.floating },
-  confirmationScrim: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(43,31,23,0.62)' },
-  confirmationCard: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.lg, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, backgroundColor: semanticColors.surfaceRaised, alignItems: 'center', gap: spacing.md, ...shadows.floating },
-  confirmationActions: { width: '100%', gap: spacing.sm },
+  center: {
+    textAlign: 'center',
+  },
+  runtime: {
+    flex: 1,
+  },
+  runtimeOverlay: {
+    position: 'absolute',
+    gap: 4,
+  },
+  status: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrim: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(45, 11, 78, 0.35)',
+  },
+  sheet: {
+    gap: 12,
+    padding: 20,
+    borderRadius: playroomRadii.card,
+    backgroundColor: playroomColors.canvas,
+  },
+  grab: {
+    alignSelf: 'center',
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: playroomColors.border,
+  },
 });

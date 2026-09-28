@@ -101,7 +101,7 @@ function renderSeated(session: object) {
   );
 }
 
-describe('Heartbeat Phone lifecycle return', () => {
+describe('Phone lifecycle return', () => {
   beforeEach(() => {
     mockEndGame.mockReset().mockResolvedValue(null);
     mockRunning = { kind: 'paused', gameId: 'trivia', reason: 'playerDisconnected' };
@@ -177,7 +177,7 @@ describe('Heartbeat Phone lifecycle return', () => {
   });
 });
 
-describe('Heartbeat Phone picker', () => {
+describe('Phone picker', () => {
   it('browses on a card tap and selects only through the separate CTA', async () => {
     const onBrowse = jest.fn();
     const onChoose = jest.fn();
@@ -253,7 +253,8 @@ describe('Heartbeat Phone picker', () => {
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
     expect(result.getByTestId('setup-nav-back')).toBeTruthy();
     expect(result.queryByTestId('setup-back-to-room')).toBeNull();
-    expect(result.getByText("You're all set!")).toBeTruthy();
+    expect(result.getByText('Ready for Trivia?')).toBeTruthy();
+    expect(result.getByText('Raise your hand')).toBeTruthy();
     await fireEvent.press(ready);
     expect(onReady).toHaveBeenCalledTimes(1);
   });

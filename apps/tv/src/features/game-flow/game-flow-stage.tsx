@@ -67,7 +67,7 @@ export function TvGameFlowStage({
       CAROUSEL_REGISTRY.map((game) => ({
         id: game.metadata.id,
         title: game.metadata.title,
-        subtitle: game.placeholder === true ? 'Coming soon' : carouselSubtitle(game.metadata.id),
+        subtitle: game.metadata.tagline,
         available: game.placeholder !== true,
       })),
     [],
@@ -205,17 +205,6 @@ function tvPlayer(seat: RosterSeat, readyPlayerIds: readonly string[]): TvGamePl
     avatarId: seat.avatar,
     ready: readyPlayerIds.includes(String(seat.playerId)) && !seat.away,
   };
-}
-
-function carouselSubtitle(gameId: string): string | undefined {
-  switch (gameId) {
-    case 'trivia':
-      return 'Test your knowledge';
-    case 'voting':
-      return 'Vote on fun topics';
-    default:
-      return undefined;
-  }
 }
 
 export type TvPlatformStatusScreenProps = {

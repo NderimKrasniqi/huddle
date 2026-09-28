@@ -182,6 +182,8 @@ export type GameMetadata = {
    * trivia's own business.
    */
   readonly category: string;
+  /** One line under the title on the picker cards: “Big questions. Bigger guesses.” */
+  readonly tagline?: string;
 };
 
 /** One value a Host can choose for a setting. */

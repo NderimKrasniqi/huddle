@@ -16,4 +16,5 @@ export const votingMetadata: GameMetadata = {
   estimatedMinutes: 3,
   /** The genre chip. */
   category: 'Party',
+  tagline: 'Share opinions. See what everyone thinks.',
 };

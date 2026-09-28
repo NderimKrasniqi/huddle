@@ -106,7 +106,7 @@ function GameCard({
       <PlayroomText color={available ? 'ink' : 'muted'} numberOfLines={1} style={selected ? styles.titleSelected : styles.title}>
         {card.title}
       </PlayroomText>
-      {card.subtitle !== undefined && available ? (
+      {card.subtitle !== undefined ? (
         <PlayroomText color="muted" numberOfLines={2} style={[playroomTv.type.caption, styles.subtitle]}>
           {card.subtitle}
         </PlayroomText>

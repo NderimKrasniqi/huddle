@@ -8,11 +8,11 @@ export type TvGameCarouselCard = {
 
 /** Defaults are visual fallbacks; an authoritative registry projection may override every field. */
 export const DEFAULT_TV_CAROUSEL_CARDS: readonly TvGameCarouselCard[] = [
-  { id: 'trivia', title: 'Trivia', subtitle: 'Test your knowledge', available: true },
-  { id: 'voting', title: 'Voting', subtitle: 'Vote on fun topics', available: true },
-  { id: 'doodle-dash', title: 'Doodle Dash', subtitle: 'Coming soon', available: false },
-  { id: 'quick-poll', title: 'Quick Poll', subtitle: 'Coming soon', available: false },
-  { id: 'hot-take', title: 'Hot Take', subtitle: 'Coming soon', available: false },
+  { id: 'trivia', title: 'Trivia', subtitle: 'Big questions. Bigger guesses.', available: true },
+  { id: 'voting', title: 'Voting', subtitle: 'Share opinions. See what everyone thinks.', available: true },
+  { id: 'doodle-dash', title: 'Doodle Dash', subtitle: 'Draw it. Guess it. Laugh about it.', available: false },
+  { id: 'quick-poll', title: 'Quick Poll', subtitle: 'Fast questions. Instant results.', available: false },
+  { id: 'hot-take', title: 'Hot Take', subtitle: 'Spicy opinions. No wrong answers.', available: false },
 ];
 
 export type TvGamePlayer = {

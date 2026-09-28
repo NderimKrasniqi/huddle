@@ -8,7 +8,7 @@ import { CAROUSEL_PLACEHOLDER_IDS } from './carousel-catalog';
  * They intentionally have no settings or running screens. The optional
  * `placeholder` flag lets the apps render a clear "Coming soon" treatment,
  * while the server continues to accept only real entries from its logic
- * registry. They are deliberately ordered to match the Heartbeat carousel:
+ * registry. They are deliberately ordered to match the Playroom picker:
  * Doodle Dash, Quick Poll, then Hot Take.
  */
 export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
@@ -21,6 +21,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
       playerRange: { min: 2, max: 10 },
       estimatedMinutes: 10,
       category: 'Drawing',
+      tagline: 'Draw it. Guess it. Laugh about it.',
     },
     settingsSchema: [],
     screens: {
@@ -37,6 +38,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
       playerRange: { min: 2, max: 10 },
       estimatedMinutes: 5,
       category: 'Polls',
+      tagline: 'Fast questions. Instant results.',
     },
     settingsSchema: [],
     screens: {
@@ -53,6 +55,7 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
       playerRange: { min: 2, max: 10 },
       estimatedMinutes: 8,
       category: 'Debate',
+      tagline: 'Spicy opinions. No wrong answers.',
     },
     settingsSchema: [],
     screens: {
