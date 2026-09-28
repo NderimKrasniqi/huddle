@@ -11,6 +11,7 @@
 import type * as developmentReset from "../developmentReset.js";
 import type * as games from "../games.js";
 import type * as lib_authorization from "../lib/authorization.js";
+import type * as lib_countdown from "../lib/countdown.js";
 import type * as lib_gameClock from "../lib/gameClock.js";
 import type * as lib_gameRuntime from "../lib/gameRuntime.js";
 import type * as lib_presence from "../lib/presence.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   developmentReset: typeof developmentReset;
   games: typeof games;
   "lib/authorization": typeof lib_authorization;
+  "lib/countdown": typeof lib_countdown;
   "lib/gameClock": typeof lib_gameClock;
   "lib/gameRuntime": typeof lib_gameRuntime;
   "lib/presence": typeof lib_presence;
