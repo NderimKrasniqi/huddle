@@ -12,7 +12,7 @@ export type PlayroomTvStageProps = PropsWithChildren<{
 }>;
 
 /**
- * The Playroom TV stage: a 1920×1080 cream room scaled to fit the screen,
+ * The Playroom TV stage: a flat 1920×1080 canvas scaled uniformly to fit,
  * with content laid out in stage pixels inside the overscan-safe frame. It is
  * display-only and never takes focus.
  */
@@ -27,8 +27,6 @@ export function PlayroomTvStage({ children, wordmark = true, style, testID }: Pl
         pointerEvents="none"
         focusable={false}
       >
-        <View style={[styles.glow, styles.glowBottomLeft]} />
-        <View style={[styles.glow, styles.glowBottomRight]} />
         {wordmark ? (
           <PlayroomWordmark height={playroomTv.wordmarkHeight} style={styles.wordmark} testID="playroom-tv-wordmark" />
         ) : null}
@@ -49,26 +47,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    backgroundColor: playroomColors.cream,
+    backgroundColor: playroomColors.canvas,
   },
   stage: {
     width: playroomTv.width,
     height: playroomTv.height,
     overflow: 'hidden',
-    backgroundColor: playroomColors.cream,
+    backgroundColor: playroomColors.canvas,
   },
-  // A faint warm vignette in the lower corners, drawn natively rather than
-  // blurred: two very large, very soft circles.
-  glow: {
-    position: 'absolute',
-    width: 900,
-    height: 900,
-    borderRadius: 450,
-    backgroundColor: playroomColors.yellow,
-    opacity: 0.07,
-  },
-  glowBottomLeft: { left: -520, bottom: -560 },
-  glowBottomRight: { right: -520, bottom: -560 },
   wordmark: {
     position: 'absolute',
     left: playroomTv.safeX,

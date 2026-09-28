@@ -16,7 +16,7 @@ const BADGE_POP = new Keyframe({
   0: { opacity: 0, transform: [{ scale: 0.9 }] },
   100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
 })
-  .duration(playroomMotion.pop)
+  .duration(playroomMotion.transition)
   .reduceMotion(ReduceMotion.System);
 
 export type PlayroomAvatarProps = {
@@ -90,13 +90,13 @@ export function PlayroomAvatar({
         </Animated.View>
       ) : null}
       {ready ? (
-        <Animated.View entering={BADGE_POP} style={[styles.badge, badgeBox(badge, border), { backgroundColor: playroomColors.green }]}>
+        <Animated.View entering={BADGE_POP} style={[styles.badge, badgeBox(badge, border), { backgroundColor: playroomColors.success }]}>
           <View
             style={{
               width: badge * 0.26,
               height: badge * 0.46,
               marginTop: -badge * 0.08,
-              borderColor: playroomColors.card,
+              borderColor: playroomColors.surface,
               borderRightWidth: badge * 0.11,
               borderBottomWidth: badge * 0.11,
               transform: [{ rotate: '45deg' }],
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    borderColor: playroomColors.card,
+    borderColor: playroomColors.surface,
   },
   waiting: {
     position: 'absolute',
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: playroomColors.card,
+    backgroundColor: playroomColors.surface,
     shadowColor: playroomColors.ink,
     shadowOpacity: 0.12,
     shadowRadius: 6,

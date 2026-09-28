@@ -20,9 +20,9 @@ export type TvRestoreIndicatorProps = {
 
 const COLORS = [
   playroomColors.orange,
-  playroomColors.yellow,
-  playroomColors.purple,
-  playroomColors.lavenderStrong,
+  playroomColors.ink,
+  playroomColors.lavender,
+  playroomColors.border,
 ] as const;
 
 /** Nominal test window; production handoff waits for the spring callback. */
@@ -215,18 +215,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkCircle: {
-    backgroundColor: playroomColors.green,
+    backgroundColor: playroomColors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkLeft: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: playroomColors.card,
+    backgroundColor: playroomColors.surface,
   },
   checkRight: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: playroomColors.card,
+    backgroundColor: playroomColors.surface,
   },
 });

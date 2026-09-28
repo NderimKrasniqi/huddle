@@ -2,7 +2,6 @@ import { ConvexProvider } from 'convex/react';
 import { Nunito_400Regular } from '@expo-google-fonts/nunito/400Regular';
 import { Nunito_700Bold } from '@expo-google-fonts/nunito/700Bold';
 import { Nunito_800ExtraBold } from '@expo-google-fonts/nunito/800ExtraBold';
-import { Nunito_900Black } from '@expo-google-fonts/nunito/900Black';
 import { useFonts } from '@expo-google-fonts/nunito/useFonts';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,7 +17,6 @@ export default function TvLayout() {
     Nunito_400Regular,
     Nunito_700Bold,
     Nunito_800ExtraBold,
-    Nunito_900Black,
   });
   const [frameReady, setFrameReady] = useState(false);
 

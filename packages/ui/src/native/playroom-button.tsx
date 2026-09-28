@@ -3,7 +3,7 @@ import {
   playroomEasing,
   playroomMotion,
   playroomPhone,
-  playroomShadows,
+  playroomRadii,
 } from '@huddle/design-tokens';
 import {
   ActivityIndicator,
@@ -18,15 +18,21 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 
 import { PlayroomBurst, PlayroomText } from './playroom-text';
 
-export type PlayroomButtonVariant = 'primary' | 'secondary' | 'soft' | 'danger' | 'link';
+/**
+ * `primary` ink with canvas text; `secondary` surface with an ink border;
+ * `accent` orange with ink text; `destructive` danger with surface text;
+ * `link` for quiet exits such as Leave room.
+ */
+export type PlayroomButtonVariant = 'primary' | 'secondary' | 'accent' | 'destructive' | 'link';
 
 export type PlayroomButtonProps = {
   readonly label: string;
   readonly onPress?: PressableProps['onPress'];
   readonly variant?: PlayroomButtonVariant;
   readonly disabled?: boolean;
+  /** Loading keeps the button's width and ignores further presses. */
   readonly busy?: boolean;
-  /** Burst dashes beside the button; the concept uses them on the main action. */
+  /** Burst dashes beside the button, for the screen's main action. */
   readonly bursts?: boolean;
   readonly accessibilityLabel?: string;
   readonly accessibilityHint?: string;
@@ -34,11 +40,7 @@ export type PlayroomButtonProps = {
   readonly testID?: string;
 };
 
-/**
- * Phone action. One orange `primary` per screen; `secondary` (strong lavender)
- * and `soft` (lavender) for the rest, `danger` for removal, `link` for quiet
- * exits such as Leave room.
- */
+/** A phone action with default, pressed, disabled, and loading states. */
 export function PlayroomButton({
   label,
   onPress,
@@ -52,14 +54,14 @@ export function PlayroomButton({
   testID,
 }: PlayroomButtonProps) {
   const inactive = disabled || busy;
-  const tone = inactive && variant === 'primary' ? toneFor('disabled') : toneFor(variant);
-  // Feedback on press-in, commit on press-out: the scale answers the finger
-  // before the action runs.
+  const tone = disabled && variant !== 'link' ? TONES.disabled : TONES[variant];
+  // Feedback on press-in, commit on press-out.
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const pressTo = (value: number) => {
     scale.set(withTiming(value, { duration: playroomMotion.press, easing: Easing.bezier(...playroomEasing.out) }));
   };
+
   const button = (
     <Pressable
       accessibilityRole="button"
@@ -68,17 +70,19 @@ export function PlayroomButton({
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
       onPress={onPress}
-      onPressIn={() => pressTo(0.97)}
+      onPressIn={() => pressTo(playroomMotion.pressScale)}
       onPressOut={() => pressTo(1)}
       pressRetentionOffset={16}
+      hitSlop={variant === 'link' ? 8 : undefined}
       testID={testID}
       style={bursts ? null : style}
     >
       <Animated.View style={[variant === 'link' ? styles.link : styles.button, tone.container, pressStyle]}>
-        {busy ? <ActivityIndicator color={tone.spinner} style={styles.spinner} /> : null}
-        <PlayroomText color={tone.text} style={variant === 'link' ? styles.linkText : styles.label}>
+        {/* The label keeps its space while loading, so the width never jumps. */}
+        <PlayroomText color={tone.text} style={[variant === 'link' ? styles.linkText : styles.label, busy ? styles.hidden : null]}>
           {label}
         </PlayroomText>
+        {busy ? <ActivityIndicator color={playroomColors[tone.text]} style={styles.spinner} /> : null}
       </Animated.View>
     </Pressable>
   );
@@ -92,47 +96,37 @@ export function PlayroomButton({
   );
 }
 
-function toneFor(variant: PlayroomButtonVariant | 'disabled') {
-  switch (variant) {
-    case 'primary':
-      return { container: [styles.primary, playroomShadows.action], text: 'card' as const, spinner: playroomColors.card };
-    case 'secondary':
-      return { container: styles.secondary, text: 'ink' as const, spinner: playroomColors.ink };
-    case 'soft':
-      return { container: styles.soft, text: 'ink' as const, spinner: playroomColors.ink };
-    case 'danger':
-      return { container: styles.danger, text: 'red' as const, spinner: playroomColors.red };
-    case 'link':
-      return { container: null, text: 'muted' as const, spinner: playroomColors.muted };
-    case 'disabled':
-      return { container: styles.disabled, text: 'soonText' as const, spinner: playroomColors.soonText };
-  }
-}
+const TONES = {
+  primary: { container: { backgroundColor: playroomColors.ink }, text: 'canvas' as const },
+  secondary: {
+    container: { backgroundColor: playroomColors.surface, borderWidth: 2, borderColor: playroomColors.ink },
+    text: 'ink' as const,
+  },
+  accent: { container: { backgroundColor: playroomColors.orange }, text: 'ink' as const },
+  destructive: { container: { backgroundColor: playroomColors.danger }, text: 'surface' as const },
+  link: { container: null, text: 'muted' as const },
+  disabled: { container: { backgroundColor: playroomColors.disabled }, text: 'muted' as const },
+};
 
 const styles = StyleSheet.create({
   button: {
     minHeight: playroomPhone.buttonHeight,
-    borderRadius: playroomPhone.radius.pill,
+    borderRadius: playroomRadii.button,
     paddingHorizontal: 24,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   link: {
-    minHeight: 44,
+    minHeight: playroomPhone.minTarget,
     alignSelf: 'center',
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primary: { backgroundColor: playroomColors.orange },
-  secondary: { backgroundColor: playroomColors.lavenderStrong },
-  soft: { backgroundColor: playroomColors.lavender },
-  danger: { backgroundColor: 'transparent', borderWidth: 2, borderColor: playroomColors.red },
-  disabled: { backgroundColor: playroomColors.soonGrey },
-  label: { ...playroomPhone.type.button, textAlign: 'center' },
-  linkText: { ...playroomPhone.type.body, textAlign: 'center' },
-  spinner: { marginRight: 8 },
+  label: { ...playroomPhone.type.label, textAlign: 'center' },
+  linkText: { ...playroomPhone.type.label, textAlign: 'center' },
+  hidden: { opacity: 0 },
+  spinner: { position: 'absolute' },
   burstRow: { flexDirection: 'row', alignItems: 'center' },
   burstButton: { flex: 1, marginHorizontal: 4 },
 });

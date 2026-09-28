@@ -29,9 +29,10 @@ export {
   playroomEasing,
   playroomFonts,
   playroomMotion,
-  playroomSprings,
   playroomPhone,
+  playroomRadii,
   playroomShadows,
+  playroomSpacing,
   playroomTv,
   type PlayroomColor,
 } from './playroom';

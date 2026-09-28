@@ -3,12 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { fontFamilies, fontWeights, typography } from './typography';
 
 describe('Heartbeat typography', () => {
-  it('uses the four pinned Nunito face aliases', () => {
+  it('uses the three pinned Nunito face aliases', () => {
     expect(fontFamilies).toEqual({
       regular: 'Nunito_400Regular',
       bold: 'Nunito_700Bold',
       extraBold: 'Nunito_800ExtraBold',
-      black: 'Nunito_900Black',
     });
   });
 

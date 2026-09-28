@@ -86,24 +86,20 @@ HEARTBEAT_PALETTE = {
     "lilac": "#C8B6FF",
     "dustyRose": "#E6A3B1",
 }
-# The approved Playroom palette (docs/design/playroom/README.md).
+# The Playroom palette from the Huddle-Platform design system (docs/design/playroom/README.md).
 PLAYROOM_PALETTE = {
-    "cream": "#FCF6EF",
-    "card": "#FFFFFF",
-    "ink": "#1F0B3F",
-    "inkSoft": "#3B2B5E",
-    "muted": "#7A6E90",
-    "line": "#EFE6DF",
-    "orange": "#FC6221",
-    "orangeDeep": "#D94A10",
-    "lavender": "#F0E8F8",
-    "lavenderStrong": "#E1D2F4",
-    "purple": "#6838DF",
-    "green": "#0E9F3E",
-    "red": "#D63B3B",
-    "soonGrey": "#EFECF0",
-    "soonText": "#6F6680",
-    "yellow": "#FFC532",
+    "canvas": "#F9F1E6",
+    "surface": "#FFFCF7",
+    "ink": "#2D0B4E",
+    "muted": "#6D5B79",
+    "orange": "#FF781F",
+    "lavender": "#E3D9FF",
+    "border": "#D8CCDF",
+    "success": "#286447",
+    "successSurface": "#D4F1CC",
+    "danger": "#A52C44",
+    "dangerSurface": "#FFE0E5",
+    "disabled": "#E5DEE9",
 }
 HEARTBEAT_RUNTIME_ROOT = Path("packages/ui/assets/heartbeat")
 # The original board is retained as a design reference, but runtime validation

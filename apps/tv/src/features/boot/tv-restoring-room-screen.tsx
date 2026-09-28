@@ -67,7 +67,7 @@ export function TvRestoringRoomScreen({
     enter.setValue(0);
     const animation = Animated.timing(enter, {
       toValue: 1,
-      duration: 250,
+      duration: 240,
       easing: Easing.bezier(0.23, 1, 0.32, 1),
       useNativeDriver: true,
     });
@@ -113,13 +113,13 @@ export function TvRestoringRoomScreen({
             reduceMotion={reduceMotion}
             onReadyAnimationComplete={() => readyCallbackRef.current?.()}
           />
-          <PlayroomHeading type={playroomTv.type.heading} style={styles.title}>
+          <PlayroomHeading type={playroomTv.type.hero} style={styles.title}>
             {title}
           </PlayroomHeading>
-          <PlayroomText color="muted" style={[playroomTv.type.subheading, styles.subtitle]}>
+          <PlayroomText color="muted" style={[playroomTv.type.body, styles.subtitle]}>
             {subtitle}
           </PlayroomText>
-          <PlayroomPill style={styles.code} textStyle={playroomTv.type.chip}>
+          <PlayroomPill style={styles.code} textStyle={playroomTv.type.label}>
             {`Room ${code}`}
           </PlayroomPill>
         </Animated.View>
@@ -131,7 +131,7 @@ export function TvRestoringRoomScreen({
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
-    backgroundColor: playroomColors.cream,
+    backgroundColor: playroomColors.canvas,
   },
   content: {
     position: 'absolute',

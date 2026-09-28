@@ -51,10 +51,10 @@ function TvBootSystemState({
       <PlayroomTvStage testID="tv-boot-status-stage">
         <View style={styles.content} pointerEvents="none" focusable={false} accessible={false}>
           <PlayroomStatusImage art={setupRequired ? 'loading' : 'disconnected'} width={420} height={320} />
-          <PlayroomHeading type={playroomTv.type.heading} style={styles.title}>
+          <PlayroomHeading type={playroomTv.type.hero} style={styles.title}>
             {setupRequired ? 'Almost there!' : 'We can’t reach your TV right now'}
           </PlayroomHeading>
-          <PlayroomText color="inkSoft" style={[playroomTv.type.subheading, styles.message]}>
+          <PlayroomText color="muted" style={[playroomTv.type.body, styles.message]}>
             {message}
           </PlayroomText>
         </View>
@@ -66,7 +66,7 @@ function TvBootSystemState({
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
-    backgroundColor: playroomColors.cream,
+    backgroundColor: playroomColors.canvas,
   },
   content: {
     ...StyleSheet.absoluteFill,

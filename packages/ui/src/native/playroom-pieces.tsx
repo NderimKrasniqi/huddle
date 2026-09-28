@@ -1,6 +1,6 @@
 import type { GameSettingIcon } from '@huddle/contracts';
-import { playroomColors, playroomFonts, playroomMotion } from '@huddle/design-tokens';
-import { useEffect, type ReactNode } from 'react';
+import { playroomColors, playroomEasing, playroomFonts, playroomMotion } from '@huddle/design-tokens';
+import type { ReactNode } from 'react';
 import {
   Image,
   StyleSheet,
@@ -11,16 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, Keyframe, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 
 import {
   PLAYROOM_ARTWORK,
@@ -32,28 +23,33 @@ import { PlayroomText } from './playroom-text';
 
 export type PlayroomPillProps = {
   readonly children: ReactNode;
-  /** `strong` is the deeper lavender used for a selected or emphasised pill. */
-  readonly tone?: 'lavender' | 'strong' | 'soon';
+  /** A small icon before the label; status pills always carry one. */
+  readonly icon?: ReactNode;
+  readonly tone?: 'lavender' | 'surface' | 'disabled' | 'success';
   readonly textStyle?: StyleProp<TextStyle>;
   readonly style?: StyleProp<ViewStyle>;
   readonly testID?: string;
 };
 
-/** Lavender pill for chips, counts, and status lines. */
-export function PlayroomPill({ children, tone = 'lavender', textStyle, style, testID }: PlayroomPillProps) {
-  const backgroundColor = tone === 'strong'
-    ? playroomColors.lavenderStrong
-    : tone === 'soon'
-      ? playroomColors.soonGrey
-      : playroomColors.lavender;
+/** Pill for chips, counts, and status lines: `8 / 10 ready`, `Host`. */
+export function PlayroomPill({ children, icon, tone = 'lavender', textStyle, style, testID }: PlayroomPillProps) {
+  const { backgroundColor, color } = PILL_TONES[tone];
   return (
     <View style={[styles.pill, { backgroundColor }, style]} testID={testID}>
-      <PlayroomText color={tone === 'soon' ? 'soonText' : 'ink'} style={[styles.pillText, textStyle]}>
+      {icon}
+      <PlayroomText color={color} style={[styles.pillText, textStyle]}>
         {children}
       </PlayroomText>
     </View>
   );
 }
+
+const PILL_TONES = {
+  lavender: { backgroundColor: playroomColors.lavender, color: 'ink' as const },
+  surface: { backgroundColor: playroomColors.surface, color: 'ink' as const },
+  disabled: { backgroundColor: playroomColors.disabled, color: 'muted' as const },
+  success: { backgroundColor: playroomColors.successSurface, color: 'success' as const },
+};
 
 export type PlayroomSettingIconProps = {
   readonly icon: GameSettingIcon | undefined;
@@ -100,81 +96,46 @@ export type PlayroomFloatProps = {
   readonly style?: StyleProp<ViewStyle>;
   /** Forces motion off (previews, tests); the system setting also applies. */
   readonly reduceMotion?: boolean;
-  /**
-   * Whether this prop keeps drifting after the entrance. Keep this to three
-   * or four props per screen: constant motion on a screen left open for
-   * minutes becomes noise.
-   */
-  readonly drifts?: boolean;
-  /** Bob length in ms while the surface is new. */
-  readonly duration?: number;
+  /** Entrance delay, to let props arrive one after another. */
   readonly delay?: number;
-  readonly tilt?: number;
 };
 
 /**
- * A decorative clay prop. It bobs while its surface is new, then either holds
- * still or drifts very slowly. Display-only, hidden from assistive technology,
- * and still under reduced motion.
+ * A decorative clay prop. It settles into place once when its surface
+ * appears and then holds still: nothing bobs forever behind the room's
+ * information. Hidden from assistive technology.
  */
-export function PlayroomFloat({
-  prop,
-  width,
-  height,
-  style,
-  reduceMotion = false,
-  drifts = false,
-  duration = 6000,
-  delay = 0,
-  tilt = 6,
-}: PlayroomFloatProps) {
+export function PlayroomFloat({ prop, width, height, style, reduceMotion = false, delay = 0 }: PlayroomFloatProps) {
   const systemReduceMotion = useReducedMotion();
   const still = reduceMotion || systemReduceMotion;
-  const phase = useSharedValue(0);
-
-  useEffect(() => {
-    if (still) {
-      cancelAnimation(phase);
-      phase.set(0);
-      return undefined;
-    }
-    const ease = Easing.inOut(Easing.sin);
-    const bob = (length: number) => withSequence(
-      withTiming(1, { duration: length / 2, easing: ease }),
-      withTiming(0, { duration: length / 2, easing: ease }),
-    );
-    const bobs = Math.max(1, Math.round(playroomMotion.settle / duration));
-    const settle = withRepeat(bob(duration), bobs, false);
-    phase.set(
-      drifts
-        ? withSequence(withTiming(0, { duration: delay }), settle, withRepeat(bob(playroomMotion.drift), -1, false))
-        : withSequence(withTiming(0, { duration: delay }), settle),
-    );
-    return () => cancelAnimation(phase);
-  }, [delay, drifts, duration, phase, still]);
-
-  const motion = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: -height * 0.06 * phase.get() },
-      { rotate: `${tilt * phase.get()}deg` },
-    ],
-  }));
-
   return (
     <Animated.View
+      entering={still ? undefined : propEntrance(delay)}
       pointerEvents="none"
       accessible={false}
       importantForAccessibility="no-hide-descendants"
-      style={[styles.float, style, motion]}
+      style={[styles.float, style]}
     >
       <Image source={PLAYROOM_ARTWORK.props[prop]} style={{ width, height }} resizeMode="contain" accessible={false} />
     </Animated.View>
   );
 }
 
+function propEntrance(delay: number) {
+  return new Keyframe({
+    0: { opacity: 0, transform: [{ translateY: playroomMotion.entranceTravel }] },
+    100: { opacity: 1, transform: [{ translateY: 0 }], easing: Easing.bezier(...playroomEasing.out) },
+  })
+    .duration(playroomMotion.entrance)
+    .delay(delay)
+    .reduceMotion(ReduceMotion.System);
+}
+
 const styles = StyleSheet.create({
   pill: {
     alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
@@ -182,7 +143,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   pillText: {
-    fontFamily: playroomFonts.extraBold,
+    fontFamily: playroomFonts.label,
     textAlign: 'center',
   },
   float: {

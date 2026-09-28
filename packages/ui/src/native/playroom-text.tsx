@@ -127,7 +127,7 @@ export function PlayroomWordmark({ height, style, testID }: PlayroomWordmarkProp
 
 const styles = StyleSheet.create({
   text: {
-    fontFamily: playroomFonts.bold,
+    fontFamily: playroomFonts.label,
     includeFontPadding: false,
   },
   headingRow: {
