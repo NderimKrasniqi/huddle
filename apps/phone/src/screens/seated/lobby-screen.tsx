@@ -46,7 +46,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
               bursts
               onPress={onOpenPicker}
               busy={busy === 'browse'}
-              disabled={roster.length < 2}
               accessibilityLabel="Pick a game"
               testID="open-game-picker"
             />

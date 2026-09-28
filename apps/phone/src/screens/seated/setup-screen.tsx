@@ -80,17 +80,34 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
   function chooseMode(mode: GameSettingsMode) {
     void Haptics.selectionAsync();
     const preset = presentation?.presets?.find((candidate) => candidate.mode === mode);
-    onConfigure(mode, mode === 'custom' ? current() : preset?.settings ?? current());
+    onConfigure(mode, mode === 'custom' ? customSettings() : preset?.settings ?? defaults());
   }
 
   function choose(key: string, value: string) {
     void Haptics.selectionAsync();
-    onConfigure('custom', { ...current(), [key]: value });
+    onConfigure('custom', { ...customSettings(), [key]: value });
   }
 
-  function current(): GameSettings {
+  function defaults(): GameSettings {
     return Object.fromEntries(
       module.settingsSchema.map((setting) => [setting.key, settings[setting.key] ?? setting.defaultValue]),
+    );
+  }
+
+  /** Custom settings keep to the keys and options the game allows in Custom. */
+  function customSettings(): GameSettings {
+    return Object.fromEntries(
+      module.settingsSchema.map((setting) => {
+        const visible = presentation?.customSettingKeys === undefined || presentation.customSettingKeys.includes(setting.key);
+        const allowed = presentation?.customOptions?.[setting.key];
+        const options = allowed === undefined ? setting.options : setting.options.filter((option) => allowed.includes(option.value));
+        const current = visible ? settings[setting.key] : undefined;
+        const selected =
+          current !== undefined && options.some((option) => option.value === current)
+            ? current
+            : options[0]?.value ?? setting.defaultValue;
+        return [setting.key, selected];
+      }),
     );
   }
 
