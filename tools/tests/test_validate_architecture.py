@@ -263,7 +263,7 @@ class ArchitectureFixtureTests(unittest.TestCase):
         validator.validate_native_assets(ROOT)
         validator.validate_runtime_assets(ROOT)
 
-    def test_heartbeat_mark_guard_rejects_the_obsolete_black_h_fixture(self) -> None:
+    def test_mark_guard_rejects_the_obsolete_black_h_fixture(self) -> None:
         def png(width: int, height: int, rows: list[bytes]) -> bytes:
             def chunk(kind: bytes, payload: bytes) -> bytes:
                 return (
@@ -286,22 +286,28 @@ class ArchitectureFixtureTests(unittest.TestCase):
         root = Path(temporary.name)
         old_h = root / "old-h.png"
         old_h.write_bytes(png(4, 4, [b"\x00\x00\x00" * 4 for _ in range(4)]))
-        self.assertFalse(validator.png_has_heartbeat_mark(old_h, "Fixture", root))
+        self.assertFalse(validator.png_has_huddle_mark(old_h, "Fixture", root))
 
-        current = root / "heartbeat.png"
+        heartbeat = root / "heartbeat.png"
+        heartbeat.write_bytes(
+            png(4, 1, [b"\xFF\x6F\x61" + b"\xFF\xD7\x66" + b"\x7F\xD2\xB6" + b"\x7C\xC6\xFF"])
+        )
+        self.assertFalse(validator.png_has_huddle_mark(heartbeat, "Fixture", root))
+
+        current = root / "playroom.png"
         current.write_bytes(
             png(
                 4,
                 4,
                 [
-                    b"\xFF\x6F\x61" + b"\xFF\xD7\x66" + b"\x7F\xD2\xB6" + b"\x7C\xC6\xFF",
-                    b"\xFF\x6F\x61" * 4,
-                    b"\xFF\xD7\x66" * 4,
-                    b"\x7F\xD2\xB6" * 4,
+                    b"\xF9\xF1\xE6" * 2 + b"\x2D\x0B\x4E" + b"\xFF\x78\x1F",
+                    b"\x2D\x0B\x4E" * 4,
+                    b"\xF9\xF1\xE6" * 4,
+                    b"\xFF\x78\x1F" * 4,
                 ],
             )
         )
-        self.assertTrue(validator.png_has_heartbeat_mark(current, "Fixture", root))
+        self.assertTrue(validator.png_has_huddle_mark(current, "Fixture", root))
 
     def test_apple_tv_derivatives_keep_the_installed_config_contract(self) -> None:
         apple_root = ROOT / "packages" / "ui" / "assets" / "app-icons" / "apple-tv"

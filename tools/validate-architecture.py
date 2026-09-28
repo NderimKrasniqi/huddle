@@ -379,13 +379,13 @@ APPLE_TV_ASSET_SPECS = {
     "huddle-tv-top-shelf-wide-4640x1440.png": ((4640, 1440), False),
 }
 APPLE_TV_ASSET_DIGESTS = {
-    "huddle-tv-icon-1280x768.png": "bb7701d5d5c8902f9caa2d1b7eb96c643de149e90e728001a0838496ed261892",
-    "huddle-tv-icon-400x240.png": "4b0c4e2f08594503a41551e363e1f279c04ce82ba083be1e957cf95f28a7acd6",
-    "huddle-tv-icon-800x480.png": "be2c2025cc8c446b493473cc949f68234b8f0448e955a9da93a51284f2941e02",
-    "huddle-tv-top-shelf-1920x720.png": "a35d4303e28ae963b56f8d7268092a37064d6554417083904edadb520c6e5d29",
-    "huddle-tv-top-shelf-3840x1440.png": "43c1d7c83b683cd1b85b21ebdeea98b6c3b6b3f4445b8834e23f7d647e95a214",
-    "huddle-tv-top-shelf-wide-2320x720.png": "5a24772d630167b8ff8dd254232df3a9950f157ebd5bc009d9b1c6fc7e0726e2",
-    "huddle-tv-top-shelf-wide-4640x1440.png": "db2ec9a6d91b64aa3f833b71e0849d6f045780ad6cf7dfe29d4a3caef583ccf1",
+    "huddle-tv-icon-1280x768.png": "14c18c8bb437646261c23c8cddb8be9d0b5f17f274241bfaefe8c4ca8a92e831",
+    "huddle-tv-icon-400x240.png": "77102b78bb23729e887296382dbec094415b4ebf65e75c6700d47b7bdfbbdcea",
+    "huddle-tv-icon-800x480.png": "43d6b2e56564b08742619a38cc6b754e01aabd0eda831b71a0623f965d2596e6",
+    "huddle-tv-top-shelf-1920x720.png": "21279479ce9155f4146fc83368df94fe3df92840a5216d5c30113ff280aadebe",
+    "huddle-tv-top-shelf-3840x1440.png": "7b7b75e1f59db8e494ef79e3ac99487882450399527d6ed0abd3f7542287829e",
+    "huddle-tv-top-shelf-wide-2320x720.png": "23cc256a24d6ca1e8ad17f496229ceb9a64f8e21677a31c462a6d5a615a33f49",
+    "huddle-tv-top-shelf-wide-4640x1440.png": "5bf3ac41ae21bb31da7efd1fa0f9ecaaa498589738f3c321cb1e1b71b998c678",
 }
 APPLE_TV_CONFIG_KEYS = {
     "icon": "huddle-tv-icon-1280x768.png",
@@ -959,13 +959,13 @@ def png_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple
     return dimensions, color_type in {4, 6}
 
 
-def png_has_heartbeat_mark(path: Path, label: str, root: Path = ROOT) -> bool:
-    """Detect the four-colour Heartbeat mark without depending on Pillow.
+def png_has_huddle_mark(path: Path, label: str, root: Path = ROOT) -> bool:
+    """Detect the Playroom mark, a deep-purple H with orange dashes, without Pillow.
 
     Native generators may change PNG encoding and dimensions, so a digest is
     not a useful stale-resource guard for generated launcher/splash files. A
-    small, dependency-free decoder lets us reject the previous black-H/white
-    resources while accepting resized or re-encoded Heartbeat derivatives.
+    small, dependency-free decoder lets us reject older black-H and Heartbeat
+    resources while accepting resized or re-encoded Playroom derivatives.
     """
 
     payload = path.read_bytes()
@@ -1009,9 +1009,9 @@ def png_has_heartbeat_mark(path: Path, label: str, root: Path = ROOT) -> bool:
         return False
 
     # Scan a bounded number of samples after PNG row unfiltering. The exact
-    # shades vary between glossy artwork and platform resizes, so use broad
-    # Heartbeat hue buckets rather than exact pixels.
-    found = {"coral": False, "butter": False, "mint": False, "sky": False}
+    # shades vary between artwork and platform resizes, so use broad hue
+    # buckets for the mark's deep-purple ink and orange dashes.
+    found = {"ink": False, "orange": False}
     previous = bytearray(row_bytes)
 
     def paeth(a: int, b: int, c: int) -> int:
@@ -1065,14 +1065,10 @@ def png_has_heartbeat_mark(path: Path, label: str, root: Path = ROOT) -> bool:
                 red = green = blue = current[base]
             else:
                 red, green, blue = current[base : base + 3]
-            if red > 175 and green < 175 and blue < 180:
-                found["coral"] = True
-            if red > 175 and green > 125 and blue < 155:
-                found["butter"] = True
-            if green > 125 and red < 180 and blue > 80:
-                found["mint"] = True
-            if blue > 145 and red < 180:
-                found["sky"] = True
+            if red < 90 and green < 60 and blue > 35 and blue > red:
+                found["ink"] = True
+            if red > 200 and 60 < green < 150 and blue < 80:
+                found["orange"] = True
             if all(found.values()):
                 return True
         previous = current
@@ -1203,27 +1199,27 @@ def validate_native_assets(root: Path = ROOT) -> None:
     for name, dimensions in NATIVE_ASSET_SPECS.items():
         path = asset_root / name
         if not path.is_file():
-            fail(f"Heartbeat native asset missing: {relative(path, root)}")
-        actual_dimensions, has_alpha = png_dimensions_and_alpha(path, "Heartbeat native", root)
+            fail(f"Native identity asset missing: {relative(path, root)}")
+        actual_dimensions, has_alpha = png_dimensions_and_alpha(path, "Native identity", root)
         if actual_dimensions != dimensions:
             fail(
-                f"Heartbeat native asset has wrong dimensions: {relative(path, root)} "
+                f"Native identity asset has wrong dimensions: {relative(path, root)} "
                 f"({actual_dimensions}, expected {dimensions})"
             )
         expected_alpha = alpha_expected.get(name, False)
         if has_alpha != expected_alpha:
             fail(
-                f"Heartbeat native asset alpha mismatch: {relative(path, root)} "
+                f"Native identity asset alpha mismatch: {relative(path, root)} "
                 f"({has_alpha}, expected {expected_alpha})"
             )
 
         # The monochrome foreground is intentionally one colour. Every other
-        # identity derivative must visibly carry the four-heart mark so an old
-        # black-H resource cannot silently pass dimension checks.
-        if name != "huddle-android-monochrome.png" and not png_has_heartbeat_mark(
-            path, "Heartbeat native", root
+        # identity derivative must visibly carry the Playroom mark so an old
+        # resource cannot silently pass dimension checks.
+        if name != "huddle-android-monochrome.png" and not png_has_huddle_mark(
+            path, "Native identity", root
         ):
-            fail(f"Heartbeat native asset does not contain the current four-heart mark: {relative(path, root)}")
+            fail(f"Native identity asset does not contain the Playroom mark: {relative(path, root)}")
 
     apple_tv_root = asset_root / "apple-tv"
     if not apple_tv_root.is_dir():
@@ -1276,7 +1272,7 @@ def require_config_asset(
     actual = resolve_config_asset(config_path, configured, root, label)
     if actual.resolve() != expected.resolve():
         fail(
-            f"{label} must use the current Heartbeat derivative: "
+            f"{label} must use the current identity derivative: "
             f"{relative(actual, root)} (expected {relative(expected, root)})"
         )
 
@@ -1352,8 +1348,8 @@ def validate_native_config(root: Path = ROOT) -> None:
             root,
             f"{app_name} Android monochrome foreground",
         )
-        if adaptive.get("backgroundColor") != HEARTBEAT_PALETTE["cream"]:
-            fail(f"{app_name} Android adaptive background must use Heartbeat cream")
+        if adaptive.get("backgroundColor") != PLAYROOM_PALETTE["canvas"]:
+            fail(f"{app_name} Android adaptive background must use the Playroom canvas")
 
         ios = expo.get("ios")
         if not isinstance(ios, dict) or not isinstance(ios.get("icon"), dict):
@@ -1364,8 +1360,8 @@ def validate_native_config(root: Path = ROOT) -> None:
 
         splash_options = splash_plugin_options(expo)
         require_config_asset(config_path, splash_options.get("image"), shared["splash.image"], root, f"{app_name} splash image")
-        if splash_options.get("backgroundColor") != HEARTBEAT_PALETTE["cream"]:
-            fail(f"{app_name} splash background must use Heartbeat cream")
+        if splash_options.get("backgroundColor") != PLAYROOM_PALETTE["canvas"]:
+            fail(f"{app_name} splash background must use the Playroom canvas")
 
         if app_name != "tv":
             continue
@@ -1405,7 +1401,7 @@ def validate_android_cream_background(path: Path, root: Path, label: str) -> Non
     if not path.is_file():
         fail(f"{label} colors missing: {relative(path, root)}")
     source = path.read_text(encoding="utf-8")
-    expected = HEARTBEAT_PALETTE["cream"]
+    expected = PLAYROOM_PALETTE["canvas"]
     for name in ("splashscreen_background", "activityBackground"):
         match = re.search(rf'<color\s+name="{name}">(?P<value>#[0-9A-Fa-f]{{6}})</color>', source)
         if match is None or match.group("value").upper() != expected:
@@ -1421,7 +1417,7 @@ def validate_ios_cream_background(path: Path, root: Path, label: str) -> None:
         expected = {"red": 249 / 255, "green": 241 / 255, "blue": 230 / 255, "alpha": 1.0}
         for channel, value in expected.items():
             if abs(float(components[channel]) - value) > 0.00001:
-                fail(f"{label} {channel} must match Heartbeat cream")
+                fail(f"{label} {channel} must match the Playroom canvas")
     except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as error:
         fail(f"{label} colorset is malformed: {error}")
 
@@ -1446,11 +1442,11 @@ def validate_native_generated_resources(root: Path = ROOT) -> None:
                 if not icon.is_file():
                     fail(f"{app_name} iOS icon missing: {relative(icon, root)}")
                 dimensions, _ = png_dimensions_and_alpha(icon, f"{app_name} iOS", root)
-                if dimensions != (1024, 1024) or not png_has_heartbeat_mark(icon, f"{app_name} iOS", root):
+                if dimensions != (1024, 1024) or not png_has_huddle_mark(icon, f"{app_name} iOS", root):
                     fail(f"{app_name} iOS icon is stale: {relative(icon, root)}")
             splash_root = image_root / "SplashScreenLogo.imageset"
             splash = splash_root / "image@3x.png"
-            if not splash.is_file() or png_dimensions_and_alpha(splash, f"{app_name} iOS", root)[0] != (480, 480) or not png_has_heartbeat_mark(splash, f"{app_name} iOS", root):
+            if not splash.is_file() or png_dimensions_and_alpha(splash, f"{app_name} iOS", root)[0] != (480, 480) or not png_has_huddle_mark(splash, f"{app_name} iOS", root):
                 fail(f"{app_name} iOS splash logo is stale or missing: {relative(splash, root)}")
             validate_ios_cream_background(
                 image_root / "SplashScreenBackground.colorset" / "Contents.json",
@@ -1478,7 +1474,7 @@ def validate_native_generated_resources(root: Path = ROOT) -> None:
             resource_root = android_root / "app" / "src" / "main" / "res"
             validate_android_cream_background(resource_root / "values" / "colors.xml", root, f"{app_name} Android")
             xxxhdpi_splash = resource_root / "drawable-xxxhdpi" / "splashscreen_logo.png"
-            if not xxxhdpi_splash.is_file() or not png_has_heartbeat_mark(xxxhdpi_splash, f"{app_name} Android", root):
+            if not xxxhdpi_splash.is_file() or not png_has_huddle_mark(xxxhdpi_splash, f"{app_name} Android", root):
                 fail(f"{app_name} Android splash logo is stale or missing: {relative(xxxhdpi_splash, root)}")
             if app_name == "tv":
                 source_root = root / "packages" / "ui" / "assets" / "app-icons"
@@ -1498,7 +1494,7 @@ def validate_native_generated_resources(root: Path = ROOT) -> None:
                         expected = int(base_size * scale)
                         if dimensions != (expected, expected):
                             fail(f"Phone Android launcher resource has wrong dimensions: {relative(native, root)}")
-                        if filename != "ic_launcher_monochrome.webp" and not png_has_heartbeat_mark(native, "Phone Android", root):
+                        if filename != "ic_launcher_monochrome.webp" and not png_has_huddle_mark(native, "Phone Android", root):
                             fail(f"Phone Android launcher resource is stale: {relative(native, root)}")
 
 
@@ -1673,7 +1669,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
         config_path = root / "apps" / app / "app.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))["expo"]
         if config.get("backgroundColor") != "#F9F1E6":
-            fail(f"{app} native background must use Heartbeat cream")
+            fail(f"{app} native background must use the Playroom canvas")
         encoded = json.dumps(config)
         referenced = set(re.findall(r"huddle-[a-z0-9-]+\.png", encoded))
         if not referenced.issubset(set(NATIVE_ASSET_SPECS) | set(APPLE_TV_CONFIG_KEYS.values())):
