@@ -31,3 +31,8 @@ coverage/
 
 # Local workflow backups
 .ai-workflow/backups/
+
+# Local agent skills (installed with `npx skills add`; the workflow check forbids tracking them)
+.agents/
+.claude/
+skills-lock.json
