@@ -8,29 +8,20 @@ import {
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_LENGTH,
 } from '@huddle/domain';
-import { brandColors, fontFamilies, radii, spacing, typography } from '@huddle/design-tokens';
+import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
 import {
-  AvatarPortrait,
-  HuddleButton,
-  HuddleText,
-  HEARTBEAT_ARTWORK,
-  LoadingMark,
-  ScreenShell,
+  PlayroomAvatar,
+  PlayroomButton,
+  PlayroomHeading,
+  PlayroomStatusImage,
+  PlayroomText,
+  PlayroomWordmark,
 } from '@huddle/ui/native';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { joinFailureMessage } from '../features/join/join-rejection';
@@ -40,7 +31,7 @@ import { hostControlFailureMessage } from '../features/room';
 import { phoneSessionTokenStore } from '../platform/session/native';
 import { joinScreenState, rememberSession, usePhoneSession } from '../platform/session';
 import { phoneIdentityStore } from '../platform/storage/native';
-import { usePhoneReducedMotion } from '../ui/reduced-motion';
+import { PhoneFrame, PhoneNotice, PhoneTopBar } from './seated/phone-frame';
 
 function normalizedCode(value: string): string {
   const normalized = [...normalizeRoomCode(value)]
@@ -58,32 +49,23 @@ type IdentityStateSurfaceProps = {
   readonly loading?: boolean;
 };
 
-/** Open, reference-aligned state surface for deep-link and restoration guards. */
+/** A full-screen state for deep-link and restoration guards. */
 function IdentityStateSurface({ title, message, testID, action, loading = false }: IdentityStateSurfaceProps) {
   return (
-    <ScreenShell tone="background" style={styles.stateRoot} testID={testID}>
-      {loading ? (
-        <LoadingMark size={104} accessibilityLabel="Huddle loading" testID={`${testID}-mark`} />
-      ) : (
-        <Image
-          source={HEARTBEAT_ARTWORK.brand.displayMark}
-          resizeMode="contain"
-          style={styles.stateMark}
-          accessible
-          accessibilityLabel="Huddle"
-        />
-      )}
-      <HuddleText variant="title" align="center" accessibilityRole="alert">{title}</HuddleText>
-      <HuddleText variant="body" align="center" style={styles.stateMessage}>{message}</HuddleText>
-      {action ? (
-        <HuddleButton
-          title={action.label}
-          onPress={action.onPress}
-          accessibilityLabel={action.label}
-          style={styles.stateAction}
-        />
-      ) : null}
-    </ScreenShell>
+    <PhoneFrame
+      testID={testID}
+      contentStyle={styles.state}
+      footer={action ? <PlayroomButton label={action.label} onPress={action.onPress} accessibilityLabel={action.label} /> : undefined}
+    >
+      <PlayroomWordmark height={34} />
+      <PlayroomStatusImage art={loading ? 'loading' : 'roomNotFound'} width={200} height={200} />
+      <PlayroomText accessibilityRole="alert" style={[playroomPhone.type.heading, styles.center]}>
+        {title}
+      </PlayroomText>
+      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+        {message}
+      </PlayroomText>
+    </PhoneFrame>
   );
 }
 
@@ -91,7 +73,6 @@ function IdentityStateSurface({ title, message, testID, action, loading = false 
 export default function JoinIdentityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const reducedMotion = usePhoneReducedMotion();
   const params = useLocalSearchParams<{ code?: string | string[] }>();
   const code = normalizedCode(Array.isArray(params.code) ? params.code[0] ?? '' : params.code ?? '');
   const {
@@ -112,12 +93,10 @@ export default function JoinIdentityScreen() {
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');
   const [avatarId, setAvatarId] = useState<AvatarId>('fox');
-  const [showAllAvatars, setShowAllAvatars] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isChangingRooms, setIsChangingRooms] = useState(false);
   const [error, setError] = useState<string>();
   const isJoiningRef = useRef(false);
-  const nameInputRef = useRef<TextInput>(null);
   const routeState = joinScreenState(session, code);
   const shouldReturnToSeat = routeState.kind === 'seated';
 
@@ -211,34 +190,41 @@ export default function JoinIdentityScreen() {
   if (routeState.kind === 'handoff') {
     const currentSession = routeState.session;
     return (
-      <ScreenShell tone="background" style={styles.root} testID="identity-room-handoff">
-        <View style={[styles.handoff, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}>
-          <HuddleText variant="caption" align="center" style={styles.eyebrow}>CHANGE ROOMS</HuddleText>
-          <HuddleText variant="display" align="center">Leave {currentSession.code}?</HuddleText>
-          <HuddleText variant="bodyLarge" align="center">You’re already seated in room {currentSession.code}. Leave it before joining room {code} so this phone never holds two seats.</HuddleText>
-          {pending ? <HuddleText variant="caption" align="center" accessibilityLiveRegion="polite" testID="identity-handoff-availability-pending">Checking whether room {code} has a seat…</HuddleText> : null}
-          {roomUnavailable ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="identity-handoff-room-missing">Room {code} is unavailable. Stay in {currentSession.code} and check the TV.</HuddleText> : null}
-          {availability?.full ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="identity-handoff-room-full">Room {code} is full. Stay in {currentSession.code} and ask someone to leave.</HuddleText> : null}
-          {canChangeRooms ? <HuddleText variant="caption" align="center" testID="identity-handoff-room-available">Room {code} is ready for you.</HuddleText> : null}
-          {error ? <HuddleText variant="caption" align="center" accessibilityRole="alert" testID="identity-handoff-error">{error}</HuddleText> : null}
-          <HuddleButton
-            title={`Leave and join ${code}`}
-            onPress={() => void changeRooms()}
-            busy={isChangingRooms}
-            disabled={!canChangeRooms}
-            accessibilityLabel={`Leave room ${currentSession.code} and join room ${code}`}
-            testID="identity-confirm-handoff"
-          />
-          <HuddleButton
-            title={`Stay in ${currentSession.code}`}
-            variant="secondary"
-            onPress={() => router.replace('/')}
-            disabled={isChangingRooms}
-            accessibilityLabel={`Stay in room ${currentSession.code}`}
-            testID="identity-cancel-handoff"
-          />
-        </View>
-      </ScreenShell>
+      <PhoneFrame
+        testID="identity-room-handoff"
+        contentStyle={styles.state}
+        footer={
+          <>
+            <PlayroomButton
+              label={`Leave and join ${code}`}
+              onPress={() => void changeRooms()}
+              busy={isChangingRooms}
+              disabled={!canChangeRooms}
+              accessibilityLabel={`Leave room ${currentSession.code} and join room ${code}`}
+              testID="identity-confirm-handoff"
+            />
+            <PlayroomButton
+              label={`Stay in ${currentSession.code}`}
+              variant="secondary"
+              onPress={() => router.replace('/')}
+              disabled={isChangingRooms}
+              accessibilityLabel={`Stay in room ${currentSession.code}`}
+              testID="identity-cancel-handoff"
+            />
+          </>
+        }
+      >
+        <PlayroomStatusImage art="leftRoom" width={180} height={180} />
+        <PlayroomHeading type={playroomPhone.type.heading}>{`Leave ${currentSession.code}?`}</PlayroomHeading>
+        <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+          {`You’re already seated in room ${currentSession.code}. Leave it before joining room ${code} so this phone never holds two seats.`}
+        </PlayroomText>
+        {pending ? <Line testID="identity-handoff-availability-pending">{`Checking whether room ${code} has a seat…`}</Line> : null}
+        {roomUnavailable ? <PhoneNotice testID="identity-handoff-room-missing">{`Room ${code} is unavailable. Stay in ${currentSession.code} and check the TV.`}</PhoneNotice> : null}
+        {availability?.full ? <PhoneNotice testID="identity-handoff-room-full">{`Room ${code} is full. Stay in ${currentSession.code} and ask someone to leave.`}</PhoneNotice> : null}
+        {canChangeRooms ? <Line testID="identity-handoff-room-available">{`Room ${code} is ready for you.`}</Line> : null}
+        {error ? <PhoneNotice testID="identity-handoff-error">{error}</PhoneNotice> : null}
+      </PhoneFrame>
     );
   }
 
@@ -290,267 +276,185 @@ export default function JoinIdentityScreen() {
     }
   }
 
-  const compactAvatarIds = AVATAR_IDS.slice(0, 5);
-  const visibleAvatarIds = showAllAvatars ? AVATAR_IDS : compactAvatarIds;
-
   return (
-    <ScreenShell tone="background" style={styles.root} testID="identity-screen">
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top}
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={insets.top}>
+      <PhoneFrame
+        avatarId={avatarId}
+        testID="identity-screen"
+        footer={
+          <PlayroomButton
+            label={isJoining ? 'Joining room…' : 'Let’s go!'}
+            bursts
+            onPress={() => void submit()}
+            busy={isJoining}
+            disabled={!canJoin}
+            accessibilityLabel="Join room"
+            testID="identity-join"
+          />
+        }
       >
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: Math.max(insets.top, spacing.lg), paddingBottom: insets.bottom + spacing.xl }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.content, reducedMotion !== undefined ? styles.contentReady : null]}>
-            <View style={styles.topRow}>
-              <HuddleButton
-                variant="ghost"
-                onPress={() => router.replace('/')}
-                accessibilityLabel="Back to room code"
-                testID="identity-back"
-                style={styles.backButton}
+        <PhoneTopBar back={{ label: `Room ${code}`, onPress: () => router.replace('/'), testID: 'identity-back' }} />
+        <PlayroomHeading type={playroomPhone.type.heading}>Pick your look</PlayroomHeading>
+        <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+          {profile ? 'Welcome back! This is how everyone will see you.' : 'This is how everyone will see you.'}
+        </PlayroomText>
+        <View style={styles.grid} testID="identity-avatar-grid">
+          {AVATAR_IDS.map((candidate) => {
+            const taken = availability?.takenAvatarIds.includes(candidate) === true;
+            const selected = candidate === avatarId;
+            return (
+              <Pressable
+                key={candidate}
+                onPress={() => {
+                  setAvatarId(candidate);
+                  setError(undefined);
+                }}
+                disabled={taken}
+                accessibilityRole="button"
+                accessibilityLabel={`${avatarLabels[candidate]}${taken ? ', taken' : ''}`}
+                accessibilityState={{ selected, disabled: taken }}
+                testID={`identity-avatar-${candidate}`}
+                style={styles.cell}
               >
-                <HuddleText variant="body" align="center" accessible={false} style={styles.backArrow}>←</HuddleText>
-              </HuddleButton>
-              <Image
-                source={HEARTBEAT_ARTWORK.brand.displayMark}
-                resizeMode="contain"
-                style={styles.brandMark}
-                accessible
-                accessibilityLabel="Huddle"
-                testID="identity-huddle-mark"
-              />
-              <View style={styles.headerSpacer} />
-            </View>
-
-            <View style={styles.headerCopy}>
-              <HuddleText variant="title" align="center" style={styles.identityTitle}>Pick your vibe</HuddleText>
-              {!showAllAvatars ? <HuddleText variant="body" align="center" style={styles.subtitle}>Choose an avatar and a name</HuddleText> : null}
-            </View>
-
-            {!showAllAvatars ? (
-              <View style={styles.heroFrame}>
-                <Image
-                  source={HEARTBEAT_ARTWORK.phone.identitySunnyHero}
-                  resizeMode="contain"
-                  style={styles.heroArtwork}
-                  accessible
-                  accessibilityLabel="Sunny, a red bear, in a little garden"
-                  testID="identity-sunny-hero"
-                />
-                {profile ? (
-                  <View style={styles.welcomeBadge} accessible accessibilityLabel="Welcome back">
-                    <HuddleText variant="caption">♡ Welcome back</HuddleText>
+                <View style={[styles.ring, selected ? styles.ringOn : null, taken ? styles.taken : null]}>
+                  <PlayroomAvatar avatarId={candidate} size={54} />
+                </View>
+                {selected ? (
+                  <View style={styles.check}>
+                    <View style={styles.tick} />
                   </View>
                 ) : null}
-              </View>
-            ) : null}
-
-            {showAllAvatars ? (
-              <View style={styles.avatarPickerPrompt} accessible accessibilityLiveRegion="polite">
-                <HuddleText variant="body">Choose an available avatar.</HuddleText>
-              </View>
-            ) : null}
-
-            {showAllAvatars ? (
-              <View style={styles.avatarGrid} testID="identity-avatar-grid">
-                {visibleAvatarIds.map((candidate) => {
-                  const taken = availability?.takenAvatarIds.includes(candidate) === true;
-                  const selected = candidate === avatarId;
-                  return (
-                    <View key={candidate} style={styles.avatarCell}>
-                      <AvatarPortrait
-                        avatarId={candidate}
-                        size={52}
-                        selected={selected}
-                        disabled={taken}
-                        onPress={taken ? undefined : () => {
-                          setAvatarId(candidate);
-                          setError(undefined);
-                        }}
-                        displayName={avatarLabels[candidate]}
-                        testID={`identity-avatar-${candidate}`}
-                        style={[styles.avatarTile, selected && styles.selectedAvatarTile]}
-                        imageStyle={styles.avatarImage}
-                      />
-                      {selected ? <View style={styles.selectionCheck} accessible={false}><HuddleText style={styles.selectionCheckText}>✓</HuddleText></View> : null}
-                      {taken ? <HuddleText variant="caption" align="center" style={styles.taken}>Taken</HuddleText> : null}
-                    </View>
-                  );
-                })}
-              </View>
-            ) : null}
-
-            <View style={[styles.nameSection, showAllAvatars && styles.expandedNameSection]}>
-              <HuddleText variant="caption" style={styles.fieldLabel}>Name</HuddleText>
-              <View style={styles.nameField}>
-                <TextInput
-                  ref={nameInputRef}
-                  value={nickname}
-                  onChangeText={(value) => {
-                    setNickname(nicknameEntry(value));
-                    setError(undefined);
-                  }}
-                  placeholder="Enter your name"
-                  placeholderTextColor="rgba(43,31,23,0.42)"
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  maxLength={NICKNAME_MAX_LENGTH * 2}
-                  returnKeyType="done"
-                  onSubmitEditing={() => void submit()}
-                  style={styles.nameInput}
-                  accessibilityLabel="Display name"
-                  testID="identity-display-name"
-                />
-                <HuddleText variant="title" style={styles.editIcon} accessibilityElementsHidden>✎</HuddleText>
-              </View>
-            </View>
-
-            {!showAllAvatars ? (
-              <View style={styles.compactPicker}>
-                <View style={styles.compactAvatarRow} testID="identity-avatar-grid">
-                  {visibleAvatarIds.map((candidate) => {
-                    const taken = availability?.takenAvatarIds.includes(candidate) === true;
-                    const selected = candidate === avatarId;
-                    return (
-                      <View key={candidate} style={styles.avatarCell}>
-                        <AvatarPortrait
-                          avatarId={candidate}
-                          size={48}
-                          selected={selected}
-                          disabled={taken}
-                          onPress={taken ? undefined : () => {
-                            setAvatarId(candidate);
-                            setError(undefined);
-                          }}
-                          displayName={avatarLabels[candidate]}
-                          testID={`identity-avatar-${candidate}`}
-                          style={[styles.avatarTile, selected && styles.selectedAvatarTile]}
-                          imageStyle={styles.avatarImage}
-                        />
-                        {selected ? <View style={styles.selectionCheck} accessible={false}><HuddleText style={styles.selectionCheckText}>✓</HuddleText></View> : null}
-                        {taken ? <HuddleText variant="caption" align="center" style={styles.taken}>Taken</HuddleText> : null}
-                      </View>
-                    );
-                  })}
-                </View>
-                <Pressable
-                  onPress={() => setShowAllAvatars(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Choose another avatar"
-                  testID="identity-show-all-avatars"
-                  style={styles.avatarExpand}
-                >
-                  <HuddleText variant="caption" style={styles.avatarExpandText}>Choose another avatar</HuddleText>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                onPress={() => setShowAllAvatars(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Show selected avatar"
-                testID="identity-show-selected-avatar"
-                style={styles.avatarExpand}
-              >
-                <HuddleText variant="caption" style={styles.avatarExpandText}>Show selected avatar</HuddleText>
+                {taken ? (
+                  <PlayroomText color="muted" style={styles.takenLabel}>
+                    Taken
+                  </PlayroomText>
+                ) : null}
               </Pressable>
-            )}
-
-            {pending ? <HuddleText variant="caption" color="text" align="center" accessibilityLiveRegion="polite" testID="identity-availability-pending">Checking room availability…</HuddleText> : null}
-            {roomUnavailable ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-room-missing"><HuddleText variant="caption" align="center">No room has that code. Go back and check the TV.</HuddleText></View> : null}
-            {availability?.full ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-room-full"><HuddleText variant="caption" align="center">That room is full. Ask someone to leave before joining.</HuddleText></View> : null}
-            {selectedTaken ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-avatar-taken"><HuddleText variant="caption" align="center">That avatar is already in use. Pick another one.</HuddleText></View> : null}
-            {error ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-error"><HuddleText variant="caption" align="center">{error}</HuddleText></View> : null}
-
-            <HuddleButton
-              onPress={() => void submit()}
-              busy={isJoining}
-              disabled={!canJoin}
-              accessibilityLabel="Join room"
-              testID="identity-join"
-              style={styles.joinButton}
-            >
-              <HuddleText style={styles.joinLabel}>{isJoining ? 'Joining room…' : 'Join room'}</HuddleText>
-            </HuddleButton>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-      {isJoining ? (
-        <View style={styles.joiningOverlay} accessible accessibilityRole="alert" accessibilityLabel="Joining room" testID="identity-joining-overlay">
-          <View style={styles.joiningPanel}>
-            <Image
-              source={HEARTBEAT_ARTWORK.brand.displayMark}
-              resizeMode="contain"
-              style={styles.joiningMark}
-              accessible={false}
+            );
+          })}
+        </View>
+        <View style={styles.field}>
+          <PlayroomText color="muted" style={playroomPhone.type.caption}>
+            Your name
+          </PlayroomText>
+          <View style={styles.input}>
+            <TextInput
+              value={nickname}
+              onChangeText={(value) => {
+                setNickname(nicknameEntry(value));
+                setError(undefined);
+              }}
+              placeholder="Enter your name"
+              placeholderTextColor={playroomColors.muted}
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={NICKNAME_MAX_LENGTH * 2}
+              returnKeyType="done"
+              onSubmitEditing={() => void submit()}
+              style={styles.inputText}
+              accessibilityLabel="Display name"
+              testID="identity-display-name"
             />
-            <HuddleText variant="title" align="center">Joining room…</HuddleText>
-            <View style={styles.joiningDots} accessibilityElementsHidden>
-              <View style={[styles.joiningDot, styles.joiningDotActive]} />
-              <View style={styles.joiningDot} />
-              <View style={styles.joiningDot} />
-              <View style={styles.joiningDot} />
-            </View>
+            <PlayroomText color="muted" style={playroomPhone.type.caption} accessibilityElementsHidden>
+              {`${nickname.length}/${NICKNAME_MAX_LENGTH}`}
+            </PlayroomText>
           </View>
         </View>
-      ) : null}
-    </ScreenShell>
+        {pending ? <Line testID="identity-availability-pending">Checking room availability…</Line> : null}
+        {roomUnavailable ? <PhoneNotice testID="identity-room-missing">No room has that code. Go back and check the TV.</PhoneNotice> : null}
+        {availability?.full ? <PhoneNotice testID="identity-room-full">That room is full. Ask someone to leave before joining.</PhoneNotice> : null}
+        {selectedTaken ? <PhoneNotice testID="identity-avatar-taken">That avatar is already in use. Pick another one.</PhoneNotice> : null}
+        {error ? <PhoneNotice testID="identity-error">{error}</PhoneNotice> : null}
+      </PhoneFrame>
+    </KeyboardAvoidingView>
+  );
+}
+
+function Line({ children, testID }: { readonly children: string; readonly testID: string }) {
+  return (
+    <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.center]} accessibilityLiveRegion="polite" testID={testID}>
+      {children}
+    </PlayroomText>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { paddingHorizontal: 0, overflow: 'hidden' },
-  stateRoot: { paddingHorizontal: spacing.xl, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
-  stateMark: { width: 72, height: 68, marginBottom: spacing.lg },
-  stateMessage: { maxWidth: 320, opacity: 0.72 },
-  stateAction: { width: '100%', maxWidth: 320, minHeight: 52, borderRadius: radii.md, marginTop: spacing.md },
-  handoff: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.lg },
-  eyebrow: { letterSpacing: 1.2, opacity: 0.68 },
-  keyboard: { flex: 1 },
-  scroll: { flexGrow: 1 },
-  content: { flexGrow: 1, width: '100%', maxWidth: 430, alignSelf: 'center', paddingHorizontal: spacing.xl, gap: spacing.md, opacity: 0.95 },
-  contentReady: { opacity: 1 },
-  topRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backButton: { width: 40, height: 40, minHeight: 40, paddingHorizontal: 0, paddingVertical: 0, borderColor: 'rgba(43,31,23,0.16)', borderWidth: 1, borderRadius: radii.round },
-  backArrow: { fontSize: 24, lineHeight: 24, fontWeight: '700' },
-  brandMark: { width: 44, height: 40, transform: [{ scale: 1.4 }] },
-  headerSpacer: { width: 40, height: 40 },
-  headerCopy: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  identityTitle: { fontSize: 32, lineHeight: 40 },
-  subtitle: { maxWidth: 290, opacity: 0.9 },
-  heroFrame: { position: 'relative', width: '100%', height: 232, marginTop: spacing.xs, marginBottom: spacing.xs, overflow: 'hidden' },
-  heroArtwork: { width: '100%', height: '100%', transform: [{ scale: 1.25 }] },
-  welcomeBadge: { position: 'absolute', top: spacing.sm, right: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.34)' },
-  avatarPickerPrompt: { alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.34)' },
-  avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.sm },
-  compactPicker: { alignItems: 'center', gap: spacing.sm },
-  compactAvatarRow: { width: '100%', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  avatarCell: { width: '18%', minWidth: 48, alignItems: 'center', gap: spacing.xs },
-  avatarTile: { width: '100%', height: 92, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(174,119,58,0.28)', backgroundColor: 'rgba(255,255,255,0.18)', shadowOpacity: 0, elevation: 0 },
-  selectedAvatarTile: { borderColor: brandColors.coral, borderWidth: 2 },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 0 },
-  selectionCheck: { position: 'absolute', bottom: -8, right: -4, width: 26, height: 26, borderRadius: radii.round, borderWidth: 2, borderColor: brandColors.cream, backgroundColor: brandColors.coral, alignItems: 'center', justifyContent: 'center' },
-  selectionCheckText: { color: brandColors.cream, fontSize: 18, lineHeight: 22 },
-  taken: { color: brandColors.dustyRose, fontSize: 10, lineHeight: 12 },
-  avatarExpand: { minHeight: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  avatarExpandText: { color: brandColors.espresso, textDecorationLine: 'underline', opacity: 0.72 },
-  nameSection: { gap: spacing.xs, marginTop: spacing.xs },
-  expandedNameSection: { marginTop: spacing.xl },
-  fieldLabel: { fontFamily: fontFamilies.regular, fontWeight: '400', fontSize: 14, lineHeight: 20, opacity: 0.88 },
-  nameField: { minHeight: 52, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(43,31,23,0.16)', borderRadius: radii.md, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: spacing.md },
-  nameInput: { ...typography.bodyLarge, fontFamily: fontFamilies.bold, fontWeight: '700', flex: 1, color: brandColors.espresso, minHeight: 50, paddingVertical: spacing.sm },
-  editIcon: { fontSize: 18, lineHeight: 24, opacity: 0.82 },
-  inlineError: { width: '100%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: 'rgba(230,163,177,0.28)' },
-  joinButton: { minHeight: 68, borderRadius: radii.md, marginTop: 'auto', marginBottom: spacing.lg },
-  joinLabel: { fontFamily: fontFamilies.bold, fontWeight: '700', fontSize: 22, lineHeight: 28 },
-  joiningOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(43,31,23,0.46)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
-  joiningPanel: { width: '100%', maxWidth: 330, minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, borderRadius: radii.xl, backgroundColor: brandColors.cream, padding: spacing.xl },
-  joiningMark: { width: 68, height: 62 },
-  joiningDots: { flexDirection: 'row', gap: spacing.sm },
-  joiningDot: { width: 8, height: 8, borderRadius: radii.round, backgroundColor: 'rgba(43,31,23,0.14)' },
-  joiningDotActive: { backgroundColor: brandColors.coral },
+  flex: {
+    flex: 1,
+  },
+  center: {
+    textAlign: 'center',
+  },
+  state: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 18,
+    marginTop: 12,
+  },
+  cell: {
+    width: '19%',
+    alignItems: 'center',
+  },
+  ring: {
+    padding: 3,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  ringOn: {
+    borderColor: playroomColors.ink,
+  },
+  taken: {
+    opacity: 0.35,
+  },
+  check: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: playroomColors.canvas,
+    backgroundColor: playroomColors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tick: {
+    width: 5,
+    height: 9,
+    marginTop: -2,
+    borderColor: playroomColors.surface,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    transform: [{ rotate: '45deg' }],
+  },
+  takenLabel: {
+    ...playroomPhone.type.caption,
+    fontSize: 11,
+  },
+  field: {
+    gap: 6,
+  },
+  input: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 54,
+    paddingHorizontal: 16,
+    borderRadius: playroomRadii.input,
+    borderWidth: 2,
+    borderColor: playroomColors.border,
+    backgroundColor: playroomColors.surface,
+  },
+  inputText: {
+    flex: 1,
+    ...playroomPhone.type.title,
+    color: playroomColors.ink,
+    paddingVertical: 10,
+  },
 });

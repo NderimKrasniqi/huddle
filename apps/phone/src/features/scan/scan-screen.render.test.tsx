@@ -1,5 +1,5 @@
 import { act, fireEvent, render, within } from '@testing-library/react-native';
-import { brandColors } from '@huddle/design-tokens';
+import { playroomColors } from '@huddle/design-tokens';
 import { Linking, StyleSheet } from 'react-native';
 
 import { ScanScreen } from './scan-screen';
@@ -151,7 +151,7 @@ describe('ScanScreen', () => {
     const result = await render(<ScanScreen />);
 
     expect(StyleSheet.flatten(result.getByText('Enter code instead').props.style)).toMatchObject({
-      color: brandColors.espresso,
+      color: playroomColors.ink,
     });
 
     await act(async () => {
