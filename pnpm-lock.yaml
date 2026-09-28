@@ -353,9 +353,6 @@ importers:
 
   games/trivia:
     dependencies:
-      '@huddle/design-tokens':
-        specifier: workspace:*
-        version: link:../../packages/design-tokens
       '@huddle/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -384,9 +381,6 @@ importers:
 
   games/voting:
     dependencies:
-      '@huddle/design-tokens':
-        specifier: workspace:*
-        version: link:../../packages/design-tokens
       '@huddle/domain':
         specifier: workspace:*
         version: link:../../packages/domain

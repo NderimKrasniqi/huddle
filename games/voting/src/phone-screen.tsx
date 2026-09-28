@@ -1,12 +1,10 @@
-import { brandColors, spacing } from '@huddle/design-tokens';
 import type { PhoneGameScreenProps, PhoneSafeAreaInsets } from '@huddle/domain';
 import {
-  HEARTBEAT_ARTWORK,
   HuddleButton,
   HuddleIcon,
   HuddleText,
   ScreenShell,
-} from '@huddle/ui/native';
+} from '@huddle/ui/game-kit';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Image, ImageBackground, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
@@ -15,6 +13,8 @@ import { votingOptionIcon } from './option-icon';
 import { playableVotingState } from './state';
 import { votingOptionTones, votingTvTheme } from './tv-theme';
 import type { VotingEvent, VotingState } from './types';
+import { votingPalette, votingSpacing } from './theme';
+import { VOTING_ART } from './art';
 
 const ZERO_INSETS: PhoneSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -51,7 +51,7 @@ export function VotingPhoneScreen({
     return (
       <VotingStatusPage insets={insets} chromeInset={chromeInset} testID="voting-phone-intro">
         <VotingBrandHeader />
-        <Image source={HEARTBEAT_ARTWORK.phone.votingRoomArt} style={styles.introArt} resizeMode="cover" accessible={false} />
+        <Image source={VOTING_ART.room} style={styles.introArt} resizeMode="cover" accessible={false} />
         <HuddleText variant="display" align="center" style={styles.introTitle}>Get ready!</HuddleText>
         <HuddleText variant="bodyLarge" align="center" style={styles.introCopy}>Vote on fun prompts and see the room’s vibe.</HuddleText>
         <View style={styles.summaryPanel}>
@@ -81,9 +81,9 @@ export function VotingPhoneScreen({
   if (model.kind === 'vote') {
     return (
       <ScreenShell tone="background" style={styles.shell} testID="voting-phone-screen">
-        <StatusBar barStyle="dark-content" backgroundColor={brandColors.cream} />
+        <StatusBar barStyle="dark-content" backgroundColor={votingPalette.cream} />
         <ImageBackground
-          source={HEARTBEAT_ARTWORK.phone.votingClouds}
+          source={VOTING_ART.clouds}
           resizeMode="cover"
           style={StyleSheet.absoluteFill}
           accessible={false}
@@ -94,10 +94,10 @@ export function VotingPhoneScreen({
           contentContainerStyle={[
             styles.scroll,
             {
-              paddingTop: insets.top + chromeInset + spacing.lg,
-              paddingRight: insets.right + spacing.xl,
-              paddingBottom: insets.bottom + spacing.xl,
-              paddingLeft: insets.left + spacing.xl,
+              paddingTop: insets.top + chromeInset + votingSpacing.lg,
+              paddingRight: insets.right + votingSpacing.xl,
+              paddingBottom: insets.bottom + votingSpacing.xl,
+              paddingLeft: insets.left + votingSpacing.xl,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -120,7 +120,7 @@ export function VotingPhoneScreen({
                 accessibilityRole="text"
                 accessibilityLabel={current?.voteSeconds === 'none' ? 'No timer' : `${countdown} seconds remaining`}
               >
-                <HuddleIcon name="clock" size={18} color={brandColors.espresso} />
+                <HuddleIcon name="clock" size={18} color={votingPalette.espresso} />
                 <HuddleText variant="body" style={styles.timerText}>{current?.voteSeconds === 'none' ? 'NO TIMER' : `${countdown}s`}</HuddleText>
               </View>
               <HuddleText variant="caption" align="center" style={styles.votePrivacyNote}>
@@ -163,7 +163,7 @@ export function VotingPhoneScreen({
       <VotingStatusPage insets={insets} chromeInset={chromeInset} testID="voting-phone-finished">
         <VotingBrandHeader />
         <HuddleText variant="display" align="center" accessibilityRole="header">That’s the room’s vibe</HuddleText>
-        <Image source={HEARTBEAT_ARTWORK.phone.votingRoomArt} style={styles.statusArt} resizeMode="cover" accessible={false} />
+        <Image source={VOTING_ART.room} style={styles.statusArt} resizeMode="cover" accessible={false} />
         <HuddleText variant="bodyLarge" align="center">The shared recap is on the TV.</HuddleText>
         <View style={styles.recapPanel}>
           <HuddleText variant="body" align="center">📺&nbsp; Recap is on the TV</HuddleText>
@@ -183,7 +183,7 @@ export function VotingPhoneScreen({
         </View>
       ) : null}
       <HuddleText variant="display" align="center" accessibilityRole="header">Eyes up!</HuddleText>
-      <Image source={HEARTBEAT_ARTWORK.phone.votingRoomArt} style={styles.statusArt} resizeMode="cover" accessible={false} />
+      <Image source={VOTING_ART.room} style={styles.statusArt} resizeMode="cover" accessible={false} />
       <View style={styles.recapPanel}>
         <HuddleText variant="body" align="center">📺&nbsp; The room’s vote is on the TV</HuddleText>
       </View>
@@ -234,9 +234,9 @@ function VotingWaitingSurface({
       style={[styles.shell, styles.statusPage]}
       testID="voting-phone-waiting"
     >
-      <StatusBar barStyle="dark-content" backgroundColor={brandColors.cream} />
+      <StatusBar barStyle="dark-content" backgroundColor={votingPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.phone.votingClouds}
+        source={VOTING_ART.clouds}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -247,10 +247,10 @@ function VotingWaitingSurface({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInset + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInset + votingSpacing.xl,
+            paddingRight: insets.right + votingSpacing.xl,
+            paddingBottom: insets.bottom + votingSpacing.xl,
+            paddingLeft: insets.left + votingSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -275,7 +275,7 @@ function VotingWaitingSurface({
             </HuddleText>
           </View>
           <Image
-            source={HEARTBEAT_ARTWORK.phone.votingRoomArt}
+            source={VOTING_ART.room}
             resizeMode="cover"
             style={styles.waitingArt}
             accessible={false}
@@ -338,9 +338,9 @@ function VotingStatusPage({
 }) {
   return (
     <ScreenShell tone="background" style={[styles.shell, styles.statusPage]} testID={testID}>
-      <StatusBar barStyle="dark-content" backgroundColor={brandColors.cream} />
+      <StatusBar barStyle="dark-content" backgroundColor={votingPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.phone.votingClouds}
+        source={VOTING_ART.clouds}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -351,10 +351,10 @@ function VotingStatusPage({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInset + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInset + votingSpacing.xl,
+            paddingRight: insets.right + votingSpacing.xl,
+            paddingBottom: insets.bottom + votingSpacing.xl,
+            paddingLeft: insets.left + votingSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -404,11 +404,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   statusPage: {
-    backgroundColor: brandColors.cream,
+    backgroundColor: votingPalette.cream,
   },
   worldWash: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: brandColors.cream,
+    backgroundColor: votingPalette.cream,
     opacity: 0.08,
   },
   scroll: {
@@ -418,13 +418,13 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 440,
     alignSelf: 'center',
-    gap: spacing.md,
+    gap: votingSpacing.md,
   },
   brandHeader: {
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: votingSpacing.sm,
   },
   gameMark: {
     width: 28,
@@ -460,17 +460,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: votingSpacing.md,
   },
   voteStack: {
     width: '100%',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: votingSpacing.md,
   },
   roundPill: {
     minHeight: 38,
     flex: 1,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: votingSpacing.md,
     borderRadius: 6,
     borderWidth: 2,
     borderColor: votingTvTheme.plum,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   timerPill: {
     minWidth: 76,
     minHeight: 76,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: votingSpacing.md,
     borderRadius: 38,
     borderWidth: 3,
     borderColor: votingTvTheme.plum,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: votingSpacing.xs,
     shadowColor: votingTvTheme.paperShadow,
     shadowOpacity: 0.28,
     shadowRadius: 8,
@@ -514,19 +514,19 @@ const styles = StyleSheet.create({
     color: votingTvTheme.plum,
   },
   promptText: {
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.md,
+    marginTop: votingSpacing.xs,
+    paddingHorizontal: votingSpacing.md,
     color: votingTvTheme.plum,
   },
   choices: {
     width: '100%',
-    gap: spacing.sm,
+    gap: votingSpacing.sm,
   },
   choiceButton: {
     width: '100%',
     minHeight: 60,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: votingSpacing.md,
+    paddingVertical: votingSpacing.sm,
     borderRadius: 6,
     borderWidth: 2,
     borderBottomWidth: 5,
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: votingSpacing.md,
     opacity: 1,
     shadowOpacity: 0,
     elevation: 0,
@@ -562,9 +562,9 @@ const styles = StyleSheet.create({
     minHeight: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    gap: votingSpacing.xs,
+    paddingHorizontal: votingSpacing.md,
+    paddingVertical: votingSpacing.sm,
   },
   votePrivacyNote: {
     position: 'absolute',
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     maxWidth: 390,
     alignSelf: 'center',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: votingSpacing.md,
   },
   statusArt: {
     width: 204,
@@ -602,8 +602,8 @@ const styles = StyleSheet.create({
   waitingPanel: {
     width: '100%',
     minHeight: 82,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: votingSpacing.lg,
+    paddingVertical: votingSpacing.md,
     borderRadius: 7,
     borderWidth: 2,
     borderTopWidth: 6,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     backgroundColor: votingTvTheme.cream,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: votingSpacing.xs,
     shadowColor: votingTvTheme.paperShadow,
     shadowOpacity: 0.2,
     shadowRadius: 7,
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   introArt: {
     width: 208,
     height: 156,
-    marginTop: spacing.xs,
+    marginTop: votingSpacing.xs,
   },
   introTitle: {
     fontSize: 34,
@@ -638,9 +638,9 @@ const styles = StyleSheet.create({
   summaryPanel: {
     width: '100%',
     maxWidth: 340,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    marginTop: votingSpacing.sm,
+    paddingHorizontal: votingSpacing.lg,
+    paddingVertical: votingSpacing.sm,
     borderRadius: 7,
     borderWidth: 2,
     borderColor: votingTvTheme.plum,
@@ -653,8 +653,8 @@ const styles = StyleSheet.create({
   },
   recapPanel: {
     width: '100%',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: votingSpacing.lg,
+    paddingVertical: votingSpacing.md,
     borderRadius: 7,
     borderWidth: 2,
     borderColor: votingTvTheme.plum,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: votingSpacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: votingTvTheme.rule,
   },

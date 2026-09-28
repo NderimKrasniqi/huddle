@@ -1,10 +1,8 @@
 import type { TvGameScreenProps } from '@huddle/domain';
-import { spacing } from '@huddle/design-tokens';
 import {
   AvatarPortrait,
-  HEARTBEAT_ARTWORK,
   HuddleText,
-} from '@huddle/ui/native';
+} from '@huddle/ui/game-kit';
 import {
   ImageBackground,
   StyleSheet,
@@ -17,6 +15,8 @@ import { INTRO_SECONDS } from './state';
 import { triviaOptionTones, triviaTvTheme } from './tv-theme';
 import { watchedScreen, type WatchedOption, type WatchedScreen } from './watching';
 import type { TriviaState } from './types';
+import { triviaSpacing } from './theme';
+import { TRIVIA_ART } from './art';
 
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
@@ -65,7 +65,7 @@ export function TriviaTvScreen({
     >
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
         <ImageBackground
-          source={HEARTBEAT_ARTWORK.gameWorlds.trivia}
+          source={TRIVIA_ART.world}
           resizeMode="cover"
           style={StyleSheet.absoluteFill}
           accessible={false}
@@ -421,15 +421,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: OVERSCAN_X,
     paddingVertical: OVERSCAN_Y,
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
   stageLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: triviaSpacing.sm,
+    paddingVertical: triviaSpacing.xs,
     backgroundColor: 'rgba(246, 238, 216, 0.76)',
     borderBottomWidth: 2,
     borderBottomColor: triviaTvTheme.ink,
@@ -447,13 +447,13 @@ const styles = StyleSheet.create({
   },
   contentGrid: {
     flex: 1,
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
   },
   introStage: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing['4xl'],
+    paddingHorizontal: triviaSpacing['4xl'],
   },
   introLeaf: {
     position: 'absolute',
@@ -484,14 +484,14 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing['4xl'],
-    paddingVertical: spacing['3xl'],
+    paddingHorizontal: triviaSpacing['4xl'],
+    paddingVertical: triviaSpacing['3xl'],
     borderRadius: 10,
     backgroundColor: triviaTvTheme.parchmentSoft,
     borderColor: triviaTvTheme.ink,
     borderWidth: 2,
     borderTopWidth: 9,
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.45,
     shadowRadius: 18,
@@ -503,9 +503,9 @@ const styles = StyleSheet.create({
     bottom: 70,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    gap: triviaSpacing.lg,
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: triviaTvTheme.ink,
   },
@@ -514,20 +514,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
   },
   countdownLabel: {
-    marginTop: spacing.sm,
+    marginTop: triviaSpacing.sm,
     color: triviaTvTheme.inkSoft,
     letterSpacing: 3,
   },
   countdownMark: {
     minWidth: 320,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: triviaSpacing.sm,
     borderTopWidth: 2,
     borderBottomWidth: 2,
     borderColor: triviaTvTheme.rule,
   },
   countdownNumber: {
-    marginTop: -spacing.sm,
+    marginTop: -triviaSpacing.sm,
     fontSize: 168,
     lineHeight: 184,
     color: triviaTvTheme.mossDark,
@@ -539,14 +539,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing['4xl'],
-    paddingVertical: spacing['3xl'],
+    paddingHorizontal: triviaSpacing['4xl'],
+    paddingVertical: triviaSpacing['3xl'],
     borderRadius: 10,
     backgroundColor: triviaTvTheme.parchmentSoft,
     borderColor: triviaTvTheme.coral,
     borderWidth: 2,
     borderTopWidth: 9,
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.38,
     shadowRadius: 18,
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   gameBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
   brandMark: {
     width: 20,
@@ -579,10 +579,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.xl,
+    gap: triviaSpacing.xl,
   },
   headingCopy: {
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
   },
   kicker: {
     color: triviaTvTheme.inkSoft,
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.4,
     shadowRadius: 10,
@@ -607,8 +607,8 @@ const styles = StyleSheet.create({
   },
   questionPanel: {
     minHeight: 214,
-    paddingHorizontal: spacing['3xl'],
-    paddingVertical: spacing['2xl'],
+    paddingHorizontal: triviaSpacing['3xl'],
+    paddingVertical: triviaSpacing['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
@@ -624,21 +624,21 @@ const styles = StyleSheet.create({
   },
   optionGrid: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
     alignItems: 'stretch',
   },
   option: {
     flex: 1,
     minWidth: 0,
     minHeight: 156,
-    padding: spacing.xl,
+    padding: triviaSpacing.xl,
     borderRadius: 8,
     borderColor: triviaTvTheme.ink,
     borderWidth: 2,
     borderBottomWidth: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: triviaSpacing.md,
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -673,34 +673,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
   },
   participationCopy: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
   },
   avatarStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
   revealColumns: {
     flex: 1,
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: triviaSpacing.xl,
     alignItems: 'stretch',
   },
   revealQuestion: {
     flex: 1.45,
-    padding: spacing.xl,
+    padding: triviaSpacing.xl,
     borderRadius: 8,
     backgroundColor: triviaTvTheme.parchmentSoft,
     borderColor: triviaTvTheme.ink,
     borderWidth: 2,
     borderLeftWidth: 10,
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
     justifyContent: 'center',
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.36,
@@ -711,12 +711,12 @@ const styles = StyleSheet.create({
   resultsPanel: {
     flex: 1,
     minWidth: 0,
-    padding: spacing.xl,
+    padding: triviaSpacing.xl,
     borderRadius: 8,
     backgroundColor: 'rgba(185, 211, 190, 0.94)',
     borderColor: triviaTvTheme.ink,
     borderWidth: 2,
-    gap: spacing.lg,
+    gap: triviaSpacing.lg,
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.30,
     shadowRadius: 12,
@@ -724,29 +724,29 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   resultsHeading: {
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
   },
   verdictList: {
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
   /** Compact two-column reveal outcomes keep all ten seats above the fold. */
   verdictGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignContent: 'flex-start',
-    columnGap: spacing.sm,
-    rowGap: spacing.xs,
+    columnGap: triviaSpacing.sm,
+    rowGap: triviaSpacing.xs,
   },
   scoreRow: {
     minHeight: 56,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: triviaSpacing.xs,
+    paddingHorizontal: triviaSpacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: triviaTvTheme.rule,
     backgroundColor: 'rgba(246, 238, 216, 0.58)',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
   awayRow: {
     opacity: 0.68,
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
   },
   scoreIdentity: {
     flex: 1,
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
   },
   avatarFallback: {
     width: 48,
@@ -780,9 +780,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    gap: triviaSpacing.md,
+    paddingHorizontal: triviaSpacing.xl,
+    paddingVertical: triviaSpacing.lg,
     borderRadius: 8,
     backgroundColor: triviaTvTheme.parchmentSoft,
     borderColor: triviaTvTheme.ink,
@@ -798,23 +798,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    columnGap: spacing.md,
-    rowGap: spacing.md,
+    columnGap: triviaSpacing.md,
+    rowGap: triviaSpacing.md,
   },
   /** Ten-player finals use two compact columns inside the overscan frame. */
   finalGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignContent: 'flex-start',
-    columnGap: spacing.md,
-    rowGap: spacing.sm,
+    columnGap: triviaSpacing.md,
+    rowGap: triviaSpacing.sm,
   },
   finalRow: {
     flexGrow: 1,
     flexBasis: '29%',
     minHeight: 180,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.lg,
     borderRadius: 6,
     backgroundColor: triviaTvTheme.parchmentSoft,
     borderColor: triviaTvTheme.ink,
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: triviaSpacing.md,
     shadowColor: triviaTvTheme.shadow,
     shadowOpacity: 0.28,
     shadowRadius: 8,
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     height: 68,
     minHeight: 68,
-    paddingVertical: spacing.xs,
+    paddingVertical: triviaSpacing.xs,
     flexDirection: 'row',
     justifyContent: 'flex-start',
   },
@@ -871,8 +871,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tag: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: triviaSpacing.md,
+    paddingVertical: triviaSpacing.xs,
     borderRadius: 3,
     borderWidth: 2,
     alignItems: 'center',

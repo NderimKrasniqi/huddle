@@ -261,8 +261,7 @@ class ArchitectureFixtureTests(unittest.TestCase):
     def test_heartbeat_runtime_bundle_is_current(self) -> None:
         validator.validate_heartbeat_tokens(ROOT)
         validator.validate_native_assets(ROOT)
-        validator.validate_heartbeat_runtime_assets(ROOT)
-        validator.validate_avatar_assets(ROOT)
+        validator.validate_runtime_assets(ROOT)
 
     def test_heartbeat_mark_guard_rejects_the_obsolete_black_h_fixture(self) -> None:
         def png(width: int, height: int, rows: list[bytes]) -> bytes:

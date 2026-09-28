@@ -1,6 +1,5 @@
 import type { TvGameScreenProps } from '@huddle/domain';
-import { spacing } from '@huddle/design-tokens';
-import { AvatarPortrait, HEARTBEAT_ARTWORK, HuddleText } from '@huddle/ui/native';
+import { AvatarPortrait, HuddleText } from '@huddle/ui/game-kit';
 import { ImageBackground, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useEffect, useState } from 'react';
 
@@ -9,6 +8,8 @@ import { votingOptionIcon, votingRecapIcon } from './option-icon';
 import { votingOptionTones, votingTvTheme } from './tv-theme';
 import type { VotingState } from './types';
 import { votingTvModel, type VotingTallyOption, type VotingTvModel } from './watching';
+import { votingSpacing } from './theme';
+import { VOTING_ART } from './art';
 
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
@@ -39,7 +40,7 @@ export function VotingTvScreen({ state, players, clockRemainingMs }: TvGameScree
   return (
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="voting-tv-screen">
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
-        <ImageBackground source={HEARTBEAT_ARTWORK.gameWorlds.voting} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID="voting-tv-world" />
+        <ImageBackground source={VOTING_ART.world} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID="voting-tv-world" />
         <View style={styles.worldWash} pointerEvents="none" focusable={false} />
         <View style={styles.safeFrame} pointerEvents="none" focusable={false}>
           <View style={styles.stageLabel} pointerEvents="none" focusable={false} accessibilityElementsHidden>
@@ -345,58 +346,58 @@ const styles = StyleSheet.create({
   viewport: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: votingTvTheme.blush },
   stage: { width: STAGE_WIDTH, height: STAGE_HEIGHT, overflow: 'hidden' },
   worldWash: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255, 240, 222, 0.08)' },
-  safeFrame: { flex: 1, paddingHorizontal: OVERSCAN_X, paddingVertical: OVERSCAN_Y, gap: spacing.sm },
-  stageLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: 'rgba(255, 240, 222, 0.78)', borderBottomWidth: 2, borderBottomColor: votingTvTheme.plum },
+  safeFrame: { flex: 1, paddingHorizontal: OVERSCAN_X, paddingVertical: OVERSCAN_Y, gap: votingSpacing.sm },
+  stageLabel: { flexDirection: 'row', alignItems: 'center', gap: votingSpacing.xs, alignSelf: 'flex-start', paddingHorizontal: votingSpacing.sm, paddingVertical: votingSpacing.xs, backgroundColor: 'rgba(255, 240, 222, 0.78)', borderBottomWidth: 2, borderBottomColor: votingTvTheme.plum },
   stageLabelHeart: { width: 15, height: 15, backgroundColor: votingTvTheme.coral, transform: [{ rotate: '45deg' }], borderRadius: 3 },
   stageLabelCopy: { color: votingTvTheme.plum, letterSpacing: 2 },
-  introStage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'] },
+  introStage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: votingSpacing['4xl'] },
   introHeart: { position: 'absolute', left: 370, top: 152, width: 120, height: 120, alignItems: 'center', justifyContent: 'center', opacity: 0.9 },
   heartLobe: { position: 'absolute', width: 54, height: 76, borderRadius: 42, backgroundColor: votingTvTheme.coral, transform: [{ rotate: '-42deg' }, { translateX: -18 }, { translateY: -18 }] },
   heartLobeRight: { transform: [{ rotate: '42deg' }, { translateX: 18 }, { translateY: -18 }] },
   heartPoint: { position: 'absolute', width: 72, height: 72, backgroundColor: votingTvTheme.coral, transform: [{ rotate: '45deg' }, { translateY: 20 }], borderRadius: 6 },
-  introBoard: { width: 930, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'], paddingVertical: spacing['3xl'], borderRadius: 10, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.plum, borderWidth: 2, borderTopWidth: 9, gap: spacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.44, shadowRadius: 18, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
-  playerRibbon: { position: 'absolute', bottom: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: votingTvTheme.plum },
+  introBoard: { width: 930, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: votingSpacing['4xl'], paddingVertical: votingSpacing['3xl'], borderRadius: 10, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.plum, borderWidth: 2, borderTopWidth: 9, gap: votingSpacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.44, shadowRadius: 18, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  playerRibbon: { position: 'absolute', bottom: 70, flexDirection: 'row', alignItems: 'center', gap: votingSpacing.lg, paddingHorizontal: votingSpacing.lg, paddingVertical: votingSpacing.sm, borderBottomWidth: 2, borderBottomColor: votingTvTheme.plum },
   ribbonLabel: { color: votingTvTheme.plum, letterSpacing: 1.8 },
-  legacyBoard: { flex: 1, width: 1120, maxWidth: '100%', alignSelf: 'center', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'], paddingVertical: spacing['3xl'], borderRadius: 10, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.coral, borderWidth: 2, borderTopWidth: 9, gap: spacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.38, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
-  gameBrand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  legacyBoard: { flex: 1, width: 1120, maxWidth: '100%', alignSelf: 'center', alignItems: 'center', justifyContent: 'center', paddingHorizontal: votingSpacing['4xl'], paddingVertical: votingSpacing['3xl'], borderRadius: 10, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.coral, borderWidth: 2, borderTopWidth: 9, gap: votingSpacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.38, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
+  gameBrand: { flexDirection: 'row', alignItems: 'center', gap: votingSpacing.sm },
   brandMark: { width: 20, height: 20, borderRadius: 3, backgroundColor: votingTvTheme.coral, borderColor: votingTvTheme.plum, borderWidth: 2, transform: [{ rotate: '45deg' }] },
   brandLabel: { color: votingTvTheme.plum, letterSpacing: 2.1 },
-  countdownLabel: { marginTop: spacing.sm, letterSpacing: 3, color: votingTvTheme.plumSoft },
-  countdownMark: { minWidth: 320, alignItems: 'center', paddingVertical: spacing.sm, borderTopWidth: 2, borderBottomWidth: 2, borderColor: votingTvTheme.rule },
-  countdownNumber: { marginTop: -spacing.sm, fontSize: 168, lineHeight: 184, color: votingTvTheme.coralDark },
-  content: { flex: 1, gap: spacing.lg },
-  topRow: { minHeight: 112, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.xl },
-  headingCopy: { gap: spacing.xs },
-  topMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  countdownLabel: { marginTop: votingSpacing.sm, letterSpacing: 3, color: votingTvTheme.plumSoft },
+  countdownMark: { minWidth: 320, alignItems: 'center', paddingVertical: votingSpacing.sm, borderTopWidth: 2, borderBottomWidth: 2, borderColor: votingTvTheme.rule },
+  countdownNumber: { marginTop: -votingSpacing.sm, fontSize: 168, lineHeight: 184, color: votingTvTheme.coralDark },
+  content: { flex: 1, gap: votingSpacing.lg },
+  topRow: { minHeight: 112, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: votingSpacing.xl },
+  headingCopy: { gap: votingSpacing.xs },
+  topMeta: { flexDirection: 'row', alignItems: 'center', gap: votingSpacing.md },
   kicker: { letterSpacing: 1.4, color: votingTvTheme.plumSoft },
-  timerPill: { width: 132, height: 92, paddingHorizontal: spacing.lg, borderRadius: 8, backgroundColor: votingTvTheme.plum, borderColor: votingTvTheme.coral, borderWidth: 3, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.xs, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
-  promptPanel: { minHeight: 196, paddingHorizontal: spacing['3xl'], paddingVertical: spacing.xl, borderRadius: 8, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.plum, borderWidth: 2, borderLeftWidth: 10, alignItems: 'center', justifyContent: 'center', shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.38, shadowRadius: 14, shadowOffset: { width: 0, height: 10 }, elevation: 7 },
-  optionRow: { flex: 1, flexDirection: 'row', gap: spacing.md, alignItems: 'stretch' },
-  optionCard: { flex: 1, minWidth: 0, minHeight: 360, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, borderRadius: 7, borderColor: votingTvTheme.plum, borderWidth: 2, borderBottomWidth: 9, alignItems: 'center', justifyContent: 'center', gap: spacing.md, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 7 }, elevation: 5 },
+  timerPill: { width: 132, height: 92, paddingHorizontal: votingSpacing.lg, borderRadius: 8, backgroundColor: votingTvTheme.plum, borderColor: votingTvTheme.coral, borderWidth: 3, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: votingSpacing.xs, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
+  promptPanel: { minHeight: 196, paddingHorizontal: votingSpacing['3xl'], paddingVertical: votingSpacing.xl, borderRadius: 8, backgroundColor: 'rgba(255, 240, 222, 0.94)', borderColor: votingTvTheme.plum, borderWidth: 2, borderLeftWidth: 10, alignItems: 'center', justifyContent: 'center', shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.38, shadowRadius: 14, shadowOffset: { width: 0, height: 10 }, elevation: 7 },
+  optionRow: { flex: 1, flexDirection: 'row', gap: votingSpacing.md, alignItems: 'stretch' },
+  optionCard: { flex: 1, minWidth: 0, minHeight: 360, paddingHorizontal: votingSpacing.lg, paddingVertical: votingSpacing.xl, borderRadius: 7, borderColor: votingTvTheme.plum, borderWidth: 2, borderBottomWidth: 9, alignItems: 'center', justifyContent: 'center', gap: votingSpacing.md, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 7 }, elevation: 5 },
   optionIcon: { fontSize: 58, lineHeight: 68, color: votingTvTheme.plum },
   tallyTrack: { width: '100%', height: 18, borderRadius: 3, overflow: 'hidden', backgroundColor: 'rgba(99, 63, 85, 0.18)' },
   tallyFill: { height: '100%', borderRadius: 3, backgroundColor: votingTvTheme.coralDark },
-  voterLabels: { width: '100%', alignItems: 'center', gap: spacing.xs },
-  voterAvatarStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  voterLabels: { width: '100%', alignItems: 'center', gap: votingSpacing.xs },
+  voterAvatarStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: votingSpacing.xs },
   voterAvatarFallback: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: votingTvTheme.butter },
   dimCopy: { color: votingTvTheme.plumSoft },
-  participationRow: { minHeight: 72, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.lg },
-  participationCopy: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, flex: 1 },
-  avatarStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.sm },
-  finished: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing['4xl'] },
-  finishBoard: { width: 1160, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing['2xl'], paddingVertical: spacing.xl, borderRadius: 9, backgroundColor: 'rgba(255, 240, 222, 0.95)', borderColor: votingTvTheme.plum, borderWidth: 2, borderTopWidth: 9, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.42, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
-  vibeMark: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  participationRow: { minHeight: 72, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: votingSpacing.lg },
+  participationCopy: { flexDirection: 'row', alignItems: 'center', gap: votingSpacing.lg, flex: 1 },
+  avatarStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: votingSpacing.sm },
+  finished: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: votingSpacing['4xl'] },
+  finishBoard: { width: 1160, maxWidth: '100%', alignItems: 'center', justifyContent: 'center', gap: votingSpacing.md, paddingHorizontal: votingSpacing['2xl'], paddingVertical: votingSpacing.xl, borderRadius: 9, backgroundColor: 'rgba(255, 240, 222, 0.95)', borderColor: votingTvTheme.plum, borderWidth: 2, borderTopWidth: 9, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.42, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
+  vibeMark: { flexDirection: 'row', alignItems: 'center', gap: votingSpacing.sm },
   vibeDot: { width: 28, height: 28, borderRadius: 4, transform: [{ rotate: '45deg' }] },
   vibeDotCoral: { backgroundColor: votingTvTheme.coral },
   vibeDotButter: { backgroundColor: votingTvTheme.butter },
   vibeDotMint: { backgroundColor: votingTvTheme.mint },
   vibeDotSky: { backgroundColor: votingTvTheme.sky },
-  recapList: { width: '100%', gap: spacing.sm },
-  recapCard: { minHeight: 96, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: 6, backgroundColor: 'rgba(247, 207, 194, 0.62)', borderColor: votingTvTheme.plum, borderWidth: 2, borderLeftWidth: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.22, shadowRadius: 7, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
+  recapList: { width: '100%', gap: votingSpacing.sm },
+  recapCard: { minHeight: 96, paddingHorizontal: votingSpacing.lg, paddingVertical: votingSpacing.md, borderRadius: 6, backgroundColor: 'rgba(247, 207, 194, 0.62)', borderColor: votingTvTheme.plum, borderWidth: 2, borderLeftWidth: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: votingSpacing.lg, shadowColor: votingTvTheme.paperShadow, shadowOpacity: 0.22, shadowRadius: 7, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
   recapIcon: { width: 64, fontSize: 48, lineHeight: 58, textAlign: 'center', color: votingTvTheme.plum },
-  recapCopy: { flex: 1, gap: spacing.xs },
+  recapCopy: { flex: 1, gap: votingSpacing.xs },
   recapValue: { minWidth: 116, textAlign: 'right' },
-  tag: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 4, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  tag: { paddingHorizontal: votingSpacing.md, paddingVertical: votingSpacing.xs, borderRadius: 4, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   tagCopy: { color: votingTvTheme.plum, letterSpacing: 1.1 },
   paperTag: { backgroundColor: votingTvTheme.cream, borderColor: votingTvTheme.plum },
   readyTag: { backgroundColor: votingTvTheme.mint, borderColor: votingTvTheme.plum },

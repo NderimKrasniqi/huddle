@@ -101,147 +101,253 @@ PLAYROOM_PALETTE = {
     "dangerSurface": "#FFE0E5",
     "disabled": "#E5DEE9",
 }
-HEARTBEAT_RUNTIME_ROOT = Path("packages/ui/assets/heartbeat")
-# The original board is retained as a design reference, but runtime validation
-# must not depend on a design manifest or source-master tree. Keep the runtime
-# bundle contract here so a stale or incomplete drop fails on its own.
-HEARTBEAT_RUNTIME_ASSET_SPECS = {
-    "brand/huddle-display-mark.png": (
-        (1302, 1208),
+# Playroom platform artwork.
+PLAYROOM_RUNTIME_ASSET_SPECS = {
+    "avatars/blue-robot.png": (
+        (640, 640),
         True,
-        "3a15f8a54750c994d5834428e2853d77435d7f673d461a4b3a9ac5857d847086",
+        "16eb753daadf920ccb11304d42a93a0c81efd9506d87f0bbdd88de32c8d0e725",
     ),
-    "brand/huddle-launcher-mark.png": (
-        (1230, 1278),
+    "avatars/fox.png": (
+        (640, 640),
         True,
-        "9b0ce6cc0b45f8d00326f78e35547d5c2ae1ea8e038151fff8194ed26ac24fc5",
+        "8096ca609f049793226a656985408c539c5fe8e7546d02ef489e7050f1963771",
     ),
-    "phone/camera-unavailable.png": (
-        (1535, 1024),
-        False,
-        "a6b48aa67353e35b3df98a659c67b4b783d760f439670121281322c12746fdb0",
-    ),
-    "phone/game-finished.png": (
-        (852, 1846),
-        False,
-        "375dedf497233a0cbec8e7d220c0a6657cd5d17d1541bc523a0fe4affebd2ce9",
-    ),
-    "phone/game-paused.png": (
-        (852, 1846),
-        False,
-        "dce326b172686f77d88e051fb2f86b99d11b0b3fc9a53340bdd10dc81541786c",
-    ),
-    "phone/guest-waiting.png": (
-        (1402, 1122),
-        False,
-        "cd3f3e045657e2242b667396d987cb24d22e95cc0ad0850e1c497613b88c4ec1",
-    ),
-    "phone/identity-environment.png": (
-        (853, 1844),
-        False,
-        "2b89f27e32ac7efb84b1305928f97c0831b5f6096178add23f3678e364b646a6",
-    ),
-    "phone/identity-sunny-hero.png": (
-        (1619, 972),
-        False,
-        "d8a645d4e614097ba11fd895a6640ba5c49b1b81cf3b02a7ef0f4d480b859cad",
-    ),
-    "phone/trivia-leaves.png": (
-        (853, 1844),
-        False,
-        "07fe1b4b59da47216122f217d065e9ec4fd6ef07bc59beb4811d0de610faf40c",
-    ),
-    "phone/trivia-tv-reveal.png": (
-        (853, 1844),
-        False,
-        "c3145fa6c991f76b6f1688f96be91c5a054ff03fa4b2a80c6021d1760d5c3870",
-    ),
-    "phone/voting-room-art.png": (
-        (863, 980),
-        False,
-        "ac2f4e2034aa16a28b6f4c0beac94fdd4930fb891068cc1458db85f6918da24b",
-    ),
-    "phone/voting-clouds.png": (
-        (935, 1683),
-        False,
-        "56392752938dddf3325e10f5545d7f66abe0d2a0897ffec6c6b88f7b30cdcae4",
-    ),
-    "phone/join-environment.png": (
-        (853, 1844),
-        False,
-        "6973da00d287b4de019f8c035d718a382c5954f8d138fa454423290c2f8ba0d5",
-    ),
-    "phone/manual-join-room.png": (
-        (852, 1846),
-        False,
-        "99161507ca37fc8361eea40862a89e724ec2c1fb54d6f1dbfec5645ade2feb29",
-    ),
-    "phone/scan-owl-phone.png": (
-        (1536, 1024),
-        False,
-        "4c791bed287864a827d7e8b6d5360172b7340e43c831cbcff370e9f4e148d34e",
-    ),
-    "phone/seat-lost.png": (
-        (852, 1846),
-        False,
-        "8f78beb04412469398f5947e61adc610403d875e1b9fdb745475caa5a9f453c2",
-    ),
-    "tv/device-unavailable.png": (
-        (1672, 941),
-        False,
-        "98a7e92ebd59c1f04c8fc78379d887f4cf2835a7039575a69138e3f2aa44d892",
-    ),
-    "tv/platform-living-room.png": (
-        (1672, 941),
-        False,
-        "b912d37a0c4d7c5be1f2589607d10e006916896711ccb33fa00d65ebc1413fd0",
-    ),
-    "tv/platform-stage.png": (
-        (1672, 941),
-        False,
-        "8ad35402c0c7fe4941163cbfe7ce2086a246fcfbdf159e5deb79eaf7f8c21528",
-    ),
-    "tv/setup-required.png": (
-        (1672, 941),
-        False,
-        "950d0ce4adc47bb6ea5648d8700e47d1507660dfb1c7f3538e0d9f8a26d047a5",
-    ),
-    "game-cards/doodle-dash.png": (
-        (1214, 1295),
+    "avatars/green-alien.png": (
+        (640, 640),
         True,
-        "387419afe21ef6bc9634bd1414f4a9efc9994099f7a3c3e1f7f24db3cae92681",
+        "2c9a3bd403ea10b17089628574c5f280f14d1b6390e12898bc32836a627a91c9",
     ),
-    "game-cards/hot-take.png": (
-        (1219, 1290),
+    "avatars/mint-cat.png": (
+        (640, 640),
         True,
-        "c0842f5e7e420593bd9c4d45cba93d1295eed3297d94875922c090f848a3d780",
+        "153464575d6141753cd835b41462fbfa117b1a43457d7c7bd5fbcac25db82e96",
     ),
-    "game-cards/quick-poll.png": (
-        (1312, 1199),
+    "avatars/pink-bunny.png": (
+        (640, 640),
         True,
-        "68de9640ff83660a252716383cdd344e8723be7ddadfcb3f72f0e0e32f06bab0",
+        "ef0d9583fa1f43baae4cdc7c7b09e658f167e54001226414e935642bc18b7880",
     ),
-    "game-cards/trivia.png": (
+    "avatars/puppy.png": (
+        (640, 640),
+        True,
+        "a0f6b0254d89e4821b0e455588db3ffc5d75a95e627b489852d35b1c9fcd652e",
+    ),
+    "avatars/purple-owl.png": (
+        (640, 640),
+        True,
+        "95111a07a0100f761ed275b901b0c244bf8e6036b1f4a8e5a02677db308320b6",
+    ),
+    "avatars/red-robot.png": (
+        (640, 640),
+        True,
+        "29d4444d07d5de221c61ca3d9511080b9d51f449962371df059cdb7815a12994",
+    ),
+    "avatars/teal-bear.png": (
+        (640, 640),
+        True,
+        "3815fa159d72c73c9c50f3adf3d031995a737bbb3afd2322fcd5eb7c6d39c064",
+    ),
+    "avatars/yellow-robot.png": (
+        (640, 640),
+        True,
+        "316938de3e5e0f025c25d9e63c2a93c14ef0a674379403267be20e0075fc2e6a",
+    ),
+    "brand/splash.png": (
+        (1024, 1024),
+        True,
+        "f6cda025c18cd760a779f04c511ed540fa74135de05174fdc80eb3c3991eefdd",
+    ),
+    "brand/wordmark.png": (
+        (1200, 318),
+        True,
+        "7e1b6907c29f8cd52883d0f337db8bce71a7b581ccfd698a68106a573f0529e1",
+    ),
+    "games/doodle-dash.png": (
+        (1200, 750),
+        True,
+        "221e8da8a03342ad3a13f24fa63f548e89ddfd16df8a436a4a3a62db22603dcc",
+    ),
+    "games/hot-take.png": (
+        (1200, 750),
+        True,
+        "745a3d3a8bf0188b7293b8aa7acf2ef845ac949d0cbdfb9cb6fd940a30daff26",
+    ),
+    "games/quick-poll.png": (
+        (1200, 750),
+        True,
+        "21ce004a14f09adbfdaf9a5a6308f2432b320d6ac9422f63171f413bb62a3941",
+    ),
+    "games/trivia.png": (
+        (1200, 750),
+        True,
+        "a7a13eb5f38b2e4683770e59ce3885a6c43a5b44c3771b9fc67c4982f7095793",
+    ),
+    "games/voting.png": (
+        (1200, 750),
+        True,
+        "2437ac86427b2309116a80de7072bed030c8526698f808a36fc15a574b3cb417",
+    ),
+    "props/ball-cream.png": (
+        (512, 512),
+        True,
+        "9e631c3fd82ffacd16db567c49fdb578a0222409b34654c913a0a09e09e43a35",
+    ),
+    "props/ball-orange.png": (
+        (512, 512),
+        True,
+        "2f584e1a35509aa604236a868a8f427ea290fb179247942e262654dde2e79c61",
+    ),
+    "props/ball-purple.png": (
+        (512, 512),
+        True,
+        "d3fd8ed08ae97df33264b5fcbb0f61e4ff0b7fb422605e4b23dd0d34efa94af1",
+    ),
+    "props/controller.png": (
+        (512, 512),
+        True,
+        "16e56ef19ae2602f5447aab4f252ea24c5d78f2c3b7821448af08cd0666aa8c6",
+    ),
+    "props/crown.png": (
+        (160, 132),
+        True,
+        "e5020562b554964736593eaef5d368b7a707cbfd6d27f4ea8452a581612c7c8c",
+    ),
+    "props/hand.png": (
+        (256, 256),
+        True,
+        "6254e0c5df84ffffbf11195aee2d8ec3f4aef2d3823c9829c99184aba11817d4",
+    ),
+    "props/star-purple.png": (
+        (512, 512),
+        True,
+        "7ba7ac01daa2e025ae49dd6507e9daf587472cf942913adab400602c78898847",
+    ),
+    "props/star-yellow.png": (
+        (512, 512),
+        True,
+        "6b674a47011bed2ea5dbcf1f9e374a5f8692bbb2d27e3fab472fe2e466379980",
+    ),
+    "settings/category.png": (
+        (256, 256),
+        True,
+        "cb49bd2afb6066172b0e3a684183d7e883f82957b45448c274121de52ce6a425",
+    ),
+    "settings/count.png": (
+        (256, 256),
+        True,
+        "67440ab64c58e53b78e752125a704dba2ae913c27a95eb40dcfe101635019e56",
+    ),
+    "settings/difficulty.png": (
+        (256, 256),
+        True,
+        "e7bf55d39fe5d8971c6291fe3749ce50cef729e30fc7d9768a4382ea12b86b04",
+    ),
+    "settings/players.png": (
+        (256, 256),
+        True,
+        "5e557d347fd5f53fa32916a197741b37166fd0ae3c2a74d31164b659e98d2e08",
+    ),
+    "settings/results.png": (
+        (256, 256),
+        True,
+        "15847f19031baa5b4c69cbbc26f47bc3f825adc98ca204bd6e5f0dc2dcce709a",
+    ),
+    "settings/scoring.png": (
+        (256, 256),
+        True,
+        "82df6cbb7796a3dd6a959e0936c55ea2bf31b30b019026cbf15e51496595b4ca",
+    ),
+    "settings/timer.png": (
+        (256, 256),
+        True,
+        "a8b6fe8708bf243890bf82c7b20084b55a7306f9901c7ff7049ef9cf4316b64e",
+    ),
+    "status/disconnected.png": (
+        (768, 768),
+        True,
+        "8cead6a464d64dd52641d76659759cddc5a9d679eee60fd2a1f9ed94c97e7b28",
+    ),
+    "status/left-room.png": (
+        (768, 768),
+        True,
+        "a96966ab9b9d2daf5ea5994a217c47f4f9ad3c631d50b83887d4f5470f83f9d5",
+    ),
+    "status/loading.png": (
+        (768, 768),
+        True,
+        "4a318f7e61190727647e108203db4dd38fb948b23e0a920946b42fbcb5189dc9",
+    ),
+    "status/paused.png": (
+        (768, 768),
+        True,
+        "cc175c727084842e762ed71af6ae7d98a3f9a38985f08350a626fcf04c225d8b",
+    ),
+    "status/room-full.png": (
+        (768, 768),
+        True,
+        "74a0d5a9fd097ad19ad2e2b70ccd437e38ebcd27a6de9df1a133606c78958dd4",
+    ),
+    "status/room-not-found.png": (
+        (768, 768),
+        True,
+        "b172b6886e3f85707ee5ce7da31727ce00d2dc3c9f7cb44435fe4676bdbc8a34",
+    ),
+    "status/waiting.png": (
+        (768, 768),
+        True,
+        "87c4a7a83e4bf3223aa0fca48d67665a7b17d41c2770bc6a506b3e12f97dded0",
+    ),
+}
+# Trivia's own artwork.
+TRIVIA_RUNTIME_ASSET_SPECS = {
+    "card.png": (
         (1156, 1360),
         True,
         "387972622160701d8e3f5c8b2b5f5724e4dfb627803c6fd1d4ba8dfe7b57eeab",
     ),
-    "game-cards/voting.png": (
-        (1214, 1295),
-        True,
-        "14704bdd2a347690b40479b857d1eeac4bfcdd6c47e87c8bc6d2dcfb75710a38",
+    "leaves.png": (
+        (853, 1844),
+        False,
+        "07fe1b4b59da47216122f217d065e9ec4fd6ef07bc59beb4811d0de610faf40c",
     ),
-    "game-worlds/trivia.png": (
+    "tv-reveal.png": (
+        (853, 1844),
+        False,
+        "c3145fa6c991f76b6f1688f96be91c5a054ff03fa4b2a80c6021d1760d5c3870",
+    ),
+    "world.png": (
         (1672, 941),
         False,
         "c6e8d4092a1f80bfb7b9dfb94fb1d04a1d3524747ec9906a5df5d80ed0fa0713",
     ),
-    "game-worlds/voting.png": (
+}
+# Voting's own artwork.
+VOTING_RUNTIME_ASSET_SPECS = {
+    "clouds.png": (
+        (935, 1683),
+        False,
+        "56392752938dddf3325e10f5545d7f66abe0d2a0897ffec6c6b88f7b30cdcae4",
+    ),
+    "room.png": (
+        (863, 980),
+        False,
+        "ac2f4e2034aa16a28b6f4c0beac94fdd4930fb891068cc1458db85f6918da24b",
+    ),
+    "world.png": (
         (1672, 941),
         False,
         "2f9148e77527cf5745e46d543ec7087e9842f2c431d637b7f55923973346daab",
     ),
 }
+# Each runtime artwork folder and the exact files it may hold. Runtime
+# validation never depends on a design manifest or source-master tree, so a
+# stale or incomplete drop fails on its own.
+RUNTIME_ASSET_BUNDLES = (
+    ("Playroom runtime", Path("packages/ui/assets/playroom"), PLAYROOM_RUNTIME_ASSET_SPECS),
+    ("Trivia runtime", Path("games/trivia/assets"), TRIVIA_RUNTIME_ASSET_SPECS),
+    ("Voting runtime", Path("games/voting/assets"), VOTING_RUNTIME_ASSET_SPECS),
+)
 
 # Keep guards for files retired from runtime and design locations. They are
 # presence checks only; the validator never requires the design tree to exist.
@@ -249,6 +355,9 @@ HEARTBEAT_OBSOLETE_PATHS = (
     Path("docs/design/heartbeat/brand/huddle-tv-banner.svg"),
     Path("docs/design/heartbeat/assets/tv/living-room.png"),
     Path("packages/ui/assets/heartbeat/tv/living-room.png"),
+    # The whole Heartbeat runtime bundle and its avatars were retired for Playroom.
+    Path("packages/ui/assets/heartbeat"),
+    Path("packages/ui/assets/avatars"),
 )
 NATIVE_ASSET_SPECS = {
     "huddle-app-icon-light.png": (1024, 1024),
@@ -294,50 +403,6 @@ ANDROID_DENSITY_SCALE = {
     "xxhdpi": 3,
     "xxxhdpi": 4,
 }
-AVATAR_ASSET_SPECS = {
-    "fox.png": (
-        (512, 512),
-        "1571a4310d83580ec4c12d9168e9d6350a804a7319a6343c8b4e4583f2d59823",
-    ),
-    "green-alien.png": (
-        (512, 512),
-        "01fd1533e871a731c54a48240688b25b7fe8d0c36b938c1a91ac6a714b326bda",
-    ),
-    "pink-bunny.png": (
-        (512, 512),
-        "eb70730f12611f87ecff6015e4d6a89761b93af862a7bffaded90016c2541efa",
-    ),
-    "blue-robot.png": (
-        (512, 512),
-        "faee57422a3ee8616858866745c7684bd16537f3e876d7d4ba753d7a9b7f93fd",
-    ),
-    "purple-owl.png": (
-        (512, 512),
-        "e73d4417081ad3be05e71a500f1e650896b538732c496338bb1066502c2cc2a1",
-    ),
-    "yellow-robot.png": (
-        (512, 512),
-        "1bc5acdc850cdbcc800643c7e52f1f60275014317a35e04fb6e494c9af065475",
-    ),
-    "red-robot.png": (
-        (512, 512),
-        "6629820fcf80570755f4bc242038f0c8852d95fa4dfb828870d69e5ec8f9c20c",
-    ),
-    "teal-bear.png": (
-        (512, 512),
-        "afcc43452a1afe8e1da17fc091dca29ea234c8c40ebfc5a7033cb1ea1630de6d",
-    ),
-    "mint-cat.png": (
-        (512, 512),
-        "97583e230639f5491c46b8eabe4c90c071675e1cd3bcee38bf957af41ddf08f9",
-    ),
-    "puppy.png": (
-        (512, 512),
-        "68dfb88e971fc64ba1f4d2d7d716b5fb7a3ef2adadb52a1e9ed7493e3499867a",
-    ),
-}
-
-
 def relative(path: Path, root: Path = ROOT) -> str:
     try:
         return str(path.relative_to(root))
@@ -1014,54 +1079,40 @@ def png_has_heartbeat_mark(path: Path, label: str, root: Path = ROOT) -> bool:
     return all(found.values())
 
 
-def validate_heartbeat_runtime_assets(root: Path = ROOT) -> None:
-    """Validate the checked-in Heartbeat runtime artwork without design sources."""
+def validate_runtime_assets(root: Path = ROOT) -> None:
+    """Validate each checked-in runtime artwork folder without design sources."""
 
-    runtime_root = root / HEARTBEAT_RUNTIME_ROOT
-    if not runtime_root.is_dir():
-        fail(f"Heartbeat runtime asset directory missing: {relative(runtime_root, root)}")
+    for label, bundle_root, specs in RUNTIME_ASSET_BUNDLES:
+        runtime_root = root / bundle_root
+        if not runtime_root.is_dir():
+            fail(f"{label} asset directory missing: {relative(runtime_root, root)}")
 
-    expected_paths = set(HEARTBEAT_RUNTIME_ASSET_SPECS)
-    actual_paths = {
-        str(path.relative_to(runtime_root))
-        for path in runtime_root.rglob("*")
-        if path.is_file()
-    }
-    if actual_paths != expected_paths:
-        extras = sorted(actual_paths - expected_paths)
-        missing = sorted(expected_paths - actual_paths)
-        fail(
-            "Heartbeat runtime asset bundle is incomplete: "
-            f"extras={extras}, missing={missing}"
-        )
+        expected_paths = set(specs)
+        actual_paths = {
+            str(path.relative_to(runtime_root))
+            for path in runtime_root.rglob("*")
+            if path.is_file()
+        }
+        if actual_paths != expected_paths:
+            extras = sorted(actual_paths - expected_paths)
+            missing = sorted(expected_paths - actual_paths)
+            fail(f"{label} asset bundle is incomplete: extras={extras}, missing={missing}")
 
-    for relative_path, (expected_dimensions, expected_alpha, expected_digest) in HEARTBEAT_RUNTIME_ASSET_SPECS.items():
-        path = runtime_root / relative_path
-        dimensions, has_alpha = png_dimensions_and_alpha(path, "Heartbeat runtime", root)
-        if dimensions != expected_dimensions:
-            fail(
-                f"Heartbeat runtime asset has wrong dimensions: {relative(path, root)} "
-                f"({dimensions}, expected {expected_dimensions})"
-            )
-        if has_alpha != expected_alpha:
-            fail(
-                f"Heartbeat runtime asset alpha mismatch: {relative(path, root)} "
-                f"({has_alpha}, expected {expected_alpha})"
-            )
-        if hashlib.sha256(path.read_bytes()).hexdigest() != expected_digest:
-            fail(f"Heartbeat runtime asset differs from its checked-in digest: {relative(path, root)}")
-
-
-
-def validate_avatar_assets(root: Path = ROOT) -> None:
-    """Keep the shared runtime avatar resolver on the exact ten-image bundle."""
-
-    validate_png_asset_set(
-        root / "packages" / "ui" / "assets" / "avatars",
-        AVATAR_ASSET_SPECS,
-        "Shared avatar",
-        root,
-    )
+        for relative_path, (expected_dimensions, expected_alpha, expected_digest) in specs.items():
+            path = runtime_root / relative_path
+            dimensions, has_alpha = png_dimensions_and_alpha(path, label, root)
+            if dimensions != expected_dimensions:
+                fail(
+                    f"{label} asset has wrong dimensions: {relative(path, root)} "
+                    f"({dimensions}, expected {expected_dimensions})"
+                )
+            if has_alpha != expected_alpha:
+                fail(
+                    f"{label} asset alpha mismatch: {relative(path, root)} "
+                    f"({has_alpha}, expected {expected_alpha})"
+                )
+            if hashlib.sha256(path.read_bytes()).hexdigest() != expected_digest:
+                fail(f"{label} asset differs from its checked-in digest: {relative(path, root)}")
 
 
 def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
@@ -1609,8 +1660,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
     validate_native_assets(root)
     validate_native_config(root)
     validate_native_generated_resources(root)
-    validate_heartbeat_runtime_assets(root)
-    validate_avatar_assets(root)
+    validate_runtime_assets(root)
     validate_reference_composite_exclusion(root)
 
     forbidden_asset_dirs = ("game-art", "icons", "logo", "phone-backgrounds", "tv-backgrounds")
