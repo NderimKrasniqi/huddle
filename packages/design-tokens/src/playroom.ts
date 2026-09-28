@@ -5,6 +5,10 @@ import { fontFamilies } from './typography';
  * (docs/design/playroom/README.md, from the Huddle-Platform tokens.json):
  * warm canvas, deep-purple ink, orange accents, Nunito.
  *
+ * Three rules follow the concept boards rather than the spec: headings use
+ * Nunito Black and run larger, the primary button is orange, and screens are
+ * framed by more props and burst dashes.
+ *
  * Game modules do not consume these; each game owns its own theme.
  */
 export const playroomColors = {
@@ -12,10 +16,10 @@ export const playroomColors = {
   canvas: '#F9F1E6',
   /** Cards and raised surfaces. */
   surface: '#FFFCF7',
-  /** Normal text, and primary buttons (with canvas text). */
+  /** Normal text, and the text on orange buttons. */
   ink: '#2D0B4E',
   muted: '#6D5B79',
-  /** Accent buttons (with ink text), burst dashes, host tags. */
+  /** Primary buttons (with ink text), burst dashes, host tags. */
   orange: '#FF781F',
   /** Selection, with an ink border and a check. */
   lavender: '#E3D9FF',
@@ -48,11 +52,12 @@ export const playroomAvatarCircles = {
 
 export const playroomAwayCircle = '#DDD9DF';
 
-/** Nunito: regular for paragraphs, bold for labels, extra-bold for headings. */
+/** Nunito: regular for paragraphs, bold for labels, black for headings. */
 export const playroomFonts = {
   body: fontFamilies.regular,
   label: fontFamilies.bold,
-  heading: fontFamilies.extraBold,
+  strong: fontFamilies.extraBold,
+  heading: fontFamilies.black,
 } as const;
 
 /** Spacing scale in logical units (phone) or stage units (TV). */
@@ -79,12 +84,14 @@ export const playroomTv = {
     caption: { fontFamily: fontFamilies.bold, fontSize: 24, lineHeight: 32 },
     body: { fontFamily: fontFamilies.regular, fontSize: 32, lineHeight: 42 },
     label: { fontFamily: fontFamilies.bold, fontSize: 32, lineHeight: 42 },
-    heading: { fontFamily: fontFamilies.extraBold, fontSize: 56, lineHeight: 64 },
-    hero: { fontFamily: fontFamilies.extraBold, fontSize: 80, lineHeight: 88 },
-    roomCode: { fontFamily: fontFamilies.extraBold, fontSize: 96, lineHeight: 104, letterSpacing: 12 },
-    countdown: { fontFamily: fontFamilies.extraBold, fontSize: 240, lineHeight: 250 },
+    /** Card titles and values. */
+    title: { fontFamily: fontFamilies.extraBold, fontSize: 56, lineHeight: 64 },
+    heading: { fontFamily: fontFamilies.black, fontSize: 84, lineHeight: 92 },
+    hero: { fontFamily: fontFamilies.black, fontSize: 104, lineHeight: 112 },
+    roomCode: { fontFamily: fontFamilies.black, fontSize: 96, lineHeight: 104 },
+    countdown: { fontFamily: fontFamilies.black, fontSize: 384, lineHeight: 400 },
   },
-  avatar: { grid: 150, row: 112, ready: 150, mini: 80 },
+  avatar: { grid: 168, row: 108, ready: 176, mini: 116 },
 } as const;
 
 /** Phone sizes in logical units; font scaling stays on and labels wrap. */
@@ -97,9 +104,10 @@ export const playroomPhone = {
     caption: { fontFamily: fontFamilies.bold, fontSize: 14, lineHeight: 20 },
     body: { fontFamily: fontFamilies.regular, fontSize: 16, lineHeight: 24 },
     label: { fontFamily: fontFamilies.bold, fontSize: 16, lineHeight: 24 },
-    heading: { fontFamily: fontFamilies.extraBold, fontSize: 28, lineHeight: 34 },
-    hero: { fontFamily: fontFamilies.extraBold, fontSize: 36, lineHeight: 42 },
-    code: { fontFamily: fontFamilies.extraBold, fontSize: 36, lineHeight: 42, letterSpacing: 6 },
+    title: { fontFamily: fontFamilies.extraBold, fontSize: 24, lineHeight: 30 },
+    heading: { fontFamily: fontFamilies.black, fontSize: 32, lineHeight: 38 },
+    hero: { fontFamily: fontFamilies.black, fontSize: 40, lineHeight: 46 },
+    code: { fontFamily: fontFamilies.black, fontSize: 36, lineHeight: 42, letterSpacing: 6 },
   },
   avatar: { tile: 48, feature: 140, identity: 58 },
 } as const;

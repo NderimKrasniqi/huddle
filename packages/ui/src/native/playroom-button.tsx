@@ -1,6 +1,7 @@
 import {
   playroomColors,
   playroomEasing,
+  playroomFonts,
   playroomMotion,
   playroomPhone,
   playroomRadii,
@@ -19,11 +20,12 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from '
 import { PlayroomBurst, PlayroomText } from './playroom-text';
 
 /**
- * `primary` ink with canvas text; `secondary` surface with an ink border;
- * `accent` orange with ink text; `destructive` danger with surface text;
- * `link` for quiet exits such as Leave room.
+ * `primary` orange with ink text, the screen's main action; `secondary`
+ * surface with an ink border; `lavender` for a quieter action such as Make
+ * host; `destructive` outlined in danger red; `link` for quiet exits such as
+ * Leave room.
  */
-export type PlayroomButtonVariant = 'primary' | 'secondary' | 'accent' | 'destructive' | 'link';
+export type PlayroomButtonVariant = 'primary' | 'secondary' | 'lavender' | 'destructive' | 'link';
 
 export type PlayroomButtonProps = {
   readonly label: string;
@@ -97,13 +99,16 @@ export function PlayroomButton({
 }
 
 const TONES = {
-  primary: { container: { backgroundColor: playroomColors.ink }, text: 'canvas' as const },
+  primary: { container: { backgroundColor: playroomColors.orange }, text: 'ink' as const },
   secondary: {
     container: { backgroundColor: playroomColors.surface, borderWidth: 2, borderColor: playroomColors.ink },
     text: 'ink' as const,
   },
-  accent: { container: { backgroundColor: playroomColors.orange }, text: 'ink' as const },
-  destructive: { container: { backgroundColor: playroomColors.danger }, text: 'surface' as const },
+  lavender: { container: { backgroundColor: playroomColors.lavender }, text: 'ink' as const },
+  destructive: {
+    container: { backgroundColor: playroomColors.surface, borderWidth: 2, borderColor: playroomColors.danger },
+    text: 'danger' as const,
+  },
   link: { container: null, text: 'muted' as const },
   disabled: { container: { backgroundColor: playroomColors.disabled }, text: 'muted' as const },
 };
@@ -123,7 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { ...playroomPhone.type.label, textAlign: 'center' },
+  label: { ...playroomPhone.type.label, fontFamily: playroomFonts.strong, textAlign: 'center' },
   linkText: { ...playroomPhone.type.label, textAlign: 'center' },
   hidden: { opacity: 0 },
   spinner: { position: 'absolute' },

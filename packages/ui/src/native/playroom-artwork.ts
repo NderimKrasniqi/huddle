@@ -22,6 +22,8 @@ export const PLAYROOM_ARTWORK = {
   props: {
     controller: nativeAsset(() => require('../../assets/playroom/props/controller.png')),
     crown: nativeAsset(() => require('../../assets/playroom/props/crown.png')),
+    /** A raised hand: this player is ready. */
+    hand: nativeAsset(() => require('../../assets/playroom/props/hand.png')),
     starPurple: nativeAsset(() => require('../../assets/playroom/props/star-purple.png')),
     starYellow: nativeAsset(() => require('../../assets/playroom/props/star-yellow.png')),
     ballOrange: nativeAsset(() => require('../../assets/playroom/props/ball-orange.png')),

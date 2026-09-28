@@ -1,121 +1,104 @@
 # Playroom design reference
 
-Playroom is the approved visual direction for the Huddle platform screens on
-Phone and TV. It replaces Heartbeat. The three concept boards in
-[`reference/`](./reference/) are the source of truth for look and layout, and
-the interactive prototype at <https://claude.ai/artifact/722ry5vuRaDCnR66PoAAML>
-shows every platform screen, including the ones the boards do not cover. Where
-the two disagree, the boards win for look and
-[`../../project-scope.md`](../../project-scope.md) wins for behavior.
+Playroom is the visual direction for the Huddle platform screens on Phone and
+TV. Its tokens come from the Huddle-Platform design system, kept here in
+[`spec/tokens.json`](./spec/tokens.json) and
+[`spec/avatar-map.json`](./spec/avatar-map.json). Its look follows the three
+concept boards in [`reference/`](./reference/). The interactive prototype at
+<https://claude.ai/artifact/722ry5vuRaDCnR66PoAAML> shows every platform
+screen, including the ones the boards do not cover. For behavior,
+[`../../project-scope.md`](../../project-scope.md) wins.
 
 Only platform surfaces use Playroom. After the countdown ends, each game module
 draws its own Phone controller and TV stage in its own theme.
 
-## Principles
+## Where the look departs from the spec
 
-- **Cream, deep purple, one orange action.** Cream backgrounds, deep-purple
-  text, and a single orange primary action per phone screen. Everything else
-  is lavender, outlined, or a text link.
-- **Clay characters, calm surfaces.** Personality comes from the 3D clay
-  avatars, game art, and props. Surfaces stay flat, soft, and uncluttered.
-- **The phone drives, the TV follows.** Every host action has a visible answer
-  on the TV within one beat.
-- **Readable from the couch.** Room codes, counts, and the countdown are the
-  largest things on the TV.
-- **Native where it can be.** Background, text, buttons, pills, QR code, and UI
-  glyphs are drawn natively. Raster art is limited to characters, game art,
-  props, and illustrations.
+The concept boards win over three spec rules:
+
+- **Headings** use Nunito Black (900) and run larger: 84 for TV headings and
+  104 for the TV hero at 1080p, 32 on the phone.
+- **The primary button is orange** with deep-purple text. White text on this
+  orange is too faint for phone-sized labels.
+- **Decoration is fuller:** orange burst dashes beside headings and main
+  actions, and clay stars and balls framing every TV screen. Props still
+  settle once and then hold still.
+
+Everything else follows the spec.
 
 ## Tokens
 
 | Role | Value |
 | --- | --- |
-| Cream background | `#FCF6EF` |
-| Card | `#FFFFFF` |
-| Ink (deep purple) | `#1F0B3F` |
-| Secondary text | `#3B2B5E` |
-| Muted text | `#7A6E90` |
-| Orange (primary action, bursts, host tag) | `#FC6221` |
-| Lavender (pills, secondary buttons) | `#F0E8F8` |
-| Lavender strong (selected, Make host) | `#E1D2F4` |
-| Purple accent (selected card, dots) | `#6838DF` |
-| Ready green | `#0E9F3E` |
-| Remove red | `#D63B3B` |
-| Coming-soon grey | `#EFECF0` |
+| Canvas | `#F9F1E6` |
+| Surface (cards) | `#FFFCF7` |
+| Ink (text, text on orange) | `#2D0B4E` |
+| Muted text | `#6D5B79` |
+| Orange (primary action, bursts, host tag) | `#FF781F` |
+| Lavender (pills, selection, Make host) | `#E3D9FF` |
+| Border | `#D8CCDF` |
+| Success / surface | `#286447` / `#D4F1CC` |
+| Danger / surface | `#A52C44` / `#FFE0E5` |
+| Disabled | `#E5DEE9` |
 
-Type is Nunito from the existing font package: 900 for headings and codes, 800
-for buttons and names, 600–700 for body. The TV background is the cream
-colour rendered natively with a faint warm vignette. It is never blurred at
-runtime.
-
-## Brand
-
-- The wordmark is **Huddle** in deep purple with two orange dashes at the top
-  right. Use the supplied wordmark artwork; never set it in orange.
-- The app icon is the deep-purple H with the same dashes on cream.
-- Headings carry three orange burst dashes on each side.
+Type is Nunito: 900 for headings and codes, 800 for titles, names and button
+labels, 700 for labels, 400 for body. Nothing on the TV is smaller than 24 at
+1080p. The TV stage is 1920×1080 with a 96×54 overscan-safe inset. Radii are
+16 for inputs, 20 for buttons and 28 for cards.
 
 ## Components
 
 | Component | Notes |
 | --- | --- |
-| Wordmark | Top left on every TV platform screen, top left on phone screens. |
-| Chip | Lavender pill for context on later screens: `KJMP · 10 players`, `Room: KJMP`. The room screen has none; its code is already the biggest thing on it. |
-| Status pill | Wide lavender pill under the join card: `3 / 10 joined`, `Room full · 10 / 10`, `10 / 10 ready`. |
-| Join code | “Join at” and the code, with the native QR code and “Scan to join” beside it, straight on the cream with no card behind them. |
-| Avatar circle | Character on its pastel circle. Host gets an orange crown badge; Ready gets a green check; waiting shows three dots; away is greyscale. |
-| Player tile | Phone lobby: white card with avatar, name, and orange HOST tag, in two columns. |
-| Game card | TV picker: art, title, tagline, and an Available or Coming soon pill. The selected card has a purple outline. The window stops at each end instead of wrapping. |
-| Game row | Phone picker list: round icon, title, tagline, status pill, chevron. |
-| Setting row / tile | Phone: icon, label, value, chevron, opening an option sheet. TV: icon plus two-line value and unit (`20` / `seconds`). Icon and unit come from the game's settings schema. |
-| Buttons | Orange primary with bursts; lavender secondary; red-outlined destructive; muted text link. |
-| Countdown ring | Orange ring draining over five seconds around a large number, then Go!. |
+| Wordmark | Top left on every platform screen. Deep purple with orange dashes; use the supplied artwork. |
+| Heading | Nunito Black with three orange burst dashes on each side. |
+| Code tiles | The room code as four letter tiles on the TV, matching the phone's four input boxes, with the QR code beside them. |
+| Status pill | Lavender pill with an icon: `3 / 10 joined`, `Room full · 10 / 10`. |
+| Avatar | The character on its pastel circle. Below the circle's middle the portrait is clipped to the circle; above it, hair and ears break out of the top. Host gets an orange crown, a ready player an orange raised hand, and an away player a grey circle with a faded portrait that stays inside it. |
+| Empty seat | A plain silhouette with no number or label. |
+| Game card | TV picker: three cards, art, title, tagline and an Available or Coming soon pill. The card the host is on is lavender with an ink border. |
+| Game row | Phone picker list: round icon, title, tagline, and a Coming soon pill with no chevron when it cannot be set up. |
+| Setting row | Phone: icon, label and value; a stepper for counts, a segmented control for short lists, a sheet for long lists. TV: art card beside rows of icon, label and value; a changed row lights up. |
+| Buttons | Orange primary with burst dashes (hidden while disabled); outlined secondary; lavender for Make host; red-outlined destructive; muted text link. |
+| You chip | Phone top bar: your avatar and `You · Name`. |
 
 ## Screens
 
 | Step | TV | Phone |
 | --- | --- | --- |
-| Splash | Splash illustration, wordmark, “Opening your room”. | Join a room: four code boxes, Join room, Scan the QR code. |
-| Identity | Room waiting for players. | Pick your look: 5×2 avatar grid with taken avatars dimmed, name field, Let's go!. |
-| Room | “Grab your phones!” → “Everyone's here!”, join code and QR, status pill, 2×5 avatar grid, “Alex is choosing what's next”. | Host: Your room, code, count, player tiles, Choose a game, Leave room. Tapping a player opens Manage player. Guest: You're in!, host card, Hang tight. |
-| Pick a game | “Playroom — Pick a game”, three cards, labelled dot rail, split roster with “Alex is choosing a game”. | Host: featured card with Set up, list of the other games. Guest: Game night with the live selection. |
-| Set up | “Setting up Trivia”: art card and live setting rows that flash when changed. | Host: Quick / Standard / Custom, setting rows, option sheet, Lock settings. Guest: Setting up with the live summary. |
-| Ready check | “Ready for Trivia?”: setting tiles, avatars with checks or waiting dots, `7 / 10 ready · Waiting for …`. | Host: Settings locked, summary, Start (enabled when everyone is Ready), Edit setup. Guest: I'm ready! / You're ready!, I'm not ready. |
-| Countdown | “Trivia starts in” with the ring, avatars with checks. | Get ready!, the ring, Eyes on the TV!. Host: Stop the countdown. Guest: Wait, I'm not ready. |
-| Game on | Circle wipe, then the game's own screens. | The game's own controller. |
+| Splash | Splash illustration, wordmark, `Opening your room`. | Join a room: four code boxes, Join room, Scan the QR code. |
+| Identity | The room, with a silhouette seat for whoever is joining. | Pick your look: 5×2 avatar grid with taken avatars dimmed, name field, Let's go!. From here the phone is tinted with your avatar's circle colour. |
+| Room | `Grab your phones!` → `Come on in!` → `Everyone's here!`, code tiles and QR, status pill, 2×5 seats, `Alex is choosing what's next`. | Host: Your room, code, count, player tiles, Choose a game, Leave room; tapping a player opens Manage player. Guest: You're in!, host card, Hang tight. |
+| Pick a game | `What are we playing?`, `Alex is looking at`, three game cards, the roster along the bottom. | Host: featured card with Set up, list of the other games. Guest: Game night with the live selection. |
+| Set up | `Setting up Trivia`: art card beside live setting rows; everyone else waits along the bottom. | Host: Quick / Standard / Custom, setting controls, Lock settings. Guest: Setting up with the live summary. |
+| Ready check | `Hands up for Trivia!`: summary chip, 2×5 avatars that lift with a raised hand when ready, a bar with one segment per player, `7 of 10 hands up`. | Host: Settings locked, summary, who is still waiting, Start (enabled when every hand is up), Edit setup. Guest: a large Raise your hand button; tap again to put it down. |
+| Countdown | `Trivia starts in` with a large ring and number, the roster below; everyone jumps once at Go!. | Get ready!, the ring, Eyes on the TV!, and a haptic tick each second. Host: Stop the countdown. Guest: Wait, I'm not ready. |
+| Game on | The game's art grows in, then the game's own screens. | The game's own controller. |
 
 States off the happy path: scan, room not found, game paused (TV and phone),
-TV reconnecting, removed from the room, game finished, and back in the room.
-Each uses the matching status illustration.
+TV reconnecting, removed from the room, game finished, and back in the room
+(a podium for the top three and `Play Trivia again?`). Each uses the matching
+status illustration.
 
 ## Motion
 
-Motion follows Emil Kowalski's design-engineering rules (the `emil-design-eng`
-and `animate-expo` skills): decide whether something should animate from how
-often it is seen, keep UI motion under 300 ms, enter with a strong ease-out
-(`cubic-bezier(0.23, 1, 0.32, 1)`), never grow from `scale(0)`, and keep
-motion on the UI thread with Reanimated.
+Motion follows the spec and Emil Kowalski's design-engineering rules (the
+`emil-design-eng` and `animate-expo` skills): keep UI motion under 300 ms,
+enter with a strong ease-out (`cubic-bezier(0.23, 1, 0.32, 1)`), never grow
+from `scale(0)`, and keep motion on the UI thread with Reanimated.
 
 | Name | Timing | Where |
 | --- | --- | --- |
-| Press | 120 ms to scale 0.97 on press-in | every phone button and tappable row |
-| Toggle | 150 ms colour change, no movement | Quick / Standard / Custom, option rows |
-| Pop | 200 ms from scale 0.9 and opacity 0 | host crown, ready check, countdown number, toasts |
-| Surface enter | 250 ms fade with an 8 px rise | a TV surface replacing another |
-| Glide | 300 ms `cubic-bezier(0.77, 0, 0.175, 1)`, retargeted when the host browses again | TV carousel following the host |
+| Press | 100 ms to scale 0.98 on press-in | every phone button and tappable row |
+| Transition | 180 ms fade or colour change | toggles, option rows, badges |
+| Entrance | 240 ms with at most 12 units of travel | surfaces, seats, props |
+| Stagger | 40 ms per item | the avatar grid's first appearance |
 | Highlight | 600 ms fade | a setting the host just changed |
-| Arrive | spring, 400 ms, damping 0.8, from scale 0.9 | a player joining the room |
-| Stagger | 40 ms per seat | the avatar grid's first appearance |
-| Settle | props bob for 10 s after a surface appears, then drift over 11 s | TV decorative props (at most four moving) |
-| Go | confetti only on Go! | the end of the countdown |
+| Tick | one pop per second, following the server deadline | the countdown number |
 
-Phone screen transitions use the platform's own navigation animation, and the
-option sheet is a native form sheet. Haptics accompany, never replace, a
-visual change: a selection tick when a setting option is picked, a light
-impact on Ready and on Start, and success on Go!.
-
-With reduced motion, props and dashes hold still and movement and scale are
-dropped; opacity changes remain, and every number and label still changes.
+Nothing bobs forever behind essential information. With reduced motion, scale
+and travel are dropped; opacity changes remain, and every number and label
+still changes. Haptics accompany, never replace, a visual change.
 
 ## Artwork
 
