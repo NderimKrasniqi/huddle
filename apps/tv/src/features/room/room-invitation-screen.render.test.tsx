@@ -19,14 +19,14 @@ describe('RoomInvitationScreen', () => {
     );
 
     expect(screen.getByText('Grab your phones!')).toBeTruthy();
-    expect(screen.getByText('Join at')).toBeTruthy();
+    expect(screen.getByText('Type this code on your phone')).toBeTruthy();
     expect(screen.getByText('0 / 10 joined')).toBeTruthy();
     expect(screen.getByText('The first phone to join becomes the host')).toBeTruthy();
     expect(screen.queryByText(/huddle\.game/i)).toBeNull();
     expect(screen.queryByText(/https?:\/\//i)).toBeNull();
-    expect(screen.getByText('KWRD', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('W', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByLabelText('Room code K W R D').props.focusable).toBe(false);
-    expect(screen.getByText('Scan\nto join', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('Scan to join', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByLabelText('QR code to join room K W R D').props.focusable).toBe(false);
     expect(screen.getByTestId('room-join-qr').props.value).toBe('huddle://join/KWRD');
     expect(screen.getAllByTestId('empty-player-slot')).toHaveLength(10);

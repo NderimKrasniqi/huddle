@@ -1,7 +1,14 @@
 import { CAROUSEL_REGISTRY, carouselWindow, gameModuleById } from '@huddle/game-registry';
-import { HEARTBEAT_ARTWORK, HuddleText, huddleAvatarSource } from '@huddle/ui/native';
-import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
-import { Image, ImageBackground, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { playroomColors, playroomTv } from '@huddle/design-tokens';
+import {
+  PlayroomHeading,
+  PlayroomPill,
+  PlayroomStatusImage,
+  PlayroomText,
+  PlayroomTvStage,
+  playroomGameArt,
+} from '@huddle/ui/native';
+import { StyleSheet, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { RosterSeat } from '../../models';
@@ -9,7 +16,6 @@ import {
   resolveTvReducedMotion,
   useTvSystemReducedMotion,
 } from '../../ui/reduced-motion';
-import { gameArtAsset, gameCardAsset } from './assets';
 import { TvGameCarouselScreen } from './game-carousel-screen';
 import {
   TV_GAME_ART_REVEAL_DURATION_MS,
@@ -63,12 +69,12 @@ export function TvGameFlowStage({
         title: game.metadata.title,
         subtitle: game.placeholder === true ? 'Coming soon' : carouselSubtitle(game.metadata.id),
         available: game.placeholder !== true,
-        image: gameCardAsset(game.metadata.id),
       })),
     [],
   );
   const hostName = roster.find((seat) => seat.host)?.nickname;
   const selectedIndex = carouselWindow(browsingAt ?? 0)?.index ?? 0;
+  const players = useMemo(() => roster.map((seat) => tvPlayer(seat, [])), [roster]);
 
   if (setup === null || setup === undefined) {
     return (
@@ -76,6 +82,7 @@ export function TvGameFlowStage({
         hostName={hostName}
         selectedIndex={selectedIndex}
         cards={cards}
+        players={players}
         reduceMotion={reduceMotion}
       />
     );
@@ -119,7 +126,7 @@ function TvGameSetupHandoff({
   readonly roster: readonly RosterSeat[];
   readonly reduceMotion: boolean;
 }) {
-  const artAvailable = gameArtAsset(setup.gameId) !== undefined;
+  const artAvailable = playroomGameArt(setup.gameId) !== undefined;
   const [revealCompleteState, setRevealComplete] = useState(
     () => reduceMotion || !artAvailable,
   );
@@ -165,15 +172,7 @@ function TvGameSetupHandoff({
   }
 
   const readyPlayerIds = setup.readyPlayerIds.map(String);
-  const players = roster.map<TvGamePlayer>((seat) => ({
-    id: String(seat.playerId),
-    name: seat.nickname,
-    isHost: seat.host,
-    away: seat.away,
-    avatar: huddleAvatarSource(seat.avatar),
-    avatarId: seat.avatar,
-    ready: readyPlayerIds.includes(String(seat.playerId)) && !seat.away,
-  }));
+  const players = roster.map((seat) => tvPlayer(seat, readyPlayerIds));
 
   // The selected game's world owns both pre-start states. Keep the art and
   // settings visible after every player is ready; the Host starts from the
@@ -191,9 +190,21 @@ function TvGameSetupHandoff({
       players={players}
       readyPlayerIds={readyPlayerIds}
       stage={setup.stage}
+      countdownEndsAt={setup.countdownEndsAt}
       reduceMotion={reduceMotion}
     />
   );
+}
+
+function tvPlayer(seat: RosterSeat, readyPlayerIds: readonly string[]): TvGamePlayer {
+  return {
+    id: String(seat.playerId),
+    name: seat.nickname,
+    isHost: seat.host,
+    away: seat.away,
+    avatarId: seat.avatar,
+    ready: readyPlayerIds.includes(String(seat.playerId)) && !seat.away,
+  };
 }
 
 function carouselSubtitle(gameId: string): string | undefined {
@@ -216,9 +227,8 @@ export type TvPlatformStatusScreenProps = {
 };
 
 /**
- * Shared passive platform state for unresolved TV data and device failures.
- * The background remains an authored stage image while every meaningful word
- * and status mark stays native and accessible.
+ * Shared passive platform state for unresolved TV data and device failures:
+ * a status illustration, what happened, and the room it belongs to.
  */
 export function TvPlatformStatusScreen({
   kind,
@@ -227,10 +237,7 @@ export function TvPlatformStatusScreen({
   roomCode,
   testID,
 }: TvPlatformStatusScreenProps) {
-  const viewport = useWindowDimensions();
-  const scale = safeScale(viewport.width, viewport.height);
   const normalizedCode = roomCode?.trim().toUpperCase().slice(0, 4);
-  const stageMessage = kind === 'loading' ? 'Reconnecting to the live Huddle room.' : 'The room is safe. Use the phones to recover or choose again.';
 
   return (
     <View
@@ -242,101 +249,40 @@ export function TvPlatformStatusScreen({
       accessibilityLabel={`${title}. ${message}${normalizedCode ? ` Room ${normalizedCode.split('').join(' ')}.` : ''}`}
       testID={testID}
     >
-      <View style={[styles.statusStage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
-        <ImageBackground
-          source={kind === 'loading' ? HEARTBEAT_ARTWORK.tv.platformLivingRoom : HEARTBEAT_ARTWORK.tv.deviceUnavailable}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID={testID ? `${testID}-background` : undefined}
-        />
-        <View style={styles.statusShade} pointerEvents="none" focusable={false} />
-        <View style={styles.statusBrand} pointerEvents="none" focusable={false} accessible={false}>
-          <Image source={HEARTBEAT_ARTWORK.brand.displayMark} resizeMode="contain" style={styles.statusMark} accessible={false} />
-          <HuddleText variant="hero" color="surface" style={styles.statusBrandName}>Huddle</HuddleText>
-        </View>
-        <View style={styles.statusPanel} pointerEvents="none" focusable={false} accessible={false}>
-          <HuddleText variant="caption" color="text" style={styles.statusKicker}>
-            {kind === 'loading' ? 'HUDDLE · RESTORING' : 'HUDDLE · TV STATUS'}
-          </HuddleText>
-          <HuddleText variant="tvDisplay" color="text" align="center" style={styles.statusTitle}>
-            {title}
-          </HuddleText>
-          <HuddleText variant="bodyLarge" color="text" align="center" style={styles.statusMessage}>
+      <PlayroomTvStage>
+        <View style={styles.statusColumn} pointerEvents="none" focusable={false} accessible={false}>
+          <PlayroomStatusImage
+            art={kind === 'loading' ? 'loading' : 'disconnected'}
+            width={460}
+            height={460}
+          />
+          <PlayroomHeading type={playroomTv.type.heading}>{title}</PlayroomHeading>
+          <PlayroomText color="muted" style={[playroomTv.type.body, styles.statusMessage]}>
             {message}
-          </HuddleText>
+          </PlayroomText>
           {normalizedCode ? (
-            <View style={styles.statusRoomCode} pointerEvents="none" focusable={false}>
-              <HuddleText variant="caption" color="text" style={styles.statusRoomLabel}>ROOM</HuddleText>
-              <HuddleText variant="title" color="text" style={styles.statusRoomValue}>{normalizedCode.split('').join('  ')}</HuddleText>
-            </View>
+            <PlayroomPill textStyle={playroomTv.type.label}>{`Room ${normalizedCode}`}</PlayroomPill>
           ) : null}
-          <View style={styles.statusRule} pointerEvents="none" focusable={false} />
-          <View style={styles.statusLine} pointerEvents="none" focusable={false}>
-            <View style={[styles.statusDot, kind === 'error' ? styles.errorDot : null]} pointerEvents="none" focusable={false} />
-            <HuddleText variant="body" color="text">{stageMessage}</HuddleText>
-          </View>
         </View>
-      </View>
+      </PlayroomTvStage>
     </View>
   );
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / 1920, height / 1080);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({
   statusViewport: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: semanticColors.text,
+    backgroundColor: playroomColors.canvas,
   },
-  statusStage: {
-    width: 1920,
-    height: 1080,
-    overflow: 'hidden',
-  },
-  statusShade: {
+  statusColumn: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.34,
-  },
-  statusBrand: {
-    position: 'absolute',
-    left: 112,
-    top: 82,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  statusMark: { width: 70, height: 70 },
-  statusBrandName: { color: semanticColors.surface, fontSize: 52, lineHeight: 64 },
-  statusPanel: {
-    position: 'absolute',
-    left: 470,
-    top: 166,
-    width: 980,
-    minHeight: 640,
-    paddingHorizontal: spacing['3xl'],
-    paddingVertical: spacing['3xl'],
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.xl,
-    backgroundColor: 'rgba(249, 241, 230, 0.97)',
-    ...shadows.floating,
+    gap: 18,
+    paddingHorizontal: 240,
   },
-  statusKicker: { color: semanticColors.text, letterSpacing: 2.4 },
-  statusTitle: { marginTop: spacing.md, color: semanticColors.text },
-  statusMessage: { marginTop: spacing.md, maxWidth: 760, color: semanticColors.text },
-  statusRoomCode: { marginTop: spacing.xl, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, minWidth: 320, alignItems: 'center', borderRadius: radii.lg, backgroundColor: 'rgba(255,215,102,0.18)' },
-  statusRoomLabel: { color: semanticColors.text, letterSpacing: 2 },
-  statusRoomValue: { marginTop: spacing.xs, color: semanticColors.text, letterSpacing: 6 },
-  statusRule: { width: 140, height: 4, marginVertical: spacing.xl, borderRadius: 2, backgroundColor: semanticColors.primary },
-  statusLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  statusDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: semanticColors.secondary },
-  errorDot: { backgroundColor: semanticColors.highlight },
+  statusMessage: {
+    textAlign: 'center',
+    maxWidth: 1100,
+  },
 });

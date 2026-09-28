@@ -11,8 +11,8 @@ export { TvSelectedGameArtScreen, TV_GAME_ART_REVEAL_DURATION_MS } from './game-
 export type { TvSelectedGameArtScreenProps } from './game-art-reveal-screen';
 export { TvGameSetupScreen } from './game-setup-screen';
 export type { TvGameSetupScreenProps } from './game-setup-screen';
-export { TvReadyToStartScreen } from './game-ready-screen';
-export type { TvReadyToStartScreenProps } from './game-ready-screen';
+export { TvReadyCheckScreen } from './game-ready-screen';
+export { TvCountdownScreen } from './game-countdown-screen';
 export {
   DEFAULT_TV_CAROUSEL_CARDS,
   tvHostCopy,
@@ -28,4 +28,3 @@ export type {
   TvSetupSetting,
   TvSetupSettings,
 } from './game-flow-model';
-export type { TvGameFlowGameId, TvInstalledGameId } from './assets';

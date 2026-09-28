@@ -1,209 +1,179 @@
-import { durationFor, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
-import { HuddleText } from '@huddle/ui/native';
-import { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  ImageBackground,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { settingSummaryText } from '@huddle/domain';
+import { playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
+import { PlayroomAvatar, PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage } from '@huddle/ui/native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { gameArtAsset } from './assets';
+import { tvHostCopy, tvReadiness, type TvGamePlayer } from './game-flow-model';
+import type { TvGameSetupScreenProps } from './game-setup-screen';
+import { TvPlayroomFrame } from './playroom-frame';
 
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
-const OVERSCAN_X = 96;
-const OVERSCAN_Y = 54;
+/** How far a player lifts when they raise their hand. */
+const LIFT = playroomMotion.entranceTravel;
 
-export type TvReadyToStartScreenProps = {
-  readonly gameId: string;
-  readonly gameTitle?: string;
-  readonly hostName?: string;
-  readonly roomCode?: string;
-  /** The coordinator should mount this only after mirroring the server start gate. */
-  readonly ready?: boolean;
-  readonly reduceMotion?: boolean;
-};
-
-/** Display-only confirmation after every current player has passed the start gate. */
-export function TvReadyToStartScreen({
+/**
+ * The ready check: everyone raises a hand on their phone. A ready player's
+ * avatar lifts with an orange hand, and a bar fills one segment per player.
+ */
+export function TvReadyCheckScreen({
   gameId,
   gameTitle,
   hostName,
-  roomCode,
-  ready = true,
+  settings,
+  settingsSchema,
+  playerRange,
+  players = [],
+  readyPlayerIds = [],
+  stage = 'ready',
   reduceMotion = false,
-}: TvReadyToStartScreenProps) {
-  const viewport = useWindowDimensions();
-  const scale = safeScale(viewport.width, viewport.height);
-  const [enter] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
-  const animationRef = useRef<Animated.CompositeAnimation | undefined>(undefined);
-  const title = gameTitle?.trim() || titleForGame(gameId);
-  const host = hostName?.trim() || 'the host';
-  const codeCopy = roomCode?.trim() ? `Room ${roomCode.trim().toUpperCase()}` : undefined;
-
-  useEffect(() => {
-    animationRef.current?.stop();
-    if (reduceMotion) {
-      enter.setValue(1);
-      return;
-    }
-    enter.setValue(0);
-    animationRef.current = Animated.timing(enter, {
-      toValue: 1,
-      duration: durationFor('slow', false),
-      useNativeDriver: true,
-    });
-    animationRef.current.start();
-    return () => animationRef.current?.stop();
-  }, [enter, gameId, reduceMotion]);
-
-  const art = gameArtAsset(gameId);
+}: TvGameSetupScreenProps) {
+  const title = gameTitle?.trim() || (gameId === 'trivia' ? 'Trivia' : gameId === 'voting' ? 'Voting' : 'Game');
+  const { readyCount, playerCount, allReady } = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
+  const isReady = (player: TvGamePlayer) => player.away !== true && readyPlayerIds.includes(player.id);
+  const waiting = players.filter((player) => !isReady(player)).map((player) => player.name);
+  const values = settings === undefined || Array.isArray(settings) ? {} : (settings as Readonly<Record<string, string>>);
+  const summary = (settingsSchema ?? []).map((setting) => settingSummaryText(setting, values[setting.key]));
 
   return (
-    <View
-      style={styles.viewport}
-      pointerEvents="none"
-      focusable={false}
-      accessible={false}
-      testID="tv-game-ready"
-    >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
-        pointerEvents="none"
-        focusable={false}
-        accessible={false}
-      >
-        {art ? (
-          <ImageBackground
-            source={art}
-            resizeMode="cover"
-            style={StyleSheet.absoluteFill}
-            accessible={false}
-            testID={`tv-ready-art-${gameId}`}
-          />
-        ) : (
-          <View style={styles.fallbackArt} pointerEvents="none" focusable={false} testID="tv-ready-art-fallback" />
-        )}
-        <View style={styles.artWash} pointerEvents="none" focusable={false} />
-        <Animated.View
-          accessible
-          focusable={false}
-          accessibilityRole="text"
-          accessibilityLabel={ready ? `${title} ready to start` : `${title} waiting for players`}
-          style={[
-            styles.card,
-            {
-              opacity: enter,
-              transform: [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
-            },
-          ]}
-        >
-          <View style={styles.check} pointerEvents="none" focusable={false} testID="tv-game-ready-check">
-            <HuddleText variant="hero" color="text" accessibilityElementsHidden>
-              ✓
-            </HuddleText>
-          </View>
-          <HuddleText variant="tvDisplay" color="surface" align="center" style={styles.title}>
-            {ready ? 'Everyone is ready!' : 'Waiting for players'}
-          </HuddleText>
-          <HuddleText variant="bodyLarge" color="surface" align="center" style={styles.subtitle}>
-            {ready ? `Waiting for ${host} to start ${title}.` : `Waiting for ${host} to finish setting up ${title}.`}
-          </HuddleText>
-          {codeCopy ? (
-            <HuddleText variant="body" color="surface" align="center" style={styles.roomCode}>
-              {codeCopy}
-            </HuddleText>
+    <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="tv-game-setup">
+      <PlayroomTvStage>
+        <TvPlayroomFrame reduceMotion={reduceMotion} />
+        <View style={styles.column} pointerEvents="none" focusable={false}>
+          <PlayroomHeading type={playroomTv.type.heading}>{`Hands up for ${title}!`}</PlayroomHeading>
+          {summary.length > 0 ? (
+            <PlayroomPill textStyle={playroomTv.type.caption} testID="tv-game-setup-settings">
+              {[title, ...summary].join(' · ')}
+            </PlayroomPill>
           ) : null}
-        </Animated.View>
-        <HuddleText variant="caption" color="surface" style={styles.safeNote} accessibilityElementsHidden>
-          Huddle TV
-        </HuddleText>
-      </View>
+          <View style={styles.grid}>
+            {players.map((player) => (
+              <Seat key={player.id} player={player} ready={isReady(player)} reduceMotion={reduceMotion} />
+            ))}
+          </View>
+          <View style={styles.bar} accessible accessibilityLabel={`${readyCount} of ${playerCount} players are ready`}>
+            <View style={styles.segments}>
+              {players.map((player, position) => (
+                <View key={player.id} style={[styles.segment, position < readyCount ? styles.segmentOn : null]} />
+              ))}
+            </View>
+            <PlayroomText style={playroomTv.type.title}>
+              {allReady ? 'Every hand is up!' : `${readyCount} of ${playerCount} hands up`}
+            </PlayroomText>
+            <PlayroomText color="muted" style={playroomTv.type.body}>
+              {allReady ? tvHostCopy(hostName, 'can start the game') : `Waiting for ${listNames(waiting)}`}
+            </PlayroomText>
+          </View>
+        </View>
+      </PlayroomTvStage>
     </View>
   );
 }
 
-function titleForGame(gameId: string): string {
-  if (gameId === 'trivia') return 'Trivia';
-  if (gameId === 'voting') return 'Voting';
-  return gameId.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+function Seat({
+  player,
+  ready,
+  reduceMotion,
+}: {
+  readonly player: TvGamePlayer;
+  readonly ready: boolean;
+  readonly reduceMotion: boolean;
+}) {
+  const lift = useSharedValue(ready ? -LIFT : 0);
+  useEffect(() => {
+    const to = ready ? -LIFT : 0;
+    lift.set(reduceMotion ? to : withTiming(to, { duration: playroomMotion.entrance, easing: Easing.bezier(...playroomEasing.out) }));
+  }, [lift, ready, reduceMotion]);
+  const lifted = useAnimatedStyle(() => ({ transform: [{ translateY: lift.get() }] }));
+
+  return (
+    <Animated.View
+      style={[styles.seat, lifted]}
+      accessible
+      accessibilityLabel={`${player.name}${player.isHost ? ', host' : ''}${player.away ? ', away' : ready ? ', ready' : ''}`}
+    >
+      {player.avatarId ? (
+        <PlayroomAvatar
+          avatarId={player.avatarId}
+          size={playroomTv.avatar.ready}
+          handUp={ready}
+          away={player.away}
+          testID={`tv-game-player-avatar-${player.id}`}
+        />
+      ) : null}
+      <PlayroomText color={ready ? 'ink' : 'muted'} numberOfLines={1} style={[playroomTv.type.label, styles.name]} accessibilityElementsHidden>
+        {player.name}
+      </PlayroomText>
+      {player.isHost ? (
+        <View style={styles.hostTag}>
+          <PlayroomText style={playroomTv.type.caption}>HOST</PlayroomText>
+        </View>
+      ) : null}
+    </Animated.View>
+  );
 }
 
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+function listNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? 'everyone';
+  if (names.length <= 3) return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
 }
 
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: semanticColors.text,
+    backgroundColor: playroomColors.canvas,
   },
-  stage: {
-    width: STAGE_WIDTH,
-    height: STAGE_HEIGHT,
-    overflow: 'hidden',
-  },
-  fallbackArt: {
+  column: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-  },
-  artWash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.34,
-  },
-  card: {
-    position: 'absolute',
-    left: 530,
-    top: 250,
-    width: 860,
-    minHeight: 420,
-    paddingHorizontal: spacing['2xl'],
-    paddingVertical: spacing['2xl'],
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.xl,
-    backgroundColor: semanticColors.text,
-    borderColor: semanticColors.surface,
-    borderWidth: 1,
-    ...shadows.floating,
+    paddingTop: playroomTv.safeY - 10,
+    gap: 14,
   },
-  check: {
-    width: 104,
-    height: 104,
+  grid: {
+    width: 1380,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    columnGap: 60,
+    // Heads break out of the top of their circles, so rows need room above.
+    rowGap: 34,
+    marginTop: 34,
+  },
+  seat: {
+    width: 216,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.round,
-    backgroundColor: semanticColors.success,
-    borderColor: semanticColors.surface,
-    borderWidth: 3,
   },
-  title: {
-    marginTop: spacing.xl,
-    color: semanticColors.surface,
+  name: {
+    marginTop: 4,
+    fontFamily: playroomTv.type.title.fontFamily,
   },
-  subtitle: {
-    marginTop: spacing.sm,
-    color: semanticColors.surface,
-    opacity: 0.84,
-  },
-  roomCode: {
-    marginTop: spacing.xl,
-    color: semanticColors.surface,
-    opacity: 0.82,
-    letterSpacing: 2,
-  },
-  safeNote: {
+  hostTag: {
     position: 'absolute',
-    left: OVERSCAN_X,
-    bottom: OVERSCAN_Y,
-    color: semanticColors.surface,
-    opacity: 0.7,
+    top: playroomTv.avatar.ready - 26,
+    paddingHorizontal: 14,
+    borderRadius: playroomRadii.pill,
+    backgroundColor: playroomColors.orange,
+  },
+  bar: {
+    width: 1100,
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  segments: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    gap: 10,
+    marginBottom: 6,
+  },
+  segment: {
+    flex: 1,
+    height: 22,
+    borderRadius: playroomRadii.pill,
+    backgroundColor: playroomColors.lavender,
+  },
+  segmentOn: {
+    backgroundColor: playroomColors.orange,
   },
 });

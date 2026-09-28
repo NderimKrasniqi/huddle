@@ -1,77 +1,28 @@
 import type { GameSettingsSchema } from '@huddle/domain';
-import { brandColors, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { playroomColors, playroomMotion, playroomRadii, playroomShadows, playroomTv } from '@huddle/design-tokens';
 import {
-  AvatarPortrait,
-  HEARTBEAT_ARTWORK,
-  HuddleText,
+  PlayroomAvatar,
+  PlayroomHeading,
+  PlayroomSettingIcon,
+  PlayroomText,
+  PlayroomTvStage,
+  playroomGameArt,
 } from '@huddle/ui/native';
-import {
-  Animated,
-  Image,
-  ImageBackground,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { gameArtAsset } from './assets';
+import { TvCountdownScreen } from './game-countdown-screen';
 import {
   tvHostCopy,
   tvModeLabel,
-  tvReadiness,
   visibleTvSetupSettings,
   type TvGamePlayer,
+  type TvSetupSetting,
   type TvSetupSettings,
 } from './game-flow-model';
-
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
-
-type TvGameSetupTheme = {
-  readonly ink: string;
-  readonly paper: string;
-  readonly accent: string;
-  readonly accentSoft: string;
-  readonly rail: string;
-  readonly railItem: string;
-  readonly shade: string;
-};
-
-/** Presentation-only themes keep the live setup data generic while the selected game owns the mood. */
-function setupThemeFor(gameId: string): TvGameSetupTheme {
-  if (gameId === 'voting') {
-      return {
-      ink: brandColors.espresso,
-      paper: brandColors.cream,
-      accent: brandColors.coral,
-      accentSoft: 'rgba(230, 163, 177, 0.84)',
-      rail: 'rgba(43, 31, 23, 0.96)',
-      railItem: 'rgba(249, 241, 230, 0.14)',
-      shade: 'rgba(43, 31, 23, 0.18)',
-    };
-  }
-  if (gameId === 'trivia') {
-    return {
-      ink: brandColors.espresso,
-      paper: brandColors.cream,
-      accent: brandColors.butter,
-      accentSoft: 'rgba(255, 215, 102, 0.22)',
-      rail: 'rgba(43, 31, 23, 0.96)',
-      railItem: 'rgba(249, 241, 230, 0.14)',
-      shade: 'rgba(43, 31, 23, 0.16)',
-    };
-  }
-  return {
-    ink: semanticColors.text,
-    paper: semanticColors.surface,
-    accent: semanticColors.secondary,
-    accentSoft: 'rgba(255, 215, 102, 0.18)',
-    rail: 'rgba(43, 31, 23, 0.92)',
-    railItem: 'rgba(249, 241, 230, 0.12)',
-    shade: 'rgba(43, 31, 23, 0.24)',
-  };
-}
+import { TvReadyCheckScreen } from './game-ready-screen';
+import { TvPlayroomFrame, TvRosterRow } from './playroom-frame';
 
 export type TvGameSetupScreenProps = {
   readonly gameId: string;
@@ -84,211 +35,121 @@ export type TvGameSetupScreenProps = {
   readonly players?: readonly TvGamePlayer[];
   readonly readyPlayerIds?: readonly string[];
   readonly stage?: 'configuring' | 'ready' | 'countdown';
+  /** Server epoch ms when the countdown's start is due; set only while counting down. */
+  readonly countdownEndsAt?: number;
   readonly reduceMotion?: boolean;
 };
 
 /**
- * Display-only setup projection. The phone owns every setting control; the TV
- * gets a single readable setup panel over the selected game's world and a
- * quiet readiness rail for the room.
+ * Display-only pre-game surface. The phone owns every control; the TV shows
+ * the host's setup as it changes, then the ready check, then the countdown,
+ * following the server's setup stage.
  */
-export function TvGameSetupScreen({
+export function TvGameSetupScreen(props: TvGameSetupScreenProps) {
+  const { stage = 'configuring' } = props;
+  if (stage === 'countdown' && props.countdownEndsAt !== undefined) {
+    return <TvCountdownScreen {...props} countdownEndsAt={props.countdownEndsAt} />;
+  }
+  if (stage === 'ready' || stage === 'countdown') {
+    return <TvReadyCheckScreen {...props} />;
+  }
+  return <SetupBoard {...props} />;
+}
+
+function SetupBoard({
   gameId,
   gameTitle,
   hostName,
   mode,
   settings,
   settingsSchema,
-  playerRange,
   players = [],
-  readyPlayerIds = [],
-  stage = 'configuring',
   reduceMotion = false,
 }: TvGameSetupScreenProps) {
-  const viewport = useWindowDimensions();
-  const scale = safeScale(viewport.width, viewport.height);
   const title = gameTitle?.trim() || titleForGame(gameId);
-  const theme = setupThemeFor(gameId);
   const setupSettings = visibleTvSetupSettings(gameId, settings, settingsSchema);
-  const readiness = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
-  const art = gameArtAsset(gameId);
-  const inRange = playerRange !== undefined && players.length >= playerRange.min && players.length <= playerRange.max;
-  const isReadyStage = stage === 'ready';
-  const [enter] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
-  const animationRef = useRef<Animated.CompositeAnimation | undefined>(undefined);
-
-  useEffect(() => {
-    animationRef.current?.stop();
-    if (reduceMotion) {
-      enter.setValue(1);
-      return;
-    }
-    enter.setValue(0);
-    animationRef.current = Animated.timing(enter, {
-      toValue: 1,
-      duration: 420,
-      useNativeDriver: true,
-    });
-    animationRef.current.start();
-    return () => animationRef.current?.stop();
-  }, [enter, gameId, reduceMotion]);
+  const art = playroomGameArt(gameId);
+  const host = players.find((player) => player.isHost);
+  const others = players.filter((player) => !player.isHost);
 
   return (
-    <View
-      style={styles.viewport}
-      pointerEvents="none"
-      focusable={false}
-      accessible={false}
-      testID="tv-game-setup"
-    >
-      <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false} accessible={false}>
-        {art ? (
-          <ImageBackground source={art} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID={`tv-setup-art-${gameId}`} />
-        ) : (
-          <ImageBackground source={HEARTBEAT_ARTWORK.tv.platformLivingRoom} resizeMode="cover" style={StyleSheet.absoluteFill} accessible={false} testID="tv-setup-fallback-background" />
-        )}
-        <View style={[styles.worldShade, { backgroundColor: theme.shade }]} pointerEvents="none" focusable={false} />
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: enter,
-              transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
-            },
-          ]}
-          pointerEvents="none"
-          focusable={false}
-          accessible={false}
-        >
-          <View style={styles.topBar} pointerEvents="none" focusable={false}>
-            <View style={styles.brandLockup} pointerEvents="none" focusable={false}>
-              <Image source={HEARTBEAT_ARTWORK.brand.displayMark} resizeMode="contain" style={styles.brandMark} accessible={false} />
-              <HuddleText variant="title" color="surface" style={{ color: theme.paper }}>Huddle</HuddleText>
+    <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="tv-game-setup">
+      <PlayroomTvStage>
+        <TvPlayroomFrame reduceMotion={reduceMotion} />
+        <View style={styles.column} pointerEvents="none" focusable={false}>
+          <PlayroomHeading type={playroomTv.type.heading}>{`Setting up ${title}`}</PlayroomHeading>
+          <View style={styles.board}>
+            <View style={styles.artCard} accessible accessibilityLabel={`${title}. ${tvHostCopy(hostName, 'is choosing the settings.')}`}>
+              {art ? <Image source={art} style={styles.art} resizeMode="contain" accessible={false} /> : null}
+              <PlayroomText style={playroomTv.type.title}>{title}</PlayroomText>
+              <View style={styles.hostLine}>
+                {host?.avatarId ? <PlayroomAvatar avatarId={host.avatarId} size={44} /> : null}
+                <PlayroomText style={playroomTv.type.caption}>{tvHostCopy(hostName, 'is choosing the settings')}</PlayroomText>
+              </View>
             </View>
-            <View style={styles.topRight} pointerEvents="none" focusable={false}>
-              <HuddleText variant="caption" color="surface" style={[styles.kicker, { color: theme.paper }]}>{`${title.toUpperCase()} · SETUP`}</HuddleText>
-              <View style={[styles.modePill, { backgroundColor: theme.accent, borderColor: theme.ink }]} pointerEvents="none" focusable={false} testID="tv-game-setup-mode">
-                <HuddleText variant="caption" color="text">MODE</HuddleText>
-                <HuddleText variant="title" color="text">{tvModeLabel(mode)}</HuddleText>
+            <View style={styles.settingsColumn}>
+              <ModeTabs mode={mode} />
+              <View style={styles.rows} testID="tv-game-setup-settings">
+                {setupSettings.map((setting) => (
+                  <SettingRow key={setting.key} setting={setting} reduceMotion={reduceMotion} />
+                ))}
               </View>
             </View>
           </View>
-
-          <View style={[styles.setupPanel, { backgroundColor: theme.paper, borderColor: theme.ink }]} pointerEvents="none" focusable={false} accessible={false}>
-            <HuddleText variant="caption" color="text" style={styles.visuallyHidden}>{`${title} setup`}</HuddleText>
-            {!isReadyStage ? <HuddleText variant="caption" color="text" style={styles.visuallyHidden}>Setup is being finalized</HuddleText> : null}
-            <HuddleText variant="caption" color="text" style={[styles.panelKicker, { color: theme.ink }]}>{isReadyStage ? 'READY TO PLAY' : 'HOST SETUP'}</HuddleText>
-            <HuddleText variant="tvDisplay" color="text" style={[styles.title, { color: theme.ink }]}>
-              {isReadyStage ? `${title} is ready` : `Set up ${title}`}
-            </HuddleText>
-            <HuddleText variant="bodyLarge" color="text" style={[styles.subtitle, { color: theme.ink }]}>
-              {isReadyStage
-                ? tvHostCopy(hostName, 'is choosing when to start on the phone.')
-                : tvHostCopy(hostName, 'is finalizing settings on the phone.')}
-            </HuddleText>
-
-            <View style={styles.divider} pointerEvents="none" focusable={false} />
-            <HuddleText variant="title" color="text" style={[styles.sectionLabel, { color: theme.ink }]}>Game settings</HuddleText>
-            <View style={styles.settingsRow} pointerEvents="none" focusable={false} testID="tv-game-setup-settings">
-              {setupSettings.length === 0 ? (
-                <HuddleText variant="body" color="text" style={styles.noSettings}>This game has no extra settings.</HuddleText>
-              ) : setupSettings.map((setting) => (
-                <View key={setting.key} style={[styles.setting, { borderColor: theme.ink, backgroundColor: theme.accentSoft }]} pointerEvents="none" focusable={false} testID={`tv-game-setting-${setting.key}`}>
-                  <HuddleText variant="caption" color="text" style={[styles.settingLabel, { color: theme.ink }]}>{setting.label ?? setting.key}</HuddleText>
-                  <HuddleText variant="title" color="text" style={{ color: theme.ink }}>{setting.value}</HuddleText>
-                </View>
-              ))}
-            </View>
-
-            <View style={[styles.panelNotice, { backgroundColor: theme.accentSoft }]} pointerEvents="none" focusable={false}>
-              <View style={[styles.noticeDot, { backgroundColor: theme.accent }, isReadyStage && readiness.allReady ? styles.noticeReady : null]} pointerEvents="none" focusable={false} />
-              <HuddleText variant="body" color="text" style={{ color: theme.ink }}>
-                {isReadyStage
-                  ? readiness.allReady
-                    ? `Everyone is ready · waiting for ${hostName?.trim() || 'the host'} to start.`
-                    : inRange
-                      ? `${readiness.readyCount} of ${readiness.playerCount} players are ready.`
-                      : playerRange
-                        ? `Need ${playerRange.min}–${playerRange.max} players to start.`
-                        : 'Waiting for the host to finish setting up.'
-                  : 'The room will ready up on the phones when setup is locked.'}
-              </HuddleText>
-            </View>
+        </View>
+        {others.length > 0 ? (
+          <View style={styles.waiting} pointerEvents="none" focusable={false}>
+            <TvRosterRow players={others} size={playroomTv.avatar.row * 0.8} names={false} />
+            <PlayroomText color="muted" style={playroomTv.type.caption}>
+              Everyone else is waiting
+            </PlayroomText>
           </View>
-
-          <View style={[styles.readinessRail, { backgroundColor: theme.rail, borderColor: theme.paper }]} pointerEvents="none" focusable={false} testID="tv-game-setup-readiness">
-            <View style={styles.readinessCopy} pointerEvents="none" focusable={false}>
-              <HuddleText variant="title" color="surface" style={{ color: theme.paper }}>
-                {isReadyStage
-                  ? readiness.allReady
-                    ? 'Everyone is ready!'
-                    : `${readiness.readyCount} of ${readiness.playerCount} players are ready`
-                  : 'Players in the room'}
-              </HuddleText>
-              <HuddleText variant="body" color="surface" style={[styles.readinessSubtitle, { color: theme.paper }]}>
-                {isReadyStage
-                  ? readiness.allReady
-                    ? 'The game starts when the Host taps Start.'
-                    : 'Keep your phone close while the Host finishes setup.'
-                  : 'Ready status appears here once the Host locks the setup.'}
-              </HuddleText>
-            </View>
-            <View style={styles.players} pointerEvents="none" focusable={false} testID="tv-game-setup-players">
-              {players.slice(0, 10).map((player) => (
-                <PlayerChip key={player.id} player={player} readyPlayerIds={readyPlayerIds} stage={stage} theme={theme} />
-              ))}
-            </View>
-          </View>
-        </Animated.View>
-      </View>
+        ) : null}
+      </PlayroomTvStage>
     </View>
   );
 }
 
-function PlayerChip({
-  player,
-  readyPlayerIds,
-  stage,
-  theme,
-}: {
-  readonly player: TvGamePlayer;
-  readonly readyPlayerIds: readonly string[];
-  readonly stage: 'configuring' | 'ready' | 'countdown';
-  readonly theme: TvGameSetupTheme;
-}) {
-  const readyStage = stage === 'ready';
-  const ready = readyStage && player.away !== true && readyPlayerIds.map(String).includes(String(player.id));
-  const name = player.name.trim() || 'Player';
-  const status = player.away ? 'away' : ready ? 'ready' : 'waiting';
-  const statusLabel = player.away ? 'away' : readyStage ? ready ? 'ready' : 'not ready' : 'in room';
+const MODES = ['quick', 'standard', 'custom'] as const;
+
+function ModeTabs({ mode }: { readonly mode: string | undefined }) {
+  return (
+    <View style={styles.modes} accessible accessibilityLabel={`${tvModeLabel(mode)} setup`}>
+      {MODES.map((option) => (
+        <View key={option} style={[styles.mode, option === mode ? styles.modeOn : null]}>
+          <PlayroomText color={option === mode ? 'ink' : 'muted'} style={playroomTv.type.caption}>
+            {tvModeLabel(option)}
+          </PlayroomText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** One setting; when the host changes it, the row lights up and fades back. */
+function SettingRow({ setting, reduceMotion }: { readonly setting: TvSetupSetting; readonly reduceMotion: boolean }) {
+  const highlight = useSharedValue(0);
+  const previous = useRef(setting.value);
+  useEffect(() => {
+    if (previous.current === setting.value) return;
+    previous.current = setting.value;
+    if (reduceMotion) return;
+    highlight.set(1);
+    highlight.set(withTiming(0, { duration: playroomMotion.highlight }));
+  }, [highlight, reduceMotion, setting.value]);
+  const glow = useAnimatedStyle(() => ({ opacity: highlight.get() }));
 
   return (
     <View
+      style={styles.row}
       accessible
-      focusable={false}
-      accessibilityRole="text"
-      accessibilityLabel={`${name}${player.isHost ? ', host' : ''}, ${statusLabel}`}
-      style={[styles.playerChip, { backgroundColor: theme.railItem }]}
-      pointerEvents="none"
-      testID={`tv-game-player-${player.id}`}
+      accessibilityLabel={`${setting.label ?? setting.key}: ${setting.value}`}
+      testID={`tv-game-setting-${setting.key}`}
     >
-      {player.avatar ? (
-        <Image source={player.avatar} resizeMode="contain" style={styles.avatarImage} accessible={false} testID={`tv-game-player-avatar-${player.id}`} />
-      ) : player.avatarId ? (
-        <AvatarPortrait avatarId={player.avatarId} displayName={name} size={52} testID={`tv-game-player-avatar-${player.id}`} />
-      ) : (
-        <View style={styles.avatarFallback} pointerEvents="none" focusable={false}>
-          <HuddleText variant="title" color="text" accessibilityElementsHidden>{Array.from(name)[0]?.toLocaleUpperCase() ?? '?'}</HuddleText>
-        </View>
-      )}
-      <View style={styles.playerIdentity} pointerEvents="none" focusable={false}>
-        <HuddleText variant="body" color="surface" style={{ color: theme.paper }} numberOfLines={1}>{name}</HuddleText>
-        <HuddleText variant="caption" color="surface" style={[styles.playerStatus, { color: theme.paper }]} numberOfLines={1}>
-          {player.isHost ? 'Host · ' : ''}{status === 'ready' ? 'Ready' : status === 'away' ? 'Away' : status === 'waiting' ? readyStage ? 'Waiting' : 'In room' : 'Ready'}
-        </HuddleText>
-        {!readyStage && !player.away ? <HuddleText variant="caption" color="surface" style={styles.visuallyHidden}>In room</HuddleText> : null}
-      </View>
-      <View style={[styles.statusDot, { backgroundColor: theme.paper }, status === 'ready' ? [styles.readyDot, { backgroundColor: theme.accent }] : status === 'away' ? styles.awayDot : null]} pointerEvents="none" focusable={false} />
+      <Animated.View style={[styles.rowGlow, glow]} pointerEvents="none" />
+      <PlayroomSettingIcon icon={setting.icon} size={64} />
+      <PlayroomText style={[playroomTv.type.label, styles.rowLabel]}>{setting.label ?? setting.key}</PlayroomText>
+      <PlayroomText style={styles.rowValue}>{setting.value}</PlayroomText>
     </View>
   );
 }
@@ -296,49 +157,107 @@ function PlayerChip({
 function titleForGame(gameId: string): string {
   if (gameId === 'trivia') return 'Trivia';
   if (gameId === 'voting') return 'Voting';
-  return gameId.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  return 'Game';
 }
 
 const styles = StyleSheet.create({
-  viewport: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: semanticColors.text },
-  stage: { width: STAGE_WIDTH, height: STAGE_HEIGHT, overflow: 'hidden' },
-  worldShade: { ...StyleSheet.absoluteFill, backgroundColor: semanticColors.text, opacity: 0.24 },
-  content: { position: 'absolute', left: 96, right: 96, top: 54, bottom: 54 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brandLockup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  brandMark: { width: 56, height: 56 },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  kicker: { color: semanticColors.surface, letterSpacing: 2.4 },
-  modePill: { minWidth: 170, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill, backgroundColor: semanticColors.secondary, alignItems: 'center', gap: 2, ...shadows.card },
-  setupPanel: { position: 'absolute', left: 0, top: 118, width: 700, minHeight: 570, paddingHorizontal: spacing['2xl'], paddingVertical: spacing['2xl'], borderRadius: radii.xl, backgroundColor: 'rgba(249, 241, 230, 0.97)', ...shadows.floating },
-  visuallyHidden: { position: 'absolute', width: 1, height: 1, opacity: 0 },
-  panelKicker: { color: semanticColors.text, letterSpacing: 2.1 },
-  title: { marginTop: spacing.sm, color: semanticColors.text, fontSize: 58, lineHeight: 66 },
-  subtitle: { marginTop: spacing.sm, color: semanticColors.text, opacity: 0.72 },
-  divider: { height: 1, marginVertical: spacing.xl, backgroundColor: 'rgba(43,31,23,0.18)' },
-  sectionLabel: { color: semanticColors.text, fontSize: 22, lineHeight: 28 },
-  settingsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md },
-  setting: { minWidth: 180, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radii.lg, backgroundColor: 'rgba(255,255,255,0.48)', borderWidth: 1, borderColor: 'rgba(43,31,23,0.18)', gap: spacing.xs },
-  settingLabel: { color: semanticColors.text, opacity: 0.66 },
-  noSettings: { color: semanticColors.text, opacity: 0.68 },
-  panelNotice: { marginTop: spacing.xl, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radii.lg, backgroundColor: 'rgba(255,215,102,0.18)', flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  noticeDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: semanticColors.secondary },
-  noticeReady: { backgroundColor: semanticColors.success },
-  readinessRail: { position: 'absolute', left: 0, right: 0, bottom: 0, minHeight: 184, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderRadius: radii.xl, backgroundColor: 'rgba(43, 31, 23, 0.92)', borderWidth: 1, borderColor: 'rgba(249,241,230,0.32)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  readinessCopy: { flex: 1, paddingRight: spacing.xl },
-  readinessSubtitle: { marginTop: spacing.xs, color: semanticColors.surface, opacity: 0.7 },
-  players: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: spacing.sm, maxWidth: 1050 },
-  playerChip: { width: 180, minHeight: 70, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.lg, backgroundColor: 'rgba(249, 241, 230, 0.12)', flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  avatarImage: { width: 52, height: 52, borderRadius: 26 },
-  avatarFallback: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: semanticColors.primary },
-  playerIdentity: { flex: 1, minWidth: 0 },
-  playerStatus: { marginTop: 1, color: semanticColors.surface, opacity: 0.66 },
-  statusDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(249,241,230,0.62)' },
-  readyDot: { backgroundColor: semanticColors.success },
-  awayDot: { backgroundColor: semanticColors.highlight },
+  viewport: {
+    flex: 1,
+    backgroundColor: playroomColors.canvas,
+  },
+  column: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    paddingTop: playroomTv.safeY - 10,
+    gap: 28,
+  },
+  board: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 64,
+  },
+  artCard: {
+    width: 580,
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 30,
+    paddingTop: 28,
+    paddingBottom: 32,
+    borderRadius: playroomRadii.card,
+    backgroundColor: playroomColors.surface,
+    ...playroomShadows.card,
+  },
+  art: {
+    width: 460,
+    height: 288,
+  },
+  hostLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 6,
+    paddingLeft: 6,
+    paddingRight: 22,
+    paddingVertical: 6,
+    borderRadius: playroomRadii.pill,
+    backgroundColor: playroomColors.lavender,
+  },
+  settingsColumn: {
+    width: 840,
+    gap: 18,
+  },
+  modes: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
+    padding: 6,
+    borderRadius: playroomRadii.pill,
+    backgroundColor: playroomColors.lavender,
+  },
+  mode: {
+    paddingHorizontal: 30,
+    paddingVertical: 6,
+    borderRadius: playroomRadii.pill,
+  },
+  modeOn: {
+    backgroundColor: playroomColors.surface,
+    borderWidth: 3,
+    borderColor: playroomColors.ink,
+  },
+  rows: {
+    gap: 14,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 22,
+    paddingHorizontal: 26,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: playroomColors.surface,
+    overflow: 'hidden',
+    ...playroomShadows.card,
+  },
+  rowGlow: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: playroomColors.lavender,
+  },
+  rowLabel: {
+    flex: 1,
+    fontFamily: playroomTv.type.title.fontFamily,
+  },
+  rowValue: {
+    ...playroomTv.type.label,
+    fontFamily: playroomTv.type.heading.fontFamily,
+  },
+  waiting: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: playroomTv.safeY + 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 22,
+  },
 });

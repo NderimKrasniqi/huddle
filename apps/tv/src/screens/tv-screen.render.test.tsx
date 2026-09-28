@@ -81,7 +81,7 @@ describe('TvScreen restoration handoff', () => {
     const rendered = await render(<TvScreen />);
 
     expect(rendered.getByTestId('tv-restoring-room-screen')).toBeTruthy();
-    expect(rendered.getByText('K W R D')).toBeTruthy();
+    expect(rendered.getByText('Room KWRD')).toBeTruthy();
 
     await act(async () => {
       jest.advanceTimersByTime(1_300);

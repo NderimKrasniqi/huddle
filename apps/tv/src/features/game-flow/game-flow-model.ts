@@ -1,14 +1,9 @@
-import { readiness, type AvatarId, type GameSettingsSchema, type GameSetupStage } from '@huddle/domain';
-import type { ImageSourcePropType } from 'react-native';
-
-import { gameCardAsset } from './assets';
-
+import { readiness, type AvatarId, type GameSettingIcon, type GameSettingsSchema, type GameSetupStage } from '@huddle/domain';
 export type TvGameCarouselCard = {
   readonly id: string;
   readonly title: string;
   readonly subtitle?: string;
   readonly available?: boolean;
-  readonly image?: ImageSourcePropType;
 };
 
 /** Defaults are visual fallbacks; an authoritative registry projection may override every field. */
@@ -18,7 +13,7 @@ export const DEFAULT_TV_CAROUSEL_CARDS: readonly TvGameCarouselCard[] = [
   { id: 'doodle-dash', title: 'Doodle Dash', subtitle: 'Coming soon', available: false },
   { id: 'quick-poll', title: 'Quick Poll', subtitle: 'Coming soon', available: false },
   { id: 'hot-take', title: 'Hot Take', subtitle: 'Coming soon', available: false },
-].map((card) => ({ ...card, image: gameCardAsset(card.id) }));
+];
 
 export type TvGamePlayer = {
   readonly id: string;
@@ -26,7 +21,6 @@ export type TvGamePlayer = {
   readonly isHost?: boolean;
   readonly ready?: boolean;
   readonly away?: boolean;
-  readonly avatar?: ImageSourcePropType;
   readonly avatarId?: AvatarId;
 };
 
@@ -34,6 +28,8 @@ export type TvSetupSetting = {
   readonly key: string;
   readonly value: string;
   readonly label?: string;
+  /** The picture the game declared for this setting. */
+  readonly icon?: GameSettingIcon;
 };
 
 export type TvSetupSettings =
@@ -71,6 +67,7 @@ export function visibleTvSetupSettings(
       // Labels belong to the installed schema; persisted values cannot rename
       // a setting on a display-only surface.
       label: definition.label ?? SETUP_LABELS[key],
+      icon: definition.icon,
     }];
   });
 }

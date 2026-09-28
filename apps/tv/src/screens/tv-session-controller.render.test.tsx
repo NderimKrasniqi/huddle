@@ -42,8 +42,8 @@ describe('TvSessionPresentation', () => {
       />,
     );
 
-    expect(screen.getByTestId('room-invitation-background')).toBeTruthy();
-    expect(screen.getByLabelText('Player Ada joined')).toBeTruthy();
+    expect(screen.getByTestId('room-invitation-viewport')).toBeTruthy();
+    expect(screen.getByLabelText('Player Ada joined, host')).toBeTruthy();
     expect(screen.queryByText('Room invitation')).toBeNull();
   });
 
@@ -62,7 +62,7 @@ describe('TvSessionPresentation', () => {
 
     expect(screen.getByTestId('tv-game-carousel')).toBeTruthy();
     expect(screen.getByLabelText('Voting, selected')).toBeTruthy();
-    expect(screen.queryByTestId('room-invitation-background')).toBeNull();
+    expect(screen.queryByTestId('room-invitation-viewport')).toBeNull();
   });
 
   it('selects the illustrated setup renderer from the authoritative draft', async () => {
@@ -153,7 +153,7 @@ describe('TvSessionPresentation', () => {
       );
 
       expect(screen.getByText(purpose)).toBeTruthy();
-      expect(screen.queryByTestId('room-invitation-background')).toBeNull();
+      expect(screen.queryByTestId('room-invitation-viewport')).toBeNull();
       expect(screen.queryByTestId('tv-game-carousel')).toBeNull();
     },
   );
