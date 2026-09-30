@@ -127,6 +127,19 @@ describe('JoinIdentityScreen', () => {
     expect(mockJoinMutation).not.toHaveBeenCalled();
   });
 
+  it('returns a link to a missing room to room-code entry with the code filled in', async () => {
+    mockAvailability = null;
+
+    await render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <JoinIdentityScreen />
+      </SafeAreaProvider>,
+    );
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/', params: { code: 'KWRD' } }));
+    expect(mockJoinMutation).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['pending', undefined, 'identity-handoff-availability-pending'],
     ['missing', null, 'identity-handoff-room-missing'],

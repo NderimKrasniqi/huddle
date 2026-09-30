@@ -139,6 +139,13 @@ export default function JoinIdentityScreen() {
     };
   }, [cacheProfile]);
 
+  // A link to a room that does not exist has nothing to join, so it goes back
+  // to room-code entry with the code filled in and its inline "no room" error.
+  const linkedRoomMissing = routeState.kind === 'joining' && availability === null;
+  useEffect(() => {
+    if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
+  }, [code, linkedRoomMissing, router]);
+
   useEffect(() => {
     if (shouldReturnToSeat) {
       router.replace('/');
@@ -457,7 +464,6 @@ export default function JoinIdentityScreen() {
             )}
 
             {pending ? <HuddleText variant="caption" color="text" align="center" accessibilityLiveRegion="polite" testID="identity-availability-pending">Checking room availability…</HuddleText> : null}
-            {roomUnavailable ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-room-missing"><HuddleText variant="caption" align="center">No room has that code. Go back and check the TV.</HuddleText></View> : null}
             {availability?.full ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-room-full"><HuddleText variant="caption" align="center">That room is full. Ask someone to leave before joining.</HuddleText></View> : null}
             {selectedTaken ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-avatar-taken"><HuddleText variant="caption" align="center">That avatar is already in use. Pick another one.</HuddleText></View> : null}
             {error ? <View style={styles.inlineError} accessible accessibilityRole="alert" testID="identity-error"><HuddleText variant="caption" align="center">{error}</HuddleText></View> : null}
