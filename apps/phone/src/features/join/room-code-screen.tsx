@@ -1,11 +1,11 @@
 import { type AvatarId } from '@huddle/domain';
 import { playroomColors, playroomPhone, playroomRadii, playroomShadows } from '@huddle/design-tokens';
-import { PlayroomButton, PlayroomFloat, PlayroomHeading, PlayroomPill, PlayroomText, PlayroomWordmark } from '@huddle/ui/native';
+import { PlayroomButton, PlayroomMoment, PlayroomHeading, PlayroomPill, PlayroomText, PlayroomWordmark } from '@huddle/ui/native';
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { usePhoneReducedMotion } from '../../ui/reduced-motion';
+import { PhoneFrame } from '../../ui/native';
 import { activeCodeCell, codeEntry, isCodeComplete } from './join-entry';
 
 export type RoomCodeAvailability = {
@@ -36,7 +36,6 @@ export function RoomCodeScreen({
   onScanQr,
 }: RoomCodeScreenProps) {
   const insets = useSafeAreaInsets();
-  const reduceMotion = usePhoneReducedMotion() !== false;
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState(() => codeEntry(initialCode));
   const [focused, setFocused] = useState(false);
@@ -56,13 +55,18 @@ export function RoomCodeScreen({
   return (
     <View style={styles.screen}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={insets.top}>
-        <ScrollView
-          contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        <PhoneFrame footer={
+          <>
+            <PlayroomButton label="Join room" onPress={() => onContinue(code)} disabled={!canContinue}
+              accessibilityLabel="Continue to pick your vibe" testID="continue-to-vibe" />
+            <PlayroomButton label={full ? 'Try another code' : 'Scan the QR code'} variant="secondary"
+              onPress={full ? () => updateCode('') : onScanQr}
+              accessibilityLabel={full ? 'Try another room code' : 'Scan TV room QR code'} testID="scan-tv-code" />
+          </>
+        }>
           <PlayroomWordmark height={34} testID="huddle-heartbeat-mark" />
-          <PlayroomHeading type={playroomPhone.type.heading}>Join a room</PlayroomHeading>
+          <PlayroomMoment art="lounge" width={300} height={230} style={styles.illustration} />
+          <PlayroomHeading type={playroomPhone.type.hero}>Good times. Start here.</PlayroomHeading>
           <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
             Type the four-letter code on the TV.
           </PlayroomText>
@@ -119,32 +123,7 @@ export function RoomCodeScreen({
           ) : null}
           {error ? <Notice testID="room-code-error">{error}</Notice> : null}
 
-          <PlayroomButton
-            label="Join room"
-            bursts
-            onPress={() => onContinue(code)}
-            disabled={!canContinue}
-            accessibilityLabel="Continue to pick your vibe"
-            testID="continue-to-vibe"
-          />
-          <View style={styles.or}>
-            <View style={styles.rule} />
-            <PlayroomText color="muted" style={playroomPhone.type.caption}>or</PlayroomText>
-            <View style={styles.rule} />
-          </View>
-          <PlayroomButton
-            label={full ? 'Try another code' : 'Scan the QR code'}
-            variant="secondary"
-            onPress={full ? () => updateCode('') : onScanQr}
-            accessibilityLabel={full ? 'Try another room code' : 'Scan TV room QR code'}
-            testID="scan-tv-code"
-          />
-          <View style={styles.props} pointerEvents="none">
-            <PlayroomFloat prop="controller" width={150} height={104} style={{ left: 12, bottom: 0 }} reduceMotion={reduceMotion} />
-            <PlayroomFloat prop="starYellow" width={52} height={52} style={{ right: 60, bottom: 30 }} reduceMotion={reduceMotion} delay={80} />
-            <PlayroomFloat prop="ballOrange" width={34} height={34} style={{ right: 20, bottom: 6 }} reduceMotion={reduceMotion} delay={160} />
-          </View>
-        </ScrollView>
+        </PhoneFrame>
       </KeyboardAvoidingView>
     </View>
   );
@@ -161,6 +140,7 @@ function Notice({ children, testID }: { readonly children: string; readonly test
 }
 
 const styles = StyleSheet.create({
+  illustration: { alignItems: 'center' },
   screen: {
     flex: 1,
     backgroundColor: playroomColors.canvas,
@@ -186,7 +166,8 @@ const styles = StyleSheet.create({
   },
   box: {
     flex: 1,
-    aspectRatio: 0.82,
+    minHeight: 80,
+    aspectRatio: 1,
     borderRadius: playroomRadii.button,
     backgroundColor: playroomColors.surface,
     alignItems: 'center',

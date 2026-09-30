@@ -103,6 +103,9 @@ PLAYROOM_PALETTE = {
 }
 # Playroom platform artwork.
 PLAYROOM_RUNTIME_ASSET_SPECS = {
+    "moments/high-five.png": ((1254, 1254), True, "ddc9014f2e7b31f88e2d707cfb2c051b7b6d542fbefc34f80247dd66188d2d5e"),
+    "moments/eyes-on-the-tv.png": ((1254, 1254), True, "617b4c200d508f046419b57053678611ef61165da26f7f19325ded97ba91ea1f"),
+    "moments/game-night-lounge.png": ((1254, 1254), True, "c3db0c442925cfec8f0caeef1fcf7fb33a6f525f6a0a4d703a2de54549149dfb"),
     "avatars/blue-robot.png": (
         (640, 640),
         True,

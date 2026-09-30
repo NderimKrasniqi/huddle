@@ -1,15 +1,16 @@
 import type { GameSettingsSchema } from '@huddle/domain';
-import { playroomColors, playroomMotion, playroomRadii, playroomShadows, playroomTv } from '@huddle/design-tokens';
+import { playroomColors, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
 import {
   PlayroomAvatar,
   PlayroomHeading,
   PlayroomSettingIcon,
   PlayroomText,
   PlayroomTvStage,
-  playroomGameArt,
+  PlayroomGameCover,
+  playroomCoverColor,
 } from '@huddle/ui/native';
 import { useEffect, useRef } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { TvCountdownScreen } from './game-countdown-screen';
@@ -68,7 +69,6 @@ function SetupBoard({
 }: TvGameSetupScreenProps) {
   const title = gameTitle?.trim() || titleForGame(gameId);
   const setupSettings = visibleTvSetupSettings(gameId, settings, settingsSchema);
-  const art = playroomGameArt(gameId);
   const host = players.find((player) => player.isHost);
   const others = players.filter((player) => !player.isHost);
 
@@ -79,8 +79,8 @@ function SetupBoard({
         <View style={styles.column} pointerEvents="none" focusable={false}>
           <PlayroomHeading type={playroomTv.type.heading}>{`Setting up ${title}`}</PlayroomHeading>
           <View style={styles.board}>
-            <View style={styles.artCard} accessible accessibilityLabel={`${title}. ${tvHostCopy(hostName, 'is choosing the settings.')}`}>
-              {art ? <Image source={art} style={styles.art} resizeMode="contain" accessible={false} /> : null}
+            <View style={[styles.artCard, { backgroundColor: playroomCoverColor(gameId) }]} accessible accessibilityLabel={`${title}. ${tvHostCopy(hostName, 'is choosing the settings.')}`}>
+              <PlayroomGameCover gameId={gameId} height={288} style={styles.cover} />
               <PlayroomText style={playroomTv.type.title}>{title}</PlayroomText>
               <View style={styles.hostLine}>
                 {host?.avatarId ? <PlayroomAvatar avatarId={host.avatarId} size={44} /> : null}
@@ -161,6 +161,7 @@ function titleForGame(gameId: string): string {
 }
 
 const styles = StyleSheet.create({
+  cover: { width: '100%' },
   viewport: {
     flex: 1,
     backgroundColor: playroomColors.canvas,
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
   column: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
-    paddingTop: playroomTv.safeY - 10,
+    paddingTop: 170,
     gap: 28,
   },
   board: {
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     borderRadius: playroomRadii.card,
     backgroundColor: playroomColors.surface,
-    ...playroomShadows.card,
+
   },
   art: {
     width: 460,
@@ -221,8 +222,8 @@ const styles = StyleSheet.create({
   },
   modeOn: {
     backgroundColor: playroomColors.surface,
-    borderWidth: 3,
-    borderColor: playroomColors.ink,
+    borderWidth: 1,
+    borderColor: playroomColors.border,
   },
   rows: {
     gap: 14,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: playroomColors.surface,
     overflow: 'hidden',
-    ...playroomShadows.card,
+
   },
   rowGlow: {
     ...StyleSheet.absoluteFill,

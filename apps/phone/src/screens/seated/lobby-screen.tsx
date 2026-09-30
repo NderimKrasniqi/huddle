@@ -5,7 +5,7 @@ import {
   PlayroomButton,
   PlayroomHeading,
   PlayroomPill,
-  PlayroomStatusImage,
+  PlayroomMoment,
   PlayroomText,
 } from '@huddle/ui/native';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -17,6 +17,8 @@ import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 
 export type LobbyScreenProps = {
   readonly session: PlayerSession;
+  readonly returned?: boolean;
+  readonly welcoming?: boolean;
   readonly roster: readonly RosterSeat[];
   readonly standing: ReturnType<typeof lobbyStanding>;
   readonly busy: BusyAction;
@@ -29,7 +31,7 @@ export type LobbyScreenProps = {
 
 /** The room before a game: the host sees everyone and chooses; guests wait. */
 export function LobbyScreen(props: LobbyScreenProps) {
-  const { session, roster, standing, busy, failure, success, onOpenPicker, onLeave } = props;
+  const { session, roster, standing, busy, failure, success, onOpenPicker, onLeave, returned, welcoming } = props;
   const me = roster.find((seat) => seat.playerId === session.playerId);
   const avatarId = me?.avatar ?? session.avatar;
   const you = { nickname: me?.nickname ?? session.nickname, avatarId };
@@ -42,9 +44,8 @@ export function LobbyScreen(props: LobbyScreenProps) {
         <>
           {standing.youAreHost ? (
             <PlayroomButton
-              label="Choose a game"
-              bursts
-              onPress={onOpenPicker}
+              label={returned ? "Choose next game" : "Choose a game"}
+                onPress={onOpenPicker}
               busy={busy === 'browse'}
               accessibilityLabel="Pick a game"
               testID="open-game-picker"
@@ -55,7 +56,17 @@ export function LobbyScreen(props: LobbyScreenProps) {
       }
     >
       <PhoneTopBar you={you} />
-      {standing.youAreHost ? <HostLobby {...props} /> : <GuestLobby {...props} />}
+      {welcoming && !returned ? <PhoneCard style={styles.welcome}>
+        <PlayroomText color="success" style={playroomPhone.type.title} accessibilityLiveRegion="polite">Your seat is saved.</PlayroomText>
+        <PlayroomText color="success" style={playroomPhone.type.body}>Look up—the room says hello.</PlayroomText>
+      </PhoneCard> : null}
+      {returned ? <>
+        <PlayroomMoment art="highFive" width={280} height={240} style={styles.moment} />
+        <PlayroomHeading type={playroomPhone.type.hero}>One more?</PlayroomHeading>
+        <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+          {standing.youAreHost ? 'Same people. New surprises. Choose what’s next.' : `${standing.hostNickname ?? 'The Host'} is choosing what’s next. Your seat stays yours.`}
+        </PlayroomText>
+      </> : standing.youAreHost ? <HostLobby {...props} /> : <GuestLobby {...props} />}
       {failure ? <PhoneNotice testID="phone-lifecycle-error">{failure}</PhoneNotice> : null}
       {success ? (
         <PlayroomPill tone="success" textStyle={playroomPhone.type.caption} testID="phone-lifecycle-success">
@@ -69,7 +80,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
 function HostLobby({ session, roster, onManage }: LobbyScreenProps) {
   return (
     <>
-      <PlayroomHeading type={playroomPhone.type.heading}>Your room</PlayroomHeading>
+      <PlayroomHeading type={playroomPhone.type.heading}>Your people</PlayroomHeading>
       <View style={styles.code} accessible accessibilityLabel={`Room code ${session.code.split('').join(' ')}`} testID="phone-room-code-tiles">
         <PlayroomText style={playroomPhone.type.code} accessibilityElementsHidden>
           {session.code}
@@ -125,16 +136,20 @@ function Tag({ label, tone }: { readonly label: string; readonly tone: 'host' | 
   );
 }
 
-function GuestLobby({ session, roster, standing }: LobbyScreenProps) {
+function GuestLobby({ session, roster }: LobbyScreenProps) {
   const me = roster.find((seat) => seat.playerId === session.playerId);
   const host = roster.find((seat) => seat.host);
   return (
     <>
       <PlayroomHeading type={playroomPhone.type.heading}>You’re in!</PlayroomHeading>
-      <View style={styles.me}>
-        <PlayroomAvatar avatarId={me?.avatar ?? session.avatar} size={playroomPhone.avatar.feature} />
-        <PlayroomText style={playroomPhone.type.hero}>{me?.nickname ?? session.nickname}</PlayroomText>
-      </View>
+      <PhoneCard style={styles.pass}>
+        <PlayroomAvatar avatarId={me?.avatar ?? session.avatar} size={88} />
+        <View style={styles.infoText}>
+          <PlayroomText style={playroomPhone.type.title}>{me?.nickname ?? session.nickname}</PlayroomText>
+          <PlayroomText color="muted" style={playroomPhone.type.body}>{`Room ${session.code} · ${me?.away ? 'Reconnecting' : 'Connected'}`}</PlayroomText>
+        </View>
+      </PhoneCard>
+      <PlayroomMoment art="tvHandoff" width={240} height={190} style={styles.moment} />
       {host ? (
         <PhoneCard style={styles.infoCard}>
           <PlayroomAvatar avatarId={host.avatar} size={52} host />
@@ -144,15 +159,7 @@ function GuestLobby({ session, roster, standing }: LobbyScreenProps) {
           </View>
         </PhoneCard>
       ) : null}
-      <PhoneCard style={[styles.infoCard, styles.lavender]}>
-        <PlayroomStatusImage art="waiting" width={56} height={56} />
-        <View style={styles.infoText}>
-          <PlayroomText style={playroomPhone.type.title}>Hang tight!</PlayroomText>
-          <PlayroomText color="muted" style={playroomPhone.type.body}>
-            {`${standing.hostNickname ?? 'The host'} will choose a game soon.`}
-          </PlayroomText>
-        </View>
-      </PhoneCard>
+
     </>
   );
 }
@@ -209,6 +216,9 @@ export function ManagePlayerScreen({ player, you, busy, onBack, onTransfer, onRe
 }
 
 const styles = StyleSheet.create({
+  welcome: { backgroundColor: playroomColors.successSurface, gap: 4 },
+  moment: { alignItems: 'center' },
+  pass: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: playroomColors.lavender },
   code: {
     alignItems: 'center',
     paddingVertical: 10,

@@ -15,7 +15,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, ReduceMotion } from 'react-native-reanimated';
 
 import { PlayroomBurst, PlayroomText } from './playroom-text';
 
@@ -61,7 +61,7 @@ export function PlayroomButton({
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const pressTo = (value: number) => {
-    scale.set(withTiming(value, { duration: playroomMotion.press, easing: Easing.bezier(...playroomEasing.out) }));
+    scale.set(withTiming(value, { duration: playroomMotion.press, reduceMotion: ReduceMotion.System, easing: Easing.bezier(...playroomEasing.out) }));
   };
 
   const button = (
@@ -99,9 +99,9 @@ export function PlayroomButton({
 }
 
 const TONES = {
-  primary: { container: { backgroundColor: playroomColors.orange }, text: 'ink' as const },
+  primary: { container: { backgroundColor: playroomColors.orange, borderBottomWidth: 3, borderBottomColor: 'rgba(45, 11, 78, 0.18)' }, text: 'ink' as const },
   secondary: {
-    container: { backgroundColor: playroomColors.surface, borderWidth: 2, borderColor: playroomColors.ink },
+    container: { backgroundColor: playroomColors.surface, borderWidth: 1, borderColor: playroomColors.border },
     text: 'ink' as const,
   },
   lavender: { container: { backgroundColor: playroomColors.lavender }, text: 'ink' as const },

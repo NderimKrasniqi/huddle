@@ -53,8 +53,8 @@ function SeatLostRecoverySurface({
         />
       }
     >
+      <PlayroomHeading type={playroomPhone.type.heading}>You’re out of the room</PlayroomHeading>
       <PlayroomStatusImage art="leftRoom" width={220} height={220} />
-      <PlayroomHeading type={playroomPhone.type.heading}>Seat no longer available</PlayroomHeading>
       <PlayroomText
         color="muted"
         accessibilityRole="alert"

@@ -174,6 +174,24 @@ artwork rather than source-master design material.
   picker return, join handoff, navigation-motion, and contact-sheet findings.
 - [x] Obtain follow-up independent approval against the repaired implementation.
 
+### 9. Game-night lounge screens — in review
+
+Native Phone and TV screens follow the fifth-pass lounge prototype in
+`output/playroom-review/`. Trivia and Voting gameplay is unchanged.
+
+- [x] Join, player pass, lobby, picker, setup, ready check, countdown, return
+  ("Back in the room" / "One more?"), camera scanner and seat-loss screens.
+- [x] Confirmed-join welcomes and the finished-game return composition use
+  session-local presentation state; transition tests cover restores,
+  reconnects and grouped arrivals.
+- [x] One-seat traversal on iPhone 17 (dev build) and Android TV (dev build):
+  join → lobby → picker → setup → ready → countdown → Trivia → return.
+- [x] Independent review; its fallback player range, scanner label and
+  duplicate-action, and finished-game confirmation findings are repaired.
+- [ ] Two-seat run covering guest views, 10 seats, long names, larger text,
+  reduced motion and Voting.
+- [ ] Android Phone and tvOS checks (not run; tvOS project not generated).
+
 ## Validation ledger
 
 Focused implementation checks pass for contracts, Convex integration,

@@ -19,6 +19,11 @@ export const PLAYROOM_ARTWORK = {
     wordmark: nativeAsset(() => require('../../assets/playroom/brand/wordmark.png')),
     splash: nativeAsset(() => require('../../assets/playroom/brand/splash.png')),
   },
+  moments: {
+    lounge: nativeAsset(() => require('../../assets/playroom/moments/game-night-lounge.png')),
+    tvHandoff: nativeAsset(() => require('../../assets/playroom/moments/eyes-on-the-tv.png')),
+    highFive: nativeAsset(() => require('../../assets/playroom/moments/high-five.png')),
+  },
   props: {
     controller: nativeAsset(() => require('../../assets/playroom/props/controller.png')),
     crown: nativeAsset(() => require('../../assets/playroom/props/crown.png')),

@@ -10,13 +10,13 @@ import {
 import { playroomAvatarCircles, playroomColors, playroomMotion, playroomPhone, playroomRadii } from '@huddle/design-tokens';
 import {
   PLAYROOM_ARTWORK,
+  PlayroomGameCover,
   PlayroomAvatar,
   PlayroomButton,
   PlayroomHeading,
   PlayroomPill,
   PlayroomSettingIcon,
   PlayroomText,
-  playroomGameArt,
 } from '@huddle/ui/native';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
@@ -75,7 +75,6 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
   const settings = setup.settings;
   const controls = settingsControls(module.settingsSchema, setup.gameId, { gameId: setup.gameId, settings }, presentation);
   const [sheet, setSheet] = useState<string>();
-  const art = playroomGameArt(module.metadata.id);
 
   function chooseMode(mode: GameSettingsMode) {
     void Haptics.selectionAsync();
@@ -118,12 +117,12 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
       avatarId={you?.avatarId}
       testID="phone-game-setup"
       footer={
-        <PlayroomButton label="Lock settings" bursts onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" />
+        <PlayroomButton label="Ready check" onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" />
       }
     >
-      <PhoneTopBar back={{ label: 'Games', onPress: onCancel, testID: 'setup-nav-back' }} you={you} />
+      <PhoneTopBar back={{ label: 'Room', onPress: onCancel, testID: 'setup-nav-back' }} you={you} />
       <PlayroomHeading type={playroomPhone.type.heading}>{`Set up ${module.metadata.title}`}</PlayroomHeading>
-      {art ? <Image source={art} style={styles.art} resizeMode="contain" accessible={false} /> : null}
+      <PlayroomGameCover gameId={module.metadata.id} height={150} />
       <View style={styles.segmented} accessibilityRole="tablist">
         {MODES.map((mode) => (
           <Segment
@@ -135,7 +134,14 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
           />
         ))}
       </View>
-      <View style={styles.settings}>
+      {setup.mode !== 'custom' ? <>
+        <PhoneCard>
+          <PlayroomText style={playroomPhone.type.title}>{presentation?.presets?.find((preset) => preset.mode === setup.mode)?.label ?? setupModeLabel(setup.mode)}</PlayroomText>
+          {presentation?.presets?.find((preset) => preset.mode === setup.mode)?.description ?
+            <PlayroomText color="muted" style={playroomPhone.type.body}>{presentation.presets.find((preset) => preset.mode === setup.mode)?.description}</PlayroomText> : null}
+        </PhoneCard>
+        <Summary module={module} settings={settings} />
+      </> : <View style={styles.settings}>
         {controls.map((control) => {
           const setting = module.settingsSchema.find((candidate) => candidate.key === control.key);
           if (setting === undefined) return null;
@@ -149,7 +155,7 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
             />
           );
         })}
-      </View>
+      </View>}
       {failure ? <PhoneNotice testID="setup-error">{failure}</PhoneNotice> : null}
       {sheetControl ? (
         <OptionSheet
@@ -333,7 +339,6 @@ function OptionSheet({
 
 function GuestSetup({ module, setup, roster, you, onLeave }: SetupScreenProps) {
   const host = roster.find((seat) => seat.host);
-  const art = playroomGameArt(module.metadata.id);
   return (
     <PhoneFrame
       avatarId={you?.avatarId}
@@ -342,7 +347,7 @@ function GuestSetup({ module, setup, roster, you, onLeave }: SetupScreenProps) {
     >
       <PhoneTopBar you={you} />
       <PlayroomHeading type={playroomPhone.type.heading}>Setting up</PlayroomHeading>
-      {art ? <Image source={art} style={styles.art} resizeMode="contain" accessible={false} /> : null}
+      <PlayroomGameCover gameId={module.metadata.id} height={150} />
       <PlayroomText style={[playroomPhone.type.hero, styles.center]}>{module.metadata.title}</PlayroomText>
       {host ? (
         <PhoneCard style={styles.infoCard}>
@@ -359,13 +364,13 @@ function GuestSetup({ module, setup, roster, you, onLeave }: SetupScreenProps) {
 }
 
 function Summary({ module, settings }: { readonly module: GameModule; readonly settings: GameSettings }) {
-  return (
-    <View style={styles.summary} testID="setup-ready-summary">
-      <PlayroomText style={[playroomPhone.type.label, styles.center]}>
-        {module.settingsSchema.map((setting) => settingSummaryText(setting, settings[setting.key])).join(' · ')}
-      </PlayroomText>
-    </View>
-  );
+  return <View style={styles.summary} testID="setup-ready-summary">
+    {module.settingsSchema.map((setting) => <View key={setting.key} style={styles.summaryRow}>
+      <PlayroomSettingIcon icon={setting.icon} size={26} />
+      <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.flex]}>{setting.label}</PlayroomText>
+      <PlayroomText style={[playroomPhone.type.label, styles.summaryValue]}>{settingSummaryText(setting, settings[setting.key])}</PlayroomText>
+    </View>)}
+  </View>;
 }
 
 /** Everyone raises a hand; the host starts once every hand is up. */
@@ -394,13 +399,12 @@ function ReadyScreen({
   const countInRange = roster.length >= module.metadata.playerRange.min && roster.length <= module.metadata.playerRange.max;
   const status =
     awayCount > 0
-      ? `${awayCount} player${awayCount === 1 ? '' : 's'} away. Waiting for them to reconnect.`
+      ? `Reconnecting: ${roster.filter((seat) => seat.away).map((seat) => seat.nickname).join(', ')}.`
       : !countInRange
         ? `Need ${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players to start.`
         : allReady
           ? 'Everyone is ready. The Host can start.'
-          : 'Everyone raises a hand to start.';
-  const waiting = roster.filter((seat) => !setup.readyPlayerIds.includes(seat.playerId) || seat.away);
+          : `Waiting for ${roster.filter((seat) => !setup.readyPlayerIds.includes(seat.playerId)).map((seat) => seat.nickname).join(', ')}.`;
 
   function raise() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -416,14 +420,13 @@ function ReadyScreen({
           <>
             <PlayroomButton
               label={canStart ? `Start ${module.metadata.title}` : `Waiting for ${Math.max(roster.length - readyCount, 1)} more`}
-              bursts
-              onPress={onStart}
+                onPress={onStart}
               busy={busy === 'start'}
               disabled={!canStart}
               accessibilityLabel={`Start ${module.metadata.title}`}
               testID="start-game"
             />
-            <PlayroomButton label="Edit setup" variant="link" onPress={onReopen} busy={busy === 'reopen'} accessibilityLabel="Reopen game setup" testID="reopen-game-setup" />
+            <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.center]}>Starts with a five-second countdown.</PlayroomText>
           </>
         ) : (
           <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="setup-leave" />
@@ -432,7 +435,7 @@ function ReadyScreen({
     >
       <PhoneTopBar back={youAreHost ? { label: 'Setup', onPress: onReopen, testID: 'setup-nav-back' } : undefined} you={you} />
       <PlayroomHeading type={playroomPhone.type.heading}>{currentReady ? 'You’re all set!' : `Ready for ${module.metadata.title}?`}</PlayroomHeading>
-      <Summary module={module} settings={setup.settings} />
+      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>{module.metadata.title}</PlayroomText>
       <Pressable
         onPress={raise}
         disabled={busy === 'ready'}
@@ -456,11 +459,12 @@ function ReadyScreen({
       <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
         {status}
       </PlayroomText>
-      {youAreHost && waiting.length > 0 ? (
-        <View style={styles.waiting} accessible accessibilityLabel={`Still waiting for ${waiting.map((seat) => seat.nickname).join(', ')}`}>
-          {waiting.map((seat) => (
-            <PlayroomAvatar key={seat.playerId} avatarId={seat.avatar} size={36} away={seat.away} />
-          ))}
+      {youAreHost && roster.length > 0 ? (
+        <View style={styles.waiting} accessible accessibilityLabel={`Players: ${roster.map((seat) => `${seat.nickname}, ${seat.away ? 'reconnecting' : setup.readyPlayerIds.includes(seat.playerId) ? 'ready' : 'waiting'}`).join('; ')}`}>
+          {roster.map((seat) => <View key={seat.playerId} style={styles.readyPerson}>
+            <PlayroomAvatar avatarId={seat.avatar} size={36} away={seat.away} />
+            <PlayroomText color={seat.away ? 'muted' : setup.readyPlayerIds.includes(seat.playerId) ? 'success' : 'ink'} style={playroomPhone.type.caption}>{seat.nickname}</PlayroomText>
+          </View>)}
         </View>
       ) : null}
       {failure ? <PhoneNotice testID="setup-error">{failure}</PhoneNotice> : null}
@@ -544,6 +548,10 @@ function useSecondsLeft(endsAt: number): number {
 const RING = 220;
 
 const styles = StyleSheet.create({
+  readyPerson: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 20, backgroundColor: playroomColors.surface },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  summaryValue: { flexShrink: 1, textAlign: 'right', maxWidth: '55%' },
   flex: {
     flex: 1,
   },
@@ -561,12 +569,12 @@ const styles = StyleSheet.create({
     padding: 5,
     borderRadius: playroomRadii.input,
     backgroundColor: playroomColors.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: playroomColors.border,
   },
   segment: {
     flex: 1,
-    minHeight: 40,
+    minHeight: playroomPhone.minTarget,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
@@ -574,8 +582,8 @@ const styles = StyleSheet.create({
   },
   segmentOn: {
     backgroundColor: playroomColors.lavender,
-    borderWidth: 2,
-    borderColor: playroomColors.ink,
+    borderWidth: 1,
+    borderColor: playroomColors.border,
   },
   settings: {
     gap: 14,
@@ -597,7 +605,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: playroomRadii.input,
     backgroundColor: playroomColors.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: playroomColors.border,
   },
   step: {
@@ -628,7 +636,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: playroomRadii.input,
     backgroundColor: playroomColors.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: playroomColors.border,
   },
   chevron: {
@@ -666,8 +674,8 @@ const styles = StyleSheet.create({
   },
   optionOn: {
     backgroundColor: playroomColors.lavender,
-    borderWidth: 2,
-    borderColor: playroomColors.ink,
+    borderWidth: 1,
+    borderColor: playroomColors.border,
   },
   check: {
     width: 22,
@@ -702,7 +710,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: playroomRadii.input,
     backgroundColor: playroomColors.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: playroomColors.border,
   },
   raise: {

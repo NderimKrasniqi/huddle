@@ -150,7 +150,7 @@ describe('ScanScreen', () => {
   it('returns to the join form from back and manual code actions', async () => {
     const result = await render(<ScanScreen />);
 
-    expect(StyleSheet.flatten(result.getByText('Enter code instead').props.style)).toMatchObject({
+    expect(StyleSheet.flatten(result.getByText('Type the code instead').props.style)).toMatchObject({
       color: playroomColors.ink,
     });
 

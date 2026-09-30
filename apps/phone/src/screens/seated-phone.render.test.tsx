@@ -282,7 +282,7 @@ describe('Phone picker', () => {
       />,
     );
 
-    expect(result.getByText('1 player away. Waiting for them to reconnect.')).toBeTruthy();
+    expect(result.getByText('Reconnecting: Milo.')).toBeTruthy();
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
   });
 

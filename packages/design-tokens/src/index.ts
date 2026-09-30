@@ -26,6 +26,7 @@ export {
   playroomAvatarCircles,
   playroomAwayCircle,
   playroomColors,
+  playroomCoverColors,
   playroomEasing,
   playroomFonts,
   playroomMotion,

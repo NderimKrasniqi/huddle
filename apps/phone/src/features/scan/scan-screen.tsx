@@ -1,4 +1,4 @@
-import { playroomColors, playroomFonts, playroomPhone, playroomRadii } from '@huddle/design-tokens';
+import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
 import { PlayroomButton, PlayroomStatusImage, PlayroomText } from '@huddle/ui/native';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useIsFocused, useRouter } from 'expo-router';
@@ -89,21 +89,22 @@ export function ScanScreen() {
         />
       ) : null}
       {cameraSurface ? <View pointerEvents="none" style={styles.cameraTint} /> : null}
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={cameraSurface ? ['top', 'left', 'right'] : undefined}>
         <View style={styles.topBar}>
           <Pressable
             onPress={goBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to Join Room"
+            accessibilityLabel={cameraSurface ? 'Scan to join, back' : 'Back'}
+            accessibilityHint="Returns to the room code screen"
+            hitSlop={12}
             style={styles.backButton}
             testID="scanner-back"
           >
-            <PlayroomText color={cameraSurface ? 'surface' : 'ink'} style={[playroomPhone.type.heading, styles.center]}>×</PlayroomText>
+            <PlayroomText color={cameraSurface ? 'surface' : 'ink'} style={styles.backChevron}>‹</PlayroomText>
+            <PlayroomText color={cameraSurface ? 'surface' : 'ink'} style={playroomPhone.type.label}>
+              {cameraSurface ? 'Scan to join' : 'Back'}
+            </PlayroomText>
           </Pressable>
-          <PlayroomText color={cameraSurface ? 'surface' : 'ink'} style={[playroomPhone.type.body, styles.center, styles.topTitle]}>
-            {cameraSurface ? 'Point at the TV\nroom code' : 'Join with QR'}
-          </PlayroomText>
-          <View style={styles.topButtonSpacer} />
         </View>
 
         <View style={[styles.content, cameraSurface && !message ? styles.cameraContent : null]}>
@@ -166,14 +167,22 @@ export function ScanScreen() {
                   <View style={[styles.corner, styles.cornerBottomRight]} />
                 </View>
               )}
+              {message ? null : (
+                <PlayroomText color="surface" style={[playroomPhone.type.label, styles.center, styles.caption]}>
+                  Point your camera at the QR code on the TV
+                </PlayroomText>
+              )}
             </>
           )}
         </View>
 
-        {cameraSurface ? (
-          <PlayroomButton label="Enter code instead" variant="secondary" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-manual-code" style={styles.manualButton} />
-        ) : null}
       </SafeAreaView>
+      {cameraSurface && !message ? (
+        <SafeAreaView edges={['bottom']} style={styles.sheet}>
+          <View style={styles.grab} />
+          <PlayroomButton label="Type the code instead" variant="secondary" onPress={goBack} accessibilityLabel="Enter room code manually" testID="scanner-manual-code" />
+        </SafeAreaView>
+      ) : null}
     </View>
   );
 }
@@ -185,28 +194,25 @@ const styles = StyleSheet.create({
   recoveryRoot: { backgroundColor: playroomColors.canvas },
   cameraTint: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: playroomColors.ink, opacity: 0.58 },
   safeArea: { flex: 1, justifyContent: 'space-between' },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 8 },
-  backButton: { width: 44, height: 44, borderRadius: playroomRadii.pill, alignItems: 'center', justifyContent: 'center' },
-  topButtonSpacer: { width: 44, height: 44 },
-  topTitle: { flex: 1, fontFamily: playroomFonts.strong },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: playroomPhone.gutter + 4, paddingTop: 8 },
+  backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: playroomPhone.minTarget },
+  backChevron: { fontSize: 30, lineHeight: 32 },
+  caption: { maxWidth: 280, marginTop: 32 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  cameraContent: { justifyContent: 'flex-start', paddingTop: 96 },
+  cameraContent: { paddingBottom: 48 },
   introContent: { width: '100%', maxWidth: 330, alignItems: 'center', gap: 24 },
-  introArtwork: { width: '100%', height: 250, marginBottom: 8 },
   recoveryContent: { width: '100%', maxWidth: 330, alignItems: 'center', gap: 16 },
-  recoveryArtwork: { width: '100%', height: 190, marginBottom: 8 },
   recoveryMessage: { maxWidth: 270, opacity: 0.8 },
   recoveryAction: { width: '100%', minHeight: 50, borderRadius: playroomRadii.input },
   recoverySecondaryAction: { width: '100%', minHeight: 48, borderRadius: playroomRadii.input },
   frame: { width: '100%', maxWidth: 320, aspectRatio: 1.08, borderRadius: playroomRadii.card, alignItems: 'center', justifyContent: 'center' },
-  corner: { position: 'absolute', width: 58, height: 58, borderColor: playroomColors.canvas },
+  corner: { position: 'absolute', width: 58, height: 58, borderColor: playroomColors.orange },
   cornerTopLeft: { top: 0, left: 0, borderTopWidth: 5, borderLeftWidth: 5, borderTopLeftRadius: playroomRadii.button },
   cornerTopRight: { top: 0, right: 0, borderTopWidth: 5, borderRightWidth: 5, borderTopRightRadius: playroomRadii.button },
   cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 5, borderLeftWidth: 5, borderBottomLeftRadius: playroomRadii.button },
   cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 5, borderRightWidth: 5, borderBottomRightRadius: playroomRadii.button },
   scanAlert: { width: '100%', maxWidth: 330, alignItems: 'center', gap: 16, padding: 32, borderRadius: playroomRadii.card, backgroundColor: playroomColors.dangerSurface },
   alertTitle: { color: playroomColors.ink },
-  alertDetail: { opacity: 0.72 },
-  manualButton: { alignSelf: 'center', width: '80%', maxWidth: 320, minHeight: 50, marginBottom: 24, borderRadius: playroomRadii.input, borderColor: playroomColors.canvas, backgroundColor: playroomColors.canvas, shadowOpacity: 0, elevation: 0 },
-  manualLabel: { fontFamily: playroomFonts.strong },
+  sheet: { width: '100%', gap: 12, paddingHorizontal: playroomPhone.gutter + 4, paddingTop: 10, paddingBottom: 16, borderTopLeftRadius: playroomRadii.card, borderTopRightRadius: playroomRadii.card, backgroundColor: playroomColors.canvas },
+  grab: { alignSelf: 'center', width: 44, height: 5, borderRadius: playroomRadii.pill, backgroundColor: playroomColors.border },
 });

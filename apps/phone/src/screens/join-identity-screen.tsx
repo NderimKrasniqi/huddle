@@ -8,7 +8,7 @@ import {
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_LENGTH,
 } from '@huddle/domain';
-import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
+import { playroomAvatarCircles, playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
 import {
   PlayroomAvatar,
   PlayroomButton,
@@ -283,8 +283,7 @@ export default function JoinIdentityScreen() {
         testID="identity-screen"
         footer={
           <PlayroomButton
-            label={isJoining ? 'Joining room…' : 'Let’s go!'}
-            bursts
+            label={isJoining ? 'Joining room…' : 'I’m in!'}
             onPress={() => void submit()}
             busy={isJoining}
             disabled={!canJoin}
@@ -294,10 +293,42 @@ export default function JoinIdentityScreen() {
         }
       >
         <PhoneTopBar back={{ label: `Room ${code}`, onPress: () => router.replace('/'), testID: 'identity-back' }} />
-        <PlayroomHeading type={playroomPhone.type.heading}>Pick your look</PlayroomHeading>
+        <PlayroomHeading type={playroomPhone.type.heading}>Make an entrance</PlayroomHeading>
         <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
           {profile ? 'Welcome back! This is how everyone will see you.' : 'This is how everyone will see you.'}
         </PlayroomText>
+        <View style={[styles.pass, { backgroundColor: playroomAvatarCircles[avatarId] }]}>
+          <PlayroomAvatar avatarId={avatarId} size={88} />
+        <View style={styles.field}>
+          <PlayroomText color="muted" style={playroomPhone.type.caption}>
+            Your name
+          </PlayroomText>
+          <View style={styles.input}>
+            <TextInput
+              value={nickname}
+              onChangeText={(value) => {
+                setNickname(nicknameEntry(value));
+                setError(undefined);
+              }}
+              placeholder="Enter your name"
+              placeholderTextColor={playroomColors.muted}
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={NICKNAME_MAX_LENGTH * 2}
+              returnKeyType="done"
+              onSubmitEditing={() => void submit()}
+              style={styles.inputText}
+              accessibilityHint="Edit the name shown in the room"
+              accessibilityLabel="Display name"
+              testID="identity-display-name"
+            />
+            <PlayroomText color="muted" style={playroomPhone.type.caption} accessibilityElementsHidden>
+              {`${nickname.length}/${NICKNAME_MAX_LENGTH}`}
+            </PlayroomText>
+          </View>
+        </View>
+        </View>
+        {nickname.trim() === '' ? <Line testID="identity-name-hint">Add your name to save your seat.</Line> : null}
         <View style={styles.grid} testID="identity-avatar-grid">
           {AVATAR_IDS.map((candidate) => {
             const taken = availability?.takenAvatarIds.includes(candidate) === true;
@@ -332,33 +363,6 @@ export default function JoinIdentityScreen() {
               </Pressable>
             );
           })}
-        </View>
-        <View style={styles.field}>
-          <PlayroomText color="muted" style={playroomPhone.type.caption}>
-            Your name
-          </PlayroomText>
-          <View style={styles.input}>
-            <TextInput
-              value={nickname}
-              onChangeText={(value) => {
-                setNickname(nicknameEntry(value));
-                setError(undefined);
-              }}
-              placeholder="Enter your name"
-              placeholderTextColor={playroomColors.muted}
-              autoCapitalize="words"
-              autoCorrect={false}
-              maxLength={NICKNAME_MAX_LENGTH * 2}
-              returnKeyType="done"
-              onSubmitEditing={() => void submit()}
-              style={styles.inputText}
-              accessibilityLabel="Display name"
-              testID="identity-display-name"
-            />
-            <PlayroomText color="muted" style={playroomPhone.type.caption} accessibilityElementsHidden>
-              {`${nickname.length}/${NICKNAME_MAX_LENGTH}`}
-            </PlayroomText>
-          </View>
         </View>
         {pending ? <Line testID="identity-availability-pending">Checking room availability…</Line> : null}
         {roomUnavailable ? <PhoneNotice testID="identity-room-missing">No room has that code. Go back and check the TV.</PhoneNotice> : null}
@@ -438,7 +442,9 @@ const styles = StyleSheet.create({
     ...playroomPhone.type.caption,
     fontSize: 11,
   },
+  pass: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: playroomRadii.card },
   field: {
+    flex: 1,
     gap: 6,
   },
   input: {
@@ -447,7 +453,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: 16,
     borderRadius: playroomRadii.input,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: playroomColors.border,
     backgroundColor: playroomColors.surface,
   },

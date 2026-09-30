@@ -7,7 +7,7 @@ import { fontFamilies } from './typography';
  *
  * Three rules follow the concept boards rather than the spec: headings use
  * Nunito Black and run larger, the primary button is orange, and screens are
- * framed by more props and burst dashes.
+ * framed by cohesive lounge artwork and quieter controls.
  *
  * Game modules do not consume these; each game owns its own theme.
  */
@@ -30,6 +30,12 @@ export const playroomColors = {
   dangerSurface: '#FFE0E5',
   disabled: '#E5DEE9',
 } as const;
+
+/** The five lounge covers belong to platform presentation, not game themes. */
+export const playroomCoverColors: Readonly<Record<string, string>> = {
+  trivia: '#DED2FF', voting: '#F9D9C1', 'doodle-dash': '#D8E8EC',
+  'quick-poll': '#F4E4BB', 'hot-take': '#F3D4D8',
+};
 
 export type PlayroomColor = keyof typeof playroomColors;
 

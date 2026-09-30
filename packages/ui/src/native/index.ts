@@ -24,6 +24,8 @@ export {
   type PlayroomStatusArt,
 } from './playroom-artwork';
 export { PlayroomAvatar, type PlayroomAvatarProps } from './playroom-avatar';
+export { PlayroomMoment, PlayroomGameCover, PlayroomRosterRow, playroomCoverColor } from './playroom-lounge';
+export { useRoomMoments } from './use-room-moments';
 export {
   PlayroomButton,
   type PlayroomButtonProps,

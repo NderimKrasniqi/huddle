@@ -29,7 +29,7 @@ export function TvReadyCheckScreen({
   reduceMotion = false,
 }: TvGameSetupScreenProps) {
   const title = gameTitle?.trim() || (gameId === 'trivia' ? 'Trivia' : gameId === 'voting' ? 'Voting' : 'Game');
-  const { readyCount, playerCount, allReady } = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
+  const { readyCount, playerCount, allReady, minPlayers } = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
   const isReady = (player: TvGamePlayer) => player.away !== true && readyPlayerIds.includes(player.id);
   const waiting = players.filter((player) => !isReady(player)).map((player) => player.name);
   const values = settings === undefined || Array.isArray(settings) ? {} : (settings as Readonly<Record<string, string>>);
@@ -61,13 +61,21 @@ export function TvReadyCheckScreen({
               {allReady ? 'Every hand is up!' : `${readyCount} of ${playerCount} hands up`}
             </PlayroomText>
             <PlayroomText color="muted" style={playroomTv.type.body}>
-              {allReady ? tvHostCopy(hostName, 'can start the game') : `Waiting for ${listNames(waiting)}`}
+              {allReady ? tvHostCopy(hostName, 'can start the game') : waitingCopy(waiting, playerCount, minPlayers)}
             </PlayroomText>
           </View>
         </View>
       </PlayroomTvStage>
     </View>
   );
+}
+
+/** Names who the room waits for, or how many more players the game needs. */
+function waitingCopy(waiting: readonly string[], playerCount: number, min: number | undefined): string {
+  if (waiting.length > 0) return `Waiting for ${listNames(waiting)}`;
+  const missing = (min ?? 0) - playerCount;
+  if (missing > 0) return `Need ${missing} more ${missing === 1 ? 'player' : 'players'} to start`;
+  return 'Waiting for everyone';
 }
 
 function Seat({
@@ -79,9 +87,9 @@ function Seat({
   readonly ready: boolean;
   readonly reduceMotion: boolean;
 }) {
-  const lift = useSharedValue(ready ? -LIFT : 0);
+  const lift = useSharedValue(ready && !reduceMotion ? -LIFT : 0);
   useEffect(() => {
-    const to = ready ? -LIFT : 0;
+    const to = ready && !reduceMotion ? -LIFT : 0;
     lift.set(reduceMotion ? to : withTiming(to, { duration: playroomMotion.entrance, easing: Easing.bezier(...playroomEasing.out) }));
   }, [lift, ready, reduceMotion]);
   const lifted = useAnimatedStyle(() => ({ transform: [{ translateY: lift.get() }] }));
@@ -90,7 +98,7 @@ function Seat({
     <Animated.View
       style={[styles.seat, lifted]}
       accessible
-      accessibilityLabel={`${player.name}${player.isHost ? ', host' : ''}${player.away ? ', away' : ready ? ', ready' : ''}`}
+      accessibilityLabel={`${player.name}${player.isHost ? ', host' : ''}${player.away ? ', reconnecting' : ready ? ', ready' : ', waiting'}`}
     >
       {player.avatarId ? (
         <PlayroomAvatar
@@ -104,6 +112,7 @@ function Seat({
       <PlayroomText color={ready ? 'ink' : 'muted'} numberOfLines={1} style={[playroomTv.type.label, styles.name]} accessibilityElementsHidden>
         {player.name}
       </PlayroomText>
+      <PlayroomText color={ready ? "success" : "muted"} style={playroomTv.type.caption}>{player.away ? 'Reconnecting' : ready ? 'Ready' : 'Waiting'}</PlayroomText>
       {player.isHost ? (
         <View style={styles.hostTag}>
           <PlayroomText style={playroomTv.type.caption}>HOST</PlayroomText>
@@ -127,7 +136,7 @@ const styles = StyleSheet.create({
   column: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
-    paddingTop: playroomTv.safeY - 10,
+    paddingTop: 170,
     gap: 14,
   },
   grid: {
@@ -137,8 +146,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     columnGap: 60,
     // Heads break out of the top of their circles, so rows need room above.
-    rowGap: 34,
-    marginTop: 34,
+    rowGap: 20,
+    marginTop: 44,
   },
   seat: {
     width: 216,

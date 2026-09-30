@@ -165,6 +165,8 @@ export function SeatedPhone({
     <>
       <LobbyScreen
         session={session}
+        returned={room.returned}
+        welcoming={room.welcoming}
         roster={roster}
         standing={standing}
         busy={busy}
@@ -205,9 +207,9 @@ function PhoneRuntimeMount({
       ? { playerId: session.playerId, nickname: session.nickname, away: false, avatar: session.avatar }
       : { playerId: seat.playerId, nickname: seat.nickname, away: seat.away, avatar: seat.avatar };
   const module = screen.module as GameModule<unknown, GameEvent>;
+  const hostBackToLobby = youAreHost && screen.kind === 'finished';
   return (
     <View style={styles.runtime} testID={`phone-runtime-${module.metadata.id}`}>
-  const hostBackToLobby = youAreHost && screen.kind === 'finished';
       {module.screens.phone({
         state: screen.state,
         player,
@@ -216,11 +218,11 @@ function PhoneRuntimeMount({
         // The game draws its own controls; host navigation returns only at the
         // finished boundary, never over private answer or vote controls.
         hostChromeInsetTop: undefined,
-        clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
-      })}
         // Reserve room for the Host's Back to lobby button below, so the
         // finished screen's own footer is not drawn underneath it.
         hostChromeInsetBottom: hostBackToLobby ? RUNTIME_BACK_TO_LOBBY_OFFSET + playroomPhone.buttonHeight : undefined,
+        clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
+      })}
       {hostBackToLobby ? (
         <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>
           <PlayroomButton label="Back to lobby" onPress={onBackToLobby} accessibilityLabel="Back to lobby" testID="runtime-back-to-lobby" />
@@ -333,11 +335,11 @@ function ConfirmationSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  center: {
 // Gap between the device's bottom inset and the Host's Back to lobby button.
 const RUNTIME_BACK_TO_LOBBY_OFFSET = 24;
 
+const styles = StyleSheet.create({
+  center: {
     textAlign: 'center',
   },
   runtime: {

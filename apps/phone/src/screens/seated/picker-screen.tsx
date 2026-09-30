@@ -1,7 +1,7 @@
 import type { AvatarId, GameModule } from '@huddle/domain';
 import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
 import { CAROUSEL_REGISTRY, carouselWindow } from '@huddle/game-registry';
-import { PlayroomAvatar, PlayroomButton, PlayroomHeading, PlayroomPill, PlayroomText, playroomGameArt } from '@huddle/ui/native';
+import { PlayroomAvatar, PlayroomButton, PlayroomHeading, PlayroomPill, PlayroomText, PlayroomGameCover, playroomCoverColor, playroomGameArt } from '@huddle/ui/native';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { pickerControlState } from '../seated-phone-model';
@@ -45,13 +45,15 @@ export function PickerScreen({
   const controls = pickerControlState({ youAreHost, focusedPlaceholder: focused?.placeholder === true, busy: busy !== null });
   if (focused === undefined) return null;
   const soon = focused.placeholder === true;
-  const art = playroomGameArt(focused.metadata.id);
 
   return (
     <PhoneFrame
       avatarId={you?.avatarId}
       testID="phone-game-picker"
-      footer={youAreHost ? undefined : <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" />}
+      footer={youAreHost ? <PlayroomButton label={soon ? 'Coming soon' : `Set up ${focused.metadata.title}`}
+        onPress={() => onChoose(focused)} busy={busy === 'select'} disabled={!controls.selectEnabled}
+        accessibilityLabel={soon ? `${focused.metadata.title}, coming soon` : `Set up ${focused.metadata.title}`}
+        testID={soon ? 'picker-coming-soon' : 'picker-select'} /> : <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" />}
     >
       <PhoneTopBar
         back={youAreHost ? { label: 'Room', onPress: onBackToRoom, testID: 'picker-back-top' } : undefined}
@@ -74,25 +76,15 @@ export function PickerScreen({
         accessibilityLabel={`${focused.metadata.title}${soon ? ', coming soon' : ''}`}
         testID={`phone-game-card-${focused.metadata.id}`}
       >
-        <PhoneCard style={[styles.featured, soon ? styles.soon : null]}>
-          {art ? <Image source={art} style={styles.featuredArt} resizeMode="contain" accessible={false} /> : null}
+        <PhoneCard style={[styles.featured, { backgroundColor: playroomCoverColor(focused.metadata.id) }]}>
+          <PlayroomGameCover gameId={focused.metadata.id} height={180} style={styles.cover} />
           <PlayroomText color={soon ? 'muted' : 'ink'} style={playroomPhone.type.hero}>
             {focused.metadata.title}
           </PlayroomText>
           <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
             {focused.metadata.tagline ?? focused.metadata.category}
           </PlayroomText>
-          {youAreHost ? (
-            <PlayroomButton
-              label={soon ? 'Coming soon' : `Set up ${focused.metadata.title}`}
-              onPress={() => onChoose(focused)}
-              busy={busy === 'select'}
-              disabled={!controls.selectEnabled}
-              accessibilityLabel={soon ? `${focused.metadata.title}, coming soon` : `Set up ${focused.metadata.title}`}
-              testID={soon ? 'picker-coming-soon' : 'picker-select'}
-              style={styles.featuredAction}
-            />
-          ) : soon ? (
+          {soon ? (
             <PlayroomPill tone="disabled" textStyle={playroomPhone.type.caption}>Coming soon</PlayroomPill>
           ) : null}
         </PhoneCard>
@@ -114,7 +106,7 @@ export function PickerScreen({
                 testID={`phone-game-card-${module.metadata.id}`}
                 style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
               >
-                <View style={[styles.rowIcon, placeholder ? styles.soon : null]}>
+                <View style={[styles.rowIcon, { backgroundColor: playroomCoverColor(module.metadata.id) }]}>
                   {icon ? <Image source={icon} style={styles.rowArt} resizeMode="contain" accessible={false} /> : null}
                 </View>
                 <View style={styles.flex}>
@@ -143,6 +135,7 @@ export function PickerScreen({
 }
 
 const styles = StyleSheet.create({
+  cover: { width: '100%' },
   flex: {
     flex: 1,
   },

@@ -105,6 +105,8 @@ export type TvReadiness = {
   readonly readyCount: number;
   readonly playerCount: number;
   readonly allReady: boolean;
+  /** Fewest seats the game can start with, when the range is known. */
+  readonly minPlayers: number | undefined;
 };
 
 const PLAYER_RANGES: Readonly<Record<string, { readonly min: number; readonly max: number }>> = {
@@ -123,14 +125,15 @@ export function tvReadiness({
   // Without an installed module range there is no authoritative start gate to
   // mirror, so `readiness` fails closed rather than claiming an unknown game
   // is playable.
+  const range = playerRange ?? PLAYER_RANGES[gameId];
   const gate = readiness({
     stage: stage ?? 'configuring',
     seats: players.map((player) => ({ playerId: player.id, away: player.away === true })),
     readyPlayerIds,
-    playerRange: playerRange ?? PLAYER_RANGES[gameId],
+    playerRange: range,
   });
 
-  return { readyCount: gate.readyCount, playerCount: gate.seatCount, allReady: gate.complete };
+  return { readyCount: gate.readyCount, playerCount: gate.seatCount, allReady: gate.complete, minPlayers: range?.min };
 }
 
 export function tvModeLabel(mode: string | undefined): string {

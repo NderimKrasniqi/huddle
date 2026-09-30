@@ -80,7 +80,7 @@ export type PlayroomHeadingProps = {
 export function PlayroomHeading({
   children,
   type,
-  bursts = true,
+  bursts = false,
   color = 'ink',
   numberOfLines,
   style,

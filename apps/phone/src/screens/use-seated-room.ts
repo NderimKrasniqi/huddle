@@ -1,3 +1,4 @@
+import { useRoomMoments } from '@huddle/ui/native';
 import { api } from '@huddle/convex';
 import type { GameEvent, GameModule, GameSettings, GameSettingsMode } from '@huddle/domain';
 import { CAROUSEL_REGISTRY, runningGameScreen } from '@huddle/game-registry';
@@ -58,7 +59,7 @@ export function useSeatedRoom({
   readonly onLeft: () => void | Promise<void>;
 }) {
   useHeartbeat();
-  const { beginLeave, cancelLeave, sessionToken } = usePhoneSession();
+  const { beginLeave, cancelLeave, sessionToken, joinWelcomeUntil } = usePhoneSession();
   const reduceMotion = usePhoneReducedMotion();
   const token = sessionToken;
   const rosterAnswer = useQuery(api.players.roster, { roomId: session.roomId });
@@ -127,6 +128,11 @@ export function useSeatedRoom({
   }, [browsingAt, setupDraft]);
 
   const screen = runningGameScreen(running);
+  const playerIds = useMemo(() => rosterAnswer?.map((player) => String(player.playerId)), [rosterAnswer]);
+  const moments = useRoomMoments({ playerIds, runtime: screen.kind,
+    lobbyResolved: running !== undefined && screen.kind === 'lobby' && browsingAt === null && setupDraft === null,
+    browsing: browsingAt !== undefined && browsingAt !== null,
+  });
   const installedOrSelectedModule = setupDraft === null || setupDraft === undefined
     ? undefined
     : CAROUSEL_REGISTRY.find((module) => module.metadata.id === setupDraft.gameId);
@@ -316,9 +322,11 @@ export function useSeatedRoom({
     setFailure(undefined);
     setConfirmation({
       title: 'Back to the room?',
-      message: 'This ends the current game for everyone.',
+      message: screen.kind === 'finished'
+        ? 'Everyone goes back to the room to choose the next game.'
+        : 'This ends the current game for everyone.',
       confirmLabel: 'Back to room',
-      destructive: true,
+      destructive: screen.kind !== 'finished',
       action: 'end',
       onConfirm: () => {
         void (async () => {
@@ -349,6 +357,8 @@ export function useSeatedRoom({
   }
 
   return {
+    returned: moments.returned,
+    welcoming: joinWelcomeUntil !== undefined && joinWelcomeUntil > Date.now(),
     session,
     reduceMotion,
     roster,

@@ -25,11 +25,11 @@ describe('TV game flow renderers', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('stops the card window at the end of the catalogue instead of wrapping', async () => {
+  it('keeps the selected card centred at the end of the catalogue instead of wrapping', async () => {
     await render(<TvGameCarouselScreen selectedGameId="hot-take" reduceMotion />);
-    expect(screen.getByTestId('tv-game-card-doodle-dash')).toBeTruthy();
     expect(screen.getByTestId('tv-game-card-quick-poll')).toBeTruthy();
     expect(screen.getByLabelText('Hot Take, coming soon, selected')).toBeTruthy();
+    expect(screen.queryByTestId('tv-game-card-doodle-dash')).toBeNull();
     expect(screen.queryByTestId('tv-game-card-trivia')).toBeNull();
   });
 
@@ -81,7 +81,7 @@ describe('TV game flow renderers', () => {
     expect(screen.getByText('1 of 2 hands up')).toBeTruthy();
     expect(screen.getByText('Waiting for Bo')).toBeTruthy();
     expect(screen.getByLabelText('Ada, host, ready')).toBeTruthy();
-    expect(screen.getByLabelText('Bo')).toBeTruthy();
+    expect(screen.getByLabelText('Bo, waiting')).toBeTruthy();
   });
 
   it('tells the room the host can start once every hand is up', async () => {
@@ -115,7 +115,21 @@ describe('TV game flow renderers', () => {
     );
     expect(screen.queryByText('Every hand is up!')).toBeNull();
     expect(screen.getByLabelText('0 of 1 players are ready')).toBeTruthy();
-    expect(screen.getByLabelText('Away, away')).toBeTruthy();
+    expect(screen.getByLabelText('Away, reconnecting')).toBeTruthy();
+  });
+
+  it('says the room needs more players when every hand is up but the game needs more', async () => {
+    await render(
+      <TvGameSetupScreen
+        gameId="trivia"
+        stage="ready"
+        playerRange={{ min: 2, max: 10 }}
+        players={[{ id: 'ada', name: 'Ada', isHost: true }]}
+        readyPlayerIds={['ada']}
+        reduceMotion
+      />,
+    );
+    expect(screen.getByText('Need 1 more player to start')).toBeTruthy();
   });
 
   it('counts down to the server deadline on the TV clock', async () => {

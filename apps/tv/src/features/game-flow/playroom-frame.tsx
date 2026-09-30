@@ -1,6 +1,6 @@
 import { playroomColors, playroomTv } from '@huddle/design-tokens';
-import { PlayroomAvatar, PlayroomFloat, PlayroomText } from '@huddle/ui/native';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { PlayroomAvatar, PlayroomText } from '@huddle/ui/native';
+import { StyleSheet, View } from 'react-native';
 
 import type { TvGamePlayer } from './game-flow-model';
 
@@ -9,27 +9,8 @@ import type { TvGamePlayer } from './game-flow-model';
  * edges so they never sit behind information. They settle once and then
  * hold still.
  */
-export function TvPlayroomFrame({ reduceMotion }: { readonly reduceMotion: boolean }) {
-  return (
-    <>
-      <PlayroomFloat prop="starYellow" width={123} height={123} style={{ left: 31, bottom: 35 }} reduceMotion={reduceMotion} />
-      <PlayroomFloat prop="ballPurple" width={58} height={58} style={{ left: 165, bottom: 46 }} reduceMotion={reduceMotion} delay={80} />
-      <PlayroomFloat prop="starPurple" width={81} height={81} style={{ left: 46, top: 230 }} reduceMotion={reduceMotion} delay={40} />
-      <PlayroomFloat prop="ballCream" width={46} height={46} style={{ left: 84, top: 353 }} reduceMotion={reduceMotion} delay={120} />
-      <PlayroomFloat prop="ballOrange" width={108} height={108} style={{ right: 50, bottom: 38 }} reduceMotion={reduceMotion} delay={40} />
-      <PlayroomFloat prop="ballPurple" width={58} height={58} style={{ right: 65, bottom: 192 }} reduceMotion={reduceMotion} delay={160} />
-      <PlayroomFloat prop="starPurple" width={88} height={88} style={{ right: 50, top: 192 }} reduceMotion={reduceMotion} delay={80} />
-      <PlayroomFloat prop="ballOrange" width={65} height={65} style={{ right: 161, top: 58 }} reduceMotion={reduceMotion} delay={120} />
-      <Dash style={{ left: 223, top: 941, transform: [{ rotate: '-35deg' }] }} />
-      <Dash style={{ left: 257, top: 1006, transform: [{ rotate: '15deg' }] }} />
-      <Dash style={{ left: 1659, top: 941, transform: [{ rotate: '35deg' }] }} />
-      <Dash style={{ left: 1628, top: 1006, transform: [{ rotate: '-15deg' }] }} />
-    </>
-  );
-}
-
-function Dash({ style }: { readonly style: ViewStyle }) {
-  return <View style={[styles.dash, style]} pointerEvents="none" accessible={false} />;
+export function TvPlayroomFrame({ reduceMotion: _reduceMotion }: { readonly reduceMotion: boolean }) {
+  return <View pointerEvents="none" accessible={false} style={styles.halo} />;
 }
 
 export type TvRosterRowProps = {
@@ -72,6 +53,7 @@ export function TvRosterRow({ players, size = playroomTv.avatar.row, names = tru
 }
 
 const styles = StyleSheet.create({
+  halo: { position: 'absolute', width: 1540, height: 620, left: 190, top: 250, borderRadius: 999, backgroundColor: playroomColors.lavender, opacity: 0.24 },
   dash: {
     position: 'absolute',
     width: 42,

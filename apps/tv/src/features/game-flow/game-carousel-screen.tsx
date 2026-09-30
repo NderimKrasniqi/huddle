@@ -1,6 +1,6 @@
-import { playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomShadows, playroomTv } from '@huddle/design-tokens';
-import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage, playroomGameArt } from '@huddle/ui/native';
-import { Image, StyleSheet, View } from 'react-native';
+import { playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
+import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage, PlayroomGameCover, playroomCoverColor } from '@huddle/ui/native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
 import { DEFAULT_TV_CAROUSEL_CARDS, tvHostCopy, type TvGameCarouselCard, type TvGamePlayer } from './game-flow-model';
@@ -48,8 +48,7 @@ export function TvGameCarouselScreen({
     0,
     catalog.length - 1,
   );
-  const start = clamp(index - 1, 0, Math.max(catalog.length - 3, 0));
-  const window = catalog.slice(start, start + 3);
+  const window = [catalog[index - 1], catalog[index], catalog[index + 1]];
   const spokenHost = hostName?.trim() || 'The host';
 
   return (
@@ -66,9 +65,9 @@ export function TvGameCarouselScreen({
             {tvHostCopy(hostName, 'is choosing a game.')}
           </PlayroomText>
           <View style={styles.cards} pointerEvents="none" focusable={false} testID="tv-game-carousel-cards">
-            {window.map((card) => (
-              <GameCard key={card.id} card={card} selected={card.id === catalog[index]?.id} reduceMotion={reduceMotion} />
-            ))}
+            {window.map((card, position) => card ? (
+              <GameCard key={card.id} card={card} selected={position === 1} reduceMotion={reduceMotion} />
+            ) : <View key={`edge-${position}`} style={styles.edge} />)}
           </View>
           <TvRosterRow players={players} />
         </View>
@@ -87,22 +86,19 @@ function GameCard({
   readonly reduceMotion: boolean;
 }) {
   const available = card.available !== false;
-  const art = playroomGameArt(card.id);
   return (
     <Animated.View
       // A new key when selection moves replays the settle on the new card only.
       key={selected ? 'selected' : 'side'}
       entering={selected && !reduceMotion ? SELECT : undefined}
-      style={[styles.card, selected ? styles.selected : null, !available ? styles.soon : null]}
+      style={[styles.card, { backgroundColor: playroomCoverColor(card.id) }, selected ? styles.selected : null]}
       pointerEvents="none"
       focusable={false}
       accessible
       accessibilityLabel={`${card.title}${available ? '' : ', coming soon'}${selected ? ', selected' : ''}`}
       testID={`tv-game-card-${card.id}`}
     >
-      <View style={[styles.art, selected ? styles.artSelected : null]}>
-        {art ? <Image source={art} style={styles.artImage} resizeMode="contain" accessible={false} /> : null}
-      </View>
+      <PlayroomGameCover gameId={card.id} height={selected ? 390 : 235} style={styles.cover} />
       <PlayroomText color={available ? 'ink' : 'muted'} numberOfLines={1} style={selected ? styles.titleSelected : styles.title}>
         {card.title}
       </PlayroomText>
@@ -123,6 +119,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 const styles = StyleSheet.create({
+  cover: { width: '100%' },
+  edge: { width: 380 },
   viewport: {
     flex: 1,
     backgroundColor: playroomColors.canvas,
@@ -130,18 +128,18 @@ const styles = StyleSheet.create({
   column: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
-    paddingTop: playroomTv.safeY - 10,
+    paddingTop: 170,
     gap: 16,
   },
   cards: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 42,
+    gap: 28,
     marginTop: 8,
     marginBottom: 34,
   },
   card: {
-    width: 460,
+    width: 380,
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 26,
@@ -149,13 +147,10 @@ const styles = StyleSheet.create({
     paddingBottom: 26,
     borderRadius: playroomRadii.card,
     backgroundColor: playroomColors.surface,
-    ...playroomShadows.card,
+
   },
   selected: {
-    width: 614,
-    backgroundColor: playroomColors.lavender,
-    borderWidth: 6,
-    borderColor: playroomColors.ink,
+    width: 820,
   },
   soon: {
     backgroundColor: playroomColors.disabled,
@@ -179,8 +174,8 @@ const styles = StyleSheet.create({
   },
   titleSelected: {
     ...playroomTv.type.heading,
-    fontSize: 70,
-    lineHeight: 78,
+    fontSize: 76,
+    lineHeight: 84,
     textAlign: 'center',
   },
   subtitle: {
