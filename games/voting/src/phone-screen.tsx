@@ -25,9 +25,13 @@ export function VotingPhoneScreen({
   sendEvent,
   safeAreaInsets,
   hostChromeInsetTop,
+  hostChromeInsetBottom,
   clockRemainingMs,
 }: PhoneGameScreenProps<VotingState, VotingEvent>) {
-  const insets = safeAreaInsets ?? ZERO_INSETS;
+  const deviceInsets = safeAreaInsets ?? ZERO_INSETS;
+  // Platform chrome at the bottom (the Host's Back to lobby) extends the
+  // device inset, so every surface's footer stays clear of it.
+  const insets = { ...deviceInsets, bottom: deviceInsets.bottom + finiteInset(hostChromeInsetBottom) };
   const chromeInset = finiteInset(hostChromeInsetTop);
   const current = playableVotingState(state);
   const model = votingPhoneModel(state, player.playerId);

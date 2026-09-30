@@ -207,6 +207,7 @@ function PhoneRuntimeMount({
   const module = screen.module as GameModule<unknown, GameEvent>;
   return (
     <View style={styles.runtime} testID={`phone-runtime-${module.metadata.id}`}>
+  const hostBackToLobby = youAreHost && screen.kind === 'finished';
       {module.screens.phone({
         state: screen.state,
         player,
@@ -217,8 +218,11 @@ function PhoneRuntimeMount({
         hostChromeInsetTop: undefined,
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
       })}
-      {youAreHost && screen.kind === 'finished' ? (
-        <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + 24, left: insets.left + 24, right: insets.right + 24 }]}>
+        // Reserve room for the Host's Back to lobby button below, so the
+        // finished screen's own footer is not drawn underneath it.
+        hostChromeInsetBottom: hostBackToLobby ? RUNTIME_BACK_TO_LOBBY_OFFSET + playroomPhone.buttonHeight : undefined,
+      {hostBackToLobby ? (
+        <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>
           <PlayroomButton label="Back to lobby" onPress={onBackToLobby} accessibilityLabel="Back to lobby" testID="runtime-back-to-lobby" />
         </View>
       ) : null}
@@ -331,6 +335,9 @@ function ConfirmationSheet({
 
 const styles = StyleSheet.create({
   center: {
+// Gap between the device's bottom inset and the Host's Back to lobby button.
+const RUNTIME_BACK_TO_LOBBY_OFFSET = 24;
+
     textAlign: 'center',
   },
   runtime: {

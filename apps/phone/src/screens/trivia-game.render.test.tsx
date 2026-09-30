@@ -56,11 +56,13 @@ function PhoneTrivia({
   sendEvent,
   clockRemainingMs,
   hostChromeInsetTop,
+  hostChromeInsetBottom,
 }: {
   readonly state: unknown;
   readonly sendEvent: (event: GameEvent) => void;
   readonly clockRemainingMs?: number;
   readonly hostChromeInsetTop?: number;
+  readonly hostChromeInsetBottom?: number;
 }) {
   return triviaModule.screens.phone({
     state,
@@ -68,6 +70,7 @@ function PhoneTrivia({
     sendEvent,
     safeAreaInsets: { top: 47, right: 11, bottom: 34, left: 13 },
     hostChromeInsetTop,
+    hostChromeInsetBottom,
     clockRemainingMs,
   });
 }
@@ -138,6 +141,15 @@ describe('Trivia Phone game renderer', () => {
       paddingTop: 47 + 64 + 16,
       paddingBottom: 34 + 24,
     });
+  });
+
+  it('keeps the finished footer clear of the platform Host bottom chrome', async () => {
+    const result = await render(
+      <PhoneTrivia state={{ ...revealState, phase: 'finished' }} sendEvent={jest.fn()} hostChromeInsetBottom={76} />,
+    );
+    const scrollStyle = StyleSheet.flatten(result.getByTestId('trivia-phone-finished-scroll').props.contentContainerStyle);
+
+    expect(scrollStyle).toMatchObject({ paddingBottom: 34 + 76 + 24 });
   });
 
   it('derives a new question countdown synchronously instead of flashing the prior beat', async () => {

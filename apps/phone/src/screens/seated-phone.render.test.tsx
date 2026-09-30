@@ -288,9 +288,11 @@ describe('Phone picker', () => {
 
   it('keeps player-range guidance when every current seat is ready but too few can start', async () => {
     const onePlayer = [setupRoster[0]!];
+    // Pin the range so this guards the guidance, not the live game metadata.
+    const twoPlayerTrivia = { ...trivia, metadata: { ...trivia.metadata, playerRange: { min: 2, max: 10 } } };
     const result = await renderSurface(
       <SetupSurface
-        module={trivia}
+        module={twoPlayerTrivia}
         setup={{ gameId: 'trivia', settings: { questions: '10' }, mode: 'standard', stage: 'ready', readyPlayerIds: ['host'] }}
         roster={onePlayer}
         playerId="host"

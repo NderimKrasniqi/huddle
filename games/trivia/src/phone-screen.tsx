@@ -28,9 +28,13 @@ export function TriviaPhoneScreen({
   sendEvent,
   safeAreaInsets,
   hostChromeInsetTop,
+  hostChromeInsetBottom,
   clockRemainingMs,
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
-  const insets = safeAreaInsets ?? ZERO_INSETS;
+  const deviceInsets = safeAreaInsets ?? ZERO_INSETS;
+  // Platform chrome at the bottom (the Host's Back to lobby) extends the
+  // device inset, so every surface's footer stays clear of it.
+  const insets = { ...deviceInsets, bottom: deviceInsets.bottom + finiteInset(hostChromeInsetBottom) };
   const chromeInsetTop = finiteInset(hostChromeInsetTop);
   const current = playableState(state);
   const countdownSeconds = useCountdownSeconds(

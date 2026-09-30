@@ -331,6 +331,12 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
    */
   readonly hostChromeInsetTop?: number;
   /**
+   * Additional bottom space reserved by the Phone host for platform chrome,
+   * such as the Host-only Back to lobby control at the finished boundary.
+   * Game screens add it to their bottom safe-area inset. Plain data, as above.
+   */
+  readonly hostChromeInsetBottom?: number;
+  /**
    * The authoritative remainder of the active server deadline, when one is
    * running. A phone may use this to animate a local display countdown, but
    * only the room's deadline can advance the game.
