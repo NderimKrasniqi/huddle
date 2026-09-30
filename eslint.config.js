@@ -25,6 +25,7 @@ module.exports = defineConfig([
     '**/expo-env.d.ts',
     'convex/convex/_generated/**',
     '.claude/**',
+    'output/**',
   ]),
   expoConfig,
   {
