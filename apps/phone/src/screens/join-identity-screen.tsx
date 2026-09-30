@@ -118,6 +118,13 @@ export default function JoinIdentityScreen() {
     };
   }, [cacheProfile]);
 
+  // A link to a room that does not exist has nothing to join, so it goes back
+  // to room-code entry with the code filled in and its inline "no room" error.
+  const linkedRoomMissing = routeState.kind === 'joining' && availability === null;
+  useEffect(() => {
+    if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
+  }, [code, linkedRoomMissing, router]);
+
   useEffect(() => {
     if (shouldReturnToSeat) {
       router.replace('/');
@@ -365,7 +372,6 @@ export default function JoinIdentityScreen() {
           })}
         </View>
         {pending ? <Line testID="identity-availability-pending">Checking room availability…</Line> : null}
-        {roomUnavailable ? <PhoneNotice testID="identity-room-missing">No room has that code. Go back and check the TV.</PhoneNotice> : null}
         {availability?.full ? <PhoneNotice testID="identity-room-full">That room is full. Ask someone to leave before joining.</PhoneNotice> : null}
         {selectedTaken ? <PhoneNotice testID="identity-avatar-taken">That avatar is already in use. Pick another one.</PhoneNotice> : null}
         {error ? <PhoneNotice testID="identity-error">{error}</PhoneNotice> : null}
