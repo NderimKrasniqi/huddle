@@ -188,6 +188,8 @@ Native Phone and TV screens follow the fifth-pass lounge prototype in
   join → lobby → picker → setup → ready → countdown → Trivia → return.
 - [x] Independent review; its fallback player range, scanner label and
   duplicate-action, and finished-game confirmation findings are repaired.
+- [x] Trivia and Voting accept one player (`playerRange.min: 1`) so a single
+  device can test the whole flow; range tests follow the declared minimum.
 - [ ] Two-seat run covering guest views, 10 seats, long names, larger text,
   reduced motion and Voting.
 - [ ] Android Phone and tvOS checks (not run; tvOS project not generated).

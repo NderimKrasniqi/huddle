@@ -1,4 +1,5 @@
 import { AVATAR_IDS, COUNTDOWN_MS } from '@huddle/domain';
+import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -269,11 +270,15 @@ describe('the countdown before a game', () => {
     await t.mutation(api.players.leaveRoom, { sessionToken: third.sessionToken });
     expect((await setupOf(t, room.roomId))?.stage).toBe('countdown');
 
-    // One player cannot play Trivia: the countdown stops.
+    // Falling below the game's minimum stops the countdown; a game that allows
+    // one player keeps counting down.
     await t.mutation(api.players.leaveRoom, { sessionToken: room.guest });
-    expect((await setupOf(t, room.roomId))?.stage).toBe('ready');
-    await countdownEnds(t);
-    expect(await runningOf(t, room.roomId)).toBeNull();
+    const minimum = gameLogicById('trivia')?.metadata.playerRange.min ?? 2;
+    expect((await setupOf(t, room.roomId))?.stage).toBe(minimum > 1 ? 'ready' : 'countdown');
+    if (minimum > 1) {
+      await countdownEnds(t);
+      expect(await runningOf(t, room.roomId)).toBeNull();
+    }
   });
 
   it('can be skipped by the Host starting at once', async () => {
