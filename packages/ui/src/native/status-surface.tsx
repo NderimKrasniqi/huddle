@@ -1,9 +1,8 @@
 import { radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { HuddleButton, type HuddleButtonVariant } from './huddle-button';
 import { HuddleText } from './huddle-text';
-import { LoadingMark } from './loading-mark';
 import { ScreenShell } from './screen-shell';
 
 export type StatusSurfaceVariant =
@@ -77,7 +76,7 @@ export function StatusSurface({
           style={styles.announcement}
         >
           {isLoading ? (
-            <LoadingMark testID={testID ? `${testID}-mark` : undefined} />
+            <ActivityIndicator size="large" color={semanticColors.text} testID={testID ? `${testID}-mark` : undefined} />
           ) : (
             <View focusable={false} style={[styles.symbol, { backgroundColor: semanticColors[recipe.accent] }]}>
               <HuddleText variant="title" color="text" systemFont={systemFont} accessibilityLabel={`${variant} status`}>{recipe.symbol}</HuddleText>

@@ -19,6 +19,8 @@ export type PhoneSessionContextValue = {
   readonly session: PlayerSession | null | undefined;
   readonly sessionToken: string | undefined;
   readonly restoringToken: boolean;
+  /** Ephemeral acknowledgement, set only by an authoritative join. */
+  readonly joinWelcomeUntil?: number;
   readonly notice: string | undefined;
   readonly rememberedProfile: GuestProfileV1 | undefined;
   readonly seat: PlayerSession | null | undefined;
@@ -46,6 +48,12 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
   const convex = useConvex();
   const [session, setSession] = useState<PlayerSession | null | undefined>();
   const [restoringToken, setRestoringToken] = useState(false);
+  const [joinWelcomeUntil, setJoinWelcomeUntil] = useState<number>();
+  useEffect(() => {
+    if (joinWelcomeUntil === undefined) return;
+    const timer = setTimeout(() => setJoinWelcomeUntil(undefined), Math.max(0, joinWelcomeUntil - Date.now()));
+    return () => clearTimeout(timer);
+  }, [joinWelcomeUntil]);
   const [sessionToken, setSessionToken] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [rememberedProfile, setRememberedProfile] = useState<GuestProfileV1>();
@@ -133,7 +141,8 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
           activeSessionRef.current = null;
           activeTokenRef.current = undefined;
           setSessionToken(undefined);
-          setSession(null);
+          setJoinWelcomeUntil(undefined);
+    setSession(null);
         }
       },
     );
@@ -148,6 +157,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     activeTokenRef.current = joinedToken;
     setSessionToken(joinedToken);
     setSession(publicSeat);
+    setJoinWelcomeUntil(Date.now() + 4600);
     setNotice(undefined);
   }, []);
 
@@ -172,7 +182,8 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
       credentialRevisionRef.current += 1;
       activeSessionRef.current = null;
       activeTokenRef.current = undefined;
-      setSession(null);
+      setJoinWelcomeUntil(undefined);
+    setSession(null);
       setSessionToken(undefined);
       return;
     }
@@ -180,6 +191,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     setNotice(reason);
     activeSessionRef.current = null;
     activeTokenRef.current = undefined;
+    setJoinWelcomeUntil(undefined);
     setSession(null);
     setSessionToken(undefined);
     clearPersistedCredential();
@@ -193,6 +205,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     activeTokenRef.current = undefined;
     await forgetSession(phoneSessionTokenStore);
     setNotice(undefined);
+    setJoinWelcomeUntil(undefined);
     setSession(null);
     setSessionToken(undefined);
   }, []);
@@ -203,6 +216,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     seat: session,
     sessionToken,
     restoringToken,
+    joinWelcomeUntil,
     notice,
     rememberedProfile,
     completeJoin,
@@ -212,7 +226,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     reportSeatLost,
     leave,
     clearNotice,
-  }), [beginLeave, cancelLeave, clearNotice, completeJoin, leave, notice, rememberProfile, rememberedProfile, reportSeatLost, restoringToken, session, sessionToken]);
+  }), [joinWelcomeUntil, beginLeave, cancelLeave, clearNotice, completeJoin, leave, notice, rememberProfile, rememberedProfile, reportSeatLost, restoringToken, session, sessionToken]);
 
   return <PhoneSessionContext.Provider value={value}>{children}</PhoneSessionContext.Provider>;
 }

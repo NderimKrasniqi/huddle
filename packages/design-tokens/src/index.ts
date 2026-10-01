@@ -22,3 +22,24 @@ export {
   reducedMotionDurations,
   type DurationToken,
 } from './motion';
+export {
+  playroomAvatarCircles,
+  playroomAwayCircle,
+  playroomColors,
+  playroomCoverColors,
+  playroomEasing,
+  playroomFonts,
+  playroomMotion,
+  playroomPhone,
+  playroomRadii,
+  playroomShadows,
+  playroomSpacing,
+  playroomTv,
+  type PlayroomColor,
+} from './playroom';
+export {
+  platformPhoneTheme,
+  platformTheme,
+  type PlatformPhoneTheme,
+  type PlatformTheme,
+} from './platform';

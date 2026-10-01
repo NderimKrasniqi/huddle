@@ -136,7 +136,7 @@ describe('TvGameFlowStage', () => {
     await rendered.unmount();
   });
 
-  it('shows the ready surface only after every current player is ready', async () => {
+  it('keeps the chosen settings visible on the ready check after everyone is ready', async () => {
     await render(
       <TvGameFlowStage
         browsingAt={0}
@@ -147,12 +147,13 @@ describe('TvGameFlowStage', () => {
       />,
     );
 
-    expect(screen.getByTestId('tv-game-ready')).toBeTruthy();
-    expect(screen.getByText('Everyone is ready!')).toBeTruthy();
-    expect(screen.getByText('Room KWRD')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-setup')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-setup-settings')).toBeTruthy();
+    expect(screen.getByText('Every hand is up!')).toBeTruthy();
+    expect(screen.queryByTestId('tv-game-ready')).toBeNull();
   });
 
-  it('passes the stable seat artwork into the setup roster projection', async () => {
+  it('passes the stable seat avatars into the setup roster projection', async () => {
     await render(
       <TvGameFlowStage
         browsingAt={0}
@@ -162,7 +163,8 @@ describe('TvGameFlowStage', () => {
       />,
     );
 
-    expect(screen.getByTestId('tv-game-player-avatar-ada').props.source).toBeTruthy();
-    expect(screen.getByTestId('tv-game-player-avatar-bo').props.source).toBeTruthy();
+    // The host sits on the setup card; everyone else waits along the bottom.
+    expect(screen.getByTestId('tv-game-player-avatar-bo')).toBeTruthy();
+    expect(screen.getByLabelText('Bo')).toBeTruthy();
   });
 });

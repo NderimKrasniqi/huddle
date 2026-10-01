@@ -14,7 +14,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@huddle/design-tokens": "workspace:*",
     "@huddle/domain": "workspace:*",
     "@huddle/ui": "workspace:*",
     "zod": "catalog:"

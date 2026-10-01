@@ -15,19 +15,18 @@ jest.mock('react-native-qrcode-svg', () => ({
 describe('RoomInvitationScreen', () => {
   it('renders the supplied empty-room invitation with a dynamic QR and ten slots', async () => {
     await render(
-      <RoomInvitationScreen roomCode="KWRD" joinUrl="huddle://join/KWRD" />,
+      <RoomInvitationScreen roomCode="KWRD" joinUrl="huddle://join/KWRD" reduceMotion />,
     );
 
-    expect(screen.getByTestId('room-invitation-background')).toBeTruthy();
-    expect(screen.getByTestId('room-invitation-phone-icon')).toBeTruthy();
-    expect(screen.getByText('Room Code')).toBeTruthy();
-    expect(screen.getByText('Open Huddle on your phone, then scan the QR or enter the room code.')).toBeTruthy();
+    expect(screen.getByText('Good company. Great games.')).toBeTruthy();
+    expect(screen.getByText('Type this code on your phone')).toBeTruthy();
+    expect(screen.getByText('0 / 10 joined')).toBeTruthy();
+    expect(screen.getByText('The first phone to join becomes the host')).toBeTruthy();
     expect(screen.queryByText(/huddle\.game/i)).toBeNull();
     expect(screen.queryByText(/https?:\/\//i)).toBeNull();
-    expect(screen.getByText('K W R D', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('W', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByLabelText('Room code K W R D').props.focusable).toBe(false);
-    expect(screen.getByText('Waiting for players to join...')).toBeTruthy();
-    expect(screen.getByText('Scan to join on\nyour phone')).toBeTruthy();
+    expect(screen.getByText('Scan to join', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByLabelText('QR code to join room K W R D').props.focusable).toBe(false);
     expect(screen.getByTestId('room-join-qr').props.value).toBe('huddle://join/KWRD');
     expect(screen.getAllByTestId('empty-player-slot')).toHaveLength(10);
@@ -44,24 +43,25 @@ describe('RoomInvitationScreen', () => {
       <RoomInvitationScreen
         roomCode="ABCD"
         joinUrl="huddle://join/ABCD"
+        reduceMotion
         players={[
-          { id: 'ada', name: 'Ada' },
-          { id: 'grace', name: 'Grace', avatar: { uri: 'avatar://grace' } },
+          { id: 'ada', name: 'Ada', host: true },
+          { id: 'grace', name: 'Grace', avatarId: 'fox' },
         ]}
       />,
     );
 
     const joined = screen.getAllByTestId('joined-player-slot');
     expect(joined).toHaveLength(2);
-    expect(joined[0]?.props.accessibilityLabel).toBe('Player Ada joined');
+    expect(joined[0]?.props.accessibilityLabel).toBe('Player Ada joined, host');
     expect(joined[1]?.props.accessibilityLabel).toBe('Player Grace joined');
     expect(joined.every((slot) => slot.props.focusable === false)).toBe(true);
     expect(screen.getAllByText('A', { includeHiddenElements: true })).not.toHaveLength(0);
     expect(screen.getByText('Ada', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText('Grace', { includeHiddenElements: true })).toBeTruthy();
-    expect(screen.getByTestId('joined-player-avatar').props.source).toEqual({
-      uri: 'avatar://grace',
-    });
+    expect(screen.getByTestId('joined-player-avatar')).toBeTruthy();
+    expect(screen.getByText('Make yourself at home.')).toBeTruthy();
+    expect(screen.getByText('Ada is choosing what’s next')).toBeTruthy();
     expect(screen.getAllByTestId('empty-player-slot')).toHaveLength(8);
     expect(screen.getByLabelText('Empty player slot 3')).toBeTruthy();
   });
@@ -81,6 +81,8 @@ describe('RoomInvitationScreen', () => {
     );
 
     expect(screen.getAllByTestId('joined-player-slot')).toHaveLength(10);
+    expect(screen.getByText('Make yourself at home.')).toBeTruthy();
+    expect(screen.getByText('Room full · 10 / 10')).toBeTruthy();
     expect(screen.queryByLabelText('Player Player 11 joined')).toBeNull();
     expect(screen.queryAllByTestId('empty-player-slot')).toHaveLength(0);
   });

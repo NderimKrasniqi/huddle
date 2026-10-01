@@ -1,7 +1,8 @@
-import { AVATAR_IDS } from '@huddle/domain';
+import { AVATAR_IDS, COUNTDOWN_MS } from '@huddle/domain';
+import { gameLogicById } from '@huddle/game-registry/logic';
 import { convexTest } from 'convex-test';
 import { ConvexError } from 'convex/values';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
@@ -65,13 +66,16 @@ describe('locked setup and readiness', () => {
       kind: 'setupNotReady',
     });
 
+    // Locking the settings starts the ready check with the Host already Ready.
     await t.mutation(api.games.finalizeGameSetup, { sessionToken: room.host });
+    expect((await t.query(api.games.setup, { roomId: room.roomId }))?.readyPlayerIds).toHaveLength(1);
     expect(await rejection(t.mutation(api.games.startGame, { sessionToken: room.host }))).toEqual({
       kind: 'playersNotReady',
       playerIds: expect.any(Array),
     });
 
     await t.mutation(api.games.setGameReady, { sessionToken: room.guest, ready: true });
+    await t.mutation(api.games.setGameReady, { sessionToken: room.host, ready: false });
     const missingHost = await rejection(t.mutation(api.games.startGame, { sessionToken: room.host }));
     expect(missingHost).toMatchObject({ kind: 'playersNotReady' });
 
@@ -150,6 +154,145 @@ describe.each([
     expect(await t.query(api.games.setup, { roomId: room.roomId })).toBeNull();
     expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
     expect((await t.query(api.players.roster, { roomId: room.roomId }))?.length).toBe(2);
+  });
+});
+
+describe('the countdown before a game', () => {
+  afterEach(() => vi.useRealTimers());
+
+  async function setupOf(t: Backend, roomId: Id<'rooms'>) {
+    return await t.query(api.games.setup, { roomId });
+  }
+
+  async function runningOf(t: Backend, roomId: Id<'rooms'>) {
+    return await t.query(api.games.running, { roomId });
+  }
+
+  async function countdownEnds(t: Backend) {
+    await vi.advanceTimersByTimeAsync(COUNTDOWN_MS + 1);
+    await t.finishInProgressScheduledFunctions();
+  }
+
+  it('is refused until everyone is Ready', async () => {
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await t.mutation(api.games.finalizeGameSetup, { sessionToken: room.host });
+
+    expect(await rejection(t.mutation(api.games.startCountdown, { sessionToken: room.host }))).toMatchObject({
+      kind: 'playersNotReady',
+    });
+    expect((await setupOf(t, room.roomId))?.stage).toBe('ready');
+  });
+
+  it('is the Host’s alone to start', async () => {
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await lockAndReady(t, room);
+
+    expect(await rejection(t.mutation(api.games.startCountdown, { sessionToken: room.guest }))).toMatchObject({
+      kind: 'notHost',
+    });
+  });
+
+  it('starts the game when it runs out', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await lockAndReady(t, room);
+
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+    const counting = await setupOf(t, room.roomId);
+    expect(counting).toMatchObject({ stage: 'countdown', countdownEndsAt: expect.any(Number) });
+    expect(await runningOf(t, room.roomId)).toBeNull();
+
+    // A second tap during the countdown changes nothing.
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+    expect((await setupOf(t, room.roomId))?.countdownEndsAt).toBe(counting?.countdownEndsAt);
+
+    await countdownEnds(t);
+    expect(await setupOf(t, room.roomId)).toBeNull();
+    expect(await runningOf(t, room.roomId)).toMatchObject({ kind: 'running', gameId: 'trivia' });
+  });
+
+  it('stops when a player un-readies, keeping everyone else Ready', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await lockAndReady(t, room);
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+
+    await t.mutation(api.games.setGameReady, { sessionToken: room.guest, ready: false });
+    const setup = await setupOf(t, room.roomId);
+    expect(setup).toMatchObject({ stage: 'ready' });
+    expect(setup?.countdownEndsAt).toBeUndefined();
+    expect(setup?.readyPlayerIds).toHaveLength(1);
+
+    await countdownEnds(t);
+    expect(await runningOf(t, room.roomId)).toBeNull();
+  });
+
+  it('stops when the Host stops it', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await lockAndReady(t, room);
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+
+    await t.mutation(api.games.stopCountdown, { sessionToken: room.host });
+    expect((await setupOf(t, room.roomId))?.stage).toBe('ready');
+    await countdownEnds(t);
+    expect(await runningOf(t, room.roomId)).toBeNull();
+
+    // And starts again from the full five seconds.
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+    await countdownEnds(t);
+    expect(await runningOf(t, room.roomId)).toMatchObject({ kind: 'running' });
+  });
+
+  it('stops when somebody joins or leaves', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await lockAndReady(t, room);
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+
+    const third = await t.mutation(api.players.joinRoom, {
+      code: room.code,
+      nickname: 'Lin',
+      avatar: AVATAR_IDS[2],
+    });
+    expect((await setupOf(t, room.roomId))?.stage).toBe('ready');
+
+    await t.mutation(api.games.setGameReady, { sessionToken: third.sessionToken, ready: true });
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+    // Two players remain, all Ready: a departure alone keeps a complete ready
+    // check, so the countdown carries on.
+    await t.mutation(api.players.leaveRoom, { sessionToken: third.sessionToken });
+    expect((await setupOf(t, room.roomId))?.stage).toBe('countdown');
+
+    // Falling below the game's minimum stops the countdown; a game that allows
+    // one player keeps counting down.
+    await t.mutation(api.players.leaveRoom, { sessionToken: room.guest });
+    const minimum = gameLogicById('trivia')?.metadata.playerRange.min ?? 2;
+    expect((await setupOf(t, room.roomId))?.stage).toBe(minimum > 1 ? 'ready' : 'countdown');
+    if (minimum > 1) {
+      await countdownEnds(t);
+      expect(await runningOf(t, room.roomId)).toBeNull();
+    }
+  });
+
+  it('can be skipped by the Host starting at once', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await lockAndReady(t, room);
+    await t.mutation(api.games.startCountdown, { sessionToken: room.host });
+
+    await t.mutation(api.games.startGame, { sessionToken: room.host });
+    expect(await runningOf(t, room.roomId)).toMatchObject({ kind: 'running' });
+    // The cancelled start never fires into the running game.
+    await countdownEnds(t);
+    expect(await runningOf(t, room.roomId)).toMatchObject({ kind: 'running', gameId: 'trivia' });
   });
 });
 

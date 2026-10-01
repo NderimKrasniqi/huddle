@@ -182,13 +182,38 @@ export type GameMetadata = {
    * trivia's own business.
    */
   readonly category: string;
+  /** One line under the title on the picker cards: “Big questions. Bigger guesses.” */
+  readonly tagline?: string;
 };
 
 /** One value a Host can choose for a setting. */
 export type GameSettingOption = {
   readonly value: string;
   readonly label: string;
+  /**
+   * The value as a summary or tile shows it, beside the setting's `unit`:
+   * `20` of “20 seconds”. Absent means the label is short enough already.
+   */
+  readonly short?: string;
+  /** This option's own unit, replacing the setting's: “No” + “timer”. */
+  readonly unit?: string;
 };
+
+/**
+ * The pictures a setting can be drawn with. A closed set, so a game names a
+ * picture the platform owns rather than shipping artwork of its own.
+ */
+export const GAME_SETTING_ICONS = [
+  'count',
+  'difficulty',
+  'timer',
+  'category',
+  'scoring',
+  'results',
+  'players',
+] as const;
+
+export type GameSettingIcon = (typeof GAME_SETTING_ICONS)[number];
 
 /** Wire-safe settings storage used by rooms and module configuration. */
 export type GameSettings = Readonly<Record<string, string>>;
@@ -207,6 +232,10 @@ export type GameSetting = {
   readonly label: string;
   readonly options: readonly GameSettingOption[];
   readonly defaultValue: string;
+  /** The picture drawn beside the setting on the Phone and TV. */
+  readonly icon?: GameSettingIcon;
+  /** The word after a short value in summaries and tiles: “questions”. */
+  readonly unit?: string;
 };
 
 /** A game module's declaration of its host-tunable options. */
@@ -219,6 +248,8 @@ export type GameSettingsMode = 'quick' | 'standard' | 'custom';
 export type GameSettingsPreset = {
   readonly mode: Exclude<GameSettingsMode, 'custom'>;
   readonly label: string;
+  /** One line on what this preset is like, shown beside it during setup. */
+  readonly description?: string;
   readonly settings: Readonly<Record<string, string>>;
 };
 
@@ -299,6 +330,12 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
    * game modules must not import or own platform navigation context.
    */
   readonly hostChromeInsetTop?: number;
+  /**
+   * Additional bottom space reserved by the Phone host for platform chrome,
+   * such as the Host-only Back to lobby control at the finished boundary.
+   * Game screens add it to their bottom safe-area inset. Plain data, as above.
+   */
+  readonly hostChromeInsetBottom?: number;
   /**
    * The authoritative remainder of the active server deadline, when one is
    * running. A phone may use this to animate a local display countdown, but

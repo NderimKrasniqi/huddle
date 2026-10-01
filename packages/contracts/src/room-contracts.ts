@@ -2,7 +2,11 @@ import type { GamePlayerId, GameSettings } from './game-module';
 
 export const GAME_SETUP_MODES = ['quick', 'standard', 'custom'] as const;
 export type GameSetupMode = (typeof GAME_SETUP_MODES)[number];
-export type GameSetupStage = 'configuring' | 'ready';
+/**
+ * `countdown` is the ready check completed: every seat is Ready and the room
+ * is counting down to the start the server has scheduled.
+ */
+export type GameSetupStage = 'configuring' | 'ready' | 'countdown';
 
 export type RoomGameSetup = {
   readonly gameId: string;

@@ -1,5 +1,15 @@
 /* global jest */
 
+// Reanimated and worklets are mapped to their published mocks in
+// jest.config.cjs, because they need a native UI runtime Jest does not have.
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 // Native storage modules are unavailable in Jest's Node runtime. Keep the
 // platform adapters importable so render tests can exercise their callers.
 jest.mock(

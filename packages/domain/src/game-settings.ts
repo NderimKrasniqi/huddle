@@ -138,3 +138,28 @@ export function settingsRefusalForMode(
 
   return null;
 }
+
+/** A setting's current value as a summary or tile shows it: “20” and “seconds”. */
+export type SettingSummary = {
+  readonly value: string;
+  readonly unit?: string;
+};
+
+/**
+ * How a setting reads in a summary, from the words its game declared: the
+ * option's `short` value (or its label) and the option's or setting's `unit`.
+ * An undeclared value reads as itself, so a stale draft never throws.
+ */
+export function settingSummary(setting: GameSetting, value: string | undefined): SettingSummary {
+  const chosen = value ?? setting.defaultValue;
+  const option = setting.options.find((candidate) => candidate.value === chosen);
+  if (option === undefined) return { value: chosen };
+  const unit = option.unit ?? setting.unit;
+  return unit === undefined ? { value: option.short ?? option.label } : { value: option.short ?? option.label, unit };
+}
+
+/** The same summary as one phrase: “20 seconds”, “No timer”, “Mixed difficulty”. */
+export function settingSummaryText(setting: GameSetting, value: string | undefined): string {
+  const summary = settingSummary(setting, value);
+  return summary.unit === undefined ? summary.value : `${summary.value} ${summary.unit}`;
+}

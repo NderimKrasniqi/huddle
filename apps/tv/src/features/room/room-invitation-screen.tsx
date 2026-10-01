@@ -1,265 +1,229 @@
-import type { AvatarId } from '@huddle/domain';
-import { radii, semanticColors, shadows, spacing, typography } from '@huddle/design-tokens';
+import { ROOM_PLAYER_CAP, type AvatarId } from '@huddle/domain';
 import {
-  AvatarPortrait,
-  Badge,
-  HEARTBEAT_ARTWORK,
-  HuddleText,
+  playroomColors,
+  playroomEasing,
+  playroomMotion,
+  playroomRadii,
+  playroomShadows,
+  playroomTv,
+} from '@huddle/design-tokens';
+import {
+  PlayroomAvatar,
+  PlayroomMoment,
+  PlayroomPill,
+  PlayroomText,
+  PlayroomTvStage,
 } from '@huddle/ui/native';
 import QRCode from 'react-native-qrcode-svg';
-import {
-  Image,
-  ImageBackground,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-  type ImageSourcePropType,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
-const PLAYER_CAPACITY = 10;
+import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduced-motion';
+
+/** The room's seat count comes from the room rules, not from the avatar set. */
+const PLAYER_CAPACITY = ROOM_PLAYER_CAP;
+
+/** A seat's portrait arriving: from 0.9 and transparent, never from nothing. */
+function seatArrival(delay: number) {
+  return new Keyframe({
+    0: { opacity: 0, transform: [{ scale: 0.9 }] },
+    100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
+  })
+    .duration(playroomMotion.entrance)
+    .delay(delay)
+    .reduceMotion(ReduceMotion.System);
+}
 
 /** The stable roster data needed by the display-only invitation renderer. */
 export type RoomInvitationPlayer = {
   readonly id: string;
   readonly name: string;
-  readonly avatar?: ImageSourcePropType;
   readonly avatarId?: AvatarId;
   readonly host?: boolean;
   readonly away?: boolean;
 };
 
 export type RoomInvitationScreenProps = {
+  readonly welcomeIds?: readonly string[];
   readonly roomCode: string;
   readonly joinUrl: string;
   readonly players?: readonly RoomInvitationPlayer[];
+  /** Overrides the system setting in previews and tests. */
+  readonly reduceMotion?: boolean;
 };
 
 /**
- * The TV invitation is a passive stage projection. The room photo is the
- * atmosphere; the dark inner frame is the shared screen where the room code,
- * QR and roster live. Keeping these layers separate makes the composition
- * readable at 720p without baking controls or copy into artwork.
+ * The TV room: the join code as four tiles that match the phone's four input
+ * boxes, the QR code beside them, the room's ten seats, and who is running
+ * it. Display-only; phones do the joining.
  */
 export function RoomInvitationScreen({
   roomCode,
   joinUrl,
   players = [],
+  welcomeIds = [],
+  reduceMotion: reduceMotionOverride,
 }: RoomInvitationScreenProps) {
-  const viewport = useWindowDimensions();
-  const scale = safeScale(viewport.width, viewport.height);
+  const systemReduceMotion = useTvSystemReducedMotion();
+  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
   const normalizedCode = roomCode.trim().toUpperCase().slice(0, 4);
   const spokenCode = normalizedCode.split('').join(' ');
   const visiblePlayers = players.slice(0, PLAYER_CAPACITY);
+  const joined = visiblePlayers.length;
+  const hostName = visiblePlayers.find((player) => player.host)?.name.trim();
+  // Seats present when the room first appears cascade in; anyone joining
+  // afterwards arrives on their own, without waiting on a stagger.
+  const [firstShow, setFirstShow] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setFirstShow(false), PLAYER_CAPACITY * playroomMotion.stagger + playroomMotion.entrance);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <View
-      style={styles.viewport}
-      pointerEvents="none"
-      focusable={false}
-      accessible={false}
-      testID="room-invitation-viewport"
-    >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
-        pointerEvents="none"
-        focusable={false}
-        accessible={false}
-        testID="room-invitation-stage"
-      >
-        <ImageBackground
-          source={HEARTBEAT_ARTWORK.tv.platformLivingRoom}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="room-invitation-background"
-        />
-        <View style={styles.atmosphereShade} pointerEvents="none" focusable={false} />
+    <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="room-invitation-viewport">
+      <PlayroomTvStage testID="room-invitation-stage">
+        <View style={styles.column} pointerEvents="none" focusable={false}>
+          <PlayroomText accessibilityRole="header" style={playroomTv.type.heading} testID="room-invitation-heading">
+            {joined === 0 ? 'Good company. Great games.' : 'Make yourself at home.'}
+          </PlayroomText>
 
-        <View style={styles.screenFrame} pointerEvents="none" focusable={false}>
-          <View style={styles.screenInner} pointerEvents="none" focusable={false}>
-            <View style={styles.brandRow} pointerEvents="none" focusable={false} accessible={false}>
-              <Image
-                source={HEARTBEAT_ARTWORK.brand.displayMark}
-                resizeMode="contain"
-                style={styles.brandMark}
-                accessible={false}
-                testID="room-invitation-brand-mark"
-              />
-              <HuddleText variant="hero" color="surface" style={styles.brandName}>
-                Huddle
-              </HuddleText>
-            </View>
-
-            <View style={styles.inviteColumn} pointerEvents="none" focusable={false} accessible={false}>
-              <HuddleText variant="tvDisplay" color="surface" align="center" style={styles.title}>
-                Join the fun!
-              </HuddleText>
-              <HuddleText variant="bodyLarge" color="surface" align="center" style={styles.subtitle}>
-                Open Huddle on your phone, then scan the QR or enter the room code.
-              </HuddleText>
-              <View style={styles.phoneIcon} pointerEvents="none" focusable={false} testID="room-invitation-phone-icon">
-                <View style={styles.phoneIconSpeaker} pointerEvents="none" focusable={false} />
-                <View style={styles.phoneIconHome} pointerEvents="none" focusable={false} />
+          <PlayroomText color="muted" style={playroomTv.type.body}>Your phone is your controller. Join the room and let the good times begin.</PlayroomText>
+          <View style={styles.joinRow} pointerEvents="none" focusable={false}>
+            <View
+              style={styles.codeBlock}
+              accessible
+              accessibilityRole="text"
+              accessibilityLabel={`Room code ${spokenCode}`}
+              focusable={false}
+              testID="room-code"
+            >
+              <View style={styles.tiles} accessibilityElementsHidden>
+                {Array.from(normalizedCode).map((letter, position) => (
+                  <View key={position} style={styles.tile}>
+                    <PlayroomText style={playroomTv.type.roomCode}>{letter}</PlayroomText>
+                  </View>
+                ))}
               </View>
-              <HuddleText variant="caption" color="surface" align="center" style={styles.roomCodeLabel}>
-                Room Code
-              </HuddleText>
-              <TvCode
-                code={normalizedCode}
-                spokenCode={spokenCode}
-                accessibilityLabel={`Room code ${spokenCode}`}
-                testID="room-code-tiles"
-              />
-              <HuddleText variant="body" color="surface" align="center" style={styles.waitingCopy}>
-                Waiting for players to join...
-              </HuddleText>
+              <PlayroomText color="muted" style={playroomTv.type.caption}>Type this code on your phone</PlayroomText>
             </View>
-
-            <View style={styles.qrColumn} pointerEvents="none" focusable={false} accessible={false}>
-              <View
-                style={styles.qrCard}
-                pointerEvents="none"
-                focusable={false}
-                accessible
-                accessibilityRole="image"
-                accessibilityLabel={`QR code to join room ${spokenCode}`}
-              >
+            <PlayroomText color="muted" style={playroomTv.type.caption} accessibilityElementsHidden>
+              or
+            </PlayroomText>
+            <View
+              style={styles.qrBlock}
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={`QR code to join room ${spokenCode}`}
+              focusable={false}
+            >
+              <View style={styles.qrCard}>
                 <QRCode
                   value={joinUrl}
-                  size={236}
-                  color={semanticColors.text}
-                  backgroundColor={semanticColors.surface}
+                  size={164}
+                  color={playroomColors.ink}
+                  backgroundColor={playroomColors.surface}
                   testID="room-join-qr"
                 />
               </View>
-              <HuddleText variant="body" color="surface" align="center" style={styles.qrCopy}>
-                {'Scan to join on\nyour phone'}
-              </HuddleText>
+              <PlayroomText color="muted" style={playroomTv.type.caption} accessibilityElementsHidden>
+                Scan to join
+              </PlayroomText>
             </View>
+          </View>
+
+          <PlayroomPill style={styles.status} textStyle={playroomTv.type.label} testID="room-roster-count">
+            {joined >= PLAYER_CAPACITY ? `Room full · ${PLAYER_CAPACITY} / ${PLAYER_CAPACITY}` : `${joined} / ${PLAYER_CAPACITY} joined`}
+          </PlayroomPill>
+
+          <View style={styles.footer} pointerEvents="none" focusable={false}>
+            
+            <PlayroomText style={[playroomTv.type.label, styles.footerText]} testID="room-invitation-footer">
+              {joined === 0
+                ? 'The first phone to join becomes the host'
+                : joined < 2
+                  ? `${hostName || 'The host'} is the host · waiting for one more player`
+                  : `${hostName || 'The host'} is choosing what’s next`}
+            </PlayroomText>
+            
           </View>
         </View>
-
-        <View
-          style={styles.rosterPanel}
-          pointerEvents="none"
-          focusable={false}
-          accessible={false}
-          testID="room-roster-panel"
-        >
-          <View style={styles.rosterHeader} pointerEvents="none" focusable={false}>
-            <View pointerEvents="none" focusable={false}>
-              <HuddleText variant="title" color="surface">
-                Players in the room
-              </HuddleText>
-              <HuddleText variant="caption" color="surface" style={styles.rosterHint}>
-                Everyone joining appears here
-              </HuddleText>
-            </View>
-            <Badge
-              label={`${visiblePlayers.length}/${PLAYER_CAPACITY} joined`}
-              tone="neutral"
-              testID="room-roster-count"
-            />
+        <View style={styles.roomSide}>
+          <PlayroomMoment art="lounge" width={760} height={380} style={styles.scene} />
+          <View style={styles.greeting}>
+            {welcomeIds.length > 0 ? <View style={styles.welcome} accessible accessibilityLiveRegion="polite"
+              accessibilityLabel={`${visiblePlayers.filter((player) => welcomeIds.includes(player.id)).map((player) => player.name).join(', ')} joined the room`} testID="tv-join-welcome">
+              {visiblePlayers.filter((player) => welcomeIds.includes(player.id)).slice(0, 3).map((player) =>
+                player.avatarId ? <PlayroomAvatar key={player.id} avatarId={player.avatarId} size={56} /> : null)}
+              <PlayroomText style={playroomTv.type.label}>{welcomeIds.length === 1 ? `${visiblePlayers.find((player) => player.id === welcomeIds[0])?.name ?? 'Your friend'} is in!` : `${welcomeIds.length} new faces. Welcome in!`}</PlayroomText>
+            </View> : <PlayroomText color="muted" style={playroomTv.type.caption}>There’s a seat for everyone.</PlayroomText>}
           </View>
-          <View
-            style={styles.playerGrid}
-            pointerEvents="none"
-            focusable={false}
-            testID="player-grid"
-          >
+          <View style={styles.grid} pointerEvents="none" focusable={false} testID="player-grid">
             {Array.from({ length: PLAYER_CAPACITY }, (_unused, position) => {
               const player = visiblePlayers[position];
               return player ? (
-                <JoinedPlayer key={player.id} player={player} />
+                <JoinedPlayer
+                  key={player.id}
+                  player={player}
+                  arrivalDelay={firstShow ? position * playroomMotion.stagger : 0}
+                  reduceMotion={reduceMotion}
+                />
               ) : (
                 <EmptySlot key={`empty-${position + 1}`} position={position} />
               );
             })}
           </View>
+
         </View>
-      </View>
+      </PlayroomTvStage>
     </View>
   );
 }
 
-function TvCode({
-  code,
-  spokenCode,
-  accessibilityLabel,
-  testID,
+function JoinedPlayer({
+  player,
+  arrivalDelay,
+  reduceMotion,
 }: {
-  readonly code: string;
-  readonly spokenCode: string;
-  readonly accessibilityLabel: string;
-  readonly testID: string;
+  readonly player: RoomInvitationPlayer;
+  readonly arrivalDelay: number;
+  readonly reduceMotion: boolean;
 }) {
-  return (
-    <View
-      style={styles.codeRow}
-      pointerEvents="none"
-      focusable={false}
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={accessibilityLabel}
-      testID={testID}
-    >
-      {Array.from({ length: 4 }, (_unused, index) => (
-        <View key={`${index}-${code[index] ?? ''}`} style={styles.codeTile} pointerEvents="none" focusable={false}>
-          <HuddleText variant="hero" color="text" style={styles.codeValue}>
-            {code[index] ?? ''}
-          </HuddleText>
-        </View>
-      ))}
-      <HuddleText variant="caption" color="surface" style={styles.visuallyHidden}>
-        {spokenCode}
-      </HuddleText>
-    </View>
-  );
-}
-
-function JoinedPlayer({ player }: { readonly player: RoomInvitationPlayer }) {
   const name = player.name.trim() || 'Player';
-  const status = player.away ? 'away' : player.host ? 'host' : 'waiting';
-
   return (
-    <View
-      style={styles.playerSlot}
+    <Animated.View
+      entering={reduceMotion ? undefined : seatArrival(arrivalDelay)}
+      style={styles.seat}
       pointerEvents="none"
       focusable={false}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`Player ${name} joined`}
+      accessibilityLabel={`Player ${name} joined${player.host ? ', host' : ''}${player.away ? ', away' : ''}`}
       testID="joined-player-slot"
     >
-      {player.avatar ? (
-        <Image
-          source={player.avatar}
-          resizeMode="contain"
-          style={styles.avatarImage}
-          accessible={false}
-          testID="joined-player-avatar"
-        />
-      ) : player.avatarId ? (
-        <AvatarPortrait
-          avatarId={player.avatarId}
-          displayName={name}
-          size={58}
-          testID="joined-player-avatar"
-        />
+      {player.avatarId ? (
+        <PlayroomAvatar avatarId={player.avatarId} size={100} host={player.host} away={player.away} testID="joined-player-avatar" />
       ) : (
-        <View style={styles.avatarFallback} pointerEvents="none" focusable={false}>
-          <HuddleText variant="title" color="text" accessibilityElementsHidden>
+        <View style={styles.initial} pointerEvents="none" focusable={false}>
+          <PlayroomText style={playroomTv.type.hero} accessibilityElementsHidden>
             {Array.from(name)[0]?.toLocaleUpperCase() ?? '?'}
-          </HuddleText>
+          </PlayroomText>
         </View>
       )}
-      <HuddleText variant="caption" color="surface" numberOfLines={1} style={styles.playerName} accessibilityElementsHidden>
+      <PlayroomText numberOfLines={1} style={[playroomTv.type.caption, styles.name]} accessibilityElementsHidden>
         {name}
-      </HuddleText>
-      {status === 'host' ? <Badge label="Host" tone="host" /> : null}
-      {status === 'away' ? <Badge label="Away" tone="away" /> : null}
+      </PlayroomText>
+      {player.away ? <SeatTag label="AWAY" /> : null}
+    </Animated.View>
+  );
+}
+
+function SeatTag({ label }: { readonly label: string }) {
+  return (
+    <View style={[styles.tag, styles.tagAway]} pointerEvents="none" focusable={false}>
+      <PlayroomText color="ink" style={styles.tagText} accessibilityElementsHidden>
+        {label}
+      </PlayroomText>
     </View>
   );
 }
@@ -267,7 +231,7 @@ function JoinedPlayer({ player }: { readonly player: RoomInvitationPlayer }) {
 function EmptySlot({ position }: { readonly position: number }) {
   return (
     <View
-      style={styles.playerSlot}
+      style={styles.seat}
       pointerEvents="none"
       focusable={false}
       accessible
@@ -275,230 +239,138 @@ function EmptySlot({ position }: { readonly position: number }) {
       accessibilityLabel={`Empty player slot ${position + 1}`}
       testID="empty-player-slot"
     >
-      <View style={styles.emptyCircle} pointerEvents="none" focusable={false} />
-      <HuddleText variant="caption" color="surface" style={styles.emptyLabel} accessibilityElementsHidden>
-        Open seat
-      </HuddleText>
+      {/* A quiet silhouette: no number, no label. */}
+      <View style={styles.empty} pointerEvents="none" focusable={false}>
+        <View style={styles.silhouetteHead} />
+        <View style={styles.silhouetteBody} />
+      </View>
+      <View style={styles.nameSpacer} />
     </View>
   );
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: semanticColors.text,
+    backgroundColor: playroomColors.canvas,
   },
-  stage: {
-    width: STAGE_WIDTH,
-    height: STAGE_HEIGHT,
-    overflow: 'hidden',
-  },
-  atmosphereShade: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.24,
-  },
-  screenFrame: {
-    position: 'absolute',
-    left: 122,
-    right: 122,
-    top: 68,
-    bottom: 140,
-    borderRadius: radii.xl,
-    padding: 14,
-    backgroundColor: semanticColors.text,
-    borderWidth: 4,
-    borderColor: 'rgba(249,241,230,0.30)',
-    ...shadows.floating,
-  },
-  screenInner: {
-    flex: 1,
-    borderRadius: radii.lg,
-    backgroundColor: 'rgba(43,31,23,0.96)',
-    borderWidth: 1,
-    borderColor: 'rgba(249,241,230,0.35)',
-    overflow: 'hidden',
-  },
-  brandRow: {
-    position: 'absolute',
-    left: 76,
-    top: 48,
+  column: { position: 'absolute', left: playroomTv.safeX, top: 190, width: 720, gap: 26 },
+  roomSide: { position: 'absolute', right: playroomTv.safeX, top: 156, width: 900, alignItems: 'center' },
+  scene: { alignItems: 'center' },
+  greeting: { height: 100, alignItems: 'center', justifyContent: 'center' },
+  welcome: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 24,
+    borderRadius: 28, backgroundColor: playroomColors.successSurface },
+  joinRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 18,
   },
-  brandMark: { width: 82, height: 82 },
-  brandName: {
-    fontSize: 56,
-    lineHeight: 68,
-    color: semanticColors.surface,
-  },
-  inviteColumn: {
-    position: 'absolute',
-    left: 260,
-    top: 120,
-    width: 780,
+  codeBlock: {
     alignItems: 'center',
+    gap: 8,
   },
-  title: {
-    color: semanticColors.surface,
-    fontSize: 62,
-    lineHeight: 72,
-  },
-  subtitle: {
-    marginTop: spacing.sm,
-    maxWidth: 720,
-    color: semanticColors.surface,
-    opacity: 0.82,
-  },
-  roomCodeLabel: {
-    marginTop: spacing.sm,
-    color: semanticColors.secondary,
-    letterSpacing: 2,
-    ...typography.caption,
-  },
-  phoneIcon: {
-    width: 24,
-    height: 38,
-    marginTop: spacing.sm,
-    borderWidth: 2,
-    borderColor: semanticColors.surface,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-    opacity: 0.82,
-  },
-  phoneIconSpeaker: { width: 7, height: 2, borderRadius: 1, backgroundColor: semanticColors.surface },
-  phoneIconHome: { width: 4, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface },
-  codeRow: {
-    marginTop: spacing.sm,
+  tiles: {
     flexDirection: 'row',
+    gap: 10,
+  },
+  tile: {
+    width: 112,
+    height: 132,
+    borderRadius: playroomRadii.card,
+    backgroundColor: playroomColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    ...playroomShadows.card,
   },
-  codeTile: {
-    width: 92,
-    height: 104,
+  qrBlock: {
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-    backgroundColor: semanticColors.surface,
-    borderWidth: 2,
-    borderColor: 'rgba(43,31,23,0.18)',
-    ...shadows.card,
-  },
-  codeValue: {
-    fontSize: 56,
-    lineHeight: 64,
-    color: semanticColors.text,
-  },
-  visuallyHidden: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
-  },
-  waitingCopy: {
-    marginTop: spacing.md,
-    color: semanticColors.surface,
-    opacity: 0.78,
-  },
-  qrColumn: {
-    position: 'absolute',
-    right: 90,
-    top: 148,
-    width: 310,
-    alignItems: 'center',
+    gap: 6,
   },
   qrCard: {
-    width: 278,
-    height: 278,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.lg,
-    backgroundColor: semanticColors.surface,
-    ...shadows.floating,
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: playroomColors.surface,
   },
-  qrCopy: {
-    marginTop: spacing.md,
-    color: semanticColors.surface,
-    opacity: 0.9,
+  status: {
+    minWidth: 560,
+    paddingVertical: 10,
   },
-  rosterPanel: {
-    position: 'absolute',
-    left: 156,
-    right: 156,
-    bottom: 156,
-    minHeight: 284,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: 'rgba(27, 18, 13, 0.94)',
-    borderWidth: 1,
-    borderColor: 'rgba(249,241,230,0.35)',
-  },
-  rosterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  rosterHint: {
-    marginTop: 2,
-    color: semanticColors.surface,
-    opacity: 0.62,
-  },
-  playerGrid: {
+  grid: {
+    width: 900,
+    padding: 20,
+    borderRadius: 36,
+    backgroundColor: playroomColors.lavender,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    rowGap: spacing.sm,
+    justifyContent: 'center',
+    columnGap: 20,
+    // Heads break out of the top of their circles, so rows need room above.
+    rowGap: 30,
+    marginTop: 0,
   },
-  playerSlot: {
-    width: '19%',
-    minHeight: 104,
+  seat: {
+    width: 145,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 2,
   },
-  avatarFallback: {
-    width: 64,
-    height: 64,
+  initial: {
+    width: 100,
+    height: 100,
+    borderRadius: 100 / 2,
+    backgroundColor: playroomColors.lavender,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.round,
-    backgroundColor: semanticColors.primary,
-    borderWidth: 2,
-    borderColor: semanticColors.surface,
   },
-  avatarImage: { width: 66, height: 66, borderRadius: radii.round },
-  playerName: {
-    maxWidth: 178,
-    color: semanticColors.surface,
+  empty: {
+    width: 100,
+    height: 100,
+    borderRadius: 100 / 2,
+    backgroundColor: playroomColors.disabled,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  silhouetteHead: {
+    marginTop: 100 * 0.22,
+    width: 100 * 0.3,
+    height: 100 * 0.3,
+    borderRadius: 100,
+    backgroundColor: playroomColors.border,
+  },
+  silhouetteBody: {
+    marginTop: 100 * 0.05,
+    width: 100 * 0.56,
+    height: 100 * 0.56,
+    borderRadius: 100,
+    backgroundColor: playroomColors.border,
+  },
+  name: {
+    marginTop: 6,
+    maxWidth: 145,
+  },
+  nameSpacer: {
+    marginTop: 6,
+    height: playroomTv.type.caption.lineHeight,
+  },
+  tag: {
+    position: 'absolute',
+    top: 100 - 26,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 2,
+  },
+  tagAway: {
+    backgroundColor: playroomColors.disabled,
+  },
+  tagText: {
+    ...playroomTv.type.caption,
+    letterSpacing: 1,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  footerText: {
     textAlign: 'center',
-  },
-  emptyCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.round,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: semanticColors.surface,
-    opacity: 0.42,
-  },
-  emptyLabel: {
-    color: semanticColors.surface,
-    opacity: 0.56,
   },
 });

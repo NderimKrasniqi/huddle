@@ -11,9 +11,10 @@ export const votingMetadata: GameMetadata = {
    */
   keyArt: { color: 'accent' },
   /** 2 up to the room's whole capacity (`ROOM_PLAYER_CAP`): a poll wants everyone at the table in it. */
-  playerRange: { min: 2, max: 10 },
+  playerRange: { min: 1, max: 10 },
   /** Standard is five 30-second prompts plus shared reveals: about three minutes. */
   estimatedMinutes: 3,
   /** The genre chip. */
   category: 'Party',
+  tagline: 'Share opinions. See what everyone thinks.',
 };

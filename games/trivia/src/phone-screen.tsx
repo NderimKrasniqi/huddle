@@ -1,17 +1,18 @@
-import { brandColors, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import type { PhoneGameScreenProps } from '@huddle/domain';
 import {
-  HEARTBEAT_ARTWORK,
   HuddleButton,
   HuddleText,
   ScreenShell,
-} from '@huddle/ui/native';
+} from '@huddle/ui/game-kit';
 import { useEffect, useState } from 'react';
-import { Image, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ImageBackground, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
 import { playableState } from './state';
+import { triviaOptionTones, triviaTvTheme } from './tv-theme';
 import type { TriviaEvent, TriviaState } from './types';
+import { triviaPalette, triviaSpacing, triviaRadii } from './theme';
+import { TRIVIA_ART } from './art';
 
 /**
  * Trivia's private controller surface.
@@ -27,9 +28,13 @@ export function TriviaPhoneScreen({
   sendEvent,
   safeAreaInsets,
   hostChromeInsetTop,
+  hostChromeInsetBottom,
   clockRemainingMs,
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
-  const insets = safeAreaInsets ?? ZERO_INSETS;
+  const deviceInsets = safeAreaInsets ?? ZERO_INSETS;
+  // Platform chrome at the bottom (the Host's Back to lobby) extends the
+  // device inset, so every surface's footer stays clear of it.
+  const insets = { ...deviceInsets, bottom: deviceInsets.bottom + finiteInset(hostChromeInsetBottom) };
   const chromeInsetTop = finiteInset(hostChromeInsetTop);
   const current = playableState(state);
   const countdownSeconds = useCountdownSeconds(
@@ -82,8 +87,9 @@ export function TriviaPhoneScreen({
   if (model.kind === 'question') {
     return (
       <ScreenShell tone="background" style={styles.shell} testID="trivia-phone-screen">
+        <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
         <ImageBackground
-          source={HEARTBEAT_ARTWORK.gameWorlds.trivia}
+          source={TRIVIA_ART.leaves}
           resizeMode="cover"
           style={StyleSheet.absoluteFill}
           accessible={false}
@@ -96,16 +102,14 @@ export function TriviaPhoneScreen({
             {
               paddingLeft: insets.left,
               paddingRight: insets.right,
-              paddingTop: insets.top + chromeInsetTop + spacing.lg,
-              paddingBottom: insets.bottom + spacing.xl,
+              paddingTop: insets.top + chromeInsetTop + triviaSpacing.lg,
+              paddingBottom: insets.bottom + triviaSpacing.xl,
             },
           ]}
           showsVerticalScrollIndicator={false}
           testID="trivia-phone-scroll"
         >
           <View style={styles.page}>
-            <TriviaBrandHeader />
-
             <View style={styles.roundRow}>
               <View style={styles.serverPill}>
                 <HuddleText variant="caption" style={styles.pillIcon} accessibilityElementsHidden>⌛</HuddleText>
@@ -118,7 +122,8 @@ export function TriviaPhoneScreen({
                 accessibilityRole="text"
                 accessibilityLabel={`${countdownSeconds} seconds remaining`}
               >
-                <HuddleText variant="title" style={styles.timerLabel}>{countdownSeconds}s</HuddleText>
+                <HuddleText variant="title" style={styles.timerLabel}>{String(countdownSeconds).padStart(2, '0')}</HuddleText>
+                <HuddleText variant="caption" style={styles.compatibilityHidden}>{`${countdownSeconds}s`}</HuddleText>
               </View>
             </View>
 
@@ -127,14 +132,12 @@ export function TriviaPhoneScreen({
             </HuddleText>
 
             <View style={styles.questionPanel}>
-              <HuddleText variant="title" align="center" accessibilityRole="header">
+              <HuddleText variant="title" align="center" accessibilityRole="header" style={styles.questionTitle}>
                 {model.text}
               </HuddleText>
-              <HuddleText variant="caption" align="center" style={styles.privateNote}>
+              <HuddleText variant="caption" align="center" style={styles.questionPrivacyNote}>
                 Your choice stays on this phone until the reveal.
               </HuddleText>
-            </View>
-
             <View style={styles.options}>
               {model.options.map((option) => (
                 <TriviaAnswerButton
@@ -149,15 +152,6 @@ export function TriviaPhoneScreen({
                 />
               ))}
             </View>
-
-            <View style={styles.lockNote} accessibilityLiveRegion="polite">
-              <HuddleText variant="body" style={styles.lockIcon} accessibilityElementsHidden>🔒</HuddleText>
-              <HuddleText variant="body" align="center">
-                {model.lockedIn ? 'Locked in' : 'Tap an answer to lock it in'}
-              </HuddleText>
-              <HuddleText variant="caption" align="center" style={styles.privateNote}>
-                {model.lockedIn ? 'You can’t change your answer.' : 'Your first choice is final.'}
-              </HuddleText>
             </View>
           </View>
         </ScrollView>
@@ -179,14 +173,11 @@ export function TriviaPhoneScreen({
 function TriviaBrandHeader() {
   return (
     <View style={styles.brandHeader} accessibilityRole="header">
-      <Image
-        source={HEARTBEAT_ARTWORK.brand.displayMark}
-        resizeMode="contain"
-        style={styles.brandMark}
-        accessible
-        accessibilityLabel="Huddle"
-      />
-      <HuddleText variant="title" style={styles.brandTitle}>Trivia</HuddleText>
+      <View style={styles.gameMark} accessible accessibilityLabel="Trivia">
+        <View style={styles.gameMarkLeaf} />
+        <View style={styles.gameMarkStem} />
+      </View>
+      <HuddleText variant="title" style={styles.brandTitle}>TRIVIA</HuddleText>
     </View>
   );
 }
@@ -220,8 +211,9 @@ function TriviaWaitingSurface({
       style={[styles.shell, styles.worldRoot]}
       testID="trivia-phone-waiting"
     >
+      <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.gameWorlds.trivia}
+        source={TRIVIA_ART.leaves}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -232,17 +224,16 @@ function TriviaWaitingSurface({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInsetTop + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInsetTop + triviaSpacing.xl,
+            paddingRight: insets.right + triviaSpacing.xl,
+            paddingBottom: insets.bottom + triviaSpacing.xl,
+            paddingLeft: insets.left + triviaSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
         testID="trivia-phone-waiting-scroll"
       >
         <View style={styles.statusContent} testID="trivia-phone-waiting-after-answer">
-          <TriviaBrandHeader />
           <View style={styles.roundRow}>
             <View style={styles.serverPill}>
               <HuddleText variant="caption" style={styles.pillIcon} accessibilityElementsHidden>⌛</HuddleText>
@@ -255,7 +246,7 @@ function TriviaWaitingSurface({
               accessibilityLabel={`${countdownSeconds} seconds remaining`}
               testID="trivia-phone-waiting-clock"
             >
-              <HuddleText variant="title" style={styles.timerLabel}>{countdownSeconds}s</HuddleText>
+              <HuddleText variant="title" style={styles.timerLabel}>{String(countdownSeconds).padStart(2, '0')}</HuddleText>
             </View>
           </View>
           <HuddleText variant="caption" align="center" style={styles.roundLabel}>
@@ -270,7 +261,7 @@ function TriviaWaitingSurface({
             </HuddleText>
           </View>
           <Image
-            source={HEARTBEAT_ARTWORK.gameCards.trivia}
+            source={TRIVIA_ART.card}
             resizeMode="contain"
             style={styles.waitingArt}
             accessible={false}
@@ -309,6 +300,7 @@ function TriviaAnswerButton({
       testID={`trivia-answer-${option.optionIndex}`}
       style={[
         styles.answerButton,
+        { backgroundColor: triviaOptionTones[option.optionIndex % triviaOptionTones.length] },
         isSelected ? styles.answerSelected : null,
         isClosed ? styles.answerClosed : null,
       ]}
@@ -333,8 +325,9 @@ function TriviaIntroSurface({
 }) {
   return (
     <ScreenShell tone="background" style={[styles.shell, styles.worldRoot]} testID="trivia-phone-intro">
+      <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.gameWorlds.trivia}
+        source={TRIVIA_ART.leaves}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -345,10 +338,10 @@ function TriviaIntroSurface({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInsetTop + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInsetTop + triviaSpacing.xl,
+            paddingRight: insets.right + triviaSpacing.xl,
+            paddingBottom: insets.bottom + triviaSpacing.xl,
+            paddingLeft: insets.left + triviaSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -357,7 +350,7 @@ function TriviaIntroSurface({
         <View style={styles.introContent}>
           <TriviaBrandHeader />
           <Image
-            source={HEARTBEAT_ARTWORK.gameCards.trivia}
+            source={TRIVIA_ART.card}
             resizeMode="contain"
             style={styles.introArt}
             accessible={false}
@@ -393,8 +386,9 @@ function TriviaStatusSurface({
   const isLegacy = phase === 'legacy';
   return (
     <ScreenShell tone="background" style={[styles.shell, styles.worldRoot]} testID={testID}>
+      <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.gameWorlds.trivia}
+        source={TRIVIA_ART.leaves}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -405,33 +399,36 @@ function TriviaStatusSurface({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInsetTop + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInsetTop + triviaSpacing.xl,
+            paddingRight: insets.right + triviaSpacing.xl,
+            paddingBottom: insets.bottom + triviaSpacing.xl,
+            paddingLeft: insets.left + triviaSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
         testID={`${testID}-scroll`}
       >
-        <View style={styles.statusContent}>
-          <TriviaBrandHeader />
-          <Image
-            source={isFinished ? HEARTBEAT_ARTWORK.phone.gameFinished : HEARTBEAT_ARTWORK.gameCards.trivia}
-            resizeMode={isFinished ? 'cover' : 'contain'}
-            style={isFinished ? styles.finishedArt : styles.statusArt}
-            accessible={false}
-            testID={isFinished ? 'trivia-phone-finished-art' : 'trivia-phone-status-art'}
-          />
+        <View style={[styles.statusContent, { paddingTop: 52 }]}>
           <HuddleText variant="display" align="center" accessibilityRole="header">
-            {isLegacy ? 'Trivia needs an update' : isFinished ? 'All done!' : 'Eyes up.'}
+            {isLegacy ? 'Trivia needs an update' : isFinished ? 'All done!' : 'Eyes up!'}
           </HuddleText>
           <HuddleText variant="bodyLarge" align="center" accessibilityLiveRegion="polite">
             {line}
           </HuddleText>
-          <HuddleText variant="caption" align="center" style={styles.privateNote}>
-            {isLegacy ? 'Return to the room to start a fresh game.' : isFinished ? 'Final scores are on the TV.' : 'Shared results and the answer key live on the TV.'}
-          </HuddleText>
+          {!isLegacy ? <Image source={TRIVIA_ART.tvReveal} resizeMode="cover" style={styles.tvMark} accessible={false} testID={isFinished ? 'trivia-phone-finished-art' : 'trivia-phone-status-art'} /> : null}
+          {!isLegacy && !isFinished ? <HuddleText variant="caption" style={styles.compatibilityHidden}>Eyes up.</HuddleText> : null}
+          {isLegacy ? (
+            <HuddleText variant="caption" align="center" style={styles.privateNote}>Return to the room to start a fresh game.</HuddleText>
+          ) : phase === 'reveal' ? (
+            <View style={styles.statusFooter}>
+              <HuddleText variant="body" align="center">Watch the TV for the correct answer and results.</HuddleText>
+            </View>
+          ) : isFinished ? (
+            <View style={styles.statusFooter}>
+              <HuddleText variant="title" align="center">Thanks for playing!</HuddleText>
+              <HuddleText variant="body" align="center">Wait for the Host.</HuddleText>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </ScreenShell>
@@ -518,12 +515,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   worldRoot: {
-    backgroundColor: brandColors.cream,
+    backgroundColor: triviaPalette.cream,
   },
   worldWash: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: brandColors.cream,
-    opacity: 0.68,
+    backgroundColor: triviaPalette.cream,
+    opacity: 0.08,
   },
   scroll: {
     flexGrow: 1,
@@ -532,145 +529,196 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 440,
     alignSelf: 'center',
-    paddingHorizontal: spacing.xl,
-    gap: spacing.md,
+    paddingHorizontal: triviaSpacing.xl,
+    gap: triviaSpacing.md,
   },
   brandHeader: {
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
-  brandMark: {
-    width: 25,
+  gameMark: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  gameMarkLeaf: {
+    width: 16,
+    height: 22,
+    borderRadius: 16,
+    backgroundColor: triviaTvTheme.moss,
+    transform: [{ rotate: '38deg' }, { translateX: 4 }, { translateY: -2 }],
+  },
+  gameMarkStem: {
+    position: 'absolute',
+    width: 2,
     height: 24,
+    backgroundColor: triviaTvTheme.ink,
+    transform: [{ rotate: '34deg' }, { translateX: -1 }],
   },
   brandTitle: {
     letterSpacing: -0.4,
+    color: triviaTvTheme.ink,
   },
   roundRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: 0,
+    width: '100%',
   },
   serverPill: {
-    minHeight: 40,
+    minHeight: 62,
     flex: 1,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.12)',
-    backgroundColor: 'rgba(249,241,230,0.92)',
+    paddingHorizontal: triviaSpacing.md,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: triviaTvTheme.ink,
+    backgroundColor: triviaTvTheme.parchment,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
   },
   pillIcon: {
     fontSize: 15,
   },
   timerPill: {
-    minWidth: 68,
-    minHeight: 46,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: brandColors.mint,
+    minWidth: 88,
+    minHeight: 88,
+    paddingHorizontal: triviaSpacing.md,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: triviaTvTheme.ink,
+    backgroundColor: triviaTvTheme.honey,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.card,
+    shadowColor: triviaTvTheme.shadow,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
   },
   timerLabel: {
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 36,
+    lineHeight: 44,
+  },
+  compatibilityHidden: {
+    position: 'absolute',
+    opacity: 0,
+    height: 0,
+    width: 0,
   },
   roundLabel: {
-    opacity: 0.8,
+    color: triviaTvTheme.inkSoft,
+    letterSpacing: 1.1,
     fontSize: 13,
   },
+  questionTitle: { fontSize: 21, lineHeight: 28, paddingVertical: 12 },
   questionPanel: {
-    minHeight: 142,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    borderRadius: radii.lg,
+    minHeight: 96,
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.lg,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.1)',
-    backgroundColor: 'rgba(249,241,230,0.96)',
+    borderColor: triviaTvTheme.ink,
+    borderLeftWidth: 7,
+    backgroundColor: triviaTvTheme.parchmentSoft,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
-    ...shadows.card,
+    gap: triviaSpacing.sm,
+    shadowColor: triviaTvTheme.shadow,
+    shadowOpacity: 0.22,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   privateNote: {
     opacity: 0.66,
   },
+  questionPrivacyNote: {
+    position: 'absolute',
+    opacity: 0,
+    height: 0,
+  },
   options: {
-    gap: spacing.sm,
+    width: '100%',
+    gap: triviaSpacing.sm,
   },
   answerButton: {
-    minHeight: 56,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    borderColor: 'rgba(43,31,23,0.12)',
-    backgroundColor: brandColors.cream,
-    justifyContent: 'flex-start',
+    minHeight: 62,
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.sm,
+    borderRadius: 6,
+    borderColor: triviaTvTheme.ink,
+    borderWidth: 2,
+    borderBottomWidth: 5,
+    justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    position: 'relative',
     opacity: 1,
-    ...shadows.card,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   answerSelected: {
-    backgroundColor: semanticColors.accent,
-    borderColor: semanticColors.accent,
+    backgroundColor: triviaTvTheme.parchment,
+    borderColor: triviaTvTheme.mossDark,
+    borderWidth: 3,
     opacity: 1,
   },
   answerClosed: {
     opacity: 0.5,
   },
   optionLetter: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.round,
-    backgroundColor: brandColors.mint,
+    width: 42,
+    height: 42,
+    borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: triviaTvTheme.ink,
   },
   optionLetterSelected: {
-    backgroundColor: 'rgba(249,241,230,0.7)',
+    backgroundColor: triviaTvTheme.honey,
   },
   optionLetterText: {
     fontSize: 12,
   },
   answerLabel: {
     flex: 1,
-    textAlign: 'left',
+    textAlign: 'center',
+    color: triviaTvTheme.ink,
   },
   answerLock: {
     fontSize: 16,
+    position: 'absolute',
+    right: triviaSpacing.md,
   },
   lockNote: {
     minHeight: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    gap: triviaSpacing.xs,
+    paddingHorizontal: triviaSpacing.md,
+    paddingVertical: triviaSpacing.sm,
   },
   lockIcon: {
     fontSize: 16,
   },
   statusScroll: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   statusContent: {
+    flexGrow: 1,
     width: '100%',
     maxWidth: 390,
     alignSelf: 'center',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: triviaSpacing.md,
   },
   statusArt: {
     width: 172,
@@ -679,21 +727,26 @@ const styles = StyleSheet.create({
   finishedArt: {
     width: 220,
     height: 262,
-    borderRadius: radii.lg,
+    borderRadius: triviaRadii.lg,
   },
   waitingPanel: {
     width: '100%',
     minHeight: 90,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.1)',
-    backgroundColor: 'rgba(249,241,230,0.92)',
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.lg,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: triviaTvTheme.ink,
+    borderTopWidth: 6,
+    backgroundColor: triviaTvTheme.parchmentSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    ...shadows.card,
+    gap: triviaSpacing.xs,
+    shadowColor: triviaTvTheme.shadow,
+    shadowOpacity: 0.20,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   waitingArt: {
     width: 184,
@@ -702,7 +755,31 @@ const styles = StyleSheet.create({
   waitingFooter: {
     width: '100%',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: triviaSpacing.xs,
+  },
+  tvMark: {
+    width: 224,
+    height: 188,
+    borderRadius: triviaRadii.lg,
+    marginTop: triviaSpacing.sm,
+  },
+  statusFooter: {
+    marginTop: 'auto',
+    width: '100%',
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.lg,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: triviaTvTheme.ink,
+    borderLeftWidth: 7,
+    backgroundColor: triviaTvTheme.parchmentSoft,
+    alignItems: 'center',
+    gap: triviaSpacing.xs,
+    shadowColor: triviaTvTheme.shadow,
+    shadowOpacity: 0.20,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   introContent: {
     width: '100%',
@@ -710,16 +787,17 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: triviaSpacing.sm,
   },
   introArt: {
     width: 188,
     height: 188,
-    marginTop: spacing.sm,
+    marginTop: triviaSpacing.sm,
   },
   introTitle: {
     fontSize: 34,
     lineHeight: 40,
+    color: triviaTvTheme.ink,
   },
   introCopy: {
     maxWidth: 320,
@@ -727,15 +805,20 @@ const styles = StyleSheet.create({
   introSummary: {
     width: '100%',
     maxWidth: 340,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.1)',
-    backgroundColor: 'rgba(249,241,230,0.88)',
+    marginTop: triviaSpacing.sm,
+    paddingHorizontal: triviaSpacing.lg,
+    paddingVertical: triviaSpacing.md,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: triviaTvTheme.ink,
+    borderTopWidth: 6,
+    backgroundColor: triviaTvTheme.parchmentSoft,
     alignItems: 'center',
-    gap: spacing.xs,
-    ...shadows.card,
+    gap: triviaSpacing.xs,
+    shadowColor: triviaTvTheme.shadow,
+    shadowOpacity: 0.20,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
 });

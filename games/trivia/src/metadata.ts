@@ -5,7 +5,8 @@ export const triviaMetadata: GameMetadata = {
   id: 'trivia',
   title: 'Trivia',
   keyArt: { color: 'ink' },
-  playerRange: { min: 2, max: 10 },
+  playerRange: { min: 1, max: 10 },
   estimatedMinutes: 15,
   category: 'Quiz',
+  tagline: 'Big questions. Bigger guesses.',
 };

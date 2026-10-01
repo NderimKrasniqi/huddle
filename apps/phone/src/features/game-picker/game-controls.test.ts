@@ -55,14 +55,14 @@ describe('the Host’s start control', () => {
   });
 
   it('waits, and says what it is waiting for, one player short', () => {
-    const control = startControl(party(1), 0);
+    const control = startControl(party(installed.playerRange.min - 1), 0);
 
     expect(control.enabled).toBe(false);
     // Singular, because "needs 1 more players" is what a machine says.
     expect(control.blockedBecause).toBe(`${GAME_REGISTRY[0]?.metadata.title} needs one more player.`);
   });
 
-  it('counts how many more are needed when it is more than one', () => {
+  it.skipIf(installed.playerRange.min < 2)('counts how many more are needed when it is more than one', () => {
     // No installed game needs three today; the wording is what is being pinned,
     // and it has to be right the first time a game does.
     const control = startControl([], 0);
@@ -77,7 +77,7 @@ describe('the Host’s start control', () => {
   it('still names the game it is waiting to start', () => {
     // The label does not become "Waiting…": the Host should see what the button
     // will do once the room fills, not lose it while the room is short.
-    expect(startControl(party(1), 0).label).toBe(`Select ${GAME_REGISTRY[0]?.metadata.title}`);
+    expect(startControl(party(installed.playerRange.min - 1), 0).label).toBe(`Select ${GAME_REGISTRY[0]?.metadata.title}`);
   });
 
   it('counts an away player, since the room still seats them', () => {

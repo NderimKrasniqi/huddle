@@ -1,56 +1,45 @@
-import { cleanup, render, screen } from '@testing-library/react-native';
+import { act, cleanup, render, screen } from '@testing-library/react-native';
 
 import { TvGameCarouselScreen } from './game-carousel-screen';
 import { TvSelectedGameArtScreen } from './game-art-reveal-screen';
 import { TvGameSetupScreen } from './game-setup-screen';
-import { TvReadyToStartScreen } from './game-ready-screen';
+
+const trivia = [
+  { key: 'questions', label: 'Questions', options: [{ value: '10', label: '10' }], defaultValue: '10', icon: 'count', unit: 'questions' },
+] as const;
 
 describe('TV game flow renderers', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    jest.useRealTimers();
+  });
 
-  it('renders the four display-only stages without controls or focus targets', async () => {
-    await render(
-      <TvGameCarouselScreen hostName="Ada" selectedGameId="voting" reduceMotion />,
-    );
+  it('shows three game cards around the one the host is on, with no controls', async () => {
+    await render(<TvGameCarouselScreen hostName="Ada" selectedGameId="voting" reduceMotion />);
     expect(screen.getByTestId('tv-game-flow-background')).toBeTruthy();
-    expect(screen.getByTestId('tv-game-card-voting')).toBeTruthy();
     expect(screen.getByTestId('tv-game-card-voting').props.focusable).toBe(false);
+    expect(screen.getByLabelText('Voting, selected')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-card-trivia')).toBeTruthy();
+    expect(screen.getByTestId('tv-game-card-doodle-dash')).toBeTruthy();
     expect(screen.getByText('Ada is choosing a game.')).toBeTruthy();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('masks the supplied Voting artwork badges during game-art reveal', async () => {
-    await render(
-      <TvSelectedGameArtScreen gameId="voting" hostName="Ada" reduceMotion />,
-    );
-    expect(screen.getByTestId('tv-game-art-voting')).toBeTruthy();
-    expect(screen.getByTestId('tv-voting-art-badge-mask')).toBeTruthy();
-    expect(screen.queryByText('12 Players')).toBeNull();
+  it('keeps the selected card centred at the end of the catalogue instead of wrapping', async () => {
+    await render(<TvGameCarouselScreen selectedGameId="hot-take" reduceMotion />);
+    expect(screen.getByTestId('tv-game-card-quick-poll')).toBeTruthy();
+    expect(screen.getByLabelText('Hot Take, coming soon, selected')).toBeTruthy();
+    expect(screen.queryByTestId('tv-game-card-doodle-dash')).toBeNull();
+    expect(screen.queryByTestId('tv-game-card-trivia')).toBeNull();
   });
 
-  it('renders only supplied authoritative settings and mirrors all-ready state', async () => {
-    await render(
-      <TvGameSetupScreen
-        gameId="trivia"
-        hostName="Ada"
-        mode="standard"
-        stage="ready"
-        settings={{ questions: '10', difficulty: 'hard' }}
-        players={[
-          { id: 'ada', name: 'Ada', isHost: true },
-          { id: 'bo', name: 'Bo' },
-        ]}
-        readyPlayerIds={['ada', 'bo']}
-      />,
-    );
-    expect(screen.getByTestId('tv-game-setting-questions')).toBeTruthy();
-    expect(screen.queryByTestId('tv-game-setting-difficulty')).toBeNull();
-    expect(screen.getByText('Everyone is ready!')).toBeTruthy();
-    expect(screen.getByLabelText('Ada, host, ready')).toBeTruthy();
-    expect(screen.getByLabelText('Bo, ready')).toBeTruthy();
+  it('reveals the chosen game before setup', async () => {
+    await render(<TvSelectedGameArtScreen gameId="voting" hostName="Ada" reduceMotion />);
+    expect(screen.getByText('Let’s play Voting!')).toBeTruthy();
+    expect(screen.getByLabelText('Voting selected. Ada is choosing settings on the phone.')).toBeTruthy();
   });
 
-  it('keeps configuring copy focused on Host setup, not player readiness', async () => {
+  it('shows only the settings the game declared while the host configures', async () => {
     await render(
       <TvGameSetupScreen
         gameId="trivia"
@@ -58,20 +47,59 @@ describe('TV game flow renderers', () => {
         hostName="Ada"
         mode="custom"
         stage="configuring"
-        settings={{ questions: '10' }}
+        settings={{ questions: '10', difficulty: 'hard' }}
+        settingsSchema={trivia}
         players={[{ id: 'ada', name: 'Ada', isHost: true }]}
+        reduceMotion
+      />,
+    );
+    expect(screen.getByText('Setting up Trivia')).toBeTruthy();
+    expect(screen.getByLabelText('Questions: 10')).toBeTruthy();
+    expect(screen.queryByTestId('tv-game-setting-difficulty')).toBeNull();
+    expect(screen.getByLabelText('Custom setup')).toBeTruthy();
+    expect(screen.queryByText(/hands up/i)).toBeNull();
+  });
+
+  it('counts raised hands and names who the room is waiting for', async () => {
+    await render(
+      <TvGameSetupScreen
+        gameId="trivia"
+        hostName="Ada"
+        stage="ready"
+        settings={{ questions: '10' }}
+        settingsSchema={trivia}
+        players={[
+          { id: 'ada', name: 'Ada', isHost: true },
+          { id: 'bo', name: 'Bo' },
+        ]}
         readyPlayerIds={['ada']}
         reduceMotion
       />,
     );
+    expect(screen.getByText('Hands up for Trivia!')).toBeTruthy();
+    expect(screen.getByText('Trivia · 10 questions')).toBeTruthy();
+    expect(screen.getByText('1 of 2 hands up')).toBeTruthy();
+    expect(screen.getByText('Waiting for Bo')).toBeTruthy();
+    expect(screen.getByLabelText('Ada, host, ready')).toBeTruthy();
+    expect(screen.getByLabelText('Bo, waiting')).toBeTruthy();
+  });
 
-    expect(screen.getByText('Trivia setup')).toBeTruthy();
-    expect(screen.getAllByText('Ada is finalizing settings on the phone.')).not.toHaveLength(0);
-    expect(screen.getByText('Setup is being finalized')).toBeTruthy();
-    expect(screen.queryByText(/players are ready/i)).toBeNull();
-    expect(screen.queryByText(/getting ready/i)).toBeNull();
-    expect(screen.queryByText(/waiting/i)).toBeNull();
-    expect(screen.getByText('In room')).toBeTruthy();
+  it('tells the room the host can start once every hand is up', async () => {
+    await render(
+      <TvGameSetupScreen
+        gameId="trivia"
+        hostName="Ada"
+        stage="ready"
+        players={[
+          { id: 'ada', name: 'Ada', isHost: true },
+          { id: 'bo', name: 'Bo' },
+        ]}
+        readyPlayerIds={['ada', 'bo']}
+        reduceMotion
+      />,
+    );
+    expect(screen.getByText('Every hand is up!')).toBeTruthy();
+    expect(screen.getByText('Ada can start the game')).toBeTruthy();
   });
 
   it('does not claim an away player is ready', async () => {
@@ -82,25 +110,56 @@ describe('TV game flow renderers', () => {
         stage="ready"
         players={[{ id: 'away', name: 'Away', away: true }]}
         readyPlayerIds={['away']}
-      />,
-    );
-    expect(screen.queryByText('Everyone is ready!')).toBeNull();
-    expect(screen.getByText('0 of 1 players are ready')).toBeTruthy();
-  });
-
-  it('keeps ready copy display-only and renders the room code', async () => {
-    await render(
-      <TvReadyToStartScreen
-        gameId="trivia"
-        hostName="Ada"
-        roomCode="KWRD"
         reduceMotion
       />,
     );
-    expect(screen.getByTestId('tv-game-ready-check')).toBeTruthy();
-    expect(screen.getByText('Everyone is ready!')).toBeTruthy();
-    expect(screen.getByText('Room KWRD')).toBeTruthy();
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
-    expect(screen.getByTestId('tv-game-ready').props.pointerEvents).toBe('none');
+    expect(screen.queryByText('Every hand is up!')).toBeNull();
+    expect(screen.getByLabelText('0 of 1 players are ready')).toBeTruthy();
+    expect(screen.getByLabelText('Away, reconnecting')).toBeTruthy();
+  });
+
+  it('says the room needs more players when every hand is up but the game needs more', async () => {
+    await render(
+      <TvGameSetupScreen
+        gameId="trivia"
+        stage="ready"
+        playerRange={{ min: 2, max: 10 }}
+        players={[{ id: 'ada', name: 'Ada', isHost: true }]}
+        readyPlayerIds={['ada']}
+        reduceMotion
+      />,
+    );
+    expect(screen.getByText('Need 1 more player to start')).toBeTruthy();
+  });
+
+  it('counts down to the server deadline on the TV clock', async () => {
+    jest.useFakeTimers({ now: 10_000 });
+    await render(
+      <TvGameSetupScreen
+        gameId="trivia"
+        stage="countdown"
+        countdownEndsAt={13_000}
+        players={[{ id: 'ada', name: 'Ada', isHost: true }]}
+        reduceMotion
+      />,
+    );
+    expect(screen.getByLabelText('Trivia starts in 3')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(3_200);
+    });
+    expect(screen.getByLabelText('Trivia is starting')).toBeTruthy();
+  });
+
+  it('keeps the ready check up if a countdown arrives without its deadline', async () => {
+    await render(
+      <TvGameSetupScreen
+        gameId="trivia"
+        stage="countdown"
+        players={[{ id: 'ada', name: 'Ada', isHost: true }]}
+        readyPlayerIds={['ada']}
+        reduceMotion
+      />,
+    );
+    expect(screen.getByText('Hands up for Trivia!')).toBeTruthy();
   });
 });

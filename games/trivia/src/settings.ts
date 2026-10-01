@@ -32,23 +32,18 @@ const DEFAULT_QUESTION_SECONDS: QuestionSeconds = 20;
 
 export const TRIVIA_SETTINGS_SCHEMA: GameSettingsSchema = [
   {
-    key: SCORING_KEY,
-    label: 'Scoring',
-    options: [
-      { value: 'flat', label: 'Flat — 100 a question' },
-      { value: 'speed', label: 'Speed — quicker is worth more' },
-    ],
-    defaultValue: DEFAULT_SCORING,
-  },
-  {
     key: QUESTION_COUNT_KEY,
     label: 'Questions',
+    icon: 'count',
+    unit: 'questions',
     options: QUESTION_COUNTS.map((count) => ({ value: String(count), label: String(count) })),
     defaultValue: String(DEFAULT_QUESTION_COUNT),
   },
   {
     key: DIFFICULTY_KEY,
     label: 'Difficulty',
+    icon: 'difficulty',
+    unit: 'difficulty',
     options: DIFFICULTIES.map((difficulty) => ({
       value: difficulty,
       label: difficulty.charAt(0).toUpperCase() + difficulty.slice(1),
@@ -58,20 +53,36 @@ export const TRIVIA_SETTINGS_SCHEMA: GameSettingsSchema = [
   {
     key: QUESTION_SECONDS_KEY,
     label: 'Time per question',
+    icon: 'timer',
+    unit: 'seconds',
     options: QUESTION_SECONDS_OPTIONS.map((seconds) => ({
       value: String(seconds),
       label: `${seconds} sec`,
+      short: String(seconds),
     })),
     defaultValue: String(DEFAULT_QUESTION_SECONDS),
   },
   {
     key: CATEGORY_KEY,
     label: 'Category',
+    icon: 'category',
+    unit: 'only',
     options: [
-      { value: EVERY_CATEGORY, label: 'All categories' },
+      { value: EVERY_CATEGORY, label: 'All categories', short: 'All', unit: 'categories' },
       ...PACK_CATEGORIES.map((category) => ({ value: category, label: category })),
     ],
     defaultValue: EVERY_CATEGORY,
+  },
+  {
+    key: SCORING_KEY,
+    label: 'Scoring',
+    icon: 'scoring',
+    unit: 'scoring',
+    options: [
+      { value: 'flat', label: 'Flat — 100 a question', short: 'Flat' },
+      { value: 'speed', label: 'Speed — quicker is worth more', short: 'Speed' },
+    ],
+    defaultValue: DEFAULT_SCORING,
   },
 ];
 
@@ -119,6 +130,7 @@ export const TRIVIA_SETTINGS_PRESENTATION = {
     {
       mode: 'quick' as const,
       label: 'Quick',
+      description: 'Great for fast, casual rounds.',
       settings: {
         scoring: 'flat',
         questions: '5',
@@ -130,6 +142,7 @@ export const TRIVIA_SETTINGS_PRESENTATION = {
     {
       mode: 'standard' as const,
       label: 'Standard',
+      description: 'Classic trivia night.',
       settings: {
         scoring: 'flat',
         questions: '10',

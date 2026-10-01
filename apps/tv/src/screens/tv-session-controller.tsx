@@ -1,8 +1,9 @@
+import { useRoomMoments } from '@huddle/ui/native';
 import { api } from '@huddle/convex';
 import { runningGameScreen, type RunningGameScreen } from '@huddle/game-registry';
 import { gamePlayersFrom } from '@huddle/domain';
 import { useQuery } from 'convex/react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { TvGameFlowStage, TvPlatformStatusScreen, type TvGameSetupProjection } from '../features/game-flow/native';
 import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
@@ -44,9 +45,16 @@ export function TvSessionController({
     hasRunningGame: room.hasRunningGame,
   });
 
+  const playerIds = useMemo(() => roster?.map((player) => String(player.playerId)), [roster]);
+  const moments = useRoomMoments({ playerIds, runtime: runtime.kind,
+    lobbyResolved: running !== undefined && runtime.kind === 'lobby' && browsingAt === null && setup === null,
+    browsing: hasBrowsing,
+  });
   const gameId = runtime.kind === 'game' || runtime.kind === 'finished' ? runtime.module.metadata.id : undefined;
   return (
     <TvSessionPresentation
+      returned={moments.returned}
+      welcomeIds={moments.welcomeIds}
       surface={surface}
       runtime={runtime.kind}
       runtimeScreen={runtime}
@@ -70,7 +78,11 @@ export function TvSessionPresentation({
   browsingAt,
   setup,
   reduceMotion,
+  returned,
+  welcomeIds,
 }: {
+  readonly returned?: boolean;
+  readonly welcomeIds?: readonly string[];
   readonly surface: TvSurface;
   readonly runtime: RunningGameScreen['kind'];
   readonly runtimeScreen?: RunningGameScreen;
@@ -121,7 +133,7 @@ export function TvSessionPresentation({
   }
 
   if (surface === 'room') {
-    return <RoomStage roomCode={roomCode} roster={roster} />;
+    return <RoomStage roomCode={roomCode} roster={roster} returned={returned} welcomeIds={welcomeIds} />;
   }
 
   if (surface === 'carousel' || surface === 'setup') {

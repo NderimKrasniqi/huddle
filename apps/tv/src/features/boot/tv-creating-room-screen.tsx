@@ -1,78 +1,49 @@
-import { durationFor, radii, semanticColors, spacing } from '@huddle/design-tokens';
+import { playroomEasing, playroomMotion, playroomTv } from '@huddle/design-tokens';
 import {
-  HEARTBEAT_ARTWORK,
-  HuddleText,
-  LoadingMark,
+  PLAYROOM_ARTWORK,
+  PlayroomFloat,
+  PlayroomText,
+  PlayroomTvStage,
+  PlayroomWordmark,
 } from '@huddle/ui/native';
-import { useEffect, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  ImageBackground,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-  type ImageSourcePropType,
-} from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
 import type { TvAnimatedBootPhase } from './boot-state';
 import { tvBootAnimationCopy } from './boot-state';
+import { TvRestoreIndicator } from './tv-restore-indicator';
 import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduced-motion';
-
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
-const OVERSCAN_X = 96;
-const OVERSCAN_Y = 54;
 
 type TvCreatingRoomScreenProps = {
   readonly phase: TvAnimatedBootPhase;
-  readonly backgroundSource?: ImageSourcePropType;
   /** Override the system preference for deterministic previews and tests. */
   readonly reduceMotion?: boolean;
 };
 
-/** Display-only Heartbeat startup/opening/reconnecting stage. */
+/** The splash settles in once, from slightly small and transparent. */
+const SPLASH_ENTER = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: playroomMotion.entranceTravel }, { scale: 0.98 }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
+})
+  .duration(playroomMotion.entrance)
+  .reduceMotion(ReduceMotion.System);
+
+const COPY_ENTER = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: playroomMotion.entranceTravel }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }], easing: Easing.bezier(...playroomEasing.out) },
+})
+  .duration(playroomMotion.entrance)
+  .delay(playroomMotion.entrance)
+  .reduceMotion(ReduceMotion.System);
+
+/** Display-only startup, room-opening, and reconnecting stage. */
 export function TvCreatingRoomScreen({
   phase,
-  backgroundSource = HEARTBEAT_ARTWORK.tv.platformLivingRoom,
   reduceMotion: reduceMotionOverride,
 }: TvCreatingRoomScreenProps) {
-  const { width, height } = useWindowDimensions();
-  const scale = safeScale(width, height);
   const systemReduceMotion = useTvSystemReducedMotion();
   const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
   const copy = tvBootAnimationCopy(phase);
-  const [enter] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
-  const [ambient] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
-
-  useEffect(() => {
-    enter.stopAnimation();
-    ambient.stopAnimation();
-    if (reduceMotion) {
-      enter.setValue(1);
-      ambient.setValue(1);
-      return;
-    }
-
-    enter.setValue(0);
-    ambient.setValue(0);
-    const animation = Animated.parallel([
-      Animated.timing(enter, {
-        toValue: 1,
-        duration: durationFor('slow', false),
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(ambient, {
-        toValue: 1,
-        duration: durationFor('celebration', false),
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]);
-    animation.start();
-    return () => animation.stop();
-  }, [ambient, enter, phase, reduceMotion]);
 
   return (
     <View
@@ -84,105 +55,47 @@ export function TvCreatingRoomScreen({
       accessibilityLabel={`${copy.title}. ${copy.subtitle}`}
       testID="tv-boot-animated"
     >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
-        pointerEvents="none"
-        focusable={false}
-        accessible={false}
-      >
-        <ImageBackground
-          source={backgroundSource}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="tv-boot-background"
-        />
-        <View style={styles.warmWash} pointerEvents="none" focusable={false} />
-        <Animated.View
-          style={[styles.ambientGlow, { opacity: ambient }]}
-          pointerEvents="none"
-          focusable={false}
-        />
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: enter,
-              transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }],
-            },
-          ]}
-          pointerEvents="none"
-          focusable={false}
-          accessible={false}
-        >
-          <LoadingMark
-            size={142}
-            reduceMotion={reduceMotion}
-            accessibilityLabel="Huddle loading"
-            testID="tv-boot-loading-mark"
-          />
-          <HuddleText variant="tvDisplay" color="surface" align="center" style={styles.title}>
-            {copy.title}
-          </HuddleText>
-          <HuddleText variant="bodyLarge" color="surface" align="center" style={styles.subtitle}>
-            {copy.subtitle}
-          </HuddleText>
-        </Animated.View>
-      </View>
+      <PlayroomTvStage wordmark={false} testID="tv-boot-stage">
+        <PlayroomFloat prop="starPurple" width={96} height={96} style={{ left: 300, top: 200 }} reduceMotion={reduceMotion} />
+        <PlayroomFloat prop="starYellow" width={120} height={120} style={{ left: 190, top: 330 }} reduceMotion={reduceMotion} delay={300} />
+        <PlayroomFloat prop="ballOrange" width={90} height={90} style={{ right: 250, top: 190 }} reduceMotion={reduceMotion} delay={200} />
+        <PlayroomFloat prop="ballPurple" width={60} height={60} style={{ right: 180, top: 460 }} reduceMotion={reduceMotion} delay={600} />
+        <View style={styles.content} pointerEvents="none" focusable={false}>
+          <Animated.View entering={reduceMotion ? undefined : SPLASH_ENTER}>
+            <Image source={PLAYROOM_ARTWORK.brand.splash} style={styles.splash} resizeMode="contain" accessible={false} />
+          </Animated.View>
+          <PlayroomWordmark height={132} style={styles.wordmark} />
+          <Animated.View entering={reduceMotion ? undefined : COPY_ENTER} style={styles.copy}>
+            <PlayroomText color="ink" style={playroomTv.type.heading}>{copy.title}</PlayroomText>
+            <PlayroomText color="muted" style={playroomTv.type.body}>{copy.subtitle}</PlayroomText>
+            <TvRestoreIndicator stage="restoring" size={72} reduceMotion={reduceMotion} />
+          </Animated.View>
+        </View>
+      </PlayroomTvStage>
     </View>
   );
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: semanticColors.text,
-  },
-  stage: {
-    width: STAGE_WIDTH,
-    height: STAGE_HEIGHT,
-    overflow: 'hidden',
-  },
-  warmWash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.62,
-  },
-  ambientGlow: {
-    position: 'absolute',
-    left: -140,
-    top: -140,
-    width: 760,
-    height: 760,
-    borderRadius: radii.round,
-    backgroundColor: semanticColors.primary,
-    opacity: 0.16,
   },
   content: {
-    position: 'absolute',
-    left: OVERSCAN_X,
-    right: OVERSCAN_X,
-    top: 154,
-    bottom: OVERSCAN_Y,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 48,
+    paddingVertical: playroomTv.safeY,
   },
-  title: {
-    marginTop: spacing.xl,
-    color: semanticColors.surface,
+  splash: {
+    width: 500,
+    height: 500,
   },
-  subtitle: {
-    marginTop: spacing.sm,
-    color: semanticColors.surface,
-    opacity: 0.86,
+  wordmark: {
+    marginTop: 6,
+  },
+  copy: {
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 18,
   },
 });

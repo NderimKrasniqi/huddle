@@ -1,4 +1,5 @@
 import {
+  fontFamilies,
   radii,
   semanticColors,
   shadows,
@@ -32,6 +33,7 @@ export type HuddleButtonProps = Omit<
   /** Set false for passive TV renderers; no focus or press target is emitted. */
   readonly interactive?: boolean;
   readonly accessibilityLabel?: string;
+  readonly labelStyle?: StyleProp<TextStyle>;
   readonly onPress?: PressableProps['onPress'];
   readonly style?: StyleProp<ViewStyle>;
 };
@@ -72,6 +74,7 @@ export function HuddleButton({
   disabled = false,
   interactive = true,
   accessibilityLabel,
+  labelStyle,
   accessibilityHint,
   accessibilityState,
   onPress,
@@ -85,7 +88,7 @@ export function HuddleButton({
     <>
       {busy ? <ActivityIndicator color={semanticColors[recipe.color]} size="small" accessible={false} /> : null}
       {title !== undefined ? (
-        <HuddleText variant="body" color={recipe.color} style={styles.label}>
+        <HuddleText variant="body" color={recipe.color} style={[styles.label, labelStyle]}>
           {title}
         </HuddleText>
       ) : (
@@ -147,6 +150,7 @@ const styles = {
   } satisfies ViewStyle,
   label: {
     ...typography.body,
+    fontFamily: fontFamilies.bold,
     fontWeight: typography.caption.fontWeight,
     textAlign: 'center',
   } satisfies TextStyle,

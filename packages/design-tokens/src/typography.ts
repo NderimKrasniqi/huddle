@@ -6,6 +6,7 @@ export const fontFamilies = {
   regular: 'Nunito_400Regular',
   bold: 'Nunito_700Bold',
   extraBold: 'Nunito_800ExtraBold',
+  black: 'Nunito_900Black',
 } as const;
 
 /** React Native accepts font weights as these string values. */
@@ -13,6 +14,7 @@ export const fontWeights = {
   regular: '400',
   bold: '700',
   extraBold: '800',
+  black: '900',
 } as const;
 
 export const fontSizes = {

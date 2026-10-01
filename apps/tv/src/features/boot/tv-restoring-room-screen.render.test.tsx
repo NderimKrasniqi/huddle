@@ -20,7 +20,8 @@ describe('TvRestoringRoomScreen', () => {
 
     expect(screen.getByText('Restoring your room…')).toBeTruthy();
     expect(screen.getByLabelText(/Room code K W R D/).props.focusable).toBe(false);
-    expect(screen.getByTestId('tv-restoring-room-background')).toBeTruthy();
+    expect(screen.getByTestId('tv-restoring-room-stage')).toBeTruthy();
+    expect(screen.getByText('Room KWRD')).toBeTruthy();
     expect(screen.getByTestId('tv-restore-indicator')).toBeTruthy();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);

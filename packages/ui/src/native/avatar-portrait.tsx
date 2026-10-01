@@ -1,4 +1,4 @@
-import { semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { playroomAvatarCircles, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import type { AvatarId } from '@huddle/contracts';
 import type { ComponentType, ComponentProps } from 'react';
 import {
@@ -6,11 +6,12 @@ import {
   Pressable,
   View,
   type ImageSourcePropType,
+  type ImageStyle,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
-import { huddleAvatarSource } from './avatar-source';
+import { PLAYROOM_AVATARS } from './playroom-artwork';
 
 // React Native's ImageProps omit the View focusable flag even though the
 // Android ImageView can otherwise become a D-pad target. Keep the explicit
@@ -29,12 +30,13 @@ export type AvatarPortraitProps = {
   readonly onPress?: () => void;
   readonly testID?: string;
   readonly style?: StyleProp<ViewStyle>;
+  readonly imageStyle?: StyleProp<ImageStyle>;
 };
 
 /** Collectible avatar portrait that becomes a button only when requested. */
 export function AvatarPortrait({
   avatarId,
-  source = huddleAvatarSource(avatarId),
+  source = PLAYROOM_AVATARS[avatarId],
   size = 56,
   selected = false,
   disabled = false,
@@ -42,21 +44,30 @@ export function AvatarPortrait({
   onPress,
   testID,
   style,
+  imageStyle,
 }: AvatarPortraitProps) {
   const label = displayName === undefined ? `${avatarId} avatar` : `${displayName}'s avatar`;
+  // The character sits on its pastel circle, drawn 1.3× and shifted up so
+  // the face fills the circle, as on the platform screens.
   const image = (
-    <HuddleImage
-      source={source}
-      resizeMode="contain"
-      // The image is either a child of the interactive Pressable below or a
-      // passive portrait. It must never become a second Android TV D-pad
-      // target in either case.
+    <View
       focusable={false}
       accessible={onPress === undefined}
       accessibilityRole={onPress === undefined ? 'image' : undefined}
       accessibilityLabel={onPress === undefined ? label : undefined}
-      style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
-    />
+      style={[styles.circle, { width: size, height: size, borderRadius: size / 2, backgroundColor: playroomAvatarCircles[avatarId] }]}
+    >
+      <HuddleImage
+        source={source}
+        resizeMode="contain"
+        // The image is either a child of the interactive Pressable below or a
+        // passive portrait. It must never become a second Android TV D-pad
+        // target in either case.
+        focusable={false}
+        accessible={false}
+        style={[styles.image, { width: size * 1.3, height: size * 1.3, left: -size * 0.15, top: -size * 0.2 }, imageStyle]}
+      />
+    </View>
   );
   const frameStyle = [
     styles.frame,
@@ -93,9 +104,13 @@ const styles = {
     borderColor: 'transparent',
     borderWidth: 2,
   } satisfies ViewStyle,
+  circle: {
+    overflow: 'hidden',
+  } satisfies ViewStyle,
   image: {
+    position: 'absolute',
     backgroundColor: 'transparent',
-  },
+  } satisfies ImageStyle,
   selected: {
     borderColor: semanticColors.primary,
     ...shadows.card,

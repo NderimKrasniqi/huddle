@@ -1,24 +1,19 @@
-import type { AvatarId, GameSettingsSchema } from '@huddle/domain';
-import type { ImageSourcePropType } from 'react-native';
-
-import { gameCardAsset } from './assets';
-
+import { readiness, type AvatarId, type GameSettingIcon, type GameSettingsSchema, type GameSetupStage } from '@huddle/domain';
 export type TvGameCarouselCard = {
   readonly id: string;
   readonly title: string;
   readonly subtitle?: string;
   readonly available?: boolean;
-  readonly image?: ImageSourcePropType;
 };
 
 /** Defaults are visual fallbacks; an authoritative registry projection may override every field. */
 export const DEFAULT_TV_CAROUSEL_CARDS: readonly TvGameCarouselCard[] = [
-  { id: 'trivia', title: 'Trivia', subtitle: 'Test your knowledge', available: true },
-  { id: 'voting', title: 'Voting', subtitle: 'Vote on fun topics', available: true },
-  { id: 'doodle-dash', title: 'Doodle Dash', subtitle: 'Coming soon', available: false },
-  { id: 'quick-poll', title: 'Quick Poll', subtitle: 'Coming soon', available: false },
-  { id: 'hot-take', title: 'Hot Take', subtitle: 'Coming soon', available: false },
-].map((card) => ({ ...card, image: gameCardAsset(card.id) }));
+  { id: 'trivia', title: 'Trivia', subtitle: 'Big questions. Bigger guesses.', available: true },
+  { id: 'voting', title: 'Voting', subtitle: 'Share opinions. See what everyone thinks.', available: true },
+  { id: 'doodle-dash', title: 'Doodle Dash', subtitle: 'Draw it. Guess it. Laugh about it.', available: false },
+  { id: 'quick-poll', title: 'Quick Poll', subtitle: 'Fast questions. Instant results.', available: false },
+  { id: 'hot-take', title: 'Hot Take', subtitle: 'Spicy opinions. No wrong answers.', available: false },
+];
 
 export type TvGamePlayer = {
   readonly id: string;
@@ -26,7 +21,6 @@ export type TvGamePlayer = {
   readonly isHost?: boolean;
   readonly ready?: boolean;
   readonly away?: boolean;
-  readonly avatar?: ImageSourcePropType;
   readonly avatarId?: AvatarId;
 };
 
@@ -34,6 +28,8 @@ export type TvSetupSetting = {
   readonly key: string;
   readonly value: string;
   readonly label?: string;
+  /** The picture the game declared for this setting. */
+  readonly icon?: GameSettingIcon;
 };
 
 export type TvSetupSettings =
@@ -71,6 +67,7 @@ export function visibleTvSetupSettings(
       // Labels belong to the installed schema; persisted values cannot rename
       // a setting on a display-only surface.
       label: definition.label ?? SETUP_LABELS[key],
+      icon: definition.icon,
     }];
   });
 }
@@ -97,7 +94,7 @@ function fallbackSchemaFor(gameId: string): GameSettingsSchema {
 
 export type TvReadinessInput = {
   readonly gameId: string;
-  readonly stage?: 'configuring' | 'ready';
+  readonly stage?: GameSetupStage;
   readonly players: readonly TvGamePlayer[];
   readonly readyPlayerIds?: readonly string[];
   /** Prefer the selected module's authoritative range; the map is a legacy fallback for direct render tests. */
@@ -108,6 +105,8 @@ export type TvReadiness = {
   readonly readyCount: number;
   readonly playerCount: number;
   readonly allReady: boolean;
+  /** Fewest seats the game can start with, when the range is known. */
+  readonly minPlayers: number | undefined;
 };
 
 const PLAYER_RANGES: Readonly<Record<string, { readonly min: number; readonly max: number }>> = {
@@ -123,17 +122,18 @@ export function tvReadiness({
   readyPlayerIds = [],
   playerRange,
 }: TvReadinessInput): TvReadiness {
-  const ready = new Set(readyPlayerIds.map(String));
-  const readyCount = players.filter((player) => player.away !== true && ready.has(String(player.id))).length;
-  const range = playerRange ?? PLAYER_RANGES[gameId];
   // Without an installed module range there is no authoritative start gate to
-  // mirror, so fail closed rather than claiming an unknown game is playable.
-  const inRange = range !== undefined && players.length >= range.min && players.length <= range.max;
-  const nobodyAway = players.every((player) => player.away !== true);
-  const allReady = stage === 'ready' && players.length > 0 && inRange && nobodyAway &&
-    players.every((player) => ready.has(String(player.id)));
+  // mirror, so `readiness` fails closed rather than claiming an unknown game
+  // is playable.
+  const range = playerRange ?? PLAYER_RANGES[gameId];
+  const gate = readiness({
+    stage: stage ?? 'configuring',
+    seats: players.map((player) => ({ playerId: player.id, away: player.away === true })),
+    readyPlayerIds,
+    playerRange: range,
+  });
 
-  return { readyCount, playerCount: players.length, allReady };
+  return { readyCount: gate.readyCount, playerCount: gate.seatCount, allReady: gate.complete, minPlayers: range?.min };
 }
 
 export function tvModeLabel(mode: string | undefined): string {

@@ -1,0 +1,52 @@
+{
+  "fox": {
+    "file": "avatars/avatar-fox.png",
+    "character": "orange fox with cream cheeks and smiling closed eyes",
+    "circleColor": "#FFCCA5"
+  },
+  "green-alien": {
+    "file": "avatars/avatar-green-alien.png",
+    "character": "mint-green frog with big friendly round eyes",
+    "circleColor": "#D4F1CC"
+  },
+  "pink-bunny": {
+    "file": "avatars/avatar-pink-bunny.png",
+    "character": "pink bunny with tall ears and smiling closed eyes",
+    "circleColor": "#FFD8E3"
+  },
+  "blue-robot": {
+    "file": "avatars/avatar-blue-robot.png",
+    "character": "lavender robot with friendly face and yellow-tipped antenna",
+    "circleColor": "#E3D9FF"
+  },
+  "purple-owl": {
+    "file": "avatars/avatar-purple-owl.png",
+    "character": "girl with warm brown skin, purple curly hair, gold hoop earrings and pink top",
+    "circleColor": "#F4CEE4"
+  },
+  "yellow-robot": {
+    "file": "avatars/avatar-yellow-robot.png",
+    "character": "girl with blue hair and headphones, cheerful closed-eye smile",
+    "circleColor": "#D8DCFF"
+  },
+  "red-robot": {
+    "file": "avatars/avatar-red-robot.png",
+    "character": "brown-haired kid in an orange knit beanie and purple hoodie",
+    "circleColor": "#FFE0C2"
+  },
+  "teal-bear": {
+    "file": "avatars/avatar-teal-bear.png",
+    "character": "cream teddy bear with rounded ears and friendly smile",
+    "circleColor": "#F8E7BC"
+  },
+  "mint-cat": {
+    "file": "avatars/avatar-mint-cat.png",
+    "character": "yellow cat with cream muzzle and smiling closed eyes",
+    "circleColor": "#FFF0B3"
+  },
+  "puppy": {
+    "file": "avatars/avatar-puppy.png",
+    "character": "friendly green dinosaur with black sunglasses resting above eyes",
+    "circleColor": "#D2F0D5"
+  }
+}

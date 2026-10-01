@@ -1,10 +1,11 @@
+import { playroomColors, playroomTv } from '@huddle/design-tokens';
 import {
-  HEARTBEAT_ARTWORK,
-  HuddleText,
-  LoadingMark,
+  PlayroomHeading,
+  PlayroomStatusImage,
+  PlayroomText,
+  PlayroomTvStage,
 } from '@huddle/ui/native';
-import { semanticColors, spacing } from '@huddle/design-tokens';
-import { ImageBackground, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   tvBootPresentation,
   type TvBootPhase,
@@ -32,8 +33,6 @@ function TvBootSystemState({
   readonly phase: Extract<TvBootPhase, 'misconfigured' | 'deviceFailure'>;
   readonly title: string;
 }) {
-  const { width, height } = useWindowDimensions();
-  const scale = Math.min(width / 1920, height / 1080) || 1;
   const setupRequired = phase === 'misconfigured';
   const message = setupRequired
     ? 'Let’s get your TV set up so everyone can join.'
@@ -49,29 +48,17 @@ function TvBootSystemState({
       accessibilityLabel={`${title}. ${message}`}
       testID="tv-boot-status"
     >
-      <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
-        <ImageBackground
-          source={setupRequired ? HEARTBEAT_ARTWORK.tv.setupRequired : HEARTBEAT_ARTWORK.tv.deviceUnavailable}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="tv-boot-status-background"
-        />
-        <View style={styles.statusContent} pointerEvents="none" focusable={false} accessible={false}>
-          <View style={styles.statusBrand} pointerEvents="none" focusable={false}>
-            <LoadingMark size={62} reduceMotion accessibilityLabel="Huddle" />
-            <HuddleText variant="hero" color="text" style={styles.statusBrandName}>
-              Huddle
-            </HuddleText>
-          </View>
-          <HuddleText variant="tvDisplay" color="text" style={styles.statusTitle}>
+      <PlayroomTvStage testID="tv-boot-status-stage">
+        <View style={styles.content} pointerEvents="none" focusable={false} accessible={false}>
+          <PlayroomStatusImage art={setupRequired ? 'loading' : 'disconnected'} width={420} height={320} />
+          <PlayroomHeading type={playroomTv.type.hero} style={styles.title}>
             {setupRequired ? 'Almost there!' : 'We can’t reach your TV right now'}
-          </HuddleText>
-          <HuddleText variant="bodyLarge" color="text" style={styles.statusMessage}>
+          </PlayroomHeading>
+          <PlayroomText color="muted" style={[playroomTv.type.body, styles.message]}>
             {message}
-          </HuddleText>
+          </PlayroomText>
         </View>
-      </View>
+      </PlayroomTvStage>
     </View>
   );
 }
@@ -79,43 +66,20 @@ function TvBootSystemState({
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
+    backgroundColor: playroomColors.canvas,
+  },
+  content: {
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: semanticColors.text,
+    paddingHorizontal: playroomTv.safeX * 2,
   },
-  stage: {
-    width: 1920,
-    height: 1080,
-    overflow: 'hidden',
+  title: {
+    marginTop: 32,
   },
-  statusContent: {
-    position: 'absolute',
-    left: 192,
-    top: 150,
-    width: 900,
-    bottom: 150,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  statusBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  statusBrandName: {
-    color: semanticColors.text,
-    fontSize: 58,
-    lineHeight: 68,
-  },
-  statusTitle: {
-    marginTop: spacing['2xl'],
-    color: semanticColors.text,
-    maxWidth: 900,
-  },
-  statusMessage: {
-    marginTop: spacing.md,
-    color: semanticColors.text,
-    maxWidth: 700,
+  message: {
+    marginTop: 16,
+    textAlign: 'center',
+    maxWidth: 1100,
   },
 });

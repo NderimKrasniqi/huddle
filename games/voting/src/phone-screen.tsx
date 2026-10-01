@@ -1,18 +1,20 @@
-import { brandColors, radii, semanticColors, shadows, spacing } from '@huddle/design-tokens';
 import type { PhoneGameScreenProps, PhoneSafeAreaInsets } from '@huddle/domain';
 import {
-  HEARTBEAT_ARTWORK,
   HuddleButton,
+  HuddleIcon,
   HuddleText,
   ScreenShell,
-} from '@huddle/ui/native';
+} from '@huddle/ui/game-kit';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Image, ImageBackground, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ImageBackground, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { votingPhoneModel, type VotingChoice } from './controller';
 import { votingOptionIcon } from './option-icon';
 import { playableVotingState } from './state';
+import { votingOptionTones, votingTvTheme } from './tv-theme';
 import type { VotingEvent, VotingState } from './types';
+import { votingPalette, votingSpacing } from './theme';
+import { VOTING_ART } from './art';
 
 const ZERO_INSETS: PhoneSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -23,9 +25,13 @@ export function VotingPhoneScreen({
   sendEvent,
   safeAreaInsets,
   hostChromeInsetTop,
+  hostChromeInsetBottom,
   clockRemainingMs,
 }: PhoneGameScreenProps<VotingState, VotingEvent>) {
-  const insets = safeAreaInsets ?? ZERO_INSETS;
+  const deviceInsets = safeAreaInsets ?? ZERO_INSETS;
+  // Platform chrome at the bottom (the Host's Back to lobby) extends the
+  // device inset, so every surface's footer stays clear of it.
+  const insets = { ...deviceInsets, bottom: deviceInsets.bottom + finiteInset(hostChromeInsetBottom) };
   const chromeInset = finiteInset(hostChromeInsetTop);
   const current = playableVotingState(state);
   const model = votingPhoneModel(state, player.playerId);
@@ -39,12 +45,6 @@ export function VotingPhoneScreen({
     return (
       <VotingStatusPage insets={insets} chromeInset={chromeInset} testID="voting-phone-legacy">
         <VotingBrandHeader />
-        <Image
-          source={HEARTBEAT_ARTWORK.gameCards.voting}
-          style={styles.statusArt}
-          resizeMode="contain"
-          accessible={false}
-        />
         <HuddleText variant="display" align="center" accessibilityRole="header">Voting needs an update</HuddleText>
         <HuddleText variant="bodyLarge" align="center">Ask the Host to return to the room and start Voting again.</HuddleText>
       </VotingStatusPage>
@@ -55,7 +55,7 @@ export function VotingPhoneScreen({
     return (
       <VotingStatusPage insets={insets} chromeInset={chromeInset} testID="voting-phone-intro">
         <VotingBrandHeader />
-        <Image source={HEARTBEAT_ARTWORK.gameCards.voting} style={styles.introArt} resizeMode="contain" accessible={false} />
+        <Image source={VOTING_ART.room} style={styles.introArt} resizeMode="cover" accessible={false} />
         <HuddleText variant="display" align="center" style={styles.introTitle}>Get ready!</HuddleText>
         <HuddleText variant="bodyLarge" align="center" style={styles.introCopy}>Vote on fun prompts and see the room’s vibe.</HuddleText>
         <View style={styles.summaryPanel}>
@@ -63,6 +63,7 @@ export function VotingPhoneScreen({
           <SummaryRow icon="⌛" label={model.voteSeconds === 'none' ? 'No visible timer' : `${model.voteSeconds} seconds to vote`} />
           <SummaryRow icon="▣" label={model.results === 'live' ? 'Live tally on the TV' : 'Reveal together'} />
         </View>
+        <HuddleText variant="caption" align="center" style={styles.helper}>Round 1 of {model.rounds} begins soon…</HuddleText>
       </VotingStatusPage>
     );
   }
@@ -84,8 +85,9 @@ export function VotingPhoneScreen({
   if (model.kind === 'vote') {
     return (
       <ScreenShell tone="background" style={styles.shell} testID="voting-phone-screen">
+        <StatusBar barStyle="dark-content" backgroundColor={votingPalette.cream} />
         <ImageBackground
-          source={HEARTBEAT_ARTWORK.gameWorlds.voting}
+          source={VOTING_ART.clouds}
           resizeMode="cover"
           style={StyleSheet.absoluteFill}
           accessible={false}
@@ -96,10 +98,10 @@ export function VotingPhoneScreen({
           contentContainerStyle={[
             styles.scroll,
             {
-              paddingTop: insets.top + chromeInset + spacing.lg,
-              paddingRight: insets.right + spacing.xl,
-              paddingBottom: insets.bottom + spacing.xl,
-              paddingLeft: insets.left + spacing.xl,
+              paddingTop: insets.top + chromeInset + votingSpacing.lg,
+              paddingRight: insets.right + votingSpacing.xl,
+              paddingBottom: insets.bottom + votingSpacing.xl,
+              paddingLeft: insets.left + votingSpacing.xl,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -108,52 +110,51 @@ export function VotingPhoneScreen({
           <View style={styles.page}>
             <VotingBrandHeader />
 
-            <View style={styles.roundRow}>
+            <View style={styles.voteStack}>
               <View style={styles.roundPill}>
                 <HuddleText variant="caption" style={styles.pillText}>Round {model.roundIndex + 1} of {model.roundCount}</HuddleText>
               </View>
+              <HuddleText variant="title" align="center" accessibilityRole="header" style={styles.promptText}>
+                {model.text}
+              </HuddleText>
               <View
-                style={styles.timerPill}
+                style={[styles.timerPill, styles.voteTimerPill]}
                 testID="voting-phone-clock"
                 accessible
                 accessibilityRole="text"
                 accessibilityLabel={current?.voteSeconds === 'none' ? 'No timer' : `${countdown} seconds remaining`}
               >
-                <HuddleText variant="caption" style={styles.timerIcon} accessibilityElementsHidden>⌛</HuddleText>
+                <HuddleIcon name="clock" size={18} color={votingPalette.espresso} />
                 <HuddleText variant="body" style={styles.timerText}>{current?.voteSeconds === 'none' ? 'NO TIMER' : `${countdown}s`}</HuddleText>
               </View>
-            </View>
-
-            <HuddleText variant="title" align="center" accessibilityRole="header" style={styles.promptText}>
-              {model.text}
-            </HuddleText>
-            <HuddleText variant="caption" align="center" style={styles.helper}>
-              Your vote stays private on this phone until the shared reveal.
-            </HuddleText>
-
-            <View style={styles.choices}>
-              {model.choices.map((choice) => (
-                <VotingChoiceButton
-                  key={choice.optionIndex}
-                  choice={choice}
-                  onPress={() => sendEvent({
-                    kind: 'vote',
-                    playerId: player.playerId,
-                    roundIndex: model.roundIndex,
-                    optionIndex: choice.optionIndex,
-                  })}
-                />
-              ))}
-            </View>
-
-            <View style={styles.lockNote} accessibilityLiveRegion="polite">
-              <HuddleText variant="body" style={styles.lockIcon} accessibilityElementsHidden>🔒</HuddleText>
-              <HuddleText variant="body" align="center">
-                {model.locked ? 'Vote locked' : 'Choose once'}
+              <HuddleText variant="caption" align="center" style={styles.votePrivacyNote}>
+                Your vote stays private on this phone until the shared reveal.
               </HuddleText>
-              <HuddleText variant="caption" align="center" style={styles.helper}>
-                {model.locked ? 'Hang tight—everyone is casting their vote.' : 'Your first choice locks for this round.'}
-              </HuddleText>
+
+              <View style={styles.choices}>
+                {model.choices.map((choice) => (
+                  <VotingChoiceButton
+                    key={choice.optionIndex}
+                    choice={choice}
+                    onPress={() => sendEvent({
+                      kind: 'vote',
+                      playerId: player.playerId,
+                      roundIndex: model.roundIndex,
+                      optionIndex: choice.optionIndex,
+                    })}
+                  />
+                ))}
+              </View>
+
+              <View style={[styles.lockNote, styles.openLockNote]} accessibilityLiveRegion="polite">
+                <HuddleText variant="body" style={styles.lockIcon} accessibilityElementsHidden>🔒</HuddleText>
+                <HuddleText variant="body" align="center">
+                  {model.locked ? 'Vote locked' : 'Choose once'}
+                </HuddleText>
+                <HuddleText variant="caption" align="center" style={styles.helper}>
+                  {model.locked ? 'Hang tight—everyone is casting their vote.' : 'Your first choice locks for this round.'}
+                </HuddleText>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -165,9 +166,14 @@ export function VotingPhoneScreen({
     return (
       <VotingStatusPage insets={insets} chromeInset={chromeInset} testID="voting-phone-finished">
         <VotingBrandHeader />
-        <Image source={HEARTBEAT_ARTWORK.gameCards.voting} style={styles.statusArt} resizeMode="contain" accessible={false} />
         <HuddleText variant="display" align="center" accessibilityRole="header">That’s the room’s vibe</HuddleText>
+        <Image source={VOTING_ART.room} style={styles.statusArt} resizeMode="cover" accessible={false} />
         <HuddleText variant="bodyLarge" align="center">The shared recap is on the TV.</HuddleText>
+        <View style={styles.recapPanel}>
+          <HuddleText variant="body" align="center">📺&nbsp; Recap is on the TV</HuddleText>
+        </View>
+        <HuddleText variant="body" align="center">Thanks for voting!</HuddleText>
+        <HuddleText variant="caption" align="center" style={styles.helper}>Waiting for the Host…</HuddleText>
       </VotingStatusPage>
     );
   }
@@ -175,11 +181,17 @@ export function VotingPhoneScreen({
   return (
     <VotingStatusPage insets={insets} chromeInset={chromeInset} testID={`voting-phone-${model.kind}`}>
       <VotingBrandHeader />
-      <Image source={HEARTBEAT_ARTWORK.gameCards.voting} style={styles.statusArt} resizeMode="contain" accessible={false} />
+      {model.kind === 'eyesUp' ? (
+        <View style={styles.roundPill}>
+          <HuddleText variant="caption" style={styles.pillText}>Round {model.roundIndex + 1} of {model.roundCount}</HuddleText>
+        </View>
+      ) : null}
       <HuddleText variant="display" align="center" accessibilityRole="header">Eyes up!</HuddleText>
-      <HuddleText variant="bodyLarge" align="center">
-        {model.kind === 'eyesUp' ? 'The room’s vote is on the TV.' : 'You’re in from the next game—enjoy the room’s vote.'}
-      </HuddleText>
+      <Image source={VOTING_ART.room} style={styles.statusArt} resizeMode="cover" accessible={false} />
+      <View style={styles.recapPanel}>
+        <HuddleText variant="body" align="center">📺&nbsp; The room’s vote is on the TV</HuddleText>
+      </View>
+      <HuddleText variant="body" align="center">Enjoy the reveal together!</HuddleText>
     </VotingStatusPage>
   );
 }
@@ -187,14 +199,12 @@ export function VotingPhoneScreen({
 function VotingBrandHeader() {
   return (
     <View style={styles.brandHeader} accessibilityRole="header">
-      <Image
-        source={HEARTBEAT_ARTWORK.brand.displayMark}
-        resizeMode="contain"
-        style={styles.brandMark}
-        accessible
-        accessibilityLabel="Huddle"
-      />
-      <HuddleText variant="title" style={styles.brandTitle}>Voting</HuddleText>
+      <View style={styles.gameMark} accessible accessibilityLabel="Voting">
+        <View style={styles.heartMarkLobe} />
+        <View style={[styles.heartMarkLobe, styles.heartMarkRight]} />
+        <View style={styles.heartMarkPoint} />
+      </View>
+      <HuddleText variant="title" style={styles.brandTitle}>VOTING</HuddleText>
     </View>
   );
 }
@@ -228,8 +238,9 @@ function VotingWaitingSurface({
       style={[styles.shell, styles.statusPage]}
       testID="voting-phone-waiting"
     >
+      <StatusBar barStyle="dark-content" backgroundColor={votingPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.gameWorlds.voting}
+        source={VOTING_ART.clouds}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -240,10 +251,10 @@ function VotingWaitingSurface({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInset + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInset + votingSpacing.xl,
+            paddingRight: insets.right + votingSpacing.xl,
+            paddingBottom: insets.bottom + votingSpacing.xl,
+            paddingLeft: insets.left + votingSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -268,8 +279,8 @@ function VotingWaitingSurface({
             </HuddleText>
           </View>
           <Image
-            source={HEARTBEAT_ARTWORK.gameCards.voting}
-            resizeMode="contain"
+            source={VOTING_ART.room}
+            resizeMode="cover"
             style={styles.waitingArt}
             accessible={false}
           />
@@ -304,6 +315,7 @@ function VotingChoiceButton({ choice, onPress }: { readonly choice: VotingChoice
       testID={`voting-choice-${choice.optionIndex}`}
       style={[
         styles.choiceButton,
+        { backgroundColor: votingOptionTones[choice.optionIndex % votingOptionTones.length] },
         isSelected ? styles.choiceSelected : null,
         isClosed ? styles.choiceClosed : null,
       ]}
@@ -330,8 +342,9 @@ function VotingStatusPage({
 }) {
   return (
     <ScreenShell tone="background" style={[styles.shell, styles.statusPage]} testID={testID}>
+      <StatusBar barStyle="dark-content" backgroundColor={votingPalette.cream} />
       <ImageBackground
-        source={HEARTBEAT_ARTWORK.gameWorlds.voting}
+        source={VOTING_ART.clouds}
         resizeMode="cover"
         style={StyleSheet.absoluteFill}
         accessible={false}
@@ -342,10 +355,10 @@ function VotingStatusPage({
         contentContainerStyle={[
           styles.statusScroll,
           {
-            paddingTop: insets.top + chromeInset + spacing.xl,
-            paddingRight: insets.right + spacing.xl,
-            paddingBottom: insets.bottom + spacing.xl,
-            paddingLeft: insets.left + spacing.xl,
+            paddingTop: insets.top + chromeInset + votingSpacing.xl,
+            paddingRight: insets.right + votingSpacing.xl,
+            paddingBottom: insets.bottom + votingSpacing.xl,
+            paddingLeft: insets.left + votingSpacing.xl,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -395,12 +408,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   statusPage: {
-    backgroundColor: brandColors.cream,
+    backgroundColor: votingPalette.cream,
   },
   worldWash: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: brandColors.cream,
-    opacity: 0.46,
+    backgroundColor: votingPalette.cream,
+    opacity: 0.08,
   },
   scroll: {
     flexGrow: 1,
@@ -409,82 +422,132 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 440,
     alignSelf: 'center',
-    gap: spacing.md,
+    gap: votingSpacing.md,
   },
   brandHeader: {
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: votingSpacing.sm,
   },
-  brandMark: {
-    width: 25,
-    height: 24,
+  gameMark: {
+    width: 28,
+    height: 28,
+    position: 'relative',
+  },
+  heartMarkLobe: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: votingTvTheme.coral,
+  },
+  heartMarkRight: {
+    left: 10,
+  },
+  heartMarkPoint: {
+    position: 'absolute',
+    left: 6,
+    bottom: 2,
+    width: 17,
+    height: 17,
+    backgroundColor: votingTvTheme.coral,
+    transform: [{ rotate: '45deg' }],
   },
   brandTitle: {
     letterSpacing: -0.4,
+    color: votingTvTheme.plum,
   },
   roundRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: votingSpacing.md,
+  },
+  voteStack: {
+    width: '100%',
+    alignItems: 'center',
+    gap: votingSpacing.md,
   },
   roundPill: {
-    minHeight: 34,
+    minHeight: 38,
     flex: 1,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,111,97,0.9)',
+    paddingHorizontal: votingSpacing.md,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: votingTvTheme.plum,
+    backgroundColor: votingTvTheme.blush,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pillText: {
-    color: semanticColors.textOnBrand,
+    color: votingTvTheme.plum,
+    letterSpacing: 0.5,
   },
   timerPill: {
-    minHeight: 34,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.1)',
-    backgroundColor: 'rgba(249,241,230,0.92)',
+    minWidth: 76,
+    minHeight: 76,
+    paddingHorizontal: votingSpacing.md,
+    borderRadius: 38,
+    borderWidth: 3,
+    borderColor: votingTvTheme.plum,
+    backgroundColor: votingTvTheme.coral,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
-    ...shadows.card,
+    gap: votingSpacing.xs,
+    shadowColor: votingTvTheme.paperShadow,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  voteTimerPill: {
+    minWidth: 76,
+    backgroundColor: votingTvTheme.coral,
+    borderColor: votingTvTheme.plum,
+    justifyContent: 'center',
   },
   timerIcon: {
     fontSize: 14,
   },
   timerText: {
     fontWeight: '700',
+    color: votingTvTheme.plum,
   },
   promptText: {
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.md,
+    marginTop: votingSpacing.xs,
+    paddingHorizontal: votingSpacing.md,
+    color: votingTvTheme.plum,
   },
   choices: {
-    gap: spacing.sm,
+    width: '100%',
+    gap: votingSpacing.sm,
   },
   choiceButton: {
-    minHeight: 56,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    borderColor: 'rgba(43,31,23,0.12)',
-    backgroundColor: brandColors.cream,
+    width: '100%',
+    minHeight: 60,
+    paddingHorizontal: votingSpacing.md,
+    paddingVertical: votingSpacing.sm,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderBottomWidth: 5,
+    borderColor: votingTvTheme.plum,
+    backgroundColor: votingTvTheme.cream,
     justifyContent: 'flex-start',
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: votingSpacing.md,
     opacity: 1,
-    ...shadows.card,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   choiceSelected: {
-    backgroundColor: semanticColors.accent,
-    borderColor: semanticColors.accent,
+    backgroundColor: votingTvTheme.cream,
+    borderColor: votingTvTheme.plum,
+    borderWidth: 3,
     opacity: 1,
   },
   choiceClosed: {
@@ -494,6 +557,7 @@ const styles = StyleSheet.create({
   choiceLabel: {
     flex: 1,
     textAlign: 'left',
+    color: votingTvTheme.plum,
   },
   choiceLock: {
     fontSize: 16,
@@ -502,9 +566,21 @@ const styles = StyleSheet.create({
     minHeight: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    gap: votingSpacing.xs,
+    paddingHorizontal: votingSpacing.md,
+    paddingVertical: votingSpacing.sm,
+  },
+  votePrivacyNote: {
+    position: 'absolute',
+    opacity: 0,
+    height: 0,
+  },
+  openLockNote: {
+    position: 'absolute',
+    opacity: 0,
+    height: 0,
+    minHeight: 0,
+    padding: 0,
   },
   lockIcon: {
     fontSize: 16,
@@ -514,45 +590,51 @@ const styles = StyleSheet.create({
   },
   statusScroll: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   statusContent: {
     width: '100%',
     maxWidth: 390,
     alignSelf: 'center',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: votingSpacing.md,
   },
   statusArt: {
-    width: 212,
-    height: 208,
+    width: 204,
+    height: 164,
   },
   waitingPanel: {
     width: '100%',
     minHeight: 82,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.1)',
-    backgroundColor: 'rgba(249,241,230,0.92)',
+    paddingHorizontal: votingSpacing.lg,
+    paddingVertical: votingSpacing.md,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderTopWidth: 6,
+    borderColor: votingTvTheme.plum,
+    backgroundColor: votingTvTheme.cream,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    ...shadows.card,
+    gap: votingSpacing.xs,
+    shadowColor: votingTvTheme.paperShadow,
+    shadowOpacity: 0.2,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   waitingArt: {
-    width: 208,
-    height: 190,
+    width: 204,
+    height: 164,
   },
   introArt: {
-    width: 222,
-    height: 218,
-    marginTop: spacing.sm,
+    width: 208,
+    height: 156,
+    marginTop: votingSpacing.xs,
   },
   introTitle: {
     fontSize: 34,
     lineHeight: 40,
+    color: votingTvTheme.coral,
   },
   introCopy: {
     maxWidth: 320,
@@ -560,22 +642,36 @@ const styles = StyleSheet.create({
   summaryPanel: {
     width: '100%',
     maxWidth: 340,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(43,31,23,0.1)',
-    backgroundColor: 'rgba(249,241,230,0.88)',
-    ...shadows.card,
+    marginTop: votingSpacing.sm,
+    paddingHorizontal: votingSpacing.lg,
+    paddingVertical: votingSpacing.sm,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: votingTvTheme.plum,
+    backgroundColor: votingTvTheme.cream,
+    shadowColor: votingTvTheme.paperShadow,
+    shadowOpacity: 0.18,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
+  },
+  recapPanel: {
+    width: '100%',
+    paddingHorizontal: votingSpacing.lg,
+    paddingVertical: votingSpacing.md,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: votingTvTheme.plum,
+    backgroundColor: votingTvTheme.blush,
+    alignItems: 'center',
   },
   summaryRow: {
     minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: votingSpacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(43,31,23,0.08)',
+    borderBottomColor: votingTvTheme.rule,
   },
   summaryIcon: {
     width: 24,

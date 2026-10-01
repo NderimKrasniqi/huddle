@@ -1,14 +1,11 @@
-import { semanticColors, spacing } from '@huddle/design-tokens';
-import { HEARTBEAT_ARTWORK, HuddleText } from '@huddle/ui/native';
+import { playroomColors, playroomTv } from '@huddle/design-tokens';
+import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage } from '@huddle/ui/native';
 import React, { useEffect } from 'react';
 import {
   Animated,
   Easing,
-  ImageBackground,
   StyleSheet,
   View,
-  useWindowDimensions,
-  type ImageSourcePropType,
 } from 'react-native';
 
 import {
@@ -30,33 +27,30 @@ export type TvRestoringRoomScreenProps = {
   readonly onReady?: () => void;
   /** Called after the green-check spring completes. */
   readonly onReadyAnimationComplete?: () => void;
-  readonly backgroundSource?: ImageSourcePropType;
   /** Override the motion preference for deterministic previews/tests. */
   readonly reduceMotion?: boolean;
 };
 
 export const TV_RESTORE_READY_DELAY_MS = 1_300;
 
-/** Display-only Heartbeat restore handoff for a persisted TV room. */
+/** Display-only restore handoff for a persisted TV room. */
 export function TvRestoringRoomScreen({
   roomCode,
   stage,
   onReady,
   onReadyAnimationComplete,
-  backgroundSource = HEARTBEAT_ARTWORK.tv.platformLivingRoom,
   reduceMotion: reduceMotionOverride,
 }: TvRestoringRoomScreenProps) {
-  const viewport = useWindowDimensions();
   const systemReduceMotion = useTvSystemReducedMotion();
   const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
   const motionPreferenceResolved = reduceMotionOverride !== undefined || systemReduceMotion !== undefined;
-  const scale = safeScale(viewport.width, viewport.height);
   const [internalStage, setInternalStage] = React.useState<TvRestoringRoomStage>('restoring');
   const readyCallback = onReadyAnimationComplete ?? onReady;
   const readyCallbackRef = React.useRef(readyCallback);
   const renderedStage =
     stage ?? (motionPreferenceResolved && reduceMotion ? 'ready' : internalStage);
-  const spokenCode = roomCode.trim().toUpperCase().slice(0, 4).split('').join(' ');
+  const code = roomCode.trim().toUpperCase().slice(0, 4);
+  const spokenCode = code.split('').join(' ');
   const isReady = renderedStage === 'ready';
   const [enter] = React.useState(() => new Animated.Value(reduceMotion ? 1 : 0));
 
@@ -73,8 +67,8 @@ export function TvRestoringRoomScreen({
     enter.setValue(0);
     const animation = Animated.timing(enter, {
       toValue: 1,
-      duration: 420,
-      easing: Easing.out(Easing.cubic),
+      duration: 240,
+      easing: Easing.bezier(0.23, 1, 0.32, 1),
       useNativeDriver: true,
     });
     animation.start();
@@ -106,22 +100,9 @@ export function TvRestoringRoomScreen({
       accessibilityLabel={`Welcome back. ${title}. ${subtitle}. Room code ${spokenCode}.`}
       testID="tv-restoring-room-screen"
     >
-      <View
-        style={[styles.stage, { transform: [{ scale }] }]}
-        pointerEvents="none"
-        focusable={false}
-        accessible={false}
-      >
-        <ImageBackground
-          source={backgroundSource}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="tv-restoring-room-background"
-        />
-        <View style={styles.warmWash} pointerEvents="none" focusable={false} />
+      <PlayroomTvStage testID="tv-restoring-room-stage">
         <Animated.View
-          style={[styles.content, { opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }] }]}
+          style={[styles.content, { opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}
           pointerEvents="none"
           focusable={false}
           accessible={false}
@@ -132,58 +113,45 @@ export function TvRestoringRoomScreen({
             reduceMotion={reduceMotion}
             onReadyAnimationComplete={() => readyCallbackRef.current?.()}
           />
-          <HuddleText variant="tvDisplay" color="surface" align="center" style={styles.title}>
+          <PlayroomHeading type={playroomTv.type.hero} style={styles.title}>
             {title}
-          </HuddleText>
-          <HuddleText variant="bodyLarge" color="surface" align="center" style={styles.subtitle}>
+          </PlayroomHeading>
+          <PlayroomText color="muted" style={[playroomTv.type.body, styles.subtitle]}>
             {subtitle}
-          </HuddleText>
+          </PlayroomText>
+          <PlayroomPill style={styles.code} textStyle={playroomTv.type.label}>
+            {`Room ${code}`}
+          </PlayroomPill>
         </Animated.View>
-      </View>
+      </PlayroomTvStage>
     </View>
   );
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / 1920, height / 1080);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({
   viewport: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: semanticColors.text,
-  },
-  stage: {
-    width: 1920,
-    height: 1080,
-    overflow: 'hidden',
-  },
-  warmWash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: semanticColors.text,
-    opacity: 0.66,
+    backgroundColor: playroomColors.canvas,
   },
   content: {
     position: 'absolute',
     top: 156,
-    left: 96,
-    right: 96,
-    bottom: 54,
+    left: playroomTv.safeX,
+    right: playroomTv.safeX,
+    bottom: playroomTv.safeY,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 24,
   },
   title: {
-    marginTop: spacing.xl,
-    color: semanticColors.surface,
+    marginTop: 40,
   },
   subtitle: {
-    marginTop: spacing.sm,
-    color: semanticColors.surface,
-    opacity: 0.86,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  code: {
+    marginTop: 28,
+    paddingHorizontal: 28,
   },
 });

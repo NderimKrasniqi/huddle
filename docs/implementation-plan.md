@@ -1,25 +1,55 @@
-# Huddle Heartbeat implementation plan
+# Huddle implementation plan
 
 ## Execution state
 
-**Current phase:** React Native visual and simulator/emulator fidelity complete;
-physical party check pending
+**Current phase:** Playroom redesign built on branch `feat/platform-redesign`;
+simulator review, fresh bundle evidence, and independent review pending
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
-TV-stage handoff are implemented. The saved Huddle direction board and approved
-screen boards in `docs/design/heartbeat/reference/approved-screens/` are the
-visual references. The React Native implementation has completed its
-screen-by-screen fidelity pass against them on iPhone Simulator and Android TV
-Emulator. Runtime artwork remains checked-in implementation artwork rather than
-source-master design material.
+TV-stage handoff are implemented. Every platform screen on Phone and TV now
+follows the Playroom design in
+[`design/playroom/README.md`](design/playroom/README.md), which replaces the
+earlier Heartbeat look. Runtime artwork remains checked-in implementation
+artwork rather than source-master design material.
+
+## Playroom redesign
+
+- [x] Server-driven five-second countdown after the Host taps Start, with
+  cancellation when readiness breaks and one shared readiness rule for the
+  server, Phone and TV.
+- [x] Games describe their settings (icon and unit) and themselves (tagline);
+  the platform never names a game.
+- [x] Phone room state and actions live in `useSeatedRoom`; each Phone phase
+  has its own screen under `apps/phone/src/screens/seated/`.
+- [x] Playroom tokens, Nunito Black, and shared pieces in `@huddle/ui/native`:
+  TV stage, headings with burst dashes, pop-out avatars, orange primary
+  buttons, pills, setting icons, status illustrations, and props, with
+  Reanimated motion that respects reduced motion.
+- [x] TV boot, room (code tiles, silhouette seats), picker (three cards),
+  art reveal, setup, raise-your-hand ready check, countdown, paused, and
+  unavailable screens.
+- [x] Phone join, pick your look, lobby, Manage player, picker, setup
+  (stepper, segmented, sheet), ready, countdown (haptics and a flash of the
+  player's colour), status, scan, loading, and seat-lost screens.
+- [x] Trivia and Voting keep their own colours, spacing and world art, and
+  borrow only the neutral `@huddle/ui/game-kit`.
+- [x] Heartbeat runtime art, components, and design references removed; app
+  icons and splash regenerated from the Huddle-Platform app artwork; the
+  architecture validator pins the Playroom and game artwork.
+- [ ] Simulator and emulator pass on iPhone and Android TV (1920 and 1280)
+  compared against the concept boards and the prototype.
+- [ ] Fresh Phone and TV exports through `pnpm verify:bundle-seam`.
+- [ ] Independent review of the redesign.
+- [ ] Live seat preview while a player picks a look, which needs the server
+  to share a player's look before they finish joining.
 
 ## Completed implementation
 
-### 1. Heartbeat foundation — complete
+### 1. Foundation — complete
 
-- [x] Exact board palette and semantic tokens in `@huddle/design-tokens`.
-- [x] Nunito Regular, Bold, and ExtraBold pinned at `0.4.2` and loaded before
-  the native splash hides on Phone and TV.
+- [x] Palette and semantic tokens in `@huddle/design-tokens`.
+- [x] Nunito pinned at `0.4.2` and loaded before the native splash hides on
+  Phone and TV.
 - [x] Shared native shell, text, buttons, code tiles, portraits, player rows,
   badges, chips, game cards, loading mark, status surfaces, and artwork map.
 - [x] Temporary Huddle brand derivatives, ten stable avatar assets, phone
@@ -36,7 +66,7 @@ source-master design material.
   remembered profile, join handoff, leave, and seat-loss recovery.
 - [x] Root room-code screen with authoritative `joinAvailability` checks and
   inline missing/full-room errors.
-- [x] Dedicated `/join/[code]` Pick your vibe identity route with remembered
+- [x] Dedicated `/join/[code]` Pick your look identity route with remembered
   profile, claimed-avatar disabling, authoritative join, persistence, and
   replacement navigation. Same-room deep links are suppressed; different-room
   links require an authoritative leave confirmation before identity can join.
@@ -83,13 +113,12 @@ source-master design material.
 
 - [x] Removed the obsolete neutral purpose renderer and combined legacy join
   adapter, tests, exports, and duplicate Phone/TV asset trees.
-- [x] Validator checks the exact Heartbeat palette, runtime asset set,
+- [x] Validator checks the exact palette, runtime asset sets,
   dimensions/alpha/digests, native identity derivatives, QR/camera scope, TV
   display-only source, bundle boundaries, and absent NativeWind/Tailwind setup
   without requiring a design manifest or source-master tree.
-- [x] Approved visual references are the retained `heartbeat-direction.png`
-  board and `approved-screens/` inventory; generated sources outside that set
-  are not treated as masters.
+- [x] The approved visual references live under `docs/design/playroom/`;
+  generated sources outside that set are not treated as masters.
 - [x] Client seam protects both Trivia content and Voting prompts from client
   runtime graphs and exported bundles.
 
@@ -111,7 +140,7 @@ source-master design material.
 ### 7. Simulator/emulator traversal — complete
 
 - [x] Build, install, and launch the iPhone 17 Release app; exercise the
-  Heartbeat room-code screen and QR scanner/manual fallback in runtime
+  room-code screen and QR scanner/manual fallback in runtime
   traversal.
 - [x] Traverse the iPhone identity, Host lobby, synchronized picker, Trivia
   setup lock, Ready toggle, minimum-player Start gate, and confirmed
@@ -145,6 +174,26 @@ source-master design material.
   picker return, join handoff, navigation-motion, and contact-sheet findings.
 - [x] Obtain follow-up independent approval against the repaired implementation.
 
+### 9. Game-night lounge screens — in review
+
+Native Phone and TV screens follow the fifth-pass lounge prototype in
+`output/playroom-review/`. Trivia and Voting gameplay is unchanged.
+
+- [x] Join, player pass, lobby, picker, setup, ready check, countdown, return
+  ("Back in the room" / "One more?"), camera scanner and seat-loss screens.
+- [x] Confirmed-join welcomes and the finished-game return composition use
+  session-local presentation state; transition tests cover restores,
+  reconnects and grouped arrivals.
+- [x] One-seat traversal on iPhone 17 (dev build) and Android TV (dev build):
+  join → lobby → picker → setup → ready → countdown → Trivia → return.
+- [x] Independent review; its fallback player range, scanner label and
+  duplicate-action, and finished-game confirmation findings are repaired.
+- [x] Trivia and Voting accept one player (`playerRange.min: 1`) so a single
+  device can test the whole flow; range tests follow the declared minimum.
+- [ ] Two-seat run covering guest views, 10 seats, long names, larger text,
+  reduced motion and Voting.
+- [ ] Android Phone and tvOS checks (not run; tvOS project not generated).
+
 ## Validation ledger
 
 Focused implementation checks pass for contracts, Convex integration,
@@ -164,8 +213,9 @@ observation and the mixed physical party check remain open.
 
 ## Non-negotiable constraints
 
-- Do not change Convex schema, session-token authority, room lifecycle, stable
-  avatar IDs, or the `GameModule` client/server seam.
+- Do not change session-token authority, room lifecycle, stable avatar IDs, or
+  the `GameModule` client/server seam. The Convex schema may change only with
+  approval, as it did for the optional countdown fields.
 - TV remains presentation-only; Phone remains the controller.
 - Do not add Invite Friend, a web client, fake settings, or playable cards for
   Doodle Dash, Quick Poll, or Hot Take.

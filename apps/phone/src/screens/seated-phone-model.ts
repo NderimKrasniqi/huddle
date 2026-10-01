@@ -1,7 +1,7 @@
-import type { GameSettingsMode } from '@huddle/domain';
+import { readiness, type GameSettingsMode, type GameSetupStage } from '@huddle/domain';
 
 export type SetupReadinessInput = {
-  readonly stage: 'configuring' | 'ready';
+  readonly stage: GameSetupStage;
   readonly playerRange: { readonly min: number; readonly max: number };
   readonly roster: readonly { readonly playerId: string; readonly away: boolean }[];
   readonly readyPlayerIds: readonly string[];
@@ -28,16 +28,13 @@ export function setupReadiness({
   readyPlayerIds,
   playerId,
 }: SetupReadinessInput): SetupReadiness {
-  const allPresent = roster.length >= playerRange.min
-    && roster.length <= playerRange.max
-    && roster.every((seat) => !seat.away);
-  const allReady = roster.length > 0 && roster.every((seat) => readyPlayerIds.includes(seat.playerId));
+  const gate = readiness({ stage, seats: roster, readyPlayerIds, playerRange });
 
   return {
-    allPresent,
-    allReady,
-    canStart: stage === 'ready' && allPresent && allReady,
-    readyCount: roster.filter((seat) => readyPlayerIds.includes(seat.playerId)).length,
+    allPresent: gate.inRange && gate.allPresent,
+    allReady: gate.allReady,
+    canStart: gate.complete,
+    readyCount: gate.readyCount,
     currentReady: readyPlayerIds.includes(playerId),
   };
 }

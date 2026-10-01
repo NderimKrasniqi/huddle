@@ -1,10 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { tvHostCopy, tvReadiness, visibleTvSetupSettings } from './game-flow-model';
-
-vi.mock('./assets', () => ({
-  gameCardAsset: (id: string) => ({ test: id }),
-}));
 
 describe('TV game-flow model', () => {
   it('uses neutral host copy when the roster has no host name', () => {

@@ -7,7 +7,11 @@ import { CAROUSEL_REGISTRY } from '@huddle/game-registry';
 import { SeatedPhone, PickerSurface, SetupSurface } from './seated-phone';
 
 const mockEndGame = jest.fn();
+// One entry per `useMutation` call in `useSeatedRoom`, in call order: leave,
+// transfer, remove, browse, select, configure, finalize, reopen, cancel,
+// ready, startCountdown, stopCountdown, end, continue, event.
 const mockMutationFunctions = [
+  jest.fn(),
   jest.fn(),
   jest.fn(),
   jest.fn(),
@@ -97,7 +101,7 @@ function renderSeated(session: object) {
   );
 }
 
-describe('Heartbeat Phone lifecycle return', () => {
+describe('Phone lifecycle return', () => {
   beforeEach(() => {
     mockEndGame.mockReset().mockResolvedValue(null);
     mockRunning = { kind: 'paused', gameId: 'trivia', reason: 'playerDisconnected' };
@@ -173,7 +177,7 @@ describe('Heartbeat Phone lifecycle return', () => {
   });
 });
 
-describe('Heartbeat Phone picker', () => {
+describe('Phone picker', () => {
   it('browses on a card tap and selects only through the separate CTA', async () => {
     const onBrowse = jest.fn();
     const onChoose = jest.fn();
@@ -249,7 +253,8 @@ describe('Heartbeat Phone picker', () => {
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
     expect(result.getByTestId('setup-nav-back')).toBeTruthy();
     expect(result.queryByTestId('setup-back-to-room')).toBeNull();
-    expect(result.getByText('Get everyone ready to play.')).toBeTruthy();
+    expect(result.getByText('Ready for Trivia?')).toBeTruthy();
+    expect(result.getByText('Raise your hand')).toBeTruthy();
     await fireEvent.press(ready);
     expect(onReady).toHaveBeenCalledTimes(1);
   });
@@ -277,15 +282,17 @@ describe('Heartbeat Phone picker', () => {
       />,
     );
 
-    expect(result.getByText('1 player away. Waiting for them to reconnect.')).toBeTruthy();
+    expect(result.getByText('Reconnecting: Milo.')).toBeTruthy();
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it('keeps player-range guidance when every current seat is ready but too few can start', async () => {
     const onePlayer = [setupRoster[0]!];
+    // Pin the range so this guards the guidance, not the live game metadata.
+    const twoPlayerTrivia = { ...trivia, metadata: { ...trivia.metadata, playerRange: { min: 2, max: 10 } } };
     const result = await renderSurface(
       <SetupSurface
-        module={trivia}
+        module={twoPlayerTrivia}
         setup={{ gameId: 'trivia', settings: { questions: '10' }, mode: 'standard', stage: 'ready', readyPlayerIds: ['host'] }}
         roster={onePlayer}
         playerId="host"

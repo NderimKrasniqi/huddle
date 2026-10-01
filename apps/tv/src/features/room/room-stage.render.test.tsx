@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react-native';
 import { View } from 'react-native';
-import { AVATAR_SOURCES } from '@huddle/ui/native';
+import { PLAYROOM_AVATARS } from '@huddle/ui/native';
 
 import type { RosterSeat } from '../../models';
 import { RoomStage } from './room-stage';
@@ -29,7 +29,7 @@ describe('RoomStage', () => {
     await render(<RoomStage roomCode="KWRD" roster={[seat('Ada'), seat('Grace')]} />);
 
     expect(screen.getByTestId('room-join-qr').props.value).toBe('huddle://join/KWRD');
-    expect(screen.getAllByTestId('joined-player-avatar')[0]?.props.source).toBe(AVATAR_SOURCES.fox);
+    expect(screen.getAllByTestId('joined-player-avatar')).toHaveLength(2);
     expect(
       screen.getAllByTestId('joined-player-slot').map((slot) => slot.props.accessibilityLabel),
     ).toEqual(['Player Ada joined', 'Player Grace joined']);
@@ -37,7 +37,7 @@ describe('RoomStage', () => {
   });
 
   it('resolves every stable avatar id to bundled artwork for TV roster seats', () => {
-    expect(Object.keys(AVATAR_SOURCES)).toEqual([
+    expect(Object.keys(PLAYROOM_AVATARS)).toEqual([
       'fox',
       'green-alien',
       'pink-bunny',
@@ -49,6 +49,6 @@ describe('RoomStage', () => {
       'mint-cat',
       'puppy',
     ]);
-    expect(Object.values(AVATAR_SOURCES).every((source) => source !== undefined)).toBe(true);
+    expect(Object.values(PLAYROOM_AVATARS).every((source) => source !== undefined)).toBe(true);
   });
 });

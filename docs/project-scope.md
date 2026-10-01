@@ -22,11 +22,11 @@ room code or the TV's native QR code.
 ## Current runtime status
 
 The platform/game behavior and Phone-controller / TV-stage lifecycle are
-implemented. The shared runtime uses the Heartbeat palette and Nunito and has
-completed its screen-by-screen React Native fidelity pass against the direction
-board and approved screen set under `docs/design/heartbeat/reference/`.
+implemented. Platform screens follow the Playroom design in
+[`design/playroom/README.md`](design/playroom/README.md): a cream canvas,
+deep-purple ink, orange actions, Nunito, and clay avatars, props, and game art.
 Checked-in runtime artwork is implementation material, not source-master design
-material.
+material. Each game module keeps its own look once play begins.
 
 The catalog has exactly five ordered cards:
 
@@ -44,13 +44,13 @@ authority or game screens.
 
 - The TV creates or restores one durable room and presents its authoritative
   four-character code, native QR code, and live ten-seat roster.
-- The Phone root route restores a valid session or shows the Heartbeat room-code
-  entry. A complete code checks `joinAvailability`; missing and full rooms stay
+- The Phone root route restores a valid session or shows the room-code entry,
+  four boxes that match the four code tiles on the TV. A complete code checks `joinAvailability`; missing and full rooms stay
   inline and cannot advance.
 - `/scan` is a modal camera route. It requests permission, accepts only a valid
   Huddle QR payload, and replaces to `/join/[code]`. Malformed, duplicate,
   denied, and unavailable-camera states keep manual entry available.
-- `/join/[code]` is the dedicated **Pick your vibe** identity route. It loads
+- `/join/[code]` is the dedicated **Pick your look** identity route. It loads
   the remembered GuestProfileV1, disables claimed avatars, validates the
   display name, performs authoritative `joinRoom`, persists the profile and
   session credential, updates the session provider, and replaces to `/`.
@@ -93,11 +93,18 @@ Trivia settings are Questions (5/10/15/20), Difficulty
 are Rounds (3/5/7), Time to vote (15/30/45 seconds or No timer), Results
 (Reveal together/Live tally), and Voter labels (Hidden/Shown after reveal).
 
-Ready is individual and native on every Phone. Start is Host-only and enabled
-only when setup is locked, the selected module's player range is satisfied,
-all current seats are present, and every current seat is Ready. Pressing Start
-is the platform/game boundary: the final platform screen is locked ready setup,
-then the module's own Phone controller and TV stage take over.
+Ready is individual on every Phone: each player raises a hand, and the TV
+lifts that player's avatar and fills one segment of the ready bar. Locking
+setup marks the Host ready. Start is Host-only and enabled only when setup is
+locked, the selected module's player range is satisfied, all current seats are
+present, and every current seat is Ready.
+
+Pressing Start begins a five-second server-driven countdown on the TV and every
+Phone; each Phone ticks with a haptic and a flash of its player's colour. The
+countdown stops and returns to the ready check if anyone un-readies, joins,
+leaves, is removed, or goes away, if the TV goes away, or if the Host stops it.
+When it ends, the server starts the game: the module's own Phone controller
+and TV stage take over.
 
 ## Living-room privacy contract
 

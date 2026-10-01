@@ -8,6 +8,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
+import { reconcileCountdown } from './lib/countdown';
 import { pauseGameClock, resumePausedGameClock } from './lib/gameClock';
 import { playersInRoom, roomSilenceMs } from './lib/presence';
 import { deleteRoom } from './lib/roomLifecycle';
@@ -265,6 +266,8 @@ export const markTvAway = internalMutation({
       tvAway: true,
       game,
     });
+    // The countdown needs the TV to show it; it stops until the TV is back.
+    await reconcileCountdown(ctx, room._id);
     // Expiry is ten minutes from the last TV heartbeat, not ten minutes after
     // the 13-second away marker happens to run.
     await ctx.scheduler.runAfter(Math.max(0, ROOM_EXPIRY_MS - silence), internal.rooms.expireTvRoom, {

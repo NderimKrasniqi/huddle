@@ -12,7 +12,7 @@ describe('TvBootScreen', () => {
 
     expect(await screen.findByText(title)).toBeTruthy();
     expect(screen.getByText(subtitle)).toBeTruthy();
-    expect(screen.getByTestId('tv-boot-background')).toBeTruthy();
+    expect(screen.getByTestId('tv-boot-stage')).toBeTruthy();
     expect(screen.getByTestId('tv-boot-animated').props.focusable).toBe(false);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryAllByRole('textbox')).toHaveLength(0);

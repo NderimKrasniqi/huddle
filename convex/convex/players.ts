@@ -16,6 +16,7 @@ import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { playerForSession, requireRoomHost } from './lib/authorization';
+import { cancelCountdownJob, reconcileCountdown } from './lib/countdown';
 import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/gameClock';
 import { playersInRoom } from './lib/presence';
 import { deleteRoom } from './lib/roomLifecycle';
@@ -374,6 +375,8 @@ export const joinRoom = mutation({
     if (await needsHost(ctx, room)) {
       await ctx.db.patch(room._id, { hostPlayerId: playerId });
     }
+    // A new seat is not Ready, so a countdown already running stops.
+    await reconcileCountdown(ctx, room._id);
 
     return { playerId, roomId: room._id, code, nickname, avatar: args.avatar, sessionToken };
   },
@@ -549,6 +552,7 @@ export const markAway = internalMutation({
     }
 
     await ctx.db.patch(player._id, { away: true });
+    await reconcileCountdown(ctx, player.roomId);
     // A host who has gone quiet is a host who has left the party, because the
     // room has no way to tell those apart. Doing it here rather than on a clock
     // of its own is what makes the handover punctual: the room passes the room
@@ -663,6 +667,7 @@ export const removePlayer = mutation({
         },
       });
     }
+    await reconcileCountdown(ctx, room._id);
     await resumeWhenEveryoneReturns(ctx, room._id);
     return null;
   },
@@ -727,6 +732,7 @@ export const leaveRoom = mutation({
           },
         });
       }
+      await reconcileCountdown(ctx, room._id);
       // The room lives on, and this is where it is handed back to its clock.
       //
       // Not optional, and not belt-and-braces. Leaving a room whose remaining
@@ -756,6 +762,7 @@ export const leaveRoom = mutation({
       // The TV is still the room's owner. Stop anything the departed party was
       // playing, then show the same empty Room screen to the next party.
       await stopGameClock(ctx, room);
+      await cancelCountdownJob(ctx, room.setup);
       await ctx.db.patch(room._id, {
         hostPlayerId: undefined,
         game: undefined,
