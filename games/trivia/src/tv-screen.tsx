@@ -1,5 +1,6 @@
 import type { TvGameScreenProps } from '@huddle/domain';
 import { AvatarPortrait } from '@huddle/ui/game-kit';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { TRIVIA_ART } from './art';
@@ -28,6 +29,22 @@ import { INTRO_SECONDS, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 import type { TriviaState } from './types';
 import { watchedScreen, type FinalStanding, type WatchedOption, type WatchedScreen } from './watching';
 
+/**
+ * The night sky is the heaviest picture Trivia draws, and on a cold start it
+ * decodes a beat after the stage mounts. Hold what sits on it until it has
+ * loaded — never longer than `SKY_WAIT_MS`, so a slow device only waits briefly.
+ */
+const SKY_WAIT_MS = 600;
+
+function useSkyFirst(): readonly [boolean, () => void] {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), SKY_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  return [shown, () => setShown(true)];
+}
+
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
 const SAFE_X = 96;
@@ -47,6 +64,7 @@ export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScree
   const viewport = useWindowDimensions();
   const scale = safeScale(viewport.width, viewport.height);
   const reduceMotion = useReducedMotion();
+  const [skyShown, showStage] = useSkyFirst();
   const phase = state.phase;
   const beat = phase === 'entered' || !('questionIndex' in state) ? 'legacy' : `${state.questionIndex}:${phase}`;
   const seconds = useCountdownSeconds(
@@ -65,25 +83,28 @@ export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScree
   return (
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="trivia-tv-screen">
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
-        <Image source={TRIVIA_ART.space} resizeMode="cover" style={styles.space} accessible={false} testID="trivia-tv-world" />
-        <Twinkle size={40} style={{ left: 40, top: 420 }} reduceMotion={reduceMotion} period={3400} />
-        <Twinkle size={30} style={{ left: 1420, top: 330 }} reduceMotion={reduceMotion} period={4600} />
-        <Twinkle size={34} style={{ right: 130, top: 520 }} reduceMotion={reduceMotion} period={3900} />
-        <Twinkle size={26} style={{ left: 50, top: 760 }} reduceMotion={reduceMotion} period={5200} />
-        <View style={styles.logo} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <Logo width={330} on="dark" />
+        <Image source={TRIVIA_ART.space} resizeMode="cover" style={styles.space} accessible={false} testID="trivia-tv-world" onLoad={showStage} />
+        {/* With motion, the intro's launch wipe already covers the sky's load; without it, the stage waits for the sky. */}
+        <View style={[StyleSheet.absoluteFill, { opacity: skyShown || reduceMotion === false ? 1 : 0 }]} testID="trivia-tv-stage-content">
+          <Twinkle size={40} style={{ left: 40, top: 420 }} reduceMotion={reduceMotion} period={3400} />
+          <Twinkle size={30} style={{ left: 1420, top: 330 }} reduceMotion={reduceMotion} period={4600} />
+          <Twinkle size={34} style={{ right: 130, top: 520 }} reduceMotion={reduceMotion} period={3900} />
+          <Twinkle size={26} style={{ left: 50, top: 760 }} reduceMotion={reduceMotion} period={5200} />
+          <View style={styles.logo} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Logo width={330} on="dark" />
+          </View>
+          {screen.kind === 'legacy' ? <LegacyStage questionCount={screen.questionCount} /> : null}
+          {screen.kind === 'intro' ? (
+            <IntroStage key="intro" screen={screen} players={players} seconds={seconds} reduceMotion={reduceMotion} />
+          ) : null}
+          {screen.kind === 'question' ? (
+            <QuestionStage key={`q${screen.questionNumber}`} screen={screen} players={players} reduceMotion={reduceMotion} />
+          ) : null}
+          {screen.kind === 'reveal' ? (
+            <RevealStage key={`r${screen.questionNumber}`} screen={screen} seconds={seconds} reduceMotion={reduceMotion} />
+          ) : null}
+          {screen.kind === 'finished' ? <FinishedStage key="finished" screen={screen} reduceMotion={reduceMotion} /> : null}
         </View>
-        {screen.kind === 'legacy' ? <LegacyStage questionCount={screen.questionCount} /> : null}
-        {screen.kind === 'intro' ? (
-          <IntroStage key="intro" screen={screen} players={players} seconds={seconds} reduceMotion={reduceMotion} />
-        ) : null}
-        {screen.kind === 'question' ? (
-          <QuestionStage key={`q${screen.questionNumber}`} screen={screen} players={players} reduceMotion={reduceMotion} />
-        ) : null}
-        {screen.kind === 'reveal' ? (
-          <RevealStage key={`r${screen.questionNumber}`} screen={screen} seconds={seconds} reduceMotion={reduceMotion} />
-        ) : null}
-        {screen.kind === 'finished' ? <FinishedStage key="finished" screen={screen} reduceMotion={reduceMotion} /> : null}
       </View>
     </View>
   );

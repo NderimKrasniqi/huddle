@@ -1,7 +1,7 @@
-import { cleanup, render } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 import type { GamePlayer } from '@huddle/domain';
 import { CAROUSEL_REGISTRY } from '@huddle/game-registry';
-import { StyleSheet } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 
 const trivia = CAROUSEL_REGISTRY.find((module) => module.metadata.id === 'trivia');
 
@@ -92,6 +92,41 @@ describe('Trivia TV game renderer', () => {
     expect(result.queryByText('Game settings')).toBeNull();
     expect(result.queryByText('Questions')).toBeNull();
     expect(result.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  describe('holding the stage for its sky', () => {
+    const contentOpacity = (result: Awaited<ReturnType<typeof render>>) =>
+      StyleSheet.flatten(result.getByTestId('trivia-tv-stage-content').props.style).opacity;
+
+    async function renderWithMotion(reduce: boolean) {
+      jest.useFakeTimers();
+      jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(reduce);
+      const result = await render(<TvTrivia state={introState} clockRemainingMs={2_400} />);
+      await act(async () => {});
+      return result;
+    }
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('without motion, shows the stage once the sky has loaded', async () => {
+      const result = await renderWithMotion(true);
+      expect(contentOpacity(result)).toBe(0);
+
+      await act(async () => fireEvent(result.getByTestId('trivia-tv-world'), 'load'));
+      expect(contentOpacity(result)).toBe(1);
+    });
+
+    it('without motion, never waits longer than a beat for a slow sky', async () => {
+      const result = await renderWithMotion(true);
+
+      await act(async () => jest.advanceTimersByTime(600));
+      expect(contentOpacity(result)).toBe(1);
+    });
+
+    it('with motion, leaves the launch wipe to cover the sky', async () => {
+      const result = await renderWithMotion(false);
+      expect(contentOpacity(result)).toBe(1);
+    });
   });
 
   it('shows the shared prompt and neutral participation without TV controls or private choice copy', async () => {
