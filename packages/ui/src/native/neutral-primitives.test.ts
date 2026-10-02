@@ -17,7 +17,7 @@ vi.mock('react-native', () => ({
   StyleSheet: {
     create: <T>(styles: T) => styles,
     flatten: (style: unknown): Record<string, unknown> =>
-      Array.isArray(style) ? Object.assign({}, ...style.map((part) => part ?? {})) : (style ?? {}),
+      Array.isArray(style) ? Object.assign({}, ...style.map((part) => part ?? {})) : ((style ?? {}) as Record<string, unknown>),
   },
   Text: 'Text',
   View: 'View',
