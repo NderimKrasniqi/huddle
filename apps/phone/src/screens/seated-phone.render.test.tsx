@@ -309,7 +309,7 @@ describe('Phone picker', () => {
     );
 
     expect(result.getAllByText('Need 2–10 players to start.')).toHaveLength(1);
-    expect(result.queryByText('Everyone is ready. The Host can start.')).toBeNull();
+    expect(result.queryByText('Everyone is ready. The host can start.')).toBeNull();
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
   });
 });

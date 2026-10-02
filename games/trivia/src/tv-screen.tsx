@@ -64,7 +64,7 @@ export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScree
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
         <Image source={TRIVIA_ART.space} resizeMode="cover" style={styles.space} accessible={false} testID="trivia-tv-world" />
         <Twinkle size={40} style={{ left: 40, top: 420 }} />
-        <Twinkle size={30} style={{ left: 1300, top: 230 }} />
+        <Twinkle size={30} style={{ left: 1420, top: 330 }} />
         <Twinkle size={34} style={{ right: 130, top: 520 }} />
         <Twinkle size={26} style={{ left: 50, top: 760 }} />
         <View style={styles.logo} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -138,14 +138,14 @@ function IntroStage({
             </CosmicText>
           </Enter>
         </View>
-        <CosmicText weight="black" size={46} color={cosmic.cream} align="center" style={{ marginTop: 10 }}>
+        <CosmicText weight="black" size={46} color={cosmic.cream} align="center">
           Answer on your phone. Watch the TV for the reveal.
         </CosmicText>
       </View>
       <View style={styles.crew}>
         <View style={styles.crewRule} />
         <View style={styles.crewLabel}>
-          <CosmicText weight="extraBold" size={28} color={cosmic.cream} tracking={5}>YOUR CREW</CosmicText>
+          <CosmicText weight="extraBold" size={30} color={cosmic.cream} tracking={5}>YOUR CREW</CosmicText>
         </View>
         <View style={styles.crewRow} testID="trivia-tv-intro-avatars">
           {players.slice(0, 10).map((player, index) => (
@@ -176,6 +176,8 @@ function QuestionStage({
   readonly players: Players;
   readonly reduceMotion: boolean | undefined;
 }) {
+  // Names fit under the faces only for a smaller room; seats stay avatar-wide otherwise.
+  const named = players.length <= 6;
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={questionAccessibilityLabel(screen)}>
       <CosmicText weight="extraBold" size={36} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
@@ -203,7 +205,7 @@ function QuestionStage({
           ))}
         </View>
       </View>
-      <Mascot pose="idle" width={250} reduceMotion={reduceMotion} style={styles.peekingMascot} />
+      <Mascot pose="idle" width={250} still reduceMotion={reduceMotion} style={[styles.peekingMascot, named ? styles.peekingMascotNamed : null]} />
       <View style={styles.footer}>
         <View style={styles.footerRule} />
         <View style={styles.footerRow}>
@@ -213,7 +215,12 @@ function QuestionStage({
           </View>
           <View style={styles.footerAvatars}>
             {players.slice(0, 10).map((player) => (
-              <AvatarPortrait key={player.playerId} avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 60 : 72} disabled={player.away} />
+              <View key={player.playerId} style={[styles.footerSeat, named ? styles.footerSeatNamed : null]}>
+                <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 60 : 72} disabled={player.away} />
+                {named ? (
+                  <CosmicText weight="bold" size={24} color={cosmic.cream} numberOfLines={1} style={styles.footerName}>{player.nickname}</CosmicText>
+                ) : null}
+              </View>
             ))}
           </View>
           <View style={styles.footerDivider} />
@@ -224,7 +231,6 @@ function QuestionStage({
   );
 }
 
-/** Shorter questions read bigger; three lines of the longest still fit. */
 /** A line for the room to laugh at when everybody, or nobody, got it. */
 function tallyQuip(right: number, total: number): string | undefined {
   if (total < 2) return undefined;
@@ -234,6 +240,7 @@ function tallyQuip(right: number, total: number): string | undefined {
   return undefined;
 }
 
+/** Shorter questions read bigger; three lines of the longest still fit. */
 function questionSize(text: string): number {
   if (text.length > 90) return 52;
   if (text.length > 55) return 60;
@@ -263,6 +270,8 @@ function RevealStage({
   const correct = screen.options.find((option) => option.correct === true);
   const last = screen.questionNumber >= screen.questionCount;
   const compact = screen.scoreboard.length > 5;
+  // Four or fewer rows would leave the panel mostly empty, so they read bigger.
+  const roomy = screen.scoreboard.length <= 4;
   const gotIt = screen.verdicts.filter((verdict) => verdict.correct).length;
   const verdictOf = (playerId: string) => screen.verdicts.find((verdict) => verdict.playerId === playerId)?.correct === true;
 
@@ -300,20 +309,22 @@ function RevealStage({
         </Enter>
         <Enter reduceMotion={reduceMotion} delay={120} style={styles.resultsPanel}>
           <CosmicText weight="black" size={66} align="center">Round results</CosmicText>
-          <View style={[styles.resultRows, compact ? styles.resultRowsCompact : null]} testID="trivia-tv-verdict-grid">
+          <View style={[styles.resultRows, compact ? styles.resultRowsCompact : null, roomy ? styles.resultRowsRoomy : null]} testID="trivia-tv-verdict-grid">
             {screen.scoreboard.map((row, index) => {
               const right = verdictOf(row.playerId);
               return (
                 <Enter key={row.playerId} reduceMotion={reduceMotion} delay={300 + index * 70} from={14} style={[styles.resultRow, compact ? styles.resultRowCompact : null]} testID={`trivia-tv-verdict-row-${row.playerId}`}>
-                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 52 : 66} disabled={row.away} /> : null}
-                  <CosmicText weight="black" size={compact ? 30 : 36} numberOfLines={1} style={styles.resultName}>{row.nickname}</CosmicText>
-                  <View style={[styles.verdict, compact ? styles.verdictCompact : null]}>
-                    {right ? <CheckBadge size={compact ? 34 : 42} /> : <MissBadge size={compact ? 34 : 42} />}
-                    <CosmicText weight="extraBold" size={compact ? 26 : 32} color={right ? cosmic.correct : cosmic.missed}>
-                      {right ? 'Correct' : 'Missed'}
-                    </CosmicText>
+                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 52 : roomy ? 84 : 66} disabled={row.away} /> : null}
+                  <CosmicText weight="black" size={compact ? 30 : roomy ? 44 : 36} numberOfLines={1} style={styles.resultName}>{row.nickname}</CosmicText>
+                  <View style={[styles.verdict, compact ? styles.verdictCompact : null, roomy ? styles.verdictRoomy : null]}>
+                    {right ? <CheckBadge size={compact ? 38 : roomy ? 50 : 42} /> : <MissBadge size={compact ? 38 : roomy ? 50 : 42} />}
+                    {compact ? null : (
+                      <CosmicText weight="extraBold" size={roomy ? 36 : 32} color={right ? cosmic.correct : cosmic.missed}>
+                        {right ? 'Correct' : 'Missed'}
+                      </CosmicText>
+                    )}
                   </View>
-                  <CosmicText weight="black" size={compact ? 32 : 38} align="right" style={compact ? styles.resultScoreCompact : styles.resultScore}>{row.score}</CosmicText>
+                  <CosmicText weight="black" size={compact ? 32 : roomy ? 46 : 38} align="right" style={compact ? styles.resultScoreCompact : styles.resultScore}>{row.score}</CosmicText>
                 </Enter>
               );
             })}
@@ -461,9 +472,9 @@ const styles = StyleSheet.create({
   logo: { position: 'absolute', left: SAFE_X - 20, top: SAFE_Y - 10 },
   centered: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 240 },
 
-  introColumn: { position: 'absolute', top: SAFE_Y + 20, left: 300, right: 300, alignItems: 'center' },
+  introColumn: { position: 'absolute', top: SAFE_Y + 16, bottom: 300, left: 300, right: 300, alignItems: 'center', justifyContent: 'space-between' },
   countPill: { paddingHorizontal: 44, paddingVertical: 12, marginBottom: 6 },
-  introRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 40, marginTop: -6 },
+  introRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 48 },
   introClock: { alignItems: 'center' },
   crew: { position: 'absolute', left: SAFE_X, right: SAFE_X, bottom: SAFE_Y, alignItems: 'center' },
   crewRule: { position: 'absolute', top: 26, left: 0, right: 0, height: 2, backgroundColor: 'rgba(121,225,222,0.35)' },
@@ -473,18 +484,24 @@ const styles = StyleSheet.create({
 
   topLabel: { position: 'absolute', top: SAFE_Y + 18, left: 500, right: 500 },
   timer: { position: 'absolute', top: SAFE_Y + 4, right: SAFE_X + 60, paddingHorizontal: 34, paddingVertical: 8 },
-  questionColumn: { position: 'absolute', top: 170, left: 340, right: 340, gap: 28 },
+  questionColumn: { position: 'absolute', top: 176, left: 340, right: 340, gap: 32 },
   categoryChip: { alignSelf: 'center', paddingHorizontal: 30, paddingVertical: 6, marginBottom: -46, zIndex: 1, borderWidth: 4, borderColor: cosmic.navy },
   questionPanel: { ...panel, minHeight: 230, paddingHorizontal: 70, paddingVertical: 34, alignItems: 'center', justifyContent: 'center' },
-  answerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 26 },
-  answerCell: { width: 607 },
-  answerTile: { height: 128, borderRadius: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, gap: 30 },
+  answerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 32 },
+  answerCell: { width: 604 },
+  answerTile: { height: 148, borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, gap: 30 },
   answerText: { flex: 1 },
-  peekingMascot: { position: 'absolute', right: 50, bottom: 152 },
+  // Hands rest on the footer rule: it peeks over the edge rather than floating.
+  peekingMascot: { position: 'absolute', right: 56, bottom: SAFE_Y + 96 },
+  // Names under the faces make the footer row taller, so the rule sits higher.
+  peekingMascotNamed: { bottom: SAFE_Y + 128 },
   footer: { position: 'absolute', left: SAFE_X, right: SAFE_X, bottom: SAFE_Y },
   footerRule: { height: 2, backgroundColor: 'rgba(121,225,222,0.35)', marginBottom: 24 },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 30 },
   footerAvatars: { flexDirection: 'row', gap: 14, flex: 1, justifyContent: 'center' },
+  footerSeat: { alignItems: 'center' },
+  footerSeatNamed: { width: 128 },
+  footerName: { marginTop: 2, maxWidth: 128 },
   footerDivider: { width: 2, height: 64, backgroundColor: 'rgba(255,248,235,0.4)' },
 
   revealRow: { position: 'absolute', top: 220, left: SAFE_X, right: SAFE_X, bottom: 200, flexDirection: 'row', gap: 40 },
@@ -494,12 +511,14 @@ const styles = StyleSheet.create({
   tallyRow: { flexDirection: 'row', alignItems: 'baseline' },
   resultsPanel: { ...panel, flex: 1, paddingHorizontal: 40, paddingTop: 36, paddingBottom: 28 },
   resultRows: { marginTop: 18, gap: 10 },
+  resultRowsRoomy: { flex: 1, justifyContent: 'center', gap: 18, marginTop: 0 },
   resultRowsCompact: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, columnGap: 24 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(4,27,57,0.04)' },
   resultRowCompact: { width: 510, gap: 10, paddingVertical: 4 },
   resultName: { flex: 1 },
   verdict: { flexDirection: 'row', alignItems: 'center', gap: 12, width: 200 },
-  verdictCompact: { width: 150, gap: 8 },
+  verdictCompact: { width: 38 },
+  verdictRoomy: { width: 250 },
   resultScore: { width: 110 },
   resultScoreCompact: { width: 76 },
   nextBar: { position: 'absolute', left: 0, right: 0, bottom: SAFE_Y + 4, alignItems: 'center' },

@@ -403,7 +403,7 @@ function ReadyScreen({
       : !countInRange
         ? `Need ${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players to start.`
         : allReady
-          ? 'Everyone is ready. The Host can start.'
+          ? 'Everyone is ready. The host can start.'
           : `Waiting for ${roster.filter((seat) => !setup.readyPlayerIds.includes(seat.playerId)).map((seat) => seat.nickname).join(', ')}.`;
 
   function raise() {
@@ -434,8 +434,15 @@ function ReadyScreen({
       }
     >
       <PhoneTopBar back={youAreHost ? { label: 'Setup', onPress: onReopen, testID: 'setup-nav-back' } : undefined} you={you} />
+      {/* The hand sits in the lower half, where a thumb reaches it. */}
+      <View style={styles.thumbSpacer} />
       <PlayroomHeading type={playroomPhone.type.heading}>{currentReady ? 'You’re all set!' : `Ready for ${module.metadata.title}?`}</PlayroomHeading>
-      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>{module.metadata.title}</PlayroomText>
+      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+        {module.settingsSchema
+          .slice(0, 2)
+          .map((setting) => settingSummaryText(setting, setup.settings[setting.key] ?? setting.defaultValue))
+          .join(' · ') || module.metadata.title}
+      </PlayroomText>
       <Pressable
         onPress={raise}
         disabled={busy === 'ready'}
@@ -468,6 +475,7 @@ function ReadyScreen({
         </View>
       ) : null}
       {failure ? <PhoneNotice testID="setup-error">{failure}</PhoneNotice> : null}
+      <View style={styles.thumbSpacerBelow} />
     </PhoneFrame>
   );
 }
@@ -548,6 +556,8 @@ function useSecondsLeft(endsAt: number): number {
 const RING = 220;
 
 const styles = StyleSheet.create({
+  thumbSpacer: { flexGrow: 1, minHeight: 8 },
+  thumbSpacerBelow: { flexGrow: 0.4 },
   readyPerson: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 20, backgroundColor: playroomColors.surface },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },

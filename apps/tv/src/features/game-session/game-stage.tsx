@@ -87,7 +87,10 @@ export function TvRuntimeStatus({
             <View style={styles.missing} testID="tv-paused-roster">
               {missing.slice(0, 10).map((player) => (
                 <View key={String(player.playerId)} style={[styles.player, missing.length > 5 ? styles.playerCompact : null]}>
-                  <PlayroomAvatar avatarId={player.avatar} size={missing.length > 5 ? 96 : 140} away />
+                  {/* Full colour in a dashed ring: missed, not gone. A faded face read as disabled. */}
+                  <View style={[styles.ring, missing.length > 5 ? styles.ringCompact : null]}>
+                    <PlayroomAvatar avatarId={player.avatar} size={missing.length > 5 ? 96 : 140} />
+                  </View>
                   <PlayroomText numberOfLines={1} style={[playroomTv.type.label, styles.center]}>{player.nickname}</PlayroomText>
                   <PlayroomText color="muted" style={[playroomTv.type.caption, styles.center]}>Reconnecting</PlayroomText>
                 </View>
@@ -96,9 +99,10 @@ export function TvRuntimeStatus({
           ) : (
             <PlayroomStatusImage art={paused ? 'paused' : 'disconnected'} width={320} height={320} />
           )}
-          <PlayroomText color="muted" style={[playroomTv.type.body, styles.center]}>
-            {waitingForPlayers && host && !host.away ? `${message} ${host.nickname} can continue without them.` : message}
-          </PlayroomText>
+          <PlayroomText style={[playroomTv.type.body, styles.center, styles.message]}>{message}</PlayroomText>
+          {waitingForPlayers && host && !host.away ? (
+            <PlayroomText color="muted" style={[playroomTv.type.label, styles.center]}>{`${host.nickname} can continue without them.`}</PlayroomText>
+          ) : null}
         </View>
       </PlayroomTvStage>
     </View>
@@ -140,6 +144,20 @@ const styles = StyleSheet.create({
   },
   playerCompact: {
     width: 200,
+  },
+  ring: {
+    padding: 8,
+    borderRadius: 999,
+    borderWidth: 4,
+    borderStyle: 'dashed',
+    borderColor: playroomColors.orange,
+  },
+  ringCompact: {
+    padding: 6,
+    borderWidth: 3,
+  },
+  message: {
+    maxWidth: 1300,
   },
   center: {
     textAlign: 'center',

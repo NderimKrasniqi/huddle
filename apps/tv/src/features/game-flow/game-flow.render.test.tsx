@@ -77,7 +77,8 @@ describe('TV game flow renderers', () => {
       />,
     );
     expect(screen.getByText('Hands up for Trivia!')).toBeTruthy();
-    expect(screen.getByText('Trivia · 10 questions')).toBeTruthy();
+    expect(screen.getByText('10 questions')).toBeTruthy();
+    expect(screen.getByLabelText('Trivia, 10 questions')).toBeTruthy();
     expect(screen.getByText('1 of 2 hands up')).toBeTruthy();
     expect(screen.getByText('Waiting for Bo')).toBeTruthy();
     expect(screen.getByLabelText('Ada, host, ready')).toBeTruthy();

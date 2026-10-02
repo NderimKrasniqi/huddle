@@ -241,13 +241,16 @@ export function Mascot({
   width,
   style,
   reduceMotion,
+  still = false,
 }: {
   readonly pose: MascotPose;
   readonly width: number;
   readonly style?: StyleProp<ViewStyle>;
   readonly reduceMotion: boolean | undefined;
+  /** Hold still, for a pose that rests on an edge (the peek). */
+  readonly still?: boolean;
 }) {
-  const bob = useLoop(reduceMotion !== false, 2400);
+  const bob = useLoop(reduceMotion !== false || still, 2400);
   const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -width * 0.025] });
   return (
     <Animated.View style={[style, { transform: [{ translateY }] }]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

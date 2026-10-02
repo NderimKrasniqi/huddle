@@ -13,7 +13,8 @@ describe('TvRuntimeStatus while players reconnect', () => {
     await render(<TvRuntimeStatus kind="paused" reason="playerDisconnected" gameId="trivia" roomCode="ABCD" players={players} />);
 
     expect(screen.getAllByText('Reconnecting', { includeHiddenElements: true })).toHaveLength(9);
-    expect(screen.getByText(/9 players lost connection\..*Ada can continue without them\./, { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('9 players lost connection. The game continues when they’re back.', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('Ada can continue without them.', { includeHiddenElements: true })).toBeTruthy();
   });
 
   it('does not say an away Host can continue', async () => {

@@ -110,7 +110,9 @@ const TONES = {
     text: 'danger' as const,
   },
   link: { container: null, text: 'muted' as const },
-  disabled: { container: { backgroundColor: playroomColors.disabled }, text: 'muted' as const },
+  // Outlined so a disabled action reads as "not yet" rather than missing, while
+  // the label keeps its contrast against the lighter fill.
+  disabled: { container: { backgroundColor: playroomColors.disabled, borderWidth: 2, borderColor: playroomColors.border }, text: 'muted' as const },
 };
 
 const styles = StyleSheet.create({

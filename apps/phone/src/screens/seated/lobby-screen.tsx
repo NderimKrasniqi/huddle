@@ -64,7 +64,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
         <PlayroomMoment art="highFive" width={280} height={240} style={styles.moment} />
         <PlayroomHeading type={playroomPhone.type.hero}>One more?</PlayroomHeading>
         <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
-          {standing.youAreHost ? 'Same people. New surprises. Choose what’s next.' : `${standing.hostNickname ?? 'The Host'} is choosing what’s next. Your seat stays yours.`}
+          {standing.youAreHost ? 'Same people. New surprises. Choose what’s next.' : `${standing.hostNickname ?? 'The host'} is choosing what’s next. Your seat stays yours.`}
         </PlayroomText>
       </> : standing.youAreHost ? <HostLobby {...props} /> : <GuestLobby {...props} />}
       {failure ? <PhoneNotice testID="phone-lifecycle-error">{failure}</PhoneNotice> : null}

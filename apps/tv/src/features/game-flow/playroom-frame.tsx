@@ -53,7 +53,9 @@ export function TvRosterRow({ players, size = playroomTv.avatar.row, names = tru
 }
 
 const styles = StyleSheet.create({
-  halo: { position: 'absolute', width: 1540, height: 620, left: 190, top: 250, borderRadius: 999, backgroundColor: playroomColors.lavender, opacity: 0.24 },
+  // A soft glow that bleeds off the stage, so it reads as light, not as a shape
+  // whose edge the content keeps crossing.
+  halo: { position: 'absolute', width: 2600, height: 1500, left: -340, top: 220, borderRadius: 1300, backgroundColor: playroomColors.lavender, opacity: 0.2 },
   dash: {
     position: 'absolute',
     width: 42,
