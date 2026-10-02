@@ -311,9 +311,9 @@ function RevealStage({
 }
 
 const PODIUM = [
-  { place: 2, color: cosmic.periwinkle, height: 190 },
+  { place: 2, color: cosmic.periwinkle, height: 205 },
   { place: 1, color: cosmic.butter, height: 250 },
-  { place: 3, color: cosmic.coral, height: 165 },
+  { place: 3, color: cosmic.coral, height: 185 },
 ] as const;
 
 function FinishedStage({
@@ -346,10 +346,11 @@ function FinishedStage({
               {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={place === 1 ? 150 : 124} disabled={standing.away} /> : null}
               <View style={[styles.podiumBlock, { height, backgroundColor: color }]}>
                 <View style={styles.rankBadge}>
-                  <CosmicText weight="black" size={44} style={{ lineHeight: 52 }}>{standing.rank}</CosmicText>
+                  <CosmicText weight="black" size={36} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
                 </View>
-                <CosmicText weight="black" size={44} numberOfLines={1} style={{ maxWidth: 300 }}>{standing.nickname}</CosmicText>
-                <CosmicText weight="black" size={44}>{standing.score}</CosmicText>
+                {/* Badge, name and score must fit the shortest (3rd place) block. */}
+                <CosmicText weight="black" size={38} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
+                <CosmicText weight="black" size={38}>{standing.score}</CosmicText>
               </View>
             </Enter>
           );
@@ -471,8 +472,8 @@ const styles = StyleSheet.create({
   winnerPill: { ...panel, position: 'absolute', top: 150, left: 520, right: 520, paddingVertical: 22, paddingHorizontal: 40, alignItems: 'center' },
   podium: { position: 'absolute', left: 380, right: 380, bottom: 330, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
   podiumSlot: { width: 386, alignItems: 'center' },
-  podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 24, marginTop: -16 },
-  rankBadge: { width: 74, height: 74, borderRadius: 37, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 16, marginTop: -16 },
+  rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   restRow: { ...panel, position: 'absolute', left: 200, right: 200, bottom: 132, minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
   restSeat: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   restRank: { width: 48, height: 48, borderRadius: 24, backgroundColor: cosmic.periwinkle, alignItems: 'center', justifyContent: 'center' },
