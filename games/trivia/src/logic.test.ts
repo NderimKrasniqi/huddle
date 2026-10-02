@@ -184,6 +184,12 @@ describe('the questions a game is dealt', () => {
     }
   });
 
+  it("carries each question's pack category for the screens", () => {
+    for (const question of gameWith(ADA, GRACE).questions) {
+      expect(question.category).toBe(categoryOf(question));
+    }
+  });
+
   it('asks four options with exactly one right answer', () => {
     for (const question of gameWith(ADA, GRACE).questions) {
       expect(question.text).not.toBe('');
@@ -865,6 +871,15 @@ describe('the game as a client is shown it', () => {
     expect(redact(answered, ADA).answers).toEqual({});
     expect(redact(answered, ADA).participationCount).toBe(1);
     expect(redact(answered, undefined).answers).toEqual({});
+  });
+
+  it('shows the current question\'s category but nothing of the questions to come', () => {
+    const asked = gameWith(ADA, GRACE);
+    const shown = redact(asked, ADA).questions;
+
+    expect(shown[0]?.category).toBe(asked.questions[0]?.category);
+    expect(shown[1]?.category).toBeUndefined();
+    expect(shown[1]?.text).toBe('');
   });
 
   it('shows a player their own answer', () => {

@@ -185,6 +185,11 @@ function QuestionStage({
         <CosmicText weight="black" size={64}>{timerLabel(screen.countdownSeconds)}</CosmicText>
       </Pill>
       <View style={styles.questionColumn}>
+        {screen.category ? (
+          <Pill color={cosmic.turquoise} style={styles.categoryChip} testID="trivia-tv-category">
+            <CosmicText weight="black" size={28} tracking={3}>{screen.category.toUpperCase()}</CosmicText>
+          </Pill>
+        ) : null}
         <Enter reduceMotion={reduceMotion} style={styles.questionPanel}>
           <CosmicText weight="black" size={questionSize(screen.text)} align="center" numberOfLines={3} adjustsFontSizeToFit>
             {screen.text}
@@ -469,6 +474,7 @@ const styles = StyleSheet.create({
   topLabel: { position: 'absolute', top: SAFE_Y + 18, left: 500, right: 500 },
   timer: { position: 'absolute', top: SAFE_Y + 4, right: SAFE_X + 60, paddingHorizontal: 34, paddingVertical: 8 },
   questionColumn: { position: 'absolute', top: 170, left: 340, right: 340, gap: 28 },
+  categoryChip: { alignSelf: 'center', paddingHorizontal: 30, paddingVertical: 6, marginBottom: -46, zIndex: 1, borderWidth: 4, borderColor: cosmic.navy },
   questionPanel: { ...panel, minHeight: 230, paddingHorizontal: 70, paddingVertical: 34, alignItems: 'center', justifyContent: 'center' },
   answerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 26 },
   answerCell: { width: 607 },
