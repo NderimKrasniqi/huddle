@@ -4,6 +4,7 @@ export {
   type HuddleButtonProps,
   type HuddleButtonVariant,
 } from './huddle-button';
+export { fontScaleCap } from './font-scale';
 export { HuddleText, type HuddleTextProps } from './huddle-text';
 export { ScreenShell, type ScreenShellProps } from './screen-shell';
 export {

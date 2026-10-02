@@ -6,6 +6,8 @@ import {
 import type { PropsWithChildren } from 'react';
 import { Platform, Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
+import { textScaleCap } from './font-scale';
+
 export type HuddleTextProps = PropsWithChildren<
   Omit<TextProps, 'style'> & {
     readonly variant?: TypographyToken;
@@ -25,18 +27,17 @@ export function HuddleText({
   align,
   systemFont = false,
   style,
+  maxFontSizeMultiplier,
   ...textProps
 }: HuddleTextProps) {
+  const textStyle = [
+    typography[variant],
+    systemFont ? styles.systemFont : null,
+    { color: semanticColors[color], textAlign: align },
+    style,
+  ];
   return (
-    <Text
-      {...textProps}
-      style={[
-        typography[variant],
-        systemFont ? styles.systemFont : null,
-        { color: semanticColors[color], textAlign: align },
-        style,
-      ]}
-    >
+    <Text {...textProps} maxFontSizeMultiplier={textScaleCap(textStyle, maxFontSizeMultiplier)} style={textStyle}>
       {children}
     </Text>
   );

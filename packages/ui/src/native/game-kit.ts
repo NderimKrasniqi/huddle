@@ -5,6 +5,7 @@
  * Reanimated, so game logic and contract tests can load it in Node.
  */
 export { AvatarPortrait, type AvatarPortraitProps } from './avatar-portrait';
+export { fontScaleCap } from './font-scale';
 export { HuddleButton, type HuddleButtonProps, type HuddleButtonVariant } from './huddle-button';
 export { HuddleIcon, type HuddleIconName } from './huddle-icon';
 export { HuddleText, type HuddleTextProps } from './huddle-text';

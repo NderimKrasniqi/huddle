@@ -14,6 +14,11 @@ vi.mock('react-native', () => ({
   Image: 'Image',
   Platform: { select: (options: Record<string, unknown>) => options.default ?? options.ios },
   Pressable: 'Pressable',
+  StyleSheet: {
+    create: <T>(styles: T) => styles,
+    flatten: (style: unknown): Record<string, unknown> =>
+      Array.isArray(style) ? Object.assign({}, ...style.map((part) => part ?? {})) : ((style ?? {}) as Record<string, unknown>),
+  },
   Text: 'Text',
   View: 'View',
 }));

@@ -11,6 +11,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { fontScaleCap } from '@huddle/ui/game-kit';
 
 import { MASCOT_ASPECT, TRIVIA_ART } from './art';
 
@@ -78,6 +79,7 @@ export function CosmicText({
 }) {
   return (
     <Text
+      maxFontSizeMultiplier={fontScaleCap(size)}
       {...props}
       style={[
         {

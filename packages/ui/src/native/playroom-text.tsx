@@ -11,6 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { textScaleCap } from './font-scale';
 import { PLAYROOM_ARTWORK } from './playroom-artwork';
 
 export type PlayroomTextProps = Omit<TextProps, 'style'> & {
@@ -20,9 +21,10 @@ export type PlayroomTextProps = Omit<TextProps, 'style'> & {
 };
 
 /** Nunito text in Playroom ink. Pass a Playroom type token as `style`. */
-export function PlayroomText({ children, color = 'ink', style, ...textProps }: PlayroomTextProps) {
+export function PlayroomText({ children, color = 'ink', style, maxFontSizeMultiplier, ...textProps }: PlayroomTextProps) {
+  const textStyle = [styles.text, { color: playroomColors[color] }, style];
   return (
-    <Text {...textProps} style={[styles.text, { color: playroomColors[color] }, style]}>
+    <Text {...textProps} maxFontSizeMultiplier={textScaleCap(textStyle, maxFontSizeMultiplier)} style={textStyle}>
       {children}
     </Text>
   );
