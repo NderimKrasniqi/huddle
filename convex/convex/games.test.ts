@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
+import { INTRO_SECONDS } from '@huddle/game-trivia/logic';
 import { roomFixture } from '../test/fixtures';
 
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
@@ -313,5 +314,58 @@ describe('presence at Start', () => {
       kind: 'playersAway',
     });
     expect((await t.query(api.games.setup, { roomId: room.roomId }))?.readyPlayerIds.length).toBe(2);
+  });
+});
+
+describe('moving on from a Trivia reveal', () => {
+  afterEach(() => vi.useRealTimers());
+
+  async function phaseOf(t: Backend, roomId: Id<'rooms'>) {
+    const running = await t.query(api.games.running, { roomId });
+    if (running?.kind !== 'running') throw new Error('expected a running game');
+    const state = running.state as { phase: string; questionIndex: number };
+    return { phase: state.phase, questionIndex: state.questionIndex };
+  }
+
+  async function revealed(t: Backend) {
+    const room = await party(t);
+    await lockAndReady(t, room);
+    await t.mutation(api.games.startGame, { sessionToken: room.host });
+    await vi.advanceTimersByTimeAsync(INTRO_SECONDS * 1000 + 1);
+    await t.finishInProgressScheduledFunctions();
+    for (const sessionToken of [room.host, room.guest]) {
+      await t.mutation(api.games.sendEvent, {
+        sessionToken,
+        event: { kind: 'answer', questionIndex: 0, optionIndex: 0 },
+      });
+    }
+    expect(await phaseOf(t, room.roomId)).toEqual({ phase: 'reveal', questionIndex: 0 });
+    return room;
+  }
+
+  it('ignores a guest claiming to be the Host', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await revealed(t);
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: room.guest,
+      event: { kind: 'advance', questionIndex: 0, phase: 'reveal', fromHost: true },
+    });
+
+    expect(await phaseOf(t, room.roomId)).toEqual({ phase: 'reveal', questionIndex: 0 });
+  });
+
+  it('lets the Host move the room on before the break ends', async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const room = await revealed(t);
+
+    await t.mutation(api.games.sendEvent, {
+      sessionToken: room.host,
+      event: { kind: 'advance', questionIndex: 0, phase: 'reveal' },
+    });
+
+    expect(await phaseOf(t, room.roomId)).toEqual({ phase: 'question', questionIndex: 1 });
   });
 });

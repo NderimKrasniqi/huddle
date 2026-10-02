@@ -103,6 +103,7 @@ async function playGameEvent(
       ...event,
       msRemaining: clockRemainingMs(running, Date.now()),
       awayPlayerIds: await awayPlayerIds(ctx, room._id),
+      fromHost: event.playerId !== undefined && event.playerId === room.hostPlayerId,
     });
     if (decodedEvent === undefined) throw new Error('event decoder returned undefined');
   } catch {

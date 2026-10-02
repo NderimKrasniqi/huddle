@@ -1,26 +1,34 @@
-import type { PhoneGameScreenProps } from '@huddle/domain';
-import {
-  HuddleButton,
-  HuddleText,
-  ScreenShell,
-} from '@huddle/ui/game-kit';
-import { useEffect, useState } from 'react';
-import { Image, ImageBackground, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import type { PhoneGameScreenProps, PhoneSafeAreaInsets } from '@huddle/domain';
+import { useState, type ReactNode } from 'react';
+import { Animated, Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
-import { playableState } from './state';
-import { triviaOptionTones, triviaTvTheme } from './tv-theme';
-import type { TriviaEvent, TriviaState } from './types';
-import { triviaPalette, triviaSpacing, triviaRadii } from './theme';
-import { TRIVIA_ART } from './art';
+import {
+  answerTone,
+  cosmic,
+  CosmicText,
+  Enter,
+  LetterBadge,
+  LockMark,
+  Logo,
+  Mascot,
+  Pill,
+  timerLabel,
+  Twinkle,
+  useCountdownSeconds,
+  useReducedMotion,
+  type MascotPose,
+} from './cosmic';
+import { playableState, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
+import type { PlayableTriviaState, TriviaEvent, TriviaState } from './types';
 
 /**
- * Trivia's private controller surface.
+ * Trivia's private controller: the answer pad.
  *
- * The Phone is the only place where a player sees and sends an answer. The
- * state handed to this component is already projected for its owner by the
- * room; this renderer never attempts to reconstruct another player's choice or
- * the answer key. The TV owns the shared question and reveal.
+ * The phone is the only place a player sees and sends an answer. The state it
+ * is handed is already projected for its owner, so it never reconstructs
+ * anybody else's choice or the answer key; the TV owns the shared question and
+ * the reveal. Between questions the Host's phone alone offers "Next question".
  */
 export function TriviaPhoneScreen({
   state,
@@ -30,795 +38,381 @@ export function TriviaPhoneScreen({
   hostChromeInsetTop,
   hostChromeInsetBottom,
   clockRemainingMs,
+  isHost = false,
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
-  const deviceInsets = safeAreaInsets ?? ZERO_INSETS;
+  const reduceMotion = useReducedMotion();
+  const device = safeAreaInsets ?? ZERO_INSETS;
   // Platform chrome at the bottom (the Host's Back to lobby) extends the
   // device inset, so every surface's footer stays clear of it.
-  const insets = { ...deviceInsets, bottom: deviceInsets.bottom + finiteInset(hostChromeInsetBottom) };
-  const chromeInsetTop = finiteInset(hostChromeInsetTop);
+  const insets = { ...device, bottom: device.bottom + finiteInset(hostChromeInsetBottom) };
+  const chromeTop = finiteInset(hostChromeInsetTop);
   const current = playableState(state);
-  const countdownSeconds = useCountdownSeconds(
-    current?.phase === 'question' ? clockRemainingMs : undefined,
-    current?.phase === 'question' ? current.questionSeconds ?? 20 : 0,
+  const seconds = useCountdownSeconds(
+    current?.phase === 'question' || current?.phase === 'reveal' ? clockRemainingMs : undefined,
+    current?.phase === 'question' ? current.questionSeconds ?? QUESTION_SECONDS : current?.phase === 'reveal' ? REVEAL_SECONDS : 0,
     current === undefined ? 'legacy' : `${current.questionIndex}:${current.phase}`,
   );
+  const frame = { insets, chromeTop };
 
   if (current === undefined) {
     return (
-      <TriviaStatusSurface
-        phase="legacy"
-        line="Ask the Host to return to the room and start Trivia again."
-        insets={insets}
-        chromeInsetTop={chromeInsetTop}
-        testID="trivia-phone-legacy"
-      />
+      <Surface {...frame} testID="trivia-phone-legacy">
+        <Logo width={190} on="light" />
+        <CosmicText weight="black" size={30} align="center" style={styles.heading}>Room needs an update</CosmicText>
+        <CosmicText size={17} color={cosmic.muted} align="center">Ask the host to return to the room and start Trivia again.</CosmicText>
+      </Surface>
     );
   }
 
+  const count = current.questions.length;
+
   if (current.phase === 'intro') {
     return (
-      <TriviaIntroSurface
-        questionCount={current.questions.length}
-        insets={insets}
-        chromeInsetTop={chromeInsetTop}
-      />
+      <Surface {...frame} testID="trivia-phone-intro">
+        <Logo width={200} on="light" />
+        <Enter reduceMotion={reduceMotion}>
+          <CosmicText weight="black" size={40} align="center" accessibilityRole="header" style={styles.heading}>Get ready!</CosmicText>
+        </Enter>
+        <Mascot pose="wave" width={210} reduceMotion={reduceMotion} />
+        <Pill color={cosmic.turquoise} style={styles.pill}>
+          <CosmicText weight="black" size={18} tracking={0.5}>{`${count} QUESTIONS`}</CosmicText>
+        </Pill>
+        <CosmicText weight="black" size={22} align="center" style={{ marginTop: 12 }}>Your phone is the answer pad.</CosmicText>
+        <CosmicText weight="black" size={22} align="center" style={{ marginTop: 8 }}>Eyes on the TV!</CosmicText>
+      </Surface>
     );
   }
 
   const model = answerScreen(state, player.playerId);
+  const progress = `${current.questionIndex + 1} / ${count}`;
 
-  // Once this phone has submitted, answers are intentionally no longer
-  // rendered here. The answer belongs to the player, while the waiting
-  // surface only communicates the shared progress that is safe to show.
   if (model.kind === 'question' && model.lockedIn) {
+    const answered = current.participationCount;
     return (
-      <TriviaWaitingSurface
-        questionIndex={model.questionIndex}
-        questionCount={current.questions.length}
-        countdownSeconds={countdownSeconds}
-        participationCount={current.participationCount}
-        playerCount={current.standings.length}
-        insets={insets}
-        chromeInsetTop={chromeInsetTop}
-      />
+      <Surface {...frame} testID="trivia-phone-waiting-after-answer">
+        <Header progress={progress} seconds={seconds} />
+        <Enter reduceMotion={reduceMotion}>
+          <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Answer locked!</CosmicText>
+        </Enter>
+        <Enter reduceMotion={reduceMotion} scale={0.6} from={0} delay={80}>
+          <LockMark size={130} />
+        </Enter>
+        {answered !== undefined ? (
+          <CosmicText weight="bold" size={19} align="center" style={{ marginTop: 18 }}>
+            {`${answered} of ${current.standings.length} answered`}
+          </CosmicText>
+        ) : null}
+        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 4 }}>Waiting for others…</CosmicText>
+        <Mascot pose="point" width={170} reduceMotion={reduceMotion} style={{ marginTop: 16 }} />
+        <CosmicText weight="black" size={22} align="center">Eyes on the TV!</CosmicText>
+        <CosmicText size={16} color={cosmic.muted} align="center">The reveal is coming.</CosmicText>
+      </Surface>
     );
   }
 
   if (model.kind === 'question') {
     return (
-      <ScreenShell tone="background" style={styles.shell} testID="trivia-phone-screen">
-        <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
-        <ImageBackground
-          source={TRIVIA_ART.leaves}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-          accessible={false}
-          testID="trivia-phone-world"
-        />
-        <View style={styles.worldWash} pointerEvents="none" />
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            {
-              paddingLeft: insets.left,
-              paddingRight: insets.right,
-              paddingTop: insets.top + chromeInsetTop + triviaSpacing.lg,
-              paddingBottom: insets.bottom + triviaSpacing.xl,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-          testID="trivia-phone-scroll"
-        >
-          <View style={styles.page}>
-            <View style={styles.roundRow}>
-              <View style={styles.serverPill}>
-                <HuddleText variant="caption" style={styles.pillIcon} accessibilityElementsHidden>⌛</HuddleText>
-                <HuddleText variant="caption">Server countdown</HuddleText>
-              </View>
-              <View
-                style={styles.timerPill}
-                testID="trivia-phone-clock"
-                accessible
-                accessibilityRole="text"
-                accessibilityLabel={`${countdownSeconds} seconds remaining`}
-              >
-                <HuddleText variant="title" style={styles.timerLabel}>{String(countdownSeconds).padStart(2, '0')}</HuddleText>
-                <HuddleText variant="caption" style={styles.compatibilityHidden}>{`${countdownSeconds}s`}</HuddleText>
-              </View>
-            </View>
-
-            <HuddleText variant="caption" align="center" style={styles.roundLabel}>
-              Question {model.questionIndex + 1} of {current.questions.length}
-            </HuddleText>
-
-            <View style={styles.questionPanel}>
-              <HuddleText variant="title" align="center" accessibilityRole="header" style={styles.questionTitle}>
-                {model.text}
-              </HuddleText>
-              <HuddleText variant="caption" align="center" style={styles.questionPrivacyNote}>
-                Your choice stays on this phone until the reveal.
-              </HuddleText>
-            <View style={styles.options}>
-              {model.options.map((option) => (
-                <TriviaAnswerButton
-                  key={option.optionIndex}
-                  option={option}
-                  onPress={() => sendEvent({
+      <Surface {...frame} testID="trivia-phone-screen" scrollTestID="trivia-phone-scroll" align="stretch">
+        <Header progress={progress} seconds={seconds} />
+        <CosmicText weight="black" size={model.text.length > 80 ? 21 : 25} align="center" accessibilityRole="header" style={styles.question}>
+          {model.text}
+        </CosmicText>
+        <View style={styles.answers}>
+          {model.options.map((option, index) => (
+            <Enter key={option.optionIndex} reduceMotion={reduceMotion} delay={index * 60} from={16}>
+              <AnswerButton
+                option={option}
+                reduceMotion={reduceMotion}
+                onPress={() =>
+                  sendEvent({
                     kind: 'answer',
                     playerId: player.playerId,
                     questionIndex: model.questionIndex,
                     optionIndex: option.optionIndex,
-                  })}
-                />
-              ))}
-            </View>
-            </View>
-          </View>
-        </ScrollView>
-      </ScreenShell>
+                  })
+                }
+              />
+            </Enter>
+          ))}
+        </View>
+        <CosmicText size={15} color={cosmic.muted} align="center" style={{ marginTop: 14 }}>
+          Tap an answer to lock it in. Your choice stays on this phone until the reveal.
+        </CosmicText>
+      </Surface>
     );
   }
 
+  if (current.phase === 'reveal') {
+    return (
+      <RevealSurface
+        {...frame}
+        state={current}
+        progress={progress}
+        seconds={seconds}
+        isHost={isHost}
+        reduceMotion={reduceMotion}
+        onNext={() =>
+          sendEvent({ kind: 'advance', playerId: player.playerId, questionIndex: current.questionIndex, phase: 'reveal' })
+        }
+      />
+    );
+  }
+
+  if (current.phase === 'finished') {
+    return (
+      <Surface {...frame} testID="trivia-phone-finished" scrollTestID="trivia-phone-finished-scroll">
+        <Logo width={190} on="light" />
+        <Pill color={cosmic.turquoise} style={styles.pill}>
+          <CosmicText weight="black" size={15} tracking={1.5}>GAME COMPLETE</CosmicText>
+        </Pill>
+        <Enter reduceMotion={reduceMotion}>
+          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>That’s a wrap!</CosmicText>
+        </Enter>
+        <Mascot pose="celebrate" width={210} reduceMotion={reduceMotion} />
+        <CosmicText weight="black" size={19} align="center">Final scores are on the TV.</CosmicText>
+        <View style={styles.rule} />
+        <CosmicText size={16} color={cosmic.muted} align="center">
+          {isHost ? 'Bring everyone back to the room.' : 'Waiting for the host to choose what’s next.'}
+        </CosmicText>
+      </Surface>
+    );
+  }
+
+  return <EyesUp {...frame} pose="point" line={model.kind === 'eyesUp' ? model.line : ''} reduceMotion={reduceMotion} testID={`trivia-phone-${current.phase}`} />;
+}
+
+function RevealSurface({
+  insets,
+  chromeTop,
+  state,
+  progress,
+  seconds,
+  isHost,
+  reduceMotion,
+  onNext,
+}: {
+  readonly insets: PhoneSafeAreaInsets;
+  readonly chromeTop: number;
+  readonly state: PlayableTriviaState;
+  readonly progress: string;
+  readonly seconds: number;
+  readonly isHost: boolean;
+  readonly reduceMotion: boolean | undefined;
+  readonly onNext: () => void;
+}) {
+  const last = state.questionIndex + 1 >= state.questions.length;
   return (
-    <TriviaStatusSurface
-      phase={current.phase}
-      line={model.line}
-      insets={insets}
-      chromeInsetTop={chromeInsetTop}
-      testID={`trivia-phone-${current.phase}`}
-    />
+    <Surface insets={insets} chromeTop={chromeTop} testID="trivia-phone-reveal">
+      <Logo width={170} on="light" />
+      <CosmicText weight="black" size={16} align="center">{progress}</CosmicText>
+      <Enter reduceMotion={reduceMotion}>
+        <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Eyes on the TV!</CosmicText>
+      </Enter>
+      <Mascot pose="point" width={200} reduceMotion={reduceMotion} />
+      <CosmicText size={17} align="center" style={{ marginTop: 6 }}>The answer and scores are on the TV.</CosmicText>
+      <Pill style={[styles.pill, styles.nextPill]} testID="trivia-phone-next-clock">
+        <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`}>
+          <CosmicText weight="bold" size={18}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
+          <CosmicText weight="black" size={24}>{`${seconds}s`}</CosmicText>
+        </View>
+      </Pill>
+      {isHost ? (
+        <>
+          <CosmicText size={15} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>
+            {last ? 'Seen enough?' : 'Ready for the next one?'}
+          </CosmicText>
+          <PressScale
+            onPress={onNext}
+            reduceMotion={reduceMotion}
+            accessibilityLabel={last ? 'Show final scores' : 'Next question'}
+            testID="trivia-phone-next"
+            style={styles.nextButton}
+          >
+            <CosmicText weight="black" size={22}>{last ? 'Show final scores' : 'Next question'}</CosmicText>
+          </PressScale>
+        </>
+      ) : (
+        <CosmicText size={15} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>The host can move on sooner.</CosmicText>
+      )}
+    </Surface>
   );
 }
 
-function TriviaBrandHeader() {
+function EyesUp({
+  insets,
+  chromeTop,
+  pose,
+  line,
+  reduceMotion,
+  testID,
+}: {
+  readonly insets: PhoneSafeAreaInsets;
+  readonly chromeTop: number;
+  readonly pose: MascotPose;
+  readonly line: string;
+  readonly reduceMotion: boolean | undefined;
+  readonly testID: string;
+}) {
   return (
-    <View style={styles.brandHeader} accessibilityRole="header">
-      <View style={styles.gameMark} accessible accessibilityLabel="Trivia">
-        <View style={styles.gameMarkLeaf} />
-        <View style={styles.gameMarkStem} />
+    <Surface insets={insets} chromeTop={chromeTop} testID={testID}>
+      <Logo width={190} on="light" />
+      <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Eyes up.</CosmicText>
+      <Mascot pose={pose} width={200} reduceMotion={reduceMotion} />
+      <CosmicText size={17} align="center">{line}</CosmicText>
+    </Surface>
+  );
+}
+
+function Header({ progress, seconds }: { readonly progress: string; readonly seconds: number }) {
+  return (
+    <View style={styles.header}>
+      <Logo width={150} on="light" />
+      <View style={styles.headerRow}>
+        <CosmicText weight="black" size={17} accessibilityLabel={`Question ${progress.replace(' / ', ' of ')}`}>{progress}</CosmicText>
+        <Pill style={styles.timer} testID="trivia-phone-clock">
+          <CosmicText weight="black" size={22} accessibilityLabel={`${seconds} seconds remaining`}>{timerLabel(seconds)}</CosmicText>
+        </Pill>
       </View>
-      <HuddleText variant="title" style={styles.brandTitle}>TRIVIA</HuddleText>
     </View>
   );
 }
 
-function TriviaWaitingSurface({
-  questionIndex,
-  questionCount,
-  countdownSeconds,
-  participationCount,
-  playerCount,
-  insets,
-  chromeInsetTop,
-}: {
-  readonly questionIndex: number;
-  readonly questionCount: number;
-  readonly countdownSeconds: number;
-  readonly participationCount?: number;
-  readonly playerCount: number;
-  readonly insets: Insets;
-  readonly chromeInsetTop: number;
-}) {
-  const hasSafeParticipation = Number.isFinite(participationCount)
-    && playerCount > 0;
-  const answered = hasSafeParticipation
-    ? Math.min(playerCount, Math.max(0, Math.round(participationCount ?? 0)))
-    : undefined;
-
-  return (
-    <ScreenShell
-      tone="background"
-      style={[styles.shell, styles.worldRoot]}
-      testID="trivia-phone-waiting"
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
-      <ImageBackground
-        source={TRIVIA_ART.leaves}
-        resizeMode="cover"
-        style={StyleSheet.absoluteFill}
-        accessible={false}
-        testID="trivia-phone-waiting-world"
-      />
-      <View style={styles.worldWash} pointerEvents="none" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.statusScroll,
-          {
-            paddingTop: insets.top + chromeInsetTop + triviaSpacing.xl,
-            paddingRight: insets.right + triviaSpacing.xl,
-            paddingBottom: insets.bottom + triviaSpacing.xl,
-            paddingLeft: insets.left + triviaSpacing.xl,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        testID="trivia-phone-waiting-scroll"
-      >
-        <View style={styles.statusContent} testID="trivia-phone-waiting-after-answer">
-          <View style={styles.roundRow}>
-            <View style={styles.serverPill}>
-              <HuddleText variant="caption" style={styles.pillIcon} accessibilityElementsHidden>⌛</HuddleText>
-              <HuddleText variant="caption">Server countdown</HuddleText>
-            </View>
-            <View
-              style={styles.timerPill}
-              accessible
-              accessibilityRole="text"
-              accessibilityLabel={`${countdownSeconds} seconds remaining`}
-              testID="trivia-phone-waiting-clock"
-            >
-              <HuddleText variant="title" style={styles.timerLabel}>{String(countdownSeconds).padStart(2, '0')}</HuddleText>
-            </View>
-          </View>
-          <HuddleText variant="caption" align="center" style={styles.roundLabel}>
-            Question {questionIndex + 1} of {questionCount}
-          </HuddleText>
-          <View style={styles.waitingPanel} accessible accessibilityLiveRegion="polite">
-            <HuddleText variant="title" align="center">
-              {answered === undefined ? 'Waiting for others' : `${answered} of ${playerCount} answered`}
-            </HuddleText>
-            <HuddleText variant="body" align="center" style={styles.privateNote}>
-              {answered === undefined ? 'Your answer is locked.' : 'Waiting for others…'}
-            </HuddleText>
-          </View>
-          <Image
-            source={TRIVIA_ART.card}
-            resizeMode="contain"
-            style={styles.waitingArt}
-            accessible={false}
-          />
-          <View style={styles.waitingFooter}>
-            <HuddleText variant="title" align="center">Hang tight!</HuddleText>
-            <HuddleText variant="body" align="center" style={styles.privateNote}>
-              Answer revealed on the TV.
-            </HuddleText>
-          </View>
-        </View>
-      </ScrollView>
-    </ScreenShell>
-  );
-}
-
-function TriviaAnswerButton({
+function AnswerButton({
   option,
+  reduceMotion,
   onPress,
 }: {
   readonly option: AnswerOption;
+  readonly reduceMotion: boolean | undefined;
   readonly onPress: () => void;
 }) {
-  const isSelected = option.state === 'lockedIn';
-  const disabled = option.state !== 'open';
-  const isClosed = option.state === 'closed';
-  const letter = String.fromCharCode(65 + option.optionIndex);
-
+  const open = option.state === 'open';
   return (
-    <HuddleButton
-      variant="secondary"
+    <PressScale
       onPress={onPress}
-      disabled={disabled}
-      accessibilityLabel={`Answer ${letter}: ${option.text}`}
-      accessibilityHint={disabled ? 'This answer is locked.' : 'Locks this answer for the current question.'}
+      disabled={!open}
+      reduceMotion={reduceMotion}
+      accessibilityLabel={`${String.fromCharCode(65 + option.optionIndex)}: ${option.text}`}
+      accessibilityState={{ disabled: !open, selected: option.state === 'lockedIn' }}
       testID={`trivia-answer-${option.optionIndex}`}
-      style={[
-        styles.answerButton,
-        { backgroundColor: triviaOptionTones[option.optionIndex % triviaOptionTones.length] },
-        isSelected ? styles.answerSelected : null,
-        isClosed ? styles.answerClosed : null,
-      ]}
+      style={[styles.answer, { backgroundColor: answerTone(option.optionIndex) }, option.state === 'closed' ? styles.answerClosed : null]}
     >
-      <View style={[styles.optionLetter, isSelected ? styles.optionLetterSelected : null]}>
-        <HuddleText variant="caption" style={styles.optionLetterText}>{letter}</HuddleText>
-      </View>
-      <HuddleText variant="body" style={styles.answerLabel}>{option.text}</HuddleText>
-      {isSelected ? <HuddleText variant="body" style={styles.answerLock} accessibilityElementsHidden>🔒</HuddleText> : null}
-    </HuddleButton>
+      <LetterBadge optionIndex={option.optionIndex} size={46} />
+      <CosmicText weight="black" size={option.text.length > 26 ? 18 : 22} numberOfLines={2} style={styles.answerText}>
+        {option.text}
+      </CosmicText>
+    </PressScale>
   );
 }
 
-function TriviaIntroSurface({
-  questionCount,
-  insets,
-  chromeInsetTop,
-}: {
-  readonly questionCount: number;
-  readonly insets: Insets;
-  readonly chromeInsetTop: number;
-}) {
-  return (
-    <ScreenShell tone="background" style={[styles.shell, styles.worldRoot]} testID="trivia-phone-intro">
-      <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
-      <ImageBackground
-        source={TRIVIA_ART.leaves}
-        resizeMode="cover"
-        style={StyleSheet.absoluteFill}
-        accessible={false}
-        testID="trivia-phone-intro-world"
-      />
-      <View style={styles.worldWash} pointerEvents="none" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.statusScroll,
-          {
-            paddingTop: insets.top + chromeInsetTop + triviaSpacing.xl,
-            paddingRight: insets.right + triviaSpacing.xl,
-            paddingBottom: insets.bottom + triviaSpacing.xl,
-            paddingLeft: insets.left + triviaSpacing.xl,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        testID="trivia-phone-intro-scroll"
-      >
-        <View style={styles.introContent}>
-          <TriviaBrandHeader />
-          <Image
-            source={TRIVIA_ART.card}
-            resizeMode="contain"
-            style={styles.introArt}
-            accessible={false}
-          />
-          <HuddleText variant="display" align="center" style={styles.introTitle}>Get ready!</HuddleText>
-          <HuddleText variant="bodyLarge" align="center" style={styles.introCopy}>
-            {questionCount} questions. Keep your phone close and eyes on the TV.
-          </HuddleText>
-          <View style={styles.introSummary}>
-            <HuddleText variant="body" align="center">Your phone is the answer pad.</HuddleText>
-            <HuddleText variant="caption" align="center" style={styles.privateNote}>The game starts on the TV.</HuddleText>
-          </View>
-        </View>
-      </ScrollView>
-    </ScreenShell>
-  );
-}
-
-function TriviaStatusSurface({
-  phase,
-  line,
-  insets,
-  chromeInsetTop,
+/** A pressable that squashes slightly under the finger; still with reduced motion. */
+function PressScale({
+  children,
+  onPress,
+  disabled = false,
+  reduceMotion,
+  accessibilityLabel,
+  accessibilityState,
   testID,
+  style,
 }: {
-  readonly phase: TriviaPhaseForPhone;
-  readonly line: string;
-  readonly insets: Insets;
-  readonly chromeInsetTop: number;
-  readonly testID: string;
+  readonly children: ReactNode;
+  readonly onPress: () => void;
+  readonly disabled?: boolean;
+  readonly reduceMotion: boolean | undefined;
+  readonly accessibilityLabel: string;
+  readonly accessibilityState?: { readonly disabled?: boolean; readonly selected?: boolean };
+  readonly testID?: string;
+  readonly style?: object;
 }) {
-  const isFinished = phase === 'finished';
-  const isLegacy = phase === 'legacy';
+  const scale = useState(() => new Animated.Value(1))[0];
+  const to = (value: number) => {
+    if (reduceMotion !== false) return;
+    Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: value === 1 ? 8 : 0 }).start();
+  };
   return (
-    <ScreenShell tone="background" style={[styles.shell, styles.worldRoot]} testID={testID}>
-      <StatusBar barStyle="dark-content" backgroundColor={triviaPalette.cream} />
-      <ImageBackground
-        source={TRIVIA_ART.leaves}
-        resizeMode="cover"
-        style={StyleSheet.absoluteFill}
-        accessible={false}
-        testID={`${testID}-world`}
-      />
-      <View style={styles.worldWash} pointerEvents="none" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.statusScroll,
-          {
-            paddingTop: insets.top + chromeInsetTop + triviaSpacing.xl,
-            paddingRight: insets.right + triviaSpacing.xl,
-            paddingBottom: insets.bottom + triviaSpacing.xl,
-            paddingLeft: insets.left + triviaSpacing.xl,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        testID={`${testID}-scroll`}
-      >
-        <View style={[styles.statusContent, { paddingTop: 52 }]}>
-          <HuddleText variant="display" align="center" accessibilityRole="header">
-            {isLegacy ? 'Trivia needs an update' : isFinished ? 'All done!' : 'Eyes up!'}
-          </HuddleText>
-          <HuddleText variant="bodyLarge" align="center" accessibilityLiveRegion="polite">
-            {line}
-          </HuddleText>
-          {!isLegacy ? <Image source={TRIVIA_ART.tvReveal} resizeMode="cover" style={styles.tvMark} accessible={false} testID={isFinished ? 'trivia-phone-finished-art' : 'trivia-phone-status-art'} /> : null}
-          {!isLegacy && !isFinished ? <HuddleText variant="caption" style={styles.compatibilityHidden}>Eyes up.</HuddleText> : null}
-          {isLegacy ? (
-            <HuddleText variant="caption" align="center" style={styles.privateNote}>Return to the room to start a fresh game.</HuddleText>
-          ) : phase === 'reveal' ? (
-            <View style={styles.statusFooter}>
-              <HuddleText variant="body" align="center">Watch the TV for the correct answer and results.</HuddleText>
-            </View>
-          ) : isFinished ? (
-            <View style={styles.statusFooter}>
-              <HuddleText variant="title" align="center">Thanks for playing!</HuddleText>
-              <HuddleText variant="body" align="center">Wait for the Host.</HuddleText>
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
-    </ScreenShell>
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => to(0.96)}
+      onPressOut={() => to(1)}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityState ?? { disabled }}
+      testID={testID}
+      style={styles.pressable}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
   );
 }
 
-/**
- * Start a local visual countdown from the room's authoritative remainder. It
- * only changes what this phone displays; the server deadline remains the sole
- * authority that advances Trivia. A numeric countdown is information rather
- * than decorative motion, so it continues to tick for reduced-motion users;
- * these screens add no interpolated movement to suppress.
- */
-function useCountdownSeconds(
-  clockRemainingMs: number | undefined,
-  fallbackSeconds: number,
-  beat: string,
-): number {
-  const rawStartingMs = clockRemainingMs ?? fallbackSeconds * 1000;
-  const startingMs = Number.isFinite(rawStartingMs)
-    ? Math.max(0, rawStartingMs)
-    : Math.max(0, fallbackSeconds * 1000);
-  const initial = displaySeconds(startingMs, fallbackSeconds);
-  const [display, setDisplay] = useState<{
-    readonly beat: string;
-    readonly startingMs: number;
-    readonly seconds: number;
-  }>({
-    beat,
-    startingMs,
-    seconds: initial,
-  });
-  // An effect runs after paint. Derive the first value from the new beat during
-  // render so a previous question's number cannot flash over this one.
-  const seconds = display.beat === beat && display.startingMs === startingMs
-    ? display.seconds
-    : initial;
-
-  useEffect(() => {
-    const startedAt = Date.now();
-    if (startingMs <= 0) return;
-
-    const timer = setInterval(() => {
-      const remainingMs = startingMs - (Date.now() - startedAt);
-      if (remainingMs <= 0) {
-        setDisplay({ beat, startingMs, seconds: 0 });
-        clearInterval(timer);
-        return;
-      }
-      setDisplay({ beat, startingMs, seconds: Math.ceil(remainingMs / 1000) });
-    }, 250);
-
-    return () => clearInterval(timer);
-  }, [beat, startingMs]);
-
-  return seconds;
+/** The cream answer pad: safe-area padding, a few twinkles, centred content. */
+function Surface({
+  insets,
+  chromeTop,
+  children,
+  testID,
+  scrollTestID,
+  align = 'center',
+}: {
+  readonly insets: PhoneSafeAreaInsets;
+  readonly chromeTop: number;
+  readonly children: ReactNode;
+  readonly testID: string;
+  readonly scrollTestID?: string;
+  readonly align?: 'center' | 'stretch';
+}) {
+  return (
+    <View style={styles.screen} testID={testID}>
+      <StatusBar barStyle="dark-content" backgroundColor={cosmic.cream} />
+      <Twinkle size={22} style={{ left: 28, top: insets.top + 90 }} />
+      <Twinkle size={18} style={{ right: 32, top: insets.top + 60 }} />
+      <Twinkle size={16} style={{ right: 40, top: '55%' }} />
+      <Twinkle size={20} style={{ left: 30, bottom: insets.bottom + 120 }} />
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+            paddingTop: insets.top + chromeTop + 16,
+            paddingBottom: insets.bottom + 24,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        testID={scrollTestID}
+      >
+        <View style={[styles.page, align === 'stretch' ? styles.pageStretch : null]}>{children}</View>
+      </ScrollView>
+    </View>
+  );
 }
 
-function displaySeconds(clockRemainingMs: number | undefined, fallbackSeconds: number | undefined): number {
-  if (clockRemainingMs !== undefined && Number.isFinite(clockRemainingMs)) {
-    return Math.max(0, Math.ceil(clockRemainingMs / 1000));
-  }
-  return fallbackSeconds ?? 20;
-}
+const ZERO_INSETS: PhoneSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 function finiteInset(value: number | undefined): number {
-  return value !== undefined && Number.isFinite(value) ? Math.max(0, value) : 0;
+  return value !== undefined && Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-type Insets = {
-  readonly top: number;
-  readonly right: number;
-  readonly bottom: number;
-  readonly left: number;
-};
-
-type TriviaPhaseForPhone = 'legacy' | 'question' | 'reveal' | 'finished';
-
-const ZERO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
-
 const styles = StyleSheet.create({
-  shell: {
-    paddingHorizontal: 0,
-    overflow: 'hidden',
-  },
-  worldRoot: {
-    backgroundColor: triviaPalette.cream,
-  },
-  worldWash: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: triviaPalette.cream,
-    opacity: 0.08,
-  },
-  scroll: {
-    flexGrow: 1,
-  },
-  page: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-    paddingHorizontal: triviaSpacing.xl,
-    gap: triviaSpacing.md,
-  },
-  brandHeader: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: triviaSpacing.sm,
-  },
-  gameMark: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  gameMarkLeaf: {
-    width: 16,
-    height: 22,
-    borderRadius: 16,
-    backgroundColor: triviaTvTheme.moss,
-    transform: [{ rotate: '38deg' }, { translateX: 4 }, { translateY: -2 }],
-  },
-  gameMarkStem: {
-    position: 'absolute',
-    width: 2,
-    height: 24,
-    backgroundColor: triviaTvTheme.ink,
-    transform: [{ rotate: '34deg' }, { translateX: -1 }],
-  },
-  brandTitle: {
-    letterSpacing: -0.4,
-    color: triviaTvTheme.ink,
-  },
-  roundRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 0,
-    width: '100%',
-  },
-  serverPill: {
-    minHeight: 62,
-    flex: 1,
-    paddingHorizontal: triviaSpacing.md,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: triviaTvTheme.ink,
-    backgroundColor: triviaTvTheme.parchment,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: triviaSpacing.xs,
-  },
-  pillIcon: {
-    fontSize: 15,
-  },
-  timerPill: {
-    minWidth: 88,
-    minHeight: 88,
-    paddingHorizontal: triviaSpacing.md,
-    borderRadius: 44,
-    borderWidth: 3,
-    borderColor: triviaTvTheme.ink,
-    backgroundColor: triviaTvTheme.honey,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: triviaTvTheme.shadow,
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4,
-  },
-  timerLabel: {
-    fontSize: 36,
-    lineHeight: 44,
-  },
-  compatibilityHidden: {
-    position: 'absolute',
-    opacity: 0,
-    height: 0,
-    width: 0,
-  },
-  roundLabel: {
-    color: triviaTvTheme.inkSoft,
-    letterSpacing: 1.1,
-    fontSize: 13,
-  },
-  questionTitle: { fontSize: 21, lineHeight: 28, paddingVertical: 12 },
-  questionPanel: {
-    minHeight: 96,
-    paddingHorizontal: triviaSpacing.lg,
-    paddingVertical: triviaSpacing.lg,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: triviaTvTheme.ink,
-    borderLeftWidth: 7,
-    backgroundColor: triviaTvTheme.parchmentSoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: triviaSpacing.sm,
-    shadowColor: triviaTvTheme.shadow,
-    shadowOpacity: 0.22,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
-  },
-  privateNote: {
-    opacity: 0.66,
-  },
-  questionPrivacyNote: {
-    position: 'absolute',
-    opacity: 0,
-    height: 0,
-  },
-  options: {
-    width: '100%',
-    gap: triviaSpacing.sm,
-  },
-  answerButton: {
-    minHeight: 62,
-    paddingHorizontal: triviaSpacing.lg,
-    paddingVertical: triviaSpacing.sm,
-    borderRadius: 6,
-    borderColor: triviaTvTheme.ink,
-    borderWidth: 2,
-    borderBottomWidth: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    position: 'relative',
-    opacity: 1,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  answerSelected: {
-    backgroundColor: triviaTvTheme.parchment,
-    borderColor: triviaTvTheme.mossDark,
-    borderWidth: 3,
-    opacity: 1,
-  },
-  answerClosed: {
-    opacity: 0.5,
-  },
-  optionLetter: {
-    width: 42,
-    height: 42,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: triviaTvTheme.ink,
-  },
-  optionLetterSelected: {
-    backgroundColor: triviaTvTheme.honey,
-  },
-  optionLetterText: {
-    fontSize: 12,
-  },
-  answerLabel: {
-    flex: 1,
-    textAlign: 'center',
-    color: triviaTvTheme.ink,
-  },
-  answerLock: {
-    fontSize: 16,
-    position: 'absolute',
-    right: triviaSpacing.md,
-  },
-  lockNote: {
-    minHeight: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: triviaSpacing.xs,
-    paddingHorizontal: triviaSpacing.md,
-    paddingVertical: triviaSpacing.sm,
-  },
-  lockIcon: {
-    fontSize: 16,
-  },
-  statusScroll: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',
-  },
-  statusContent: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: 390,
-    alignSelf: 'center',
-    alignItems: 'center',
-    gap: triviaSpacing.md,
-  },
-  statusArt: {
-    width: 172,
-    height: 172,
-  },
-  finishedArt: {
-    width: 220,
-    height: 262,
-    borderRadius: triviaRadii.lg,
-  },
-  waitingPanel: {
-    width: '100%',
-    minHeight: 90,
-    paddingHorizontal: triviaSpacing.lg,
-    paddingVertical: triviaSpacing.lg,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: triviaTvTheme.ink,
-    borderTopWidth: 6,
-    backgroundColor: triviaTvTheme.parchmentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: triviaSpacing.xs,
-    shadowColor: triviaTvTheme.shadow,
-    shadowOpacity: 0.20,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
-  },
-  waitingArt: {
-    width: 184,
-    height: 184,
-  },
-  waitingFooter: {
-    width: '100%',
-    alignItems: 'center',
-    gap: triviaSpacing.xs,
-  },
-  tvMark: {
-    width: 224,
-    height: 188,
-    borderRadius: triviaRadii.lg,
-    marginTop: triviaSpacing.sm,
-  },
-  statusFooter: {
-    marginTop: 'auto',
-    width: '100%',
-    paddingHorizontal: triviaSpacing.lg,
-    paddingVertical: triviaSpacing.lg,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: triviaTvTheme.ink,
-    borderLeftWidth: 7,
-    backgroundColor: triviaTvTheme.parchmentSoft,
-    alignItems: 'center',
-    gap: triviaSpacing.xs,
-    shadowColor: triviaTvTheme.shadow,
-    shadowOpacity: 0.20,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
-  },
-  introContent: {
-    width: '100%',
-    maxWidth: 390,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: triviaSpacing.sm,
-  },
-  introArt: {
-    width: 188,
-    height: 188,
-    marginTop: triviaSpacing.sm,
-  },
-  introTitle: {
-    fontSize: 34,
-    lineHeight: 40,
-    color: triviaTvTheme.ink,
-  },
-  introCopy: {
-    maxWidth: 320,
-  },
-  introSummary: {
-    width: '100%',
-    maxWidth: 340,
-    marginTop: triviaSpacing.sm,
-    paddingHorizontal: triviaSpacing.lg,
-    paddingVertical: triviaSpacing.md,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: triviaTvTheme.ink,
-    borderTopWidth: 6,
-    backgroundColor: triviaTvTheme.parchmentSoft,
-    alignItems: 'center',
-    gap: triviaSpacing.xs,
-    shadowColor: triviaTvTheme.shadow,
-    shadowOpacity: 0.20,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
-  },
+  screen: { flex: 1, backgroundColor: cosmic.cream },
+  scroll: { flexGrow: 1 },
+  page: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22, gap: 6 },
+  pageStretch: { alignItems: 'stretch', justifyContent: 'flex-start' },
+  heading: { marginVertical: 8 },
+  pill: { paddingHorizontal: 22, paddingVertical: 8, marginTop: 8 },
+  header: { alignItems: 'center' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 2 },
+  timer: { paddingHorizontal: 16, paddingVertical: 4, minWidth: 74 },
+  question: { marginTop: 14, marginBottom: 16 },
+  answers: { gap: 12 },
+  answer: { minHeight: 68, borderRadius: 24, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
+  answerClosed: { opacity: 0.45 },
+  answerText: { flex: 1 },
+  nextPill: { marginTop: 16, paddingHorizontal: 26, paddingVertical: 12, alignSelf: 'stretch' },
+  nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
+  pressable: { alignSelf: 'stretch' },
+  clockRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
+  rule: { alignSelf: 'stretch', height: 1, backgroundColor: 'rgba(4,27,57,0.12)', marginVertical: 14 },
 });

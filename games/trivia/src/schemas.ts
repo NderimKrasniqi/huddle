@@ -47,6 +47,7 @@ const triviaAnswerEventSchema = z.strictObject({
   optionIndex: z.number().int().min(0).max(3),
   msRemaining: z.number().finite().optional(),
   awayPlayerIds: awayPlayerIdsSchema.optional(),
+  fromHost: z.boolean().optional(),
 });
 
 const triviaAdvanceEventSchema = z.strictObject({
@@ -56,6 +57,7 @@ const triviaAdvanceEventSchema = z.strictObject({
   phase: z.enum(['intro', 'question', 'reveal', 'finished']),
   msRemaining: z.number().finite().optional(),
   awayPlayerIds: awayPlayerIdsSchema.optional(),
+  fromHost: z.boolean().optional(),
 });
 
 /** Strict decoder for untrusted Trivia events, including server deadlines. */

@@ -57,12 +57,14 @@ function PhoneTrivia({
   clockRemainingMs,
   hostChromeInsetTop,
   hostChromeInsetBottom,
+  isHost,
 }: {
   readonly state: unknown;
   readonly sendEvent: (event: GameEvent) => void;
   readonly clockRemainingMs?: number;
   readonly hostChromeInsetTop?: number;
   readonly hostChromeInsetBottom?: number;
+  readonly isHost?: boolean;
 }) {
   return triviaModule.screens.phone({
     state,
@@ -72,6 +74,7 @@ function PhoneTrivia({
     hostChromeInsetTop,
     hostChromeInsetBottom,
     clockRemainingMs,
+    isHost,
   });
 }
 
@@ -100,7 +103,7 @@ describe('Trivia Phone game renderer', () => {
     expect(result.getByText('Which color is on the Huddle board?')).toBeTruthy();
     expect(result.getByTestId('trivia-phone-clock')).toBeTruthy();
     expect(result.getAllByRole('button')).toHaveLength(4);
-    expect(result.getByText('Your choice stays on this phone until the reveal.')).toBeTruthy();
+    expect(result.getByText(/Your choice stays on this phone until the reveal\./)).toBeTruthy();
 
     await fireEvent.press(result.getByTestId('trivia-answer-1'));
     expect(sendEvent).toHaveBeenCalledWith({
@@ -126,9 +129,21 @@ describe('Trivia Phone game renderer', () => {
       );
     });
 
-    expect(result.getByText('Eyes up.')).toBeTruthy();
+    expect(result.getByText('Eyes on the TV!')).toBeTruthy();
+    expect(result.getByText('The host can move on sooner.')).toBeTruthy();
     expect(result.queryAllByRole('button')).toHaveLength(0);
     expect(result.queryByText('Correct')).toBeNull();
+  });
+
+  it('gives only the Host a Next question control during the reveal', async () => {
+    const sendEvent = jest.fn();
+    const result = await render(
+      <PhoneTrivia state={revealState} sendEvent={sendEvent} clockRemainingMs={30_000} isHost />,
+    );
+
+    expect(result.getByText('30s')).toBeTruthy();
+    await fireEvent.press(result.getByTestId('trivia-phone-next'));
+    expect(sendEvent).toHaveBeenCalledWith({ kind: 'advance', playerId: 'ada', questionIndex: 0, phase: 'reveal' });
   });
 
   it('reserves platform Host chrome and both horizontal safe-area insets', async () => {
@@ -169,14 +184,16 @@ describe('Trivia Phone game renderer', () => {
       );
     });
 
-    expect(result.getByText('5s')).toBeTruthy();
+    expect(result.getByText('05s')).toBeTruthy();
     expect(result.queryByText('18s')).toBeNull();
   });
 
-  it('crops the finished portrait artwork into its status surface', async () => {
+  it('wraps up the finished game and tells guests who chooses next', async () => {
     const result = await renderPhone({ ...revealState, phase: 'finished' });
 
-    expect(result.getByTestId('trivia-phone-finished-art').props.resizeMode).toBe('cover');
-    expect(result.queryByTestId('trivia-phone-status-art')).toBeNull();
+    expect(result.getByText('That’s a wrap!')).toBeTruthy();
+    expect(result.getByText('Final scores are on the TV.')).toBeTruthy();
+    expect(result.getByText('Waiting for the host to choose what’s next.')).toBeTruthy();
+    expect(result.queryAllByRole('button')).toHaveLength(0);
   });
 });

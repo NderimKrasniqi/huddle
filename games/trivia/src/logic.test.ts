@@ -383,6 +383,29 @@ describe('a game of trivia', () => {
     ).toBe(asked);
   });
 
+  it('lets the Host end the break after a reveal early', () => {
+    const revealed = advancing(gameWith(ADA, GRACE));
+    const next = asPlayable(triviaGameLogic.reduce(revealed, { ...advanceOf(revealed), playerId: ADA, fromHost: true }));
+
+    expect(next.phase).toBe('question');
+    expect(next.questionIndex).toBe(1);
+  });
+
+  it('does not let a guest end a reveal, or the Host skip a live question', () => {
+    const asked = gameWith(ADA, GRACE);
+    const revealed = advancing(asked);
+
+    expect(triviaGameLogic.reduce(revealed, { ...advanceOf(revealed), playerId: GRACE, fromHost: false })).toBe(revealed);
+    expect(triviaGameLogic.reduce(asked, { ...advanceOf(asked), playerId: ADA, fromHost: true })).toBe(asked);
+  });
+
+  it('ignores a Host skip addressed to a reveal the room has left', () => {
+    const revealed = advancing(gameWith(ADA, GRACE));
+    const next = advancing(revealed);
+
+    expect(triviaGameLogic.reduce(next, { ...advanceOf(revealed), playerId: ADA, fromHost: true })).toBe(next);
+  });
+
   it('ignores a second “move on” for a beat the room has left', () => {
     const revealed = advancing(gameWith(ADA, GRACE));
     const endReveal = advanceOf(revealed);

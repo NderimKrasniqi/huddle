@@ -34,6 +34,9 @@ export function PlayroomMoment({ art, width, height, style }: {
   </View>;
 }
 
+/** Games whose cover is a full scene rather than a prop on a pastel card. */
+const FULL_BLEED_COVERS: ReadonlySet<string> = new Set(['trivia']);
+
 /** Text-free cover art; native labels belong to the surrounding screen. */
 export function PlayroomGameCover({ gameId, height, style }: {
   readonly gameId: string;
@@ -41,6 +44,11 @@ export function PlayroomGameCover({ gameId, height, style }: {
   readonly style?: StyleProp<ViewStyle>;
 }) {
   const source = playroomGameArt(gameId);
+  if (source && FULL_BLEED_COVERS.has(gameId)) {
+    return <View style={[styles.cover, { height, backgroundColor: playroomCoverColor(gameId) }, style]} accessible={false}>
+      <Image source={source} style={styles.scene} resizeMode="cover" accessible={false} />
+    </View>;
+  }
   return <View style={[styles.cover, { height, backgroundColor: playroomCoverColor(gameId) }, style]} accessible={false}>
     <View style={styles.halo} />
     {source ? <Image source={source} style={styles.art} resizeMode="contain" accessible={false} /> : null}
@@ -53,4 +61,5 @@ const styles = StyleSheet.create({
   cover: { alignItems: 'center', justifyContent: 'center', borderRadius: playroomRadii.card, overflow: 'hidden' },
   halo: { position: 'absolute', width: '80%', height: '70%', borderRadius: 999, backgroundColor: playroomColors.surface, opacity: 0.3 },
   art: { width: '90%', height: '90%' },
+  scene: { width: '100%', height: '100%' },
 });

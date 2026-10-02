@@ -123,6 +123,17 @@ export type GameEvent = {
    * means; trivia waits for everybody, exactly as it did before there was one.
    */
   readonly awayPlayerIds?: readonly GamePlayerId[];
+  /**
+   * Whether this event came from the room's Host, as the room reads it when the
+   * event lands.
+   *
+   * The hub's, and written over whatever arrived for the same reason `playerId`
+   * is: a phone claiming to be the Host is a claim. Games are not told who the
+   * Host is (see `RosterSeatForGame`); this is how one lets the Host alone do
+   * something, such as move on from a reveal early. Scheduled deadlines and
+   * players who are not the Host always carry `false`.
+   */
+  readonly fromHost?: boolean;
 };
 
 /**
@@ -342,6 +353,12 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
    * only the room's deadline can advance the game.
    */
   readonly clockRemainingMs?: number;
+  /**
+   * Whether this phone belongs to the room's Host, so a screen can offer a
+   * Host-only control. Presentation only: the rules trust `GameEvent.fromHost`,
+   * which the hub stamps, never this.
+   */
+  readonly isHost?: boolean;
 };
 
 /**

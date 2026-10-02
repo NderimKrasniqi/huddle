@@ -33,11 +33,17 @@ convex ─> @huddle/game-registry/logic ─> server game logic
 - `games/trivia` and `games/voting` own metadata, settings, prompts/content,
   state, deadlines, events, redacted projections, and their Phone/TV screens.
   Their running-TV and private Phone presentation is intentionally game-local:
-  Trivia owns its storybook paper/ink theme in `games/trivia/src/tv-theme.ts`,
-  while Voting owns its poster/sticker room-mood theme in
-  `games/voting/src/tv-theme.ts`. Each game keeps its colours, spacing and
-  radii in its own `theme.ts` and its world art in its own `assets/`. These are
-  not platform tokens, and the game screens do not use the Playroom pieces.
+  Trivia owns its Cosmic Quiz look (night-sky TV, cream answer pad, alien
+  mascot) in `games/trivia/src/cosmic.tsx`, while Voting owns its
+  poster/sticker room-mood theme in `games/voting/src/tv-theme.ts`. Each game
+  keeps its colours and its art in its own package (`assets/`). These are not
+  platform tokens, and the game screens do not use the Playroom pieces. Game
+  motion uses React Native's `Animated`, never Reanimated, and honours the
+  device's reduced-motion setting.
+- Games are not told who the Host is. When a game needs a Host-only action,
+  the hub stamps `GameEvent.fromHost` itself (as it stamps `playerId`), and the
+  phone screen receives `isHost` purely to show the control. Trivia uses this
+  to let the Host end the 30-second break after a reveal early.
 - `apps/phone` owns Expo Router adapters, the root session provider, scan/join
   routes, subscriptions, presence, and Phone controller composition.
 - `apps/tv` owns room opening/restoration, subscriptions, and passive TV stage

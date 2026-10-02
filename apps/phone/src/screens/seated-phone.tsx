@@ -222,6 +222,7 @@ function PhoneRuntimeMount({
         // finished screen's own footer is not drawn underneath it.
         hostChromeInsetBottom: hostBackToLobby ? RUNTIME_BACK_TO_LOBBY_OFFSET + playroomPhone.buttonHeight : undefined,
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
+        isHost: youAreHost,
       })}
       {hostBackToLobby ? (
         <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>

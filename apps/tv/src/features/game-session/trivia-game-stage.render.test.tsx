@@ -75,15 +75,20 @@ function TvTrivia({
 }
 
 describe('Trivia TV game renderer', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    jest.useRealTimers();
+  });
 
   it('shows the game-specific start countdown without carrying setup settings into play', async () => {
+    // Freeze the clock so a slow machine cannot tick 3 down to 2 mid-test.
+    jest.useFakeTimers();
     const result = await render(<TvTrivia state={introState} clockRemainingMs={2_400} />);
 
-    expect(result.getByText('Get ready!')).toBeTruthy();
-    expect(result.getByText('STARTING IN')).toBeTruthy();
-    expect(result.getByText('3')).toBeTruthy();
-    expect(result.getByLabelText(/Trivia countdown.*3 seconds remaining/)).toBeTruthy();
+    expect(result.getByText('Ready for liftoff?')).toBeTruthy();
+    expect(result.getByText('FIRST QUESTION IN')).toBeTruthy();
+    expect(result.getByText('3', { includeHiddenElements: true })).toBeTruthy();
+    expect(result.getByLabelText(/Trivia countdown.*First question in 3 seconds/)).toBeTruthy();
     expect(result.queryByText('Game settings')).toBeNull();
     expect(result.queryByText('Questions')).toBeNull();
     expect(result.queryAllByRole('button')).toHaveLength(0);
@@ -95,7 +100,7 @@ describe('Trivia TV game renderer', () => {
     expect(result.getByTestId('trivia-tv-screen').props.pointerEvents).toBe('none');
     expect(result.getByText('Which color is on the Huddle board?')).toBeTruthy();
     expect(result.getByLabelText(/Question 1 of 1.*Choices: A: Coral; B: Espresso; C: Mint; D: Lilac/)).toBeTruthy();
-    expect(result.getByText('1/2 answered')).toBeTruthy();
+    expect(result.getByText(' of 2 answered')).toBeTruthy();
     expect(result.queryAllByRole('button')).toHaveLength(0);
     expect(result.queryByText('Ada chose Espresso')).toBeNull();
     expect(result.queryByText('Correct')).toBeNull();
@@ -104,10 +109,12 @@ describe('Trivia TV game renderer', () => {
   it('reveals only the shared answer and standings, still with no focus targets', async () => {
     const result = await render(<TvTrivia state={revealState} />);
 
-    expect(result.getByText('Here’s the answer')).toBeTruthy();
+    expect(result.getByText('Correct answer')).toBeTruthy();
     expect(result.getByText('Espresso')).toBeTruthy();
+    expect(result.getByText('The host can move on sooner')).toBeTruthy();
     expect(result.getByLabelText(/Reveal for question 1 of 1.*B: Espresso, correct answer.*Round results: Ada, Correct, 0 points; Bo, Missed, 0 points/)).toBeTruthy();
-    expect(result.getAllByText('Correct')).toHaveLength(2);
+    expect(result.getAllByText('Correct')).toHaveLength(1);
+    expect(result.getAllByText('Missed')).toHaveLength(1);
     expect(result.getByText('Ada')).toBeTruthy();
     expect(result.getByText('Round results')).toBeTruthy();
     expect(result.queryAllByRole('button')).toHaveLength(0);
@@ -120,11 +127,14 @@ describe('Trivia TV game renderer', () => {
     const grid = StyleSheet.flatten(result.getByTestId('trivia-tv-verdict-grid').props.style);
 
     expect(grid).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
-    expect(result.getAllByTestId(/trivia-tv-verdict-row-/)).toHaveLength(10);
+    const rows = result.getAllByTestId(/trivia-tv-verdict-row-/);
+    expect(rows).toHaveLength(10);
+    // Two 510-wide columns and their gap fit the 1048-wide panel interior.
+    expect(StyleSheet.flatten(rows[0]?.props.style)).toMatchObject({ width: 510 });
     expect(result.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('keeps ten-player final standings inside the compact overscan-safe grid', async () => {
+  it('shows all ten final standings: a podium and the rest below', async () => {
     const finishedState = {
       ...tenPlayerRevealState,
       phase: 'finished' as const,
@@ -134,15 +144,14 @@ describe('Trivia TV game renderer', () => {
     const result = await render(
       <TvTrivia state={finishedState} players={tenPlayers} />,
     );
-    const grid = StyleSheet.flatten(result.getByTestId('trivia-tv-final-grid').props.style);
-
-    expect(grid).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
+    // The top three stand on the podium; everyone else shares the row below.
+    expect(result.getByTestId('trivia-tv-final-grid')).toBeTruthy();
     expect(result.getAllByTestId(/trivia-tv-final-row-/)).toHaveLength(10);
     expect(result.getByLabelText(/Final Trivia standings:.*Player 1, 100 points, winner.*Player 2, 0 points/)).toBeTruthy();
     expect(result.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('keeps a two-player podium compact while leaving every result visible', async () => {
+  it('puts a two-player game on the podium with every result visible', async () => {
     const finishedState = {
       ...revealState,
       phase: 'finished' as const,
@@ -153,11 +162,9 @@ describe('Trivia TV game renderer', () => {
       revealVerdicts: undefined,
     };
     const result = await render(<TvTrivia state={finishedState} />);
-    const winnerStyle = StyleSheet.flatten(result.getByTestId('trivia-tv-final-row-ada').props.style);
-    const runnerUpStyle = StyleSheet.flatten(result.getByTestId('trivia-tv-final-row-bo').props.style);
-
-    expect(winnerStyle.height).toBeGreaterThanOrEqual(272);
-    expect(runnerUpStyle.height).toBeGreaterThanOrEqual(272);
+    expect(result.getByTestId('trivia-tv-final-row-ada')).toBeTruthy();
+    expect(result.getByTestId('trivia-tv-final-row-bo')).toBeTruthy();
+    expect(result.getByText('Ada wins!')).toBeTruthy();
     expect(result.getByText('Ada')).toBeTruthy();
     expect(result.getByText('200')).toBeTruthy();
     expect(result.getByText('Bo')).toBeTruthy();

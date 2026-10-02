@@ -49,6 +49,7 @@ export type TriviaEvent =
       readonly optionIndex: number;
       readonly msRemaining?: number;
       readonly awayPlayerIds?: readonly GamePlayerId[];
+      readonly fromHost?: boolean;
     }
   | {
       readonly kind: 'advance';
@@ -57,6 +58,7 @@ export type TriviaEvent =
       readonly phase: TriviaPhase;
       readonly msRemaining?: number;
       readonly awayPlayerIds?: readonly GamePlayerId[];
+      readonly fromHost?: boolean;
     };
 
 export type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;

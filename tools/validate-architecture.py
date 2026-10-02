@@ -184,7 +184,7 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
     "games/trivia.png": (
         (1200, 750),
         True,
-        "a7a13eb5f38b2e4683770e59ce3885a6c43a5b44c3771b9fc67c4982f7095793",
+        "8a24aaae1285848cbd3141d3e3c0d6eb1d109ad3802c4ddceb3cf8647a951698",
     ),
     "games/voting.png": (
         (1200, 750),
@@ -304,26 +304,55 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
 }
 # Trivia's own artwork.
 TRIVIA_RUNTIME_ASSET_SPECS = {
-    "card.png": (
-        (1156, 1360),
+    "logo-dark.png": (
+        (720, 360),
         True,
-        "387972622160701d8e3f5c8b2b5f5724e4dfb627803c6fd1d4ba8dfe7b57eeab",
+        "74b2a5f78b964e49e25e0d691544672888793a1f918feb115ee1b868c98de594",
     ),
-    "leaves.png": (
-        (853, 1844),
+    "logo-light.png": (
+        (720, 360),
+        True,
+        "d3daf77f65f0e03b2c8774658ff8699e04126725cd0258d859ea69ea2f6fa773",
+    ),
+    "mascot-celebrate.png": (
+        (640, 533),
+        True,
+        "e79bf3318cac6b493ff3f911baea9f22d7b319c75d81ff96446e76076eec00b8",
+    ),
+    "mascot-idle.png": (
+        (640, 533),
+        True,
+        "0ba037b247aa09514a3110b3f3fe752cfe870a138432bcb7a8096ece1c2ed822",
+    ),
+    "mascot-point.png": (
+        (640, 534),
+        True,
+        "818adcaebcd0b3e22c32af8710d997528e14034430f584cf8597593de1571891",
+    ),
+    "mascot-wave.png": (
+        (640, 475),
+        True,
+        "e797cf558bedbe8a710003331109628e94e17385652a110d397e381677f639e9",
+    ),
+    "space.png": (
+        (1600, 900),
         False,
-        "07fe1b4b59da47216122f217d065e9ec4fd6ef07bc59beb4811d0de610faf40c",
+        "54afb9bd12fddf5f46520637f130787732ed2a541249ba3d898648296e2c72ec",
     ),
-    "tv-reveal.png": (
-        (853, 1844),
-        False,
-        "c3145fa6c991f76b6f1688f96be91c5a054ff03fa4b2a80c6021d1760d5c3870",
-    ),
-    "world.png": (
-        (1672, 941),
-        False,
-        "c6e8d4092a1f80bfb7b9dfb94fb1d04a1d3524747ec9906a5df5d80ed0fa0713",
-    ),
+}
+# Trivia's own Cosmic Quiz look (games/trivia/src/cosmic.tsx). Only the
+# Trivia package may use these; the platform keeps its own palettes.
+COSMIC_QUIZ_PALETTE = {
+    "navy": "#041B39",
+    "navyDeep": "#021226",
+    "cream": "#FFF8EB",
+    "turquoise": "#79E1DE",
+    "butter": "#FFDB74",
+    "coral": "#FFA095",
+    "periwinkle": "#B9AAFB",
+    "muted": "#5B6B82",
+    "correct": "#1E7A55",
+    "missed": "#6B7891",
 }
 # Voting's own artwork.
 VOTING_RUNTIME_ASSET_SPECS = {
@@ -1187,7 +1216,10 @@ def validate_heartbeat_tokens(root: Path = ROOT) -> None:
                 continue
             clean = COMMENTS.sub("", path.read_text(encoding="utf-8"))
             literals = {value.upper() for value in hex_literal.findall(clean)}
-            if not literals.issubset(approved_hexes):
+            allowed = approved_hexes
+            if path.is_relative_to(root / "games" / "trivia"):
+                allowed = approved_hexes | set(COSMIC_QUIZ_PALETTE.values())
+            if not literals.issubset(allowed):
                 fail(f"unapproved color literal in Heartbeat source: {relative(path, root)}")
 
 

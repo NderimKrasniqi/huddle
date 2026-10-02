@@ -44,6 +44,7 @@ export const votingStateSchema = z.union([legacyVotingState, playableVotingState
 const commonEvent = {
   msRemaining: z.number().finite().optional(),
   awayPlayerIds: z.array(playerId).optional(),
+  fromHost: z.boolean().optional(),
 };
 
 export const votingEventSchema = z.union([
