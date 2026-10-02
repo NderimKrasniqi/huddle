@@ -310,11 +310,22 @@ function RevealStage({
   );
 }
 
-const PODIUM = [
-  { place: 2, color: cosmic.periwinkle, height: 205 },
-  { place: 1, color: cosmic.butter, height: 250 },
-  { place: 3, color: cosmic.coral, height: 185 },
-] as const;
+/** Left to right: the second, first and third finisher take these slots. */
+const PODIUM_SLOTS = [2, 1, 3] as const;
+
+/**
+ * A step's look follows the rank, not the slot, so players who tie stand
+ * equally high: a three-way tie for first is three gold steps.
+ */
+const STEP_BY_RANK = {
+  1: { color: cosmic.butter, height: 250, avatar: 150 },
+  2: { color: cosmic.periwinkle, height: 205, avatar: 124 },
+  3: { color: cosmic.coral, height: 185, avatar: 124 },
+} as const;
+
+function stepFor(rank: number) {
+  return STEP_BY_RANK[Math.min(Math.max(rank, 1), 3) as 1 | 2 | 3];
+}
 
 function FinishedStage({
   screen,
@@ -338,17 +349,18 @@ function FinishedStage({
         </CosmicText>
       </Enter>
       <View style={styles.podium} testID="trivia-tv-final-grid">
-        {PODIUM.map(({ place, color, height }, index) => {
+        {PODIUM_SLOTS.map((place, index) => {
           const standing = byPlace(place);
           if (standing === undefined) return <View key={place} style={styles.podiumSlot} />;
+          const { color, height, avatar } = stepFor(standing.rank);
           return (
             <Enter key={standing.playerId} reduceMotion={reduceMotion} delay={250 + index * 160} from={120} style={styles.podiumSlot} testID={`trivia-tv-final-row-${standing.playerId}`}>
-              {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={place === 1 ? 150 : 124} disabled={standing.away} /> : null}
+              {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={avatar} disabled={standing.away} /> : null}
               <View style={[styles.podiumBlock, { height, backgroundColor: color }]}>
                 <View style={styles.rankBadge}>
                   <CosmicText weight="black" size={36} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
                 </View>
-                {/* Badge, name and score must fit the shortest (3rd place) block. */}
+                {/* Badge, name and score must fit the shortest (3rd rank) step. */}
                 <CosmicText weight="black" size={38} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
                 <CosmicText weight="black" size={38}>{standing.score}</CosmicText>
               </View>
