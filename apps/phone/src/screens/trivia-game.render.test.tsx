@@ -183,6 +183,20 @@ describe('Trivia Phone game renderer', () => {
     expect(scrollStyle).toMatchObject({ paddingBottom: 34 + 76 + 24 });
   });
 
+  it.each([
+    ['a clear win', [{ playerId: 'ada', score: 300 }, { playerId: 'bo', score: 100 }], 'You won!', '1st', 'of 2 · 300 points'],
+    ['a shared top score', [{ playerId: 'bo', score: 200 }, { playerId: 'ada', score: 200 }], 'It’s a tie!', '1st', 'of 2 · 200 points'],
+    ['second place', [{ playerId: 'bo', score: 200 }, { playerId: 'ada', score: 0 }], 'That’s a wrap!', '2nd', 'of 2 · 0 points'],
+  ])('shows the owner their own finishing place after %s', async (_case, standings, heading, place, detail) => {
+    const result = await render(
+      <PhoneTrivia state={{ ...revealState, phase: 'finished', standings }} sendEvent={jest.fn()} />,
+    );
+
+    expect(result.getByText(heading)).toBeTruthy();
+    expect(result.getByText(place)).toBeTruthy();
+    expect(result.getByText(detail)).toBeTruthy();
+  });
+
   it('derives a new question countdown synchronously instead of flashing the prior beat', async () => {
     const nextQuestionState = {
       ...questionState,
@@ -207,7 +221,9 @@ describe('Trivia Phone game renderer', () => {
   it('wraps up the finished game and tells guests who chooses next', async () => {
     const result = await renderPhone({ ...revealState, phase: 'finished' });
 
-    expect(result.getByText('That’s a wrap!')).toBeTruthy();
+    // Everyone still on 0 is the TV's tie too.
+    expect(result.getByText('It’s a tie!')).toBeTruthy();
+    expect(result.queryByText('You won!')).toBeNull();
     expect(result.getByText('Final scores are on the TV.')).toBeTruthy();
     expect(result.getByText('Waiting for the host to choose what’s next.')).toBeTruthy();
     expect(result.queryAllByRole('button')).toHaveLength(0);

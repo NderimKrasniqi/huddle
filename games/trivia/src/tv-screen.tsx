@@ -293,11 +293,11 @@ function RevealStage({
           {correct ? (
             <Enter reduceMotion={reduceMotion} delay={350} scale={0.8} from={0} style={{ alignSelf: 'stretch', marginTop: 36 }}>
               <View style={[styles.correctTile, { backgroundColor: answerTone(correct.optionIndex) }]}>
-                <LetterBadge optionIndex={correct.optionIndex} size={84} />
-                <CosmicText weight="black" size={correct.text.length > 16 ? 40 : 54} numberOfLines={2} style={styles.answerText}>
+                <LetterBadge optionIndex={correct.optionIndex} size={72} />
+                <CosmicText weight="black" size={correctAnswerSize(correct.text)} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.answerText}>
                   {correct.text}
                 </CosmicText>
-                <CheckBadge size={76} />
+                <CheckBadge size={60} />
               </View>
             </Enter>
           ) : null}
@@ -436,7 +436,8 @@ function FinishedStage({
         })}
       </View>
       {rest.length > 0 ? (
-        <Enter reduceMotion={reduceMotion} delay={800} style={styles.restRow}>
+        <Enter reduceMotion={reduceMotion} delay={800} style={styles.restDock}>
+          <View style={styles.restRow}>
           {rest.slice(0, 7).map((standing) => (
             <View key={standing.playerId} style={styles.restSeat} testID={`trivia-tv-final-row-${standing.playerId}`}>
               <View style={styles.restRank}>
@@ -449,6 +450,7 @@ function FinishedStage({
               </View>
             </View>
           ))}
+          </View>
         </Enter>
       ) : null}
       <CosmicText weight="black" size={40} color={cosmic.cream} align="center" style={styles.thanks}>
@@ -498,6 +500,16 @@ const panel = {
   borderRadius: 56,
 } as const;
 
+/** The reveal tile has room for about 250px of text, so one word must never break mid-word. */
+function correctAnswerSize(text: string): number {
+  const longestWord = Math.max(...text.split(/\s+/).map((word) => word.length));
+  if (text.length <= 7) return 54;
+  if (longestWord <= 10 && text.length <= 16) return 40;
+  // "Deoxyribonucleic" would split even at 34; Android only auto-shrinks past numberOfLines.
+  if (longestWord > 12) return 28;
+  return 34;
+}
+
 const styles = StyleSheet.create({
   viewport: { flex: 1, backgroundColor: cosmic.navy, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   space: { position: 'absolute', left: 0, top: 0, width: STAGE_WIDTH, height: STAGE_HEIGHT },
@@ -539,7 +551,7 @@ const styles = StyleSheet.create({
 
   revealRow: { position: 'absolute', top: 220, left: SAFE_X, right: SAFE_X, bottom: 200, flexDirection: 'row', gap: 40 },
   answerPanel: { ...panel, width: 560, paddingHorizontal: 44, paddingVertical: 48, alignItems: 'center' },
-  correctTile: { borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 26, paddingVertical: 22, gap: 24 },
+  correctTile: { borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 22, gap: 20 },
   tally: { marginTop: 'auto', alignItems: 'center', gap: 4 },
   tallyRow: { flexDirection: 'row', alignItems: 'baseline' },
   resultsPanel: { ...panel, flex: 1, paddingHorizontal: 40, paddingTop: 36, paddingBottom: 28 },
@@ -569,7 +581,9 @@ const styles = StyleSheet.create({
   // A lighter top face gives the flat steps some depth, like the pack's podium art.
   podiumTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 22, borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: 'rgba(255,255,255,0.32)' },
   rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  restRow: { ...panel, position: 'absolute', left: 200, right: 200, bottom: 132, minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
+  // The panel hugs its seats, so one 4th place is a pill rather than an empty bar.
+  restDock: { position: 'absolute', left: 200, right: 200, bottom: 132, alignItems: 'center' },
+  restRow: { ...panel, maxWidth: '100%', minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
   restSeat: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   restRank: { width: 48, height: 48, borderRadius: 24, backgroundColor: cosmic.periwinkle, alignItems: 'center', justifyContent: 'center' },
   thanks: { position: 'absolute', left: 0, right: 0, bottom: SAFE_Y + 10 },

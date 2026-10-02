@@ -165,6 +165,9 @@ export function TriviaPhoneScreen({
   }
 
   if (current.phase === 'finished') {
+    const place = finishingPlace(current, player.playerId);
+    // Same call as the TV headline: a shared top score is a tie, never a win.
+    const won = place?.rank === 1;
     return (
       <Surface {...frame} testID="trivia-phone-finished" scrollTestID="trivia-phone-finished-scroll">
         <Logo width={190} on="light" />
@@ -172,9 +175,21 @@ export function TriviaPhoneScreen({
           <CosmicText weight="black" size={15} tracking={1.5}>GAME COMPLETE</CosmicText>
         </Pill>
         <Enter reduceMotion={reduceMotion}>
-          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>That’s a wrap!</CosmicText>
+          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>
+            {won ? (place.shared ? 'It’s a tie!' : 'You won!') : 'That’s a wrap!'}
+          </CosmicText>
         </Enter>
         <Mascot pose="celebrate" width={210} reduceMotion={reduceMotion} />
+        {place ? (
+          <Enter reduceMotion={reduceMotion} delay={250} scale={0.85} from={0} testID="trivia-phone-place">
+            <View style={[styles.placeCard, { backgroundColor: won ? cosmic.butter : cosmic.periwinkle }]}>
+              <CosmicText weight="black" size={40}>{ordinal(place.rank)}</CosmicText>
+              <CosmicText weight="bold" size={17}>
+                of {place.of} · {place.score} {place.score === 1 ? 'point' : 'points'}
+              </CosmicText>
+            </View>
+          </Enter>
+        ) : null}
         <CosmicText weight="black" size={19} align="center">Final scores are on the TV.</CosmicText>
         <View style={styles.rule} />
         <CosmicText size={16} color={cosmic.muted} align="center">
@@ -427,6 +442,25 @@ function Surface({
   );
 }
 
+/**
+ * This phone's own place, ranked like the TV podium: equal scores share a
+ * place and use up the ones below (1, 1, 3). Standings are already shared
+ * with every phone, so nothing new leaves the server.
+ */
+function finishingPlace(state: PlayableTriviaState, playerId: string) {
+  const own = state.standings.find((standing) => standing.playerId === playerId);
+  if (!own) return undefined;
+  const ahead = state.standings.filter((standing) => standing.score > own.score).length;
+  const level = state.standings.filter((standing) => standing.score === own.score).length;
+  return { rank: ahead + 1, of: state.standings.length, score: own.score, shared: level > 1 };
+}
+
+function ordinal(rank: number): string {
+  const tens = rank % 100;
+  if (tens >= 11 && tens <= 13) return `${rank}th`;
+  return `${rank}${['th', 'st', 'nd', 'rd'][rank % 10] ?? 'th'}`;
+}
+
 const ZERO_INSETS: PhoneSafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 function finiteInset(value: number | undefined): number {
@@ -451,6 +485,7 @@ const styles = StyleSheet.create({
   answer: { minHeight: 68, borderRadius: 24, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
   answerClosed: { opacity: 0.45 },
   answerText: { flex: 1 },
+  placeCard: { alignItems: 'center', borderRadius: 28, paddingHorizontal: 36, paddingVertical: 12, marginBottom: 14 },
   verdictBadge: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 999, marginVertical: 8 },
   nextPill: { marginTop: 16, paddingHorizontal: 26, paddingVertical: 12, alignSelf: 'stretch' },
   nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
