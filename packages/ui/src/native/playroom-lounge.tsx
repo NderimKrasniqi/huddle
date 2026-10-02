@@ -23,19 +23,32 @@ export function playroomCoverColor(gameId: string): string {
   return playroomCoverColors[gameId] ?? playroomColors.lavender;
 }
 
-export function PlayroomMoment({ art, width, height, style }: {
+export function PlayroomMoment({ art, width, height, style, glow = false }: {
   readonly art: keyof typeof PLAYROOM_ARTWORK.moments;
   readonly width: number;
   readonly height: number;
   readonly style?: StyleProp<ViewStyle>;
+  /** A soft warm light behind the art, for the screens that welcome people in. */
+  readonly glow?: boolean;
 }) {
+  const outer = Math.min(width, height) * 1.05;
   return <View style={style} pointerEvents="none" accessible={false}>
-    <Image source={PLAYROOM_ARTWORK.moments[art]} style={{ width, height, maxWidth: '100%' }} resizeMode="contain" accessible={false} />
+    <View style={{ width, height, maxWidth: '100%', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Faint stacked rings read as one soft radial light without an SVG dependency. */}
+      {glow ? GLOW_RINGS.map((ring) => <View
+        key={ring}
+        style={[styles.glowRing, { width: outer * ring, height: outer * ring, borderRadius: (outer * ring) / 2 }]}
+      />) : null}
+      <Image source={PLAYROOM_ARTWORK.moments[art]} style={{ width, height, maxWidth: '100%' }} resizeMode="contain" accessible={false} />
+    </View>
   </View>;
 }
 
 /** Games whose cover is a full scene rather than a prop on a pastel card. */
 const FULL_BLEED_COVERS: ReadonlySet<string> = new Set(['trivia']);
+
+/** Ring sizes for the soft light behind welcome art, largest first. */
+const GLOW_RINGS = [1, 0.88, 0.76, 0.64, 0.52] as const;
 
 /** Text-free cover art; native labels belong to the surrounding screen. */
 export function PlayroomGameCover({ gameId, height, style }: {
@@ -59,6 +72,7 @@ const styles = StyleSheet.create({
   roster: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
   seat: { width: 130, alignItems: 'center', gap: 6 },
   cover: { alignItems: 'center', justifyContent: 'center', borderRadius: playroomRadii.card, overflow: 'hidden' },
+  glowRing: { position: 'absolute', backgroundColor: playroomColors.lavender, opacity: 0.09 },
   halo: { position: 'absolute', width: '80%', height: '70%', borderRadius: 999, backgroundColor: playroomColors.surface, opacity: 0.3 },
   art: { width: '90%', height: '90%' },
   scene: { width: '100%', height: '100%' },

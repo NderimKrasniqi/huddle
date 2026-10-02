@@ -28,6 +28,7 @@ const playableTriviaStateSchema = z.strictObject({
   participationCount: z.number().int().nonnegative().optional(),
   // TV reveal projection: normalized outcome only, never an option mapping.
   revealVerdicts: z.record(playerIdSchema, z.boolean()).optional(),
+  revealGains: z.record(playerIdSchema, z.number().finite()).optional(),
   questionSeconds: z.number().int().min(10).max(30).optional(),
   standings: z.array(
     z.strictObject({ playerId: playerIdSchema, score: z.number().finite() }),

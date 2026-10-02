@@ -141,6 +141,16 @@ describe('Trivia Phone game renderer', () => {
     expect(result.queryByText('Correct')).toBeNull();
   });
 
+  it.each([
+    [true, 'You got it!'],
+    [false, 'Not this time'],
+  ])('tells the owner their own result at the reveal (%s)', async (correct, line) => {
+    const result = await renderPhone({ ...revealState, revealVerdicts: { ada: correct } });
+
+    expect(result.getByText(line)).toBeTruthy();
+    expect(result.queryByText('Eyes on the TV!')).toBeNull();
+  });
+
   it('gives only the Host a Next question control during the reveal', async () => {
     const sendEvent = jest.fn();
     const result = await render(

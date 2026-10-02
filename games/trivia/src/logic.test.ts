@@ -946,11 +946,34 @@ describe('the game as a client is shown it', () => {
     expect(shown.questions[0]?.correctIndex).toBe(playing.questions[0]?.correctIndex);
     expect(shown.answers).toEqual({});
     expect(shown.revealVerdicts).toEqual({ [ADA]: true, [GRACE]: false });
+    // The round's points, which the TV could already derive from the standings.
+    expect(shown.revealGains?.[GRACE]).toBe(0);
+    expect(shown.revealGains?.[ADA]).toBeGreaterThan(0);
     expect(shown.answerSeconds).toBeUndefined();
     expect(triviaStateSchema.parse(shown)).toEqual(shown);
   });
 
-  it('keeps reveal details off every phone, including the answer owner', () => {
+  it('gives the TV round points that match the change in standings, speed bonus included', () => {
+    const playing = startedOn({ scoring: 'speed' }, ADA, GRACE);
+    const right = rightAnswerTo(playing);
+    const before = Object.fromEntries(playing.standings.map(({ playerId, score }) => [playerId, score]));
+    const revealed = asPlayable(
+      triviaGameLogic.reduce(answering(playing, ADA, right, 12_000), {
+        kind: 'answer',
+        playerId: GRACE,
+        questionIndex: playing.questionIndex,
+        optionIndex: wrongAnswerTo(playing),
+      }),
+    );
+    const gains = redact(revealed, undefined).revealGains ?? {};
+
+    for (const { playerId, score } of revealed.standings) {
+      expect(gains[playerId]).toBe(score - (before[playerId] ?? 0));
+    }
+    expect(gains[ADA]).toBeGreaterThan(100);
+  });
+
+  it('keeps reveal details off every phone except the owner\'s own result', () => {
     const playing = gameWith(ADA, GRACE);
     const right = rightAnswerTo(playing);
     const revealed = answering(answering(playing, ADA, right), GRACE, wrongAnswerTo(playing));
@@ -961,8 +984,12 @@ describe('the game as a client is shown it', () => {
       expect(shown.questions.every((question) => question.correctIndex === HIDDEN_CORRECT_INDEX)).toBe(true);
       expect(shown.answers).toEqual({});
       expect(shown.answerSeconds).toBeUndefined();
-      expect(shown.revealVerdicts).toBeUndefined();
+      // Only the owner's own outcome, which the TV is showing the room anyway.
+      expect(Object.keys(shown.revealVerdicts ?? {})).toEqual([viewer]);
+      expect(shown.revealGains).toBeUndefined();
     }
+    expect(redact(revealed, ADA).revealVerdicts).toEqual({ [ADA]: true });
+    expect(redact(revealed, GRACE).revealVerdicts).toEqual({ [GRACE]: false });
   });
 
   it('still withholds the rest of the game at the reveal', () => {

@@ -49,6 +49,8 @@ export type ScoreRow = {
    * saying nothing about them either way, and the game they played stands.
    */
   readonly away: boolean;
+  /** Points on the question just revealed, when the room says; for the "+100". */
+  readonly gain?: number;
 };
 
 /**
@@ -153,6 +155,7 @@ function scoreboardOf(
       avatar: seated?.avatar,
       score: standing.score,
       away: seated?.away ?? false,
+      gain: state.revealGains?.[standing.playerId],
     };
   });
 }
