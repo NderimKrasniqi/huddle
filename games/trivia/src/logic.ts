@@ -133,8 +133,9 @@ function advanced(
   state: PlayableTriviaState,
   event: Extract<TriviaEvent, { kind: 'advance' }>,
 ): PlayableTriviaState {
-  // Phones can never advance a beat; only the scheduler supplies an absent id.
-  if (event.playerId !== undefined) return state;
+  // Phones cannot advance a beat, with one exception: the Host may end the
+  // break after a reveal early. `fromHost` is the hub's, never the phone's.
+  if (event.playerId !== undefined && !(event.fromHost === true && event.phase === 'reveal')) return state;
   if (event.questionIndex !== state.questionIndex || event.phase !== state.phase) return state;
 
   switch (state.phase) {

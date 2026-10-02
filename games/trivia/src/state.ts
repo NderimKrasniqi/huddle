@@ -40,9 +40,10 @@ export const QUESTION_SECONDS = 20;
  *
  * A rule of the game rather than a fact about either screen, so it is here with
  * the rest of them: the phones count it down and the television draws for that
- * long, and the two cannot be counting different numbers.
+ * long, and the two cannot be counting different numbers. It is a break long
+ * enough to laugh about the answers; the Host can end it sooner.
  */
-export const REVEAL_SECONDS = 5;
+export const REVEAL_SECONDS = 30;
 
 /**
  * The beat a state is on, named: which question, and which half of it.
