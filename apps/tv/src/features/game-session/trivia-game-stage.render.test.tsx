@@ -130,6 +130,15 @@ describe('Trivia TV game renderer', () => {
     expect(result.queryAllByRole('button')).toHaveLength(0);
   });
 
+  it.each([
+    ['everybody', { ada: true, bo: true }, 'Big brains all round!'],
+    ['nobody', { ada: false, bo: false }, 'Nobody saw that coming!'],
+    ['only one of two', { ada: true, bo: false }, 'A lone genius walks among us.'],
+  ])('jokes when %s got it', async (_who, revealVerdicts, quip) => {
+    const result = await render(<TvTrivia state={{ ...revealState, revealVerdicts }} />);
+    expect(result.getByText(quip, { includeHiddenElements: true })).toBeTruthy();
+  });
+
   it('keeps ten-player reveal outcomes inside a compact two-column stage', async () => {
     const result = await render(
       <TvTrivia state={tenPlayerRevealState} players={tenPlayers} />,
