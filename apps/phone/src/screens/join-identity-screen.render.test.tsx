@@ -218,6 +218,24 @@ describe('JoinIdentityScreen', () => {
     await waitFor(() => expect(screen.getByTestId('identity-join')).toBeTruthy());
   });
 
+  it('swaps a remembered avatar someone already has for a free one instead of erroring', async () => {
+    mockAvailability = { full: false, takenAvatarIds: ['fox'] };
+    mockJoinMutation.mockReturnValue(new Promise(() => {}));
+
+    await render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <JoinIdentityScreen />
+      </SafeAreaProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue('Ada')).toBeTruthy());
+    expect(screen.queryByTestId('identity-avatar-taken')).toBeNull();
+    await fireEvent.press(screen.getByTestId('identity-join'));
+
+    expect(mockJoinMutation).toHaveBeenCalledTimes(1);
+    expect(mockJoinMutation.mock.calls[0][0].avatar).not.toBe('fox');
+  });
+
   it('blocks duplicate authoritative joins during the same event window', async () => {
     let resolveJoin: ((value: object) => void) | undefined;
     mockJoinMutation.mockImplementation(
