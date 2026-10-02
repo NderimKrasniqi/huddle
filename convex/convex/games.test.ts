@@ -8,7 +8,7 @@ import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import { INTRO_SECONDS } from '@huddle/game-trivia/logic';
-import { roomFixture } from '../test/fixtures';
+import { roomFixture, tvRunning } from '../test/fixtures';
 
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 type Backend = ReturnType<typeof convexTest>;
@@ -136,7 +136,7 @@ describe.each([
     await lockAndReady(t, room);
     await t.mutation(api.games.startGame, { sessionToken: room.host });
 
-    const running = await t.query(api.games.running, { roomId: room.roomId });
+    const running = await tvRunning(t, room.roomId);
     expect(running).toMatchObject({ kind: 'running', gameId });
     expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBe(4);
 
@@ -151,10 +151,50 @@ describe.each([
     expect(running?.kind === 'running' ? running.clockRemainingMs : undefined).toBeGreaterThan(0);
 
     await t.mutation(api.games.endGame, { sessionToken: room.host });
-    expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
+    expect(await tvRunning(t, room.roomId)).toBeNull();
     expect(await t.query(api.games.setup, { roomId: room.roomId })).toBeNull();
     expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
     expect((await t.query(api.players.roster, { roomId: room.roomId }))?.length).toBe(2);
+  });
+});
+
+describe('who is shown a running game', () => {
+  async function tvToken(t: Backend, roomId: Id<'rooms'>, token: string) {
+    await t.run(async (ctx) =>
+      await ctx.db.insert('tvSessions', { roomId, sessionToken: token, lastSeenAt: Date.now(), away: false }),
+    );
+    return token;
+  }
+
+  async function started(t: Backend) {
+    const room = await party(t);
+    await lockAndReady(t, room);
+    await t.mutation(api.games.startGame, { sessionToken: room.host });
+    return room;
+  }
+
+  it('shows the game to this room\'s TV and its seated players', async () => {
+    const t = convexTest(schema, modules);
+    const room = await started(t);
+    const tvSessionToken = await tvToken(t, room.roomId, 'tv-here');
+
+    expect(await t.query(api.games.running, { roomId: room.roomId, tvSessionToken })).toMatchObject({ kind: 'running' });
+    expect(await t.query(api.games.running, { roomId: room.roomId, sessionToken: room.guest })).toMatchObject({ kind: 'running' });
+  });
+
+  it('shows nothing to a caller who is neither, rather than the TV\'s shared screen', async () => {
+    const t = convexTest(schema, modules);
+    const room = await started(t);
+    const elsewhere = await party(t);
+    const foreignTv = await tvToken(t, elsewhere.roomId, 'tv-elsewhere');
+    const leaver = await t.mutation(api.players.joinRoom, { code: room.code, nickname: 'Lin', avatar: AVATAR_IDS[2] });
+    await t.mutation(api.players.leaveRoom, { sessionToken: leaver.sessionToken });
+
+    const unavailable = { kind: 'unavailable', gameId: 'trivia' };
+    expect(await t.query(api.games.running, { roomId: room.roomId })).toEqual(unavailable);
+    expect(await t.query(api.games.running, { roomId: room.roomId, tvSessionToken: foreignTv })).toEqual(unavailable);
+    expect(await t.query(api.games.running, { roomId: room.roomId, sessionToken: elsewhere.host })).toEqual(unavailable);
+    expect(await t.query(api.games.running, { roomId: room.roomId, sessionToken: leaver.sessionToken })).toEqual(unavailable);
   });
 });
 
@@ -166,7 +206,7 @@ describe('the countdown before a game', () => {
   }
 
   async function runningOf(t: Backend, roomId: Id<'rooms'>) {
-    return await t.query(api.games.running, { roomId });
+    return await tvRunning(t, roomId);
   }
 
   async function countdownEnds(t: Backend) {
@@ -321,7 +361,7 @@ describe('moving on from a Trivia reveal', () => {
   afterEach(() => vi.useRealTimers());
 
   async function phaseOf(t: Backend, roomId: Id<'rooms'>) {
-    const running = await t.query(api.games.running, { roomId });
+    const running = await tvRunning(t, roomId);
     if (running?.kind !== 'running') throw new Error('expected a running game');
     const state = running.state as { phase: string; questionIndex: number };
     return { phase: state.phase, questionIndex: state.questionIndex };

@@ -44,5 +44,14 @@ export function keepRoomPresent(): () => void {
   });
 }
 
+/**
+ * The credential that proves this launch is the room's TV, for queries that
+ * show the room's shared screen. Set before `openRoom` resolves, so any screen
+ * holding an open room can read it.
+ */
+export function tvSessionToken(): string | undefined {
+  return activeTvSessionToken;
+}
+
 /** Whether this build was given a Convex deployment to open a room on at all. */
 export const deployed = convexClient !== undefined;

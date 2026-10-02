@@ -893,8 +893,9 @@ export const browsing = query({
  * The viewer a game's state is redacted for, resolved from the token here for
  * the same reason an event's player is: a phone naming itself is a claim, so the
  * seat is looked up and never taken on the client's word (see `GameEvent`). A
- * token for some other room's seat is nobody here — it is handed the same view
- * the television gets, which is the one that keeps every player's private state.
+ * token for some other room's seat is nobody here — and nobody gets no game at
+ * all (see `running`). The television is named the same way, by the TV session
+ * credential it minted the room with, never by the absence of a player token.
  *
  * The cost, written down so it is not rediscovered: this puts the asking phone's
  * own `players` row in the read set of its `running` subscription, and
@@ -902,20 +903,31 @@ export const browsing = query({
  * re-runs its own `running` — which is exactly what the query below was split
  * off to avoid, though only for the phone's own beat rather than for every beat
  * in the room. The alternative is taking the viewer from a client-supplied
- * player id, which is the claim this whole lookup exists to refuse.
+ * player id, which is the claim this whole lookup exists to refuse. The TV pays
+ * the same price with its `tvSessions` row and `tvHeartbeat`.
  */
+type RunningViewer = { readonly kind: 'tv' } | { readonly kind: 'player'; readonly playerId: GamePlayerId };
+
 async function viewerIn(
   ctx: QueryCtx,
   roomId: Id<'rooms'>,
   sessionToken: string | undefined,
-): Promise<GamePlayerId | undefined> {
-  if (sessionToken === undefined) {
-    return undefined;
+  tvSessionToken: string | undefined,
+): Promise<RunningViewer | undefined> {
+  if (sessionToken !== undefined) {
+    const player = await playerForSession(ctx, sessionToken);
+    if (player !== null && player.roomId === roomId) return { kind: 'player', playerId: player._id };
   }
 
-  const player = await playerForSession(ctx, sessionToken);
+  if (tvSessionToken !== undefined) {
+    const tv = await ctx.db
+      .query('tvSessions')
+      .withIndex('by_session_token', (q) => q.eq('sessionToken', tvSessionToken))
+      .first();
+    if (tv !== null && tv.roomId === roomId) return { kind: 'tv' };
+  }
 
-  return player !== null && player.roomId === roomId ? player._id : undefined;
+  return undefined;
 }
 
 /**
@@ -938,7 +950,11 @@ async function viewerIn(
  * that reason).
  */
 export const running = query({
-  args: { roomId: v.id('rooms'), sessionToken: v.optional(v.string()) },
+  args: {
+    roomId: v.id('rooms'),
+    sessionToken: v.optional(v.string()),
+    tvSessionToken: v.optional(v.string()),
+  },
   returns: v.union(
     v.null(),
     v.object({
@@ -964,6 +980,13 @@ export const running = query({
     }
 
     const running = room.game;
+    // Only this room's TV and seated players see a game. The TV view is the
+    // room's shared screen, so a caller proving neither gets nothing to draw.
+    const viewer = await viewerIn(ctx, args.roomId, args.sessionToken, args.tvSessionToken);
+    if (viewer === undefined) {
+      return { kind: 'unavailable' as const, gameId: running.gameId };
+    }
+
     const runtime = decodeStoredRuntime(args.roomId, running);
     if (runtime === undefined) {
       return { kind: 'unavailable' as const, gameId: running.gameId };
@@ -985,8 +1008,7 @@ export const running = query({
       };
     }
 
-    const viewer = await viewerIn(ctx, args.roomId, args.sessionToken);
-    const state = projectRuntime(runtime, viewer);
+    const state = projectRuntime(runtime, viewer.kind === 'tv' ? undefined : viewer.playerId);
     if (state === undefined) {
       runtimeFailure(args.roomId, running, 'projection');
       return { kind: 'unavailable' as const, gameId: running.gameId };

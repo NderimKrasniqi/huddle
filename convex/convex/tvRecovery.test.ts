@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from './_generated/api';
 import schema from './schema';
-import { registerRateLimiter } from '../test/fixtures';
+import { registerRateLimiter, tvRunning } from '../test/fixtures';
 
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 type Backend = ReturnType<typeof convexTest>;
@@ -117,13 +117,13 @@ describe('durable TV room recovery', () => {
     await t.mutation(api.players.heartbeat, { sessionToken: host.sessionToken });
     await t.mutation(api.players.heartbeat, { sessionToken: guest.sessionToken });
     await t.finishInProgressScheduledFunctions();
-    expect(await t.query(api.games.running, { roomId: opened.roomId })).toMatchObject({
+    expect(await tvRunning(t, opened.roomId)).toMatchObject({
       kind: 'paused',
       reason: 'tvDisconnected',
     });
 
     await t.mutation(api.rooms.tvHeartbeat, { tvSessionToken: token });
-    expect(await t.query(api.games.running, { roomId: opened.roomId })).toMatchObject({
+    expect(await tvRunning(t, opened.roomId)).toMatchObject({
       kind: 'running',
       state: { phase: 'question' },
       clockRemainingMs: expect.any(Number),

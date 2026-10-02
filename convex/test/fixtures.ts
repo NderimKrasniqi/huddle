@@ -2,6 +2,7 @@ import { gameLogicById } from '@huddle/game-registry/logic';
 import type { TestConvexForDataModelAndIdentity } from 'convex-test';
 import rateLimiterSchema from '../node_modules/@convex-dev/rate-limiter/dist/component/schema.js';
 
+import { api } from '../convex/_generated/api';
 import type { DataModel, Id } from '../convex/_generated/dataModel';
 
 export type Backend = TestConvexForDataModelAndIdentity<DataModel>;
@@ -42,6 +43,22 @@ export async function roomFixture(
     await ctx.db.insert('rooms', { code, tvAway: false }),
   );
   return { roomId, code };
+}
+
+/**
+ * The running game as the room's own TV is shown it. A fixture room has no TV
+ * of its own, so the first look seats one; a room opened through `openRoom`
+ * already has the session this uses.
+ */
+export async function tvRunning(t: Backend, roomId: Id<'rooms'>) {
+  const tvSessionToken = await t.run(async (ctx) => {
+    const tv = await ctx.db.query('tvSessions').filter((q) => q.eq(q.field('roomId'), roomId)).first();
+    if (tv !== null) return tv.sessionToken;
+    const token = `tv-fixture-${roomId}`;
+    await ctx.db.insert('tvSessions', { roomId, sessionToken: token, lastSeenAt: Date.now(), away: false });
+    return token;
+  });
+  return await t.query(api.games.running, { roomId, tvSessionToken });
 }
 
 /** The typed Trivia projection fields exercised at the backend boundary. */

@@ -10,7 +10,7 @@ import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage } from '../features/room/native';
 import type { RosterSeat } from '../models';
 import type { OpenRoom, RoomOpening } from '../platform/room-session';
-import { keepRoomPresent, useRoomExpiry } from '../platform/room-session/native';
+import { keepRoomPresent, tvSessionToken, useRoomExpiry } from '../platform/room-session/native';
 import { tvPurposeForSurface } from './tv-purpose';
 import { tvSurface, type TvSurface } from './tv-surface';
 
@@ -32,7 +32,8 @@ export function TvSessionController({
   useRoomExpiry(room, onExpired);
   useEffect(() => keepRoomPresent(), [room.roomId]);
 
-  const running = useQuery(api.games.running, { roomId: room.roomId });
+  const tvToken = tvSessionToken();
+  const running = useQuery(api.games.running, tvToken === undefined ? 'skip' : { roomId: room.roomId, tvSessionToken: tvToken });
   const runtime = runningGameScreen(running);
   const browsingAt = useQuery(api.games.browsing, { roomId: room.roomId });
   const setup = useQuery(api.games.setup, { roomId: room.roomId });

@@ -92,6 +92,9 @@ Convex mutations derive seat identity from SecureStore session credentials.
 capacity and claimed avatar IDs; `joinRoom` is the authoritative membership
 mutation. Host transfer/removal, setup locking, Ready, Start, pause, end, and
 Back to lobby remain server-authorized and guarded per action on the Phone.
+A running game is shown only to a caller who proves a seat in the room (its
+Phone session) or that it is the room's TV (the TV session credential it opened
+the room with). Anyone else gets `unavailable`, never the TV's shared view.
 
 The redaction contract is part of each module's logic, not a renderer
 convention:
