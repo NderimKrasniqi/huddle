@@ -196,8 +196,8 @@ Native Phone and TV screens follow the fifth-pass lounge prototype in
 
 ### 10. Cosmic Quiz Trivia — in review
 
-Trivia's TV and Phone screens follow the approved Cosmic Quiz mockups (kept
-locally, outside git, under `docs/design-reference/trivia-cosmic/`). Voting and
+Trivia's TV and Phone screens follow the approved Cosmic Quiz mockups (Huddle
+Playroom v10; the reference pack is kept locally and is not in git). Voting and
 the platform screens are unchanged.
 
 - [x] Night-sky TV and cream answer pad: intro ("Ready for liftoff?"),
