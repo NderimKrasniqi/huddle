@@ -46,19 +46,44 @@ export async function roomFixture(
 }
 
 /**
- * The running game as the room's own TV is shown it. A fixture room has no TV
- * of its own, so the first look seats one; a room opened through `openRoom`
- * already has the session this uses.
+ * Look at a room as its own TV. A room opened through `openRoom` already has
+ * the TV session this uses; a fixture room has none, so one is seated for the
+ * single look and removed again, leaving rooms that model a TV-less legacy
+ * room exactly as they were.
  */
-export async function tvRunning(t: Backend, roomId: Id<'rooms'>) {
-  const tvSessionToken = await t.run(async (ctx) => {
+async function asTv<T>(t: Backend, roomId: Id<'rooms'>, look: (tvSessionToken: string) => Promise<T>): Promise<T> {
+  const { token, temporary } = await t.run(async (ctx) => {
     const tv = await ctx.db.query('tvSessions').filter((q) => q.eq(q.field('roomId'), roomId)).first();
-    if (tv !== null) return tv.sessionToken;
+    if (tv !== null) return { token: tv.sessionToken, temporary: undefined };
     const token = `tv-fixture-${roomId}`;
-    await ctx.db.insert('tvSessions', { roomId, sessionToken: token, lastSeenAt: Date.now(), away: false });
-    return token;
+    const temporary = await ctx.db.insert('tvSessions', { roomId, sessionToken: token, lastSeenAt: Date.now(), away: false });
+    return { token, temporary };
   });
-  return await t.query(api.games.running, { roomId, tvSessionToken });
+  try {
+    return await look(token);
+  } finally {
+    if (temporary !== undefined) await t.run(async (ctx) => await ctx.db.delete(temporary));
+  }
+}
+
+/** The running game as the room's own TV is shown it. */
+export async function tvRunning(t: Backend, roomId: Id<'rooms'>) {
+  return await asTv(t, roomId, (tvSessionToken) => t.query(api.games.running, { roomId, tvSessionToken }));
+}
+
+/** The roster as the room's own TV is shown it. */
+export async function tvRoster(t: Backend, roomId: Id<'rooms'>) {
+  return await asTv(t, roomId, (tvSessionToken) => t.query(api.players.roster, { roomId, tvSessionToken }));
+}
+
+/** The Host's setup draft as the room's own TV is shown it. */
+export async function tvSetup(t: Backend, roomId: Id<'rooms'>) {
+  return await asTv(t, roomId, (tvSessionToken) => t.query(api.games.setup, { roomId, tvSessionToken }));
+}
+
+/** The browsed game card as the room's own TV is shown it. */
+export async function tvBrowsing(t: Backend, roomId: Id<'rooms'>) {
+  return await asTv(t, roomId, (tvSessionToken) => t.query(api.games.browsing, { roomId, tvSessionToken }));
 }
 
 /** The typed Trivia projection fields exercised at the backend boundary. */

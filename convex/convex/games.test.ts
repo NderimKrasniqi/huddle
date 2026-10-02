@@ -8,7 +8,7 @@ import { api } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import { INTRO_SECONDS } from '@huddle/game-trivia/logic';
-import { roomFixture, tvRunning } from '../test/fixtures';
+import { roomFixture, tvBrowsing, tvRoster, tvRunning, tvSetup } from '../test/fixtures';
 
 const modules = import.meta.glob(['./**/*.*s', '!./**/*.d.ts', '!./**/*.test.*']);
 type Backend = ReturnType<typeof convexTest>;
@@ -50,13 +50,13 @@ describe('locked setup and readiness', () => {
     const t = convexTest(schema, modules);
     const room = await party(t);
 
-    expect(await t.query(api.games.setup, { roomId: room.roomId })).not.toBeNull();
-    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBe(0);
+    expect(await tvSetup(t, room.roomId)).not.toBeNull();
+    expect(await tvBrowsing(t, room.roomId)).toBe(0);
 
     await t.mutation(api.games.cancelGameSetup, { sessionToken: room.host });
 
-    expect(await t.query(api.games.setup, { roomId: room.roomId })).toBeNull();
-    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
+    expect(await tvSetup(t, room.roomId)).toBeNull();
+    expect(await tvBrowsing(t, room.roomId)).toBeNull();
   });
 
   it('requires a locked setup and every seated player, including Host, to Ready', async () => {
@@ -69,7 +69,7 @@ describe('locked setup and readiness', () => {
 
     // Locking the settings starts the ready check with the Host already Ready.
     await t.mutation(api.games.finalizeGameSetup, { sessionToken: room.host });
-    expect((await t.query(api.games.setup, { roomId: room.roomId }))?.readyPlayerIds).toHaveLength(1);
+    expect((await tvSetup(t, room.roomId))?.readyPlayerIds).toHaveLength(1);
     expect(await rejection(t.mutation(api.games.startGame, { sessionToken: room.host }))).toEqual({
       kind: 'playersNotReady',
       playerIds: expect.any(Array),
@@ -99,7 +99,7 @@ describe('locked setup and readiness', () => {
     ).toEqual({ kind: 'setupLocked' });
 
     await t.mutation(api.games.reopenGameSetup, { sessionToken: room.host });
-    expect(await t.query(api.games.setup, { roomId: room.roomId })).toMatchObject({
+    expect(await tvSetup(t, room.roomId)).toMatchObject({
       stage: 'configuring',
       readyPlayerIds: [],
     });
@@ -138,7 +138,7 @@ describe.each([
 
     const running = await tvRunning(t, room.roomId);
     expect(running).toMatchObject({ kind: 'running', gameId });
-    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBe(4);
+    expect(await tvBrowsing(t, room.roomId)).toBe(4);
 
     // Both installed modules own a playable v2 opening beat. The public
     // projection exposes the server-owned intro clock and settled setup while
@@ -152,9 +152,9 @@ describe.each([
 
     await t.mutation(api.games.endGame, { sessionToken: room.host });
     expect(await tvRunning(t, room.roomId)).toBeNull();
-    expect(await t.query(api.games.setup, { roomId: room.roomId })).toBeNull();
-    expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
-    expect((await t.query(api.players.roster, { roomId: room.roomId }))?.length).toBe(2);
+    expect(await tvSetup(t, room.roomId)).toBeNull();
+    expect(await tvBrowsing(t, room.roomId)).toBeNull();
+    expect((await tvRoster(t, room.roomId))?.length).toBe(2);
   });
 });
 
@@ -182,6 +182,27 @@ describe('who is shown a running game', () => {
     expect(await t.query(api.games.running, { roomId: room.roomId, sessionToken: room.guest })).toMatchObject({ kind: 'running' });
   });
 
+  it('keeps the lobby — roster, setup and browsed card — to the same room', async () => {
+    const t = convexTest(schema, modules);
+    const room = await party(t);
+    await t.mutation(api.games.browseGame, { sessionToken: room.host, index: 2 });
+    const tvSessionToken = await tvToken(t, room.roomId, 'tv-lobby');
+    const elsewhere = await party(t);
+    const foreignTv = await tvToken(t, elsewhere.roomId, 'tv-lobby-elsewhere');
+
+    for (const asking of [{ tvSessionToken }, { sessionToken: room.guest }]) {
+      expect(await t.query(api.players.roster, { roomId: room.roomId, ...asking })).toHaveLength(2);
+      expect(await t.query(api.games.setup, { roomId: room.roomId, ...asking })).toMatchObject({ gameId: 'trivia' });
+      expect(await t.query(api.games.browsing, { roomId: room.roomId, ...asking })).toBe(2);
+    }
+
+    for (const asking of [{}, { tvSessionToken: foreignTv }, { sessionToken: elsewhere.host }]) {
+      expect(await t.query(api.players.roster, { roomId: room.roomId, ...asking })).toEqual([]);
+      expect(await t.query(api.games.setup, { roomId: room.roomId, ...asking })).toBeNull();
+      expect(await t.query(api.games.browsing, { roomId: room.roomId, ...asking })).toBeNull();
+    }
+  });
+
   it('shows nothing to a caller who is neither, rather than the TV\'s shared screen', async () => {
     const t = convexTest(schema, modules);
     const room = await started(t);
@@ -202,7 +223,7 @@ describe('the countdown before a game', () => {
   afterEach(() => vi.useRealTimers());
 
   async function setupOf(t: Backend, roomId: Id<'rooms'>) {
-    return await t.query(api.games.setup, { roomId });
+    return await tvSetup(t, roomId);
   }
 
   async function runningOf(t: Backend, roomId: Id<'rooms'>) {
@@ -353,7 +374,7 @@ describe('presence at Start', () => {
     expect(await rejection(t.mutation(api.games.startGame, { sessionToken: room.host }))).toMatchObject({
       kind: 'playersAway',
     });
-    expect((await t.query(api.games.setup, { roomId: room.roomId }))?.readyPlayerIds.length).toBe(2);
+    expect((await tvSetup(t, room.roomId))?.readyPlayerIds.length).toBe(2);
   });
 });
 

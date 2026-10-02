@@ -15,7 +15,7 @@ import { ConvexError, v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
-import { playerForSession, requireRoomHost } from './lib/authorization';
+import { playerForSession, requireRoomHost, roomViewer, roomViewerArgs } from './lib/authorization';
 import { cancelCountdownJob, reconcileCountdown } from './lib/countdown';
 import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/gameClock';
 import { playersInRoom } from './lib/presence';
@@ -798,7 +798,7 @@ export const leaveRoom = mutation({
  * one-shot answer at launch could do.
  */
 export const roster = query({
-  args: { roomId: v.id('rooms') },
+  args: { roomId: v.id('rooms'), ...roomViewerArgs },
   returns: v.array(
     v.object({
       playerId: v.id('players'),
@@ -809,6 +809,8 @@ export const roster = query({
     }),
   ),
   handler: async (ctx, args) => {
+    // Names and faces are for the room: its TV and the phones seated in it.
+    if ((await roomViewer(ctx, args.roomId, args)) === undefined) return [];
     const room = await ctx.db.get(args.roomId);
     const seated = await playersInRoom(ctx, args.roomId);
 
