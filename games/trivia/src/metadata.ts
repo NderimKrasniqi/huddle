@@ -8,5 +8,5 @@ export const triviaMetadata: GameMetadata = {
   playerRange: { min: 1, max: 10 },
   estimatedMinutes: 15,
   category: 'Quiz',
-  tagline: 'Big questions. Bigger guesses.',
+  tagline: 'Cosmic Quiz · Big guesses. Bigger laughs.',
 };

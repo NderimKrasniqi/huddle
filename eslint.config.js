@@ -26,6 +26,7 @@ module.exports = defineConfig([
     'convex/convex/_generated/**',
     '.claude/**',
     'output/**',
+    'docs/design-reference/**',
   ]),
   expoConfig,
   {

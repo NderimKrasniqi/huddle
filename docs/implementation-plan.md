@@ -194,6 +194,28 @@ Native Phone and TV screens follow the fifth-pass lounge prototype in
   reduced motion and Voting.
 - [ ] Android Phone and tvOS checks (not run; tvOS project not generated).
 
+### 10. Cosmic Quiz Trivia — in review
+
+Trivia's TV and Phone screens follow the approved Cosmic Quiz mockups (kept
+locally, outside git, under `docs/design-reference/trivia-cosmic/`). Voting and
+the platform screens are unchanged.
+
+- [x] Night-sky TV and cream answer pad: intro ("Ready for liftoff?"),
+  question, answer locked, reveal with round results, podium finish; shared
+  answer colours A–D; alien mascot; Trivia's full-scene picker card.
+- [x] The reveal is a 30-second break that advances on its own; only the Host
+  can end it early. The hub stamps `GameEvent.fromHost`; phones get `isHost`
+  only to show the button. Logic and Convex tests cover guests, spoofing and
+  stale beats.
+- [x] Motion uses React Native `Animated` (entrances, answer press, staggered
+  results, rising podium, bobbing mascot) and honours reduced motion.
+- [x] One-seat traversal on iPhone 17 and Android TV dev builds, including the
+  Host skipping a break and the final scores; independent review repaired the
+  6–10 player reveal, podium and crew-row layouts.
+- [ ] Two-seat run with guest phones, ten players and long names on devices.
+- [ ] Question categories (the mockups' "SPACE" chip) need the category in
+  game state; not shown yet.
+
 ## Validation ledger
 
 Focused implementation checks pass for contracts, Convex integration,
