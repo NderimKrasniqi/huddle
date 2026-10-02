@@ -114,6 +114,11 @@ export function TriviaPhoneScreen({
     return (
       <Surface {...frame} testID="trivia-phone-screen" scrollTestID="trivia-phone-scroll" align="stretch">
         <Header progress={progress} seconds={seconds} />
+        {model.category ? (
+          <Pill color={cosmic.turquoise} style={styles.categoryChip} testID="trivia-phone-category">
+            <CosmicText weight="black" size={13} tracking={1.5}>{model.category.toUpperCase()}</CosmicText>
+          </Pill>
+        ) : null}
         <CosmicText weight="black" size={model.text.length > 80 ? 21 : 25} align="center" accessibilityRole="header" style={styles.question}>
           {model.text}
         </CosmicText>
@@ -405,7 +410,8 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 2 },
   timer: { paddingHorizontal: 16, paddingVertical: 4, minWidth: 74 },
-  question: { marginTop: 14, marginBottom: 16 },
+  categoryChip: { alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 4, marginTop: 12 },
+  question: { marginTop: 10, marginBottom: 16 },
   answers: { gap: 12 },
   answer: { minHeight: 68, borderRadius: 24, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
   answerClosed: { opacity: 0.45 },

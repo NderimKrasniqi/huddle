@@ -8,6 +8,7 @@ const triviaQuestionSchema = z.strictObject({
   options: z.tuple([z.string(), z.string(), z.string(), z.string()]),
   // -2 is the redacted correct-answer sentinel used by client projections.
   correctIndex: z.number().int().min(-2).max(3).refine((value) => value !== -1),
+  category: z.string().optional(),
 });
 
 const legacyTriviaStateSchema = z.strictObject({

@@ -24,6 +24,11 @@ export type TriviaQuestion = {
   readonly options: readonly [string, string, string, string];
   /** Which of `options` is right — one of them, and only one. */
   readonly correctIndex: number;
+  /**
+   * The pack category it came from, for the screens' chip. Not secret: the Host
+   * picks categories in setup. Absent on games dealt before it was carried.
+   */
+  readonly category?: string;
 };
 
 /**
@@ -57,6 +62,7 @@ function asked(question: PackQuestion): TriviaQuestion {
     text: question.text,
     options: question.options,
     correctIndex: question.correctIndex,
+    category: question.category,
   };
 }
 

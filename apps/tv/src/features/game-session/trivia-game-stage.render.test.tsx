@@ -101,9 +101,18 @@ describe('Trivia TV game renderer', () => {
     expect(result.getByText('Which color is on the Huddle board?')).toBeTruthy();
     expect(result.getByLabelText(/Question 1 of 1.*Choices: A: Coral; B: Espresso; C: Mint; D: Lilac/)).toBeTruthy();
     expect(result.getByText(' of 2 answered')).toBeTruthy();
+    // An older game's questions carry no category, so there is no chip.
+    expect(result.queryByTestId('trivia-tv-category')).toBeNull();
     expect(result.queryAllByRole('button')).toHaveLength(0);
     expect(result.queryByText('Ada chose Espresso')).toBeNull();
     expect(result.queryByText('Correct')).toBeNull();
+  });
+
+  it('labels the question with its pack category', async () => {
+    const withCategory = { ...questionState, questions: questionState.questions.map((asked) => ({ ...asked, category: 'Movies' })) };
+    const result = await render(<TvTrivia state={withCategory} />);
+
+    expect(result.getByText('MOVIES', { includeHiddenElements: true })).toBeTruthy();
   });
 
   it('reveals only the shared answer and standings, still with no focus targets', async () => {

@@ -87,6 +87,8 @@ export type WatchedScreen =
       readonly kind: 'question';
       readonly questionNumber: number;
       readonly questionCount: number;
+      /** The pack category, for the chip above the question; absent on old games. */
+      readonly category: string | undefined;
       readonly text: string;
       readonly options: readonly WatchedOption[];
       /** The "3/5 answered" chip: how many are in, out of how many are playing. */
@@ -290,6 +292,7 @@ export function watchedScreen(
     kind: 'question',
     questionNumber,
     questionCount,
+    category: question.category,
     text: question.text,
     options: optionsOf(question, false),
     // The numerator is the server-projected aggregate; the denominator is the

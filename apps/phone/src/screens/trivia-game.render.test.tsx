@@ -114,6 +114,12 @@ describe('Trivia Phone game renderer', () => {
     });
   });
 
+  it('labels the question with its pack category', async () => {
+    const result = await renderPhone({ ...questionState, questions: [{ ...question, category: 'Science' }] });
+
+    expect(result.getByText('SCIENCE')).toBeTruthy();
+  });
+
   it('renders a distinct private waiting state after the owner locks an answer', async () => {
     const result = await renderPhone({ ...lockedState, participationCount: 1 });
 

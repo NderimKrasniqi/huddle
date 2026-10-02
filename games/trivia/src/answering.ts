@@ -45,6 +45,8 @@ export type AnswerScreen =
        * and not to whatever is up when the tap lands (see `TriviaEvent`).
        */
       readonly questionIndex: number;
+      /** The pack category, for the chip beside the question number. */
+      readonly category: string | undefined;
       readonly text: string;
       readonly options: readonly AnswerOption[];
       /** Whether this player's answer is in — the screen's "LOCKED IN". */
@@ -122,6 +124,7 @@ export function answerScreen(state: TriviaState, playerId: GamePlayerId): Answer
   return {
     kind: 'question',
     questionIndex: current.questionIndex,
+    category: question.category,
     text: question.text,
     options: question.options.map((text, optionIndex) => ({
       optionIndex,
