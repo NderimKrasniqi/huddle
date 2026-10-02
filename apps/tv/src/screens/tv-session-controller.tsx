@@ -28,15 +28,17 @@ export function TvSessionController({
   readonly opening: RoomOpening;
   readonly onExpired: (expired: OpenRoom) => void;
 }) {
-  const roster = useQuery(api.players.roster, { roomId: room.roomId });
+  // Every room view is asked as this room's TV; the server shows nobody else.
+  const tvToken = tvSessionToken();
+  const asTv = tvToken === undefined ? 'skip' : { roomId: room.roomId, tvSessionToken: tvToken };
+  const roster = useQuery(api.players.roster, asTv);
   useRoomExpiry(room, onExpired);
   useEffect(() => keepRoomPresent(), [room.roomId]);
 
-  const tvToken = tvSessionToken();
-  const running = useQuery(api.games.running, tvToken === undefined ? 'skip' : { roomId: room.roomId, tvSessionToken: tvToken });
+  const running = useQuery(api.games.running, asTv);
   const runtime = runningGameScreen(running);
-  const browsingAt = useQuery(api.games.browsing, { roomId: room.roomId });
-  const setup = useQuery(api.games.setup, { roomId: room.roomId });
+  const browsingAt = useQuery(api.games.browsing, asTv);
+  const setup = useQuery(api.games.setup, asTv);
   const hasBrowsing = browsingAt !== undefined && browsingAt !== null;
   const surface = tvSurface({
     runtime: runtime.kind,

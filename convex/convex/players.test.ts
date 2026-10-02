@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import schema from './schema';
 import type { Id } from './_generated/dataModel';
-import { registerRateLimiter, roomFixture, tvRunning } from '../test/fixtures';
+import { registerRateLimiter, roomFixture, tvBrowsing, tvRoster, tvRunning } from '../test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
@@ -106,7 +106,7 @@ async function rejectionOf(attempt: Promise<unknown>): Promise<JoinRejection | u
 
 /** The nicknames the TV would draw on its seats, in seat order. */
 async function rosterNames(t: Backend, roomId: Id<'rooms'>): Promise<string[]> {
-  const roster = await t.query(api.players.roster, { roomId });
+  const roster = await tvRoster(t, roomId);
   return roster.map((seat) => seat.nickname);
 }
 
@@ -542,7 +542,7 @@ describe('session', () => {
         sessionToken: joined.sessionToken,
       });
     });
-    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    const roster = await tvRoster(t, room.roomId);
     expect(JSON.stringify(roster)).not.toContain(joined.sessionToken);
   });
 });
@@ -552,7 +552,7 @@ describe('roster', () => {
     const t = convexTest(schema, modules);
     const room = await openRoom(t);
 
-    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([]);
+    expect(await tvRoster(t, room.roomId)).toEqual([]);
   });
 
   it('gives the TV a seat id and a nickname, and nothing else about a player', async () => {
@@ -567,7 +567,7 @@ describe('roster', () => {
     // The TV is a renderer: it gets what it draws. Player rows grow private
     // fields in Phase 2 (the Session Token), and this projection is what keeps
     // them off a screen the whole room is looking at.
-    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([
+    expect(await tvRoster(t, room.roomId)).toEqual([
       { playerId: joined.playerId, nickname: 'Ada', away: false, host: true, avatar: 'fox' },
     ]);
   });
@@ -585,7 +585,7 @@ describe('roster', () => {
 describe('the avatar a join claims', () => {
   /** The avatar the room is drawing this player in. */
   async function avatarOf(t: Backend, roomId: Id<'rooms'>, nickname: string) {
-    const roster = await t.query(api.players.roster, { roomId });
+    const roster = await tvRoster(t, roomId);
 
     return roster.find((seat) => seat.nickname === nickname)?.avatar;
   }
@@ -618,7 +618,7 @@ describe('the avatar a join claims', () => {
       expect(await rejectionOf(join(t, room.code, `Player ${at + 1}`, avatar))).toBeUndefined();
     }
 
-    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    const roster = await tvRoster(t, room.roomId);
     expect(roster.map((seat) => seat.avatar)).toEqual([...AVATAR_IDS]);
   });
 
@@ -681,7 +681,7 @@ describe('presence', () => {
 
   /** Whether the TV's roster is drawing this player as away. */
   async function isAway(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<boolean> {
-    const roster = await t.query(api.players.roster, { roomId });
+    const roster = await tvRoster(t, roomId);
     const seat = roster.find((player) => player.nickname === nickname);
 
     if (seat === undefined) {
@@ -854,13 +854,13 @@ describe('presence', () => {
     });
 
     await expect(elapse(t, 15_000)).resolves.toBeUndefined();
-    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([]);
+    expect(await tvRoster(t, room.roomId)).toEqual([]);
   });
 });
 
 /** Who the room is calling Host, by the name every client is told — or nobody. */
 async function hostName(t: Backend, roomId: Id<'rooms'>): Promise<string | undefined> {
-  const roster = await t.query(api.players.roster, { roomId });
+  const roster = await tvRoster(t, roomId);
   return roster.find((seat) => seat.host)?.nickname;
 }
 
@@ -871,7 +871,7 @@ async function hostName(t: Backend, roomId: Id<'rooms'>): Promise<string | undef
  * transfer is not landing on the wrong player — it is landing on a second one.
  */
 async function hostCount(t: Backend, roomId: Id<'rooms'>): Promise<number> {
-  const roster = await t.query(api.players.roster, { roomId });
+  const roster = await tvRoster(t, roomId);
   return roster.filter((seat) => seat.host).length;
 }
 
@@ -1487,7 +1487,7 @@ describe('leaveRoom', () => {
 
   /** Whether the room is drawing this player as away. */
   async function isAwayNamed(t: Backend, roomId: Id<'rooms'>, nickname: string): Promise<boolean> {
-    const roster = await t.query(api.players.roster, { roomId });
+    const roster = await tvRoster(t, roomId);
 
     return roster.find((player) => player.nickname === nickname)?.away === true;
   }
@@ -1540,7 +1540,7 @@ describe('leaveRoom', () => {
     await t.mutation(api.players.leaveRoom, { sessionToken: only.sessionToken });
 
     expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
-    expect(await t.query(api.players.roster, { roomId: room.roomId })).toEqual([]);
+    expect(await tvRoster(t, room.roomId)).toEqual([]);
     expect(
       await t.mutation(api.rooms.openRoom, {
         tvSessionToken: 'tv-stays-after-last-player',
@@ -1571,7 +1571,7 @@ describe('leaveRoom', () => {
 
       expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
       expect(await tvRunning(t, room.roomId)).toBeNull();
-      expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
+      expect(await tvBrowsing(t, room.roomId)).toBeNull();
 
       const deadlines = await t.run(async (ctx) =>
         (await ctx.db.system.query('_scheduled_functions').collect()).filter(

@@ -13,7 +13,7 @@ import { api, internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import schema from './schema';
 import type { RoomCodeExhausted } from './rooms';
-import { registerRateLimiter, roomFixture } from '../test/fixtures';
+import { registerRateLimiter, roomFixture, tvRoster } from '../test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
@@ -237,7 +237,7 @@ describe('room expiry', () => {
    * half-done expiry worth failing on.
    */
   async function seatedCount(t: Backend, roomId: Id<'rooms'>): Promise<number> {
-    return (await t.query(api.players.roster, { roomId })).length;
+    return (await tvRoster(t, roomId)).length;
   }
 
   /**
@@ -399,7 +399,7 @@ describe('room expiry', () => {
     // A game is running, so the room has a deadline scheduled against itself.
     await t.mutation(api.games.selectGame, { sessionToken: host.sessionToken, gameId: 'trivia' });
     await t.mutation(api.games.finalizeGameSetup, { sessionToken: host.sessionToken });
-    const roster = await t.query(api.players.roster, { roomId: room.roomId });
+    const roster = await tvRoster(t, room.roomId);
     for (const seat of roster) {
       const token = await t.run(async (ctx) => (await ctx.db.get(seat.playerId))?.sessionToken);
       if (token !== undefined) {

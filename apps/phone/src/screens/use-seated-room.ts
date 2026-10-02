@@ -62,18 +62,17 @@ export function useSeatedRoom({
   const { beginLeave, cancelLeave, sessionToken, joinWelcomeUntil } = usePhoneSession();
   const reduceMotion = usePhoneReducedMotion();
   const token = sessionToken;
-  const rosterAnswer = useQuery(api.players.roster, { roomId: session.roomId });
+  // Every room view is asked as this seat; the server shows nobody else.
+  const asSeat = token === undefined ? 'skip' : { roomId: session.roomId, sessionToken: token };
+  const rosterAnswer = useQuery(api.players.roster, asSeat);
   const roster = useMemo(() => rosterAnswer ?? [], [rosterAnswer]);
-  const running = useQuery(
-    api.games.running,
-    token === undefined ? 'skip' : { roomId: session.roomId, sessionToken: token },
-  );
+  const running = useQuery(api.games.running, asSeat);
   const seat = useQuery(
     api.players.session,
     token === undefined ? 'skip' : { sessionToken: token },
   );
-  const browsingAt = useQuery(api.games.browsing, { roomId: session.roomId });
-  const setupDraft = useQuery(api.games.setup, { roomId: session.roomId });
+  const browsingAt = useQuery(api.games.browsing, asSeat);
+  const setupDraft = useQuery(api.games.setup, asSeat);
   const standing = lobbyStanding(roster, session.playerId);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
