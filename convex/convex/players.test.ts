@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from './_generated/api';
 import schema from './schema';
 import type { Id } from './_generated/dataModel';
-import { registerRateLimiter, roomFixture } from '../test/fixtures';
+import { registerRateLimiter, roomFixture, tvRunning } from '../test/fixtures';
 
 // See schema.test.ts: pnpm's isolated node_modules layout defeats convex-test's
 // default module lookup, so the function modules are handed over explicitly.
@@ -1456,7 +1456,7 @@ describe('host controls', () => {
         playerId: grace.playerId,
       });
 
-      expect(await t.query(api.games.running, { roomId: room.roomId })).not.toBeNull();
+      expect(await tvRunning(t, room.roomId)).not.toBeNull();
       expect(await rosterNames(t, room.roomId)).toEqual(['Ada']);
     });
   });
@@ -1570,7 +1570,7 @@ describe('leaveRoom', () => {
       await t.mutation(api.players.leaveRoom, { sessionToken: host.sessionToken });
 
       expect(await t.query(api.rooms.stillOpen, { roomId: room.roomId })).toBe(true);
-      expect(await t.query(api.games.running, { roomId: room.roomId })).toBeNull();
+      expect(await tvRunning(t, room.roomId)).toBeNull();
       expect(await t.query(api.games.browsing, { roomId: room.roomId })).toBeNull();
 
       const deadlines = await t.run(async (ctx) =>

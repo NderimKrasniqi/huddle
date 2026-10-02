@@ -13,6 +13,7 @@ function MockQrCode(props: Record<string, unknown>) {
 
 jest.mock('../platform/room-session/native', () => ({
   keepRoomPresent: jest.fn(),
+  tvSessionToken: () => 'tv-token',
   useRoomExpiry: jest.fn(),
 }));
 
