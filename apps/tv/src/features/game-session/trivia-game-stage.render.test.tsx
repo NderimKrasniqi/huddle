@@ -75,9 +75,14 @@ function TvTrivia({
 }
 
 describe('Trivia TV game renderer', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    jest.useRealTimers();
+  });
 
   it('shows the game-specific start countdown without carrying setup settings into play', async () => {
+    // Freeze the clock so a slow machine cannot tick 3 down to 2 mid-test.
+    jest.useFakeTimers();
     const result = await render(<TvTrivia state={introState} clockRemainingMs={2_400} />);
 
     expect(result.getByText('Ready for liftoff?')).toBeTruthy();
