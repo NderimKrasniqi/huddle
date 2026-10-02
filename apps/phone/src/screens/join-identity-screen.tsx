@@ -92,7 +92,9 @@ export default function JoinIdentityScreen() {
   );
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');
-  const [avatarId, setAvatarId] = useState<AvatarId>('fox');
+  const [chosenAvatarId, setAvatarId] = useState<AvatarId>('fox');
+  // Only an avatar the guest tapped is theirs to keep; a remembered one yields to the room.
+  const [avatarPicked, setAvatarPicked] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isChangingRooms, setIsChangingRooms] = useState(false);
   const [error, setError] = useState<string>();
@@ -131,7 +133,12 @@ export default function JoinIdentityScreen() {
     }
   }, [router, shouldReturnToSeat]);
 
-  const selectedTaken = availability?.takenAvatarIds.includes(avatarId) === true;
+  // A returning guest whose usual avatar is already in the room gets the first
+  // free one instead of an error they did nothing to cause.
+  const isTaken = (candidate: AvatarId) => availability?.takenAvatarIds.includes(candidate) === true;
+  const firstFreeAvatar = AVATAR_IDS.find((candidate) => !isTaken(candidate));
+  const avatarId = !avatarPicked && isTaken(chosenAvatarId) && firstFreeAvatar !== undefined ? firstFreeAvatar : chosenAvatarId;
+  const selectedTaken = isTaken(avatarId);
   const roomUnavailable = availability === null;
   const pending = availability === undefined;
   const canJoin = session === null && profile !== undefined && nickname.trim() !== '' && !selectedTaken && !pending && !roomUnavailable && availability?.full !== true && !isJoining && !isChangingRooms;
@@ -345,6 +352,7 @@ export default function JoinIdentityScreen() {
                 key={candidate}
                 onPress={() => {
                   setAvatarId(candidate);
+                  setAvatarPicked(true);
                   setError(undefined);
                 }}
                 disabled={taken}
@@ -376,7 +384,7 @@ export default function JoinIdentityScreen() {
         </View>
         {pending ? <Line testID="identity-availability-pending">Checking room availability…</Line> : null}
         {availability?.full ? <PhoneNotice testID="identity-room-full">That room is full. Ask someone to leave before joining.</PhoneNotice> : null}
-        {selectedTaken ? <PhoneNotice testID="identity-avatar-taken">That avatar is already in use. Pick another one.</PhoneNotice> : null}
+        {selectedTaken ? <PhoneNotice testID="identity-avatar-taken">Someone just took that avatar. Pick another one.</PhoneNotice> : null}
         {error ? <PhoneNotice testID="identity-error">{error}</PhoneNotice> : null}
       </PhoneFrame>
     </KeyboardAvoidingView>
