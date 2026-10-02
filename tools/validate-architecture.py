@@ -334,10 +334,11 @@ TRIVIA_RUNTIME_ASSET_SPECS = {
         True,
         "e797cf558bedbe8a710003331109628e94e17385652a110d397e381677f639e9",
     ),
-    "space.png": (
+    # An opaque photo-like backdrop: JPEG is an eighth of the PNG's size.
+    "space.jpg": (
         (1600, 900),
         False,
-        "54afb9bd12fddf5f46520637f130787732ed2a541249ba3d898648296e2c72ec",
+        "05865fda84db2b558be19f99913b4c928482ae63d68c2ba25bf770b411cbe2bb",
     ),
 }
 # Trivia's own Cosmic Quiz look (games/trivia/src/cosmic.tsx). Only the
@@ -991,6 +992,36 @@ def png_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple
     return dimensions, color_type in {4, 6}
 
 
+def jpeg_dimensions(path: Path, label: str, root: Path = ROOT) -> tuple[int, int]:
+    """Read JPEG dimensions from its first start-of-frame marker."""
+
+    payload = path.read_bytes()
+    if payload[:2] != b"\xff\xd8":
+        fail(f"{label} asset is not a JPEG: {relative(path, root)}")
+    offset = 2
+    while offset + 4 <= len(payload):
+        if payload[offset] != 0xFF:
+            break
+        marker = payload[offset + 1]
+        length = struct.unpack(">H", payload[offset + 2 : offset + 4])[0]
+        # SOF0-SOF15, excluding DHT (C4), JPG (C8) and DAC (CC).
+        if 0xC0 <= marker <= 0xCF and marker not in {0xC4, 0xC8, 0xCC}:
+            if offset + 9 > len(payload):
+                break
+            height, width = struct.unpack(">HH", payload[offset + 5 : offset + 9])
+            return width, height
+        offset += 2 + length
+    fail(f"{label} asset is not a complete JPEG: {relative(path, root)}")
+
+
+def image_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple[tuple[int, int], bool]:
+    """PNG dimensions and alpha, or JPEG dimensions (a JPEG never has alpha)."""
+
+    if path.suffix.lower() in {".jpg", ".jpeg"}:
+        return jpeg_dimensions(path, label, root), False
+    return png_dimensions_and_alpha(path, label, root)
+
+
 def png_has_huddle_mark(path: Path, label: str, root: Path = ROOT) -> bool:
     """Detect the Playroom mark, a deep-purple H with orange dashes, without Pillow.
 
@@ -1128,7 +1159,7 @@ def validate_runtime_assets(root: Path = ROOT) -> None:
 
         for relative_path, (expected_dimensions, expected_alpha, expected_digest) in specs.items():
             path = runtime_root / relative_path
-            dimensions, has_alpha = png_dimensions_and_alpha(path, label, root)
+            dimensions, has_alpha = image_dimensions_and_alpha(path, label, root)
             if dimensions != expected_dimensions:
                 fail(
                     f"{label} asset has wrong dimensions: {relative(path, root)} "

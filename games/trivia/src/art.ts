@@ -18,8 +18,8 @@ export const TRIVIA_ART = {
   logoDark: nativeAsset(() => require('../assets/logo-dark.png')),
   /** Logo for light backgrounds (the phones). 2:1. */
   logoLight: nativeAsset(() => require('../assets/logo-light.png')),
-  /** The TV's starfield and planet. 16:9, opaque. */
-  space: nativeAsset(() => require('../assets/space.png')),
+  /** The TV's starfield and planet. 16:9, opaque, so a JPEG. */
+  space: nativeAsset(() => require('../assets/space.jpg')),
   mascot: {
     /** Peeking over an edge, hands down: while a question is up. */
     idle: nativeAsset(() => require('../assets/mascot-idle.png')),
