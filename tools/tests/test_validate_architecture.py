@@ -309,6 +309,17 @@ class ArchitectureFixtureTests(unittest.TestCase):
         )
         self.assertTrue(validator.png_has_huddle_mark(current, "Fixture", root))
 
+    def test_jpeg_runtime_assets_report_their_frame_size_and_no_alpha(self) -> None:
+        sky = ROOT / "games" / "trivia" / "assets" / "space.jpg"
+        self.assertEqual(validator.image_dimensions_and_alpha(sky, "Fixture", ROOT), ((1600, 900), False))
+
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        broken = Path(temporary.name) / "broken.jpg"
+        broken.write_bytes(b"\xff\xd8\xff\xe0\x00\x02")
+        with self.assertRaisesRegex(SystemExit, "not a complete JPEG"):
+            validator.image_dimensions_and_alpha(broken, "Fixture", Path(temporary.name))
+
     def test_apple_tv_derivatives_keep_the_installed_config_contract(self) -> None:
         apple_root = ROOT / "packages" / "ui" / "assets" / "app-icons" / "apple-tv"
         for name, (dimensions, has_alpha) in validator.APPLE_TV_ASSET_SPECS.items():
