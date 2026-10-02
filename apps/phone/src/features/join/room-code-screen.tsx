@@ -45,6 +45,8 @@ export function RoomCodeScreen({
   const full = complete && availability?.full === true;
   const canContinue = complete && availability !== undefined && availability !== null && !full;
   const active = focused ? activeCodeCell(code) : undefined;
+  // Before the keyboard is up, the next empty tile still hints where to type.
+  const hint = focused ? undefined : activeCodeCell(code);
 
   function updateCode(value: string) {
     const next = codeEntry(value);
@@ -66,7 +68,7 @@ export function RoomCodeScreen({
         }>
           <PlayroomWordmark height={34} testID="huddle-heartbeat-mark" />
           <PlayroomMoment art="lounge" width={300} height={230} style={styles.illustration} />
-          <PlayroomHeading type={playroomPhone.type.hero}>Good times. Start here.</PlayroomHeading>
+          <PlayroomHeading type={playroomPhone.type.hero}>{'Good times.\nStart here.'}</PlayroomHeading>
           <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
             Type the four-letter code on the TV.
           </PlayroomText>
@@ -82,11 +84,11 @@ export function RoomCodeScreen({
             {[0, 1, 2, 3].map((position) => (
               <View
                 key={position}
-                style={[styles.box, position === active ? styles.boxActive : null, missing || full ? styles.boxError : null]}
+                style={[styles.box, position === active ? styles.boxActive : null, position === hint ? styles.boxHint : null, missing || full ? styles.boxError : null]}
                 testID={position === 0 ? 'heartbeat-room-code' : undefined}
               >
                 <PlayroomText style={styles.letter}>{code[position] ?? ''}</PlayroomText>
-                {position === active && code[position] === undefined ? <View style={styles.caret} /> : null}
+                {(position === active || position === hint) && code[position] === undefined ? <View style={[styles.caret, position === hint ? styles.caretHint : null]} /> : null}
               </View>
             ))}
           </Pressable>
@@ -177,6 +179,13 @@ const styles = StyleSheet.create({
   boxActive: {
     borderWidth: 3,
     borderColor: playroomColors.ink,
+  },
+  boxHint: {
+    borderWidth: 2,
+    borderColor: playroomColors.border,
+  },
+  caretHint: {
+    opacity: 0.45,
   },
   boxError: {
     borderWidth: 2,

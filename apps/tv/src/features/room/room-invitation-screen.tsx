@@ -320,11 +320,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // An open seat reads as an invitation from across the room: a dashed ring
+  // around a soft figure, rather than a grey disc that disappears on the panel.
   empty: {
     width: 100,
     height: 100,
     borderRadius: 100 / 2,
-    backgroundColor: playroomColors.disabled,
+    backgroundColor: playroomColors.surface,
+    borderWidth: 3,
+    borderStyle: 'dashed',
+    borderColor: playroomColors.border,
     alignItems: 'center',
     overflow: 'hidden',
   },
@@ -333,14 +338,14 @@ const styles = StyleSheet.create({
     width: 100 * 0.3,
     height: 100 * 0.3,
     borderRadius: 100,
-    backgroundColor: playroomColors.border,
+    backgroundColor: playroomColors.lavender,
   },
   silhouetteBody: {
     marginTop: 100 * 0.05,
     width: 100 * 0.56,
     height: 100 * 0.56,
     borderRadius: 100,
-    backgroundColor: playroomColors.border,
+    backgroundColor: playroomColors.lavender,
   },
   name: {
     marginTop: 6,

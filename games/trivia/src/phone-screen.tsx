@@ -271,7 +271,7 @@ function EyesUp({
 function Header({ progress, seconds }: { readonly progress: string; readonly seconds: number }) {
   return (
     <View style={styles.header}>
-      <Logo width={150} on="light" />
+      <Logo width={120} on="light" />
       <View style={styles.headerRow}>
         <CosmicText weight="black" size={17} accessibilityLabel={`Question ${progress.replace(' / ', ' of ')}`}>{progress}</CosmicText>
         <Pill style={styles.timer} testID="trivia-phone-clock">
@@ -388,7 +388,17 @@ function Surface({
         showsVerticalScrollIndicator={false}
         testID={scrollTestID}
       >
-        <View style={[styles.page, align === 'stretch' ? styles.pageStretch : null]}>{children}</View>
+        {align === 'stretch' ? (
+          <View style={[styles.page, styles.pageStretch]}>{children}</View>
+        ) : (
+          // A short stack sits about a third of the way down, not dead centre,
+          // so the screen does not look empty above and below it.
+          <View style={styles.page}>
+            <View style={styles.spaceAbove} />
+            {children}
+            <View style={styles.spaceBelow} />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -403,7 +413,9 @@ function finiteInset(value: number | undefined): number {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: cosmic.cream },
   scroll: { flexGrow: 1 },
-  page: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22, gap: 6 },
+  page: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', alignItems: 'center', paddingHorizontal: 24, gap: 8 },
+  spaceAbove: { flexGrow: 1 },
+  spaceBelow: { flexGrow: 1.8 },
   pageStretch: { alignItems: 'stretch', justifyContent: 'flex-start' },
   heading: { marginVertical: 8 },
   pill: { paddingHorizontal: 22, paddingVertical: 8, marginTop: 8 },

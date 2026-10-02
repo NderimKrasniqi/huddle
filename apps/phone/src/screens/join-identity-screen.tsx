@@ -354,19 +354,22 @@ export default function JoinIdentityScreen() {
                 testID={`identity-avatar-${candidate}`}
                 style={styles.cell}
               >
-                <View style={[styles.ring, selected ? styles.ringOn : null, taken ? styles.taken : null]}>
-                  <PlayroomAvatar avatarId={candidate} size={54} />
-                </View>
-                {selected ? (
-                  <View style={styles.check}>
-                    <View style={styles.tick} />
+                <View>
+                  <View style={[styles.ring, selected ? styles.ringOn : null, taken ? styles.taken : null]}>
+                    <PlayroomAvatar avatarId={candidate} size={54} />
                   </View>
-                ) : null}
-                {taken ? (
-                  <PlayroomText color="muted" style={styles.takenLabel}>
-                    Taken
-                  </PlayroomText>
-                ) : null}
+                  {/* Badges sit on the avatar's corner, never over a label. */}
+                  {selected ? (
+                    <View style={styles.check}>
+                      <View style={styles.tick} />
+                    </View>
+                  ) : null}
+                  {taken ? (
+                    <View style={[styles.check, styles.takenBadge]}>
+                      <View style={styles.takenBar} />
+                    </View>
+                  ) : null}
+                </View>
               </Pressable>
             );
           })}
@@ -420,7 +423,7 @@ const styles = StyleSheet.create({
     borderColor: playroomColors.ink,
   },
   taken: {
-    opacity: 0.35,
+    opacity: 0.3,
   },
   check: {
     position: 'absolute',
@@ -444,9 +447,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     transform: [{ rotate: '45deg' }],
   },
-  takenLabel: {
-    ...playroomPhone.type.caption,
-    fontSize: 11,
+  takenBadge: {
+    backgroundColor: playroomColors.muted,
+  },
+  takenBar: {
+    width: 10,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: playroomColors.surface,
   },
   pass: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: playroomRadii.card },
   field: {

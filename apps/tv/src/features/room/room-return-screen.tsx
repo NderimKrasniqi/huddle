@@ -10,7 +10,7 @@ export function RoomReturnScreen({ players }: { readonly players: readonly RoomI
       <PlayroomMoment art="highFive" width={360} height={290} />
       <PlayroomText color="muted" style={playroomTv.type.label}>Back in the room</PlayroomText>
       <PlayroomHeading type={playroomTv.type.heading}>Same people. New surprises.</PlayroomHeading>
-      <PlayroomText color="muted" style={playroomTv.type.body}>{`${host?.name ?? 'The Host'} is choosing what’s next. Everyone keeps their seat.`}</PlayroomText>
+      <PlayroomText color="muted" style={playroomTv.type.body}>{`${host?.name ?? 'The host'} is choosing what’s next. Everyone keeps their seat.`}</PlayroomText>
     </View>
     <View style={styles.roster}>
       <PlayroomRosterRow players={players.map((player) => ({ ...player, isHost: player.host }))} size={100} />

@@ -79,7 +79,7 @@ export function SeatedPhone({
           title={screen.kind === 'paused' ? 'Game paused' : 'Game unavailable'}
           message={
             screen.kind === 'unavailable'
-              ? 'This game could not be restored on this phone. The Host can return the room to the lobby.'
+              ? 'This game could not be restored on this phone. The host can return the room to the lobby.'
               : disconnected
                 ? 'A player’s phone went quiet. The room will resume when everyone is back.'
                 : 'The TV is reconnecting. Keep Huddle open on the phones.'

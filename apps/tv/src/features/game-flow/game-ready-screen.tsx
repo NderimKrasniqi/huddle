@@ -42,9 +42,12 @@ export function TvReadyCheckScreen({
         <View style={styles.column} pointerEvents="none" focusable={false}>
           <PlayroomHeading type={playroomTv.type.heading}>{`Hands up for ${title}!`}</PlayroomHeading>
           {summary.length > 0 ? (
-            <PlayroomPill textStyle={playroomTv.type.caption} testID="tv-game-setup-settings">
-              {[title, ...summary].join(' · ')}
-            </PlayroomPill>
+            // One short chip per setting reads at a glance; one long line did not.
+            <View style={styles.chips} testID="tv-game-setup-settings" accessible accessibilityLabel={[title, ...summary].join(', ')}>
+              {summary.map((item, index) => (
+                <PlayroomPill key={settingsSchema?.[index]?.key ?? index} textStyle={playroomTv.type.caption}>{item}</PlayroomPill>
+              ))}
+            </View>
           ) : null}
           <View style={styles.grid}>
             {players.map((player) => (
@@ -105,6 +108,7 @@ function Seat({
           avatarId={player.avatarId}
           size={playroomTv.avatar.ready}
           handUp={ready}
+          host={player.isHost}
           away={player.away}
           testID={`tv-game-player-avatar-${player.id}`}
         />
@@ -113,11 +117,6 @@ function Seat({
         {player.name}
       </PlayroomText>
       <PlayroomText color={ready ? "success" : "muted"} style={playroomTv.type.caption}>{player.away ? 'Reconnecting' : ready ? 'Ready' : 'Waiting'}</PlayroomText>
-      {player.isHost ? (
-        <View style={styles.hostTag}>
-          <PlayroomText style={playroomTv.type.caption}>HOST</PlayroomText>
-        </View>
-      ) : null}
     </Animated.View>
   );
 }
@@ -136,8 +135,17 @@ const styles = StyleSheet.create({
   column: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
-    paddingTop: 170,
-    gap: 14,
+    justifyContent: 'center',
+    paddingTop: 96,
+    paddingBottom: playroomTv.safeY,
+    gap: 16,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    maxWidth: 1500,
   },
   grid: {
     width: 1380,
@@ -156,13 +164,6 @@ const styles = StyleSheet.create({
   name: {
     marginTop: 4,
     fontFamily: playroomTv.type.title.fontFamily,
-  },
-  hostTag: {
-    position: 'absolute',
-    top: playroomTv.avatar.ready - 26,
-    paddingHorizontal: 14,
-    borderRadius: playroomRadii.pill,
-    backgroundColor: playroomColors.orange,
   },
   bar: {
     width: 1100,
