@@ -112,6 +112,7 @@ describe('Trivia TV game renderer', () => {
     expect(result.getByText('Correct answer')).toBeTruthy();
     expect(result.getByText('Espresso')).toBeTruthy();
     expect(result.getByText('The host can move on sooner')).toBeTruthy();
+    expect(result.getByText(' of 2 got it right', { includeHiddenElements: true })).toBeTruthy();
     expect(result.getByLabelText(/Reveal for question 1 of 1.*B: Espresso, correct answer.*Round results: Ada, Correct, 0 points; Bo, Missed, 0 points/)).toBeTruthy();
     expect(result.getAllByText('Correct')).toHaveLength(1);
     expect(result.getAllByText('Missed')).toHaveLength(1);

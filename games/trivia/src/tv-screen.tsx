@@ -220,6 +220,15 @@ function QuestionStage({
 }
 
 /** Shorter questions read bigger; three lines of the longest still fit. */
+/** A line for the room to laugh at when everybody, or nobody, got it. */
+function tallyQuip(right: number, total: number): string | undefined {
+  if (total < 2) return undefined;
+  if (right === total) return 'Big brains all round!';
+  if (right === 0) return 'Nobody saw that coming!';
+  if (right === 1) return 'A lone genius walks among us.';
+  return undefined;
+}
+
 function questionSize(text: string): number {
   if (text.length > 90) return 52;
   if (text.length > 55) return 60;
@@ -249,6 +258,7 @@ function RevealStage({
   const correct = screen.options.find((option) => option.correct === true);
   const last = screen.questionNumber >= screen.questionCount;
   const compact = screen.scoreboard.length > 5;
+  const gotIt = screen.verdicts.filter((verdict) => verdict.correct).length;
   const verdictOf = (playerId: string) => screen.verdicts.find((verdict) => verdict.playerId === playerId)?.correct === true;
 
   return (
@@ -273,6 +283,15 @@ function RevealStage({
               </View>
             </Enter>
           ) : null}
+          <Enter reduceMotion={reduceMotion} delay={700} from={10} style={styles.tally} testID="trivia-tv-tally">
+            <View style={styles.tallyRow}>
+              <CosmicText weight="black" size={64} color={cosmic.correct}>{gotIt}</CosmicText>
+              <CosmicText weight="extraBold" size={34}>{` of ${screen.verdicts.length} got it right`}</CosmicText>
+            </View>
+            {tallyQuip(gotIt, screen.verdicts.length) ? (
+              <CosmicText weight="bold" size={30} color={cosmic.muted} align="center">{tallyQuip(gotIt, screen.verdicts.length)}</CosmicText>
+            ) : null}
+          </Enter>
         </Enter>
         <Enter reduceMotion={reduceMotion} delay={120} style={styles.resultsPanel}>
           <CosmicText weight="black" size={66} align="center">Round results</CosmicText>
@@ -465,6 +484,8 @@ const styles = StyleSheet.create({
   revealRow: { position: 'absolute', top: 220, left: SAFE_X, right: SAFE_X, bottom: 200, flexDirection: 'row', gap: 40 },
   answerPanel: { ...panel, width: 560, paddingHorizontal: 44, paddingVertical: 48, alignItems: 'center' },
   correctTile: { borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 26, paddingVertical: 22, gap: 24 },
+  tally: { marginTop: 'auto', alignItems: 'center', gap: 4 },
+  tallyRow: { flexDirection: 'row', alignItems: 'baseline' },
   resultsPanel: { ...panel, flex: 1, paddingHorizontal: 40, paddingTop: 36, paddingBottom: 28 },
   resultRows: { marginTop: 18, gap: 10 },
   resultRowsCompact: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, columnGap: 24 },
