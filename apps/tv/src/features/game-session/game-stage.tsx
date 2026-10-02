@@ -53,7 +53,9 @@ export function TvRuntimeStatus({
   const host = players.find((player) => player.host);
   const message = paused
     ? waitingForPlayers
-      ? 'A player lost connection. The game will continue when they return.'
+      ? missing.length === 1
+        ? `${missing[0]?.nickname} lost connection. The game continues when they’re back.`
+        : `${missing.length} players lost connection. The game continues when they’re back.`
       : 'The TV connection is recovering. Your room is still safe.'
     : 'This game can’t be played right now.';
   const title = paused
@@ -79,21 +81,23 @@ export function TvRuntimeStatus({
         <View style={styles.column} pointerEvents="none" focusable={false} accessible={false}>
           <PlayroomPill textStyle={playroomTv.type.caption}>{paused ? `${gameTitle} · paused` : `Room ${normalizedCode}`}</PlayroomPill>
           <PlayroomHeading type={playroomTv.type.heading}>{paused ? 'Game paused' : 'Game unavailable'}</PlayroomHeading>
-          <View style={styles.row}>
+          {waitingForPlayers && missing.length > 0 ? (
+            // One card per missing player, wrapping onto a second row when a
+            // big room drops out, so no name ever runs off the stage.
+            <View style={styles.missing} testID="tv-paused-roster">
+              {missing.slice(0, 10).map((player) => (
+                <View key={String(player.playerId)} style={[styles.player, missing.length > 5 ? styles.playerCompact : null]}>
+                  <PlayroomAvatar avatarId={player.avatar} size={missing.length > 5 ? 96 : 140} away />
+                  <PlayroomText numberOfLines={1} style={[playroomTv.type.label, styles.center]}>{player.nickname}</PlayroomText>
+                  <PlayroomText color="muted" style={[playroomTv.type.caption, styles.center]}>Reconnecting</PlayroomText>
+                </View>
+              ))}
+            </View>
+          ) : (
             <PlayroomStatusImage art={paused ? 'paused' : 'disconnected'} width={320} height={320} />
-            {waitingForPlayers && missing.length > 0 ? (
-              <View style={styles.missing} testID="tv-paused-roster">
-                {missing.slice(0, 3).map((player) => (
-                  <View key={String(player.playerId)} style={styles.player}>
-                    <PlayroomAvatar avatarId={player.avatar} size={150} away />
-                    <PlayroomText style={playroomTv.type.title}>{`${player.nickname} lost connection`}</PlayroomText>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </View>
+          )}
           <PlayroomText color="muted" style={[playroomTv.type.body, styles.center]}>
-            {waitingForPlayers && host ? `${message} ${host.nickname} can continue without them.` : message}
+            {waitingForPlayers && host && !host.away ? `${message} ${host.nickname} can continue without them.` : message}
           </PlayroomText>
         </View>
       </PlayroomTvStage>
@@ -121,18 +125,21 @@ const styles = StyleSheet.create({
     gap: 22,
     paddingHorizontal: 200,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 60,
-  },
   missing: {
     flexDirection: 'row',
-    gap: 40,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    columnGap: 36,
+    rowGap: 20,
+    maxWidth: 1500,
   },
   player: {
+    width: 220,
     alignItems: 'center',
-    gap: 10,
+    gap: 4,
+  },
+  playerCompact: {
+    width: 200,
   },
   center: {
     textAlign: 'center',

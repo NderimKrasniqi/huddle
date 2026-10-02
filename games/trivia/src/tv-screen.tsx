@@ -220,6 +220,15 @@ function QuestionStage({
 }
 
 /** Shorter questions read bigger; three lines of the longest still fit. */
+/** A line for the room to laugh at when everybody, or nobody, got it. */
+function tallyQuip(right: number, total: number): string | undefined {
+  if (total < 2) return undefined;
+  if (right === total) return 'Big brains all round!';
+  if (right === 0) return 'Nobody saw that coming!';
+  if (right === 1) return 'A lone genius walks among us.';
+  return undefined;
+}
+
 function questionSize(text: string): number {
   if (text.length > 90) return 52;
   if (text.length > 55) return 60;
@@ -249,6 +258,7 @@ function RevealStage({
   const correct = screen.options.find((option) => option.correct === true);
   const last = screen.questionNumber >= screen.questionCount;
   const compact = screen.scoreboard.length > 5;
+  const gotIt = screen.verdicts.filter((verdict) => verdict.correct).length;
   const verdictOf = (playerId: string) => screen.verdicts.find((verdict) => verdict.playerId === playerId)?.correct === true;
 
   return (
@@ -273,6 +283,15 @@ function RevealStage({
               </View>
             </Enter>
           ) : null}
+          <Enter reduceMotion={reduceMotion} delay={700} from={10} style={styles.tally} testID="trivia-tv-tally">
+            <View style={styles.tallyRow}>
+              <CosmicText weight="black" size={64} color={cosmic.correct}>{gotIt}</CosmicText>
+              <CosmicText weight="extraBold" size={34}>{` of ${screen.verdicts.length} got it right`}</CosmicText>
+            </View>
+            {tallyQuip(gotIt, screen.verdicts.length) ? (
+              <CosmicText weight="bold" size={30} color={cosmic.muted} align="center">{tallyQuip(gotIt, screen.verdicts.length)}</CosmicText>
+            ) : null}
+          </Enter>
         </Enter>
         <Enter reduceMotion={reduceMotion} delay={120} style={styles.resultsPanel}>
           <CosmicText weight="black" size={66} align="center">Round results</CosmicText>
@@ -310,11 +329,22 @@ function RevealStage({
   );
 }
 
-const PODIUM = [
-  { place: 2, color: cosmic.periwinkle, height: 190 },
-  { place: 1, color: cosmic.butter, height: 250 },
-  { place: 3, color: cosmic.coral, height: 165 },
-] as const;
+/** Left to right: the second, first and third finisher take these slots. */
+const PODIUM_SLOTS = [2, 1, 3] as const;
+
+/**
+ * A step's look follows the rank, not the slot, so players who tie stand
+ * equally high: a three-way tie for first is three gold steps.
+ */
+const STEP_BY_RANK = {
+  1: { color: cosmic.butter, height: 250, avatar: 150 },
+  2: { color: cosmic.periwinkle, height: 205, avatar: 124 },
+  3: { color: cosmic.coral, height: 185, avatar: 124 },
+} as const;
+
+function stepFor(rank: number) {
+  return STEP_BY_RANK[Math.min(Math.max(rank, 1), 3) as 1 | 2 | 3];
+}
 
 function FinishedStage({
   screen,
@@ -338,18 +368,20 @@ function FinishedStage({
         </CosmicText>
       </Enter>
       <View style={styles.podium} testID="trivia-tv-final-grid">
-        {PODIUM.map(({ place, color, height }, index) => {
+        {PODIUM_SLOTS.map((place, index) => {
           const standing = byPlace(place);
           if (standing === undefined) return <View key={place} style={styles.podiumSlot} />;
+          const { color, height, avatar } = stepFor(standing.rank);
           return (
             <Enter key={standing.playerId} reduceMotion={reduceMotion} delay={250 + index * 160} from={120} style={styles.podiumSlot} testID={`trivia-tv-final-row-${standing.playerId}`}>
-              {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={place === 1 ? 150 : 124} disabled={standing.away} /> : null}
+              {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={avatar} disabled={standing.away} /> : null}
               <View style={[styles.podiumBlock, { height, backgroundColor: color }]}>
                 <View style={styles.rankBadge}>
-                  <CosmicText weight="black" size={44} style={{ lineHeight: 52 }}>{standing.rank}</CosmicText>
+                  <CosmicText weight="black" size={36} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
                 </View>
-                <CosmicText weight="black" size={44} numberOfLines={1} style={{ maxWidth: 300 }}>{standing.nickname}</CosmicText>
-                <CosmicText weight="black" size={44}>{standing.score}</CosmicText>
+                {/* Badge, name and score must fit the shortest (3rd rank) step. */}
+                <CosmicText weight="black" size={38} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
+                <CosmicText weight="black" size={38}>{standing.score}</CosmicText>
               </View>
             </Enter>
           );
@@ -452,6 +484,8 @@ const styles = StyleSheet.create({
   revealRow: { position: 'absolute', top: 220, left: SAFE_X, right: SAFE_X, bottom: 200, flexDirection: 'row', gap: 40 },
   answerPanel: { ...panel, width: 560, paddingHorizontal: 44, paddingVertical: 48, alignItems: 'center' },
   correctTile: { borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 26, paddingVertical: 22, gap: 24 },
+  tally: { marginTop: 'auto', alignItems: 'center', gap: 4 },
+  tallyRow: { flexDirection: 'row', alignItems: 'baseline' },
   resultsPanel: { ...panel, flex: 1, paddingHorizontal: 40, paddingTop: 36, paddingBottom: 28 },
   resultRows: { marginTop: 18, gap: 10 },
   resultRowsCompact: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, columnGap: 24 },
@@ -471,8 +505,8 @@ const styles = StyleSheet.create({
   winnerPill: { ...panel, position: 'absolute', top: 150, left: 520, right: 520, paddingVertical: 22, paddingHorizontal: 40, alignItems: 'center' },
   podium: { position: 'absolute', left: 380, right: 380, bottom: 330, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
   podiumSlot: { width: 386, alignItems: 'center' },
-  podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 24, marginTop: -16 },
-  rankBadge: { width: 74, height: 74, borderRadius: 37, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 16, marginTop: -16 },
+  rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   restRow: { ...panel, position: 'absolute', left: 200, right: 200, bottom: 132, minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
   restSeat: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   restRank: { width: 48, height: 48, borderRadius: 24, backgroundColor: cosmic.periwinkle, alignItems: 'center', justifyContent: 'center' },

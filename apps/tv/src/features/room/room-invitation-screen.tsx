@@ -371,6 +371,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   footerText: {
-    textAlign: 'center',
+    // Long host names wrap inside the 720-wide column instead of clipping.
+    flexShrink: 1,
+    textAlign: 'left',
   },
 });
