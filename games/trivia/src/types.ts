@@ -29,11 +29,13 @@ export type PlayableTriviaState = {
    */
   readonly participationCount?: number;
   /**
-   * TV-only reveal projection. The stored game never needs this field: it is
-   * derived from the unredacted answers at the public query boundary so the TV
-   * can show shared outcomes without receiving anybody's option mapping.
+   * Reveal projection. The stored game never needs this field: it is derived
+   * from the unredacted answers at the public query boundary. The TV gets every
+   * player's outcome; a phone gets only its owner's, never anybody's option.
    */
   readonly revealVerdicts?: Readonly<Record<GamePlayerId, boolean>>;
+  /** TV-only reveal projection: each player's points on the question just revealed. */
+  readonly revealGains?: Readonly<Record<GamePlayerId, number>>;
   readonly standings: readonly TriviaStanding[];
   readonly scoring?: ScoringMode;
 };

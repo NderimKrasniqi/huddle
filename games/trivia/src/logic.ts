@@ -194,6 +194,35 @@ function questionsForViewer(
   return state.questions.map(() => WITHHELD_QUESTION);
 }
 
+/**
+ * What each player scored on the question just revealed, for the TV's "+100".
+ * Nothing new: the TV can already subtract one reveal's standings from the
+ * next. It just arrives in time to be drawn.
+ */
+function revealGainsFor(state: PlayableTriviaState): Readonly<Record<GamePlayerId, number>> {
+  const question = state.questions[state.questionIndex];
+  if (question === undefined) return {};
+
+  return Object.fromEntries(
+    state.standings.map(({ playerId }) => [
+      playerId,
+      state.answers?.[playerId] === question.correctIndex
+        ? scoreForCorrectAnswer(state, state.answerSeconds?.[playerId] ?? 0)
+        : 0,
+    ]),
+  );
+}
+
+/** Every outcome for the TV; only the viewer's own for a phone. */
+function verdictsForViewer(
+  state: PlayableTriviaState,
+  viewer: GamePlayerId | undefined,
+): Readonly<Record<GamePlayerId, boolean>> | undefined {
+  const all = revealVerdictsFor(state);
+  if (viewer === undefined) return all;
+  return Object.hasOwn(all, viewer) ? { [viewer]: all[viewer] === true } : undefined;
+}
+
 /** Normalize the just-revealed outcome for the shared TV projection. */
 function revealVerdictsFor(
   state: PlayableTriviaState,
@@ -235,12 +264,12 @@ export function redactTriviaStateFor(
       current.phase === 'question'
         ? Object.keys(current.answers ?? {}).length
         : undefined,
-    // Only the TV gets normalized reveal outcomes. Phones must not receive a
-    // field from which they could infer another player's answer or timing.
-    revealVerdicts:
-      current.phase === 'reveal' && viewer === undefined
-        ? revealVerdictsFor(current)
-        : undefined,
+    // The TV gets every normalized reveal outcome. A phone gets only its own,
+    // which the TV is showing the whole room at that moment anyway; it never
+    // receives a field from which it could infer another player's answer.
+    revealVerdicts: current.phase === 'reveal' ? verdictsForViewer(current, viewer) : undefined,
+    // The TV alone draws everyone's round points.
+    revealGains: current.phase === 'reveal' && viewer === undefined ? revealGainsFor(current) : undefined,
   };
 
   return projected;

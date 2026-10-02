@@ -152,6 +152,7 @@ export function TriviaPhoneScreen({
       <RevealSurface
         {...frame}
         state={current}
+        verdict={current.revealVerdicts?.[player.playerId]}
         progress={progress}
         seconds={seconds}
         isHost={isHost}
@@ -190,6 +191,7 @@ function RevealSurface({
   insets,
   chromeTop,
   state,
+  verdict,
   progress,
   seconds,
   isHost,
@@ -199,6 +201,8 @@ function RevealSurface({
   readonly insets: PhoneSafeAreaInsets;
   readonly chromeTop: number;
   readonly state: PlayableTriviaState;
+  /** This phone's own outcome, when the room has revealed it. */
+  readonly verdict: boolean | undefined;
   readonly progress: string;
   readonly seconds: number;
   readonly isHost: boolean;
@@ -210,11 +214,30 @@ function RevealSurface({
     <Surface insets={insets} chromeTop={chromeTop} testID="trivia-phone-reveal">
       <Logo width={170} on="light" />
       <CosmicText weight="black" size={16} align="center">{progress}</CosmicText>
-      <Enter reduceMotion={reduceMotion}>
-        <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Eyes on the TV!</CosmicText>
-      </Enter>
-      <Mascot pose="point" width={200} reduceMotion={reduceMotion} />
-      <CosmicText size={17} align="center" style={{ marginTop: 6 }}>The answer and scores are on the TV.</CosmicText>
+      {verdict === undefined ? (
+        <>
+          <Enter reduceMotion={reduceMotion}>
+            <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Eyes on the TV!</CosmicText>
+          </Enter>
+          <Mascot pose="point" width={200} reduceMotion={reduceMotion} />
+          <CosmicText size={17} align="center" style={{ marginTop: 6 }}>The answer and scores are on the TV.</CosmicText>
+        </>
+      ) : (
+        <>
+          {/* Only this phone's own outcome: the TV is showing everyone's. */}
+          <Enter reduceMotion={reduceMotion} scale={0.7} from={0} testID="trivia-phone-verdict">
+            <View style={[styles.verdictBadge, { backgroundColor: verdict ? cosmic.turquoise : cosmic.coral }]}>
+              <CosmicText weight="black" size={30} align="center" accessibilityRole="header">
+                {verdict ? 'You got it!' : 'Not this time'}
+              </CosmicText>
+            </View>
+          </Enter>
+          <Mascot pose={verdict ? 'celebrate' : 'point'} width={190} reduceMotion={reduceMotion} />
+          <CosmicText size={17} align="center" style={{ marginTop: 6 }}>
+            {verdict ? 'Nice one. See how everyone did on the TV.' : 'The answer and scores are on the TV.'}
+          </CosmicText>
+        </>
+      )}
       <Pill style={[styles.pill, styles.nextPill]} testID="trivia-phone-next-clock">
         <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`}>
           <CosmicText weight="bold" size={18}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
@@ -428,6 +451,7 @@ const styles = StyleSheet.create({
   answer: { minHeight: 68, borderRadius: 24, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
   answerClosed: { opacity: 0.45 },
   answerText: { flex: 1 },
+  verdictBadge: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 999, marginVertical: 8 },
   nextPill: { marginTop: 16, paddingHorizontal: 26, paddingVertical: 12, alignSelf: 'stretch' },
   nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
   pressable: { alignSelf: 'stretch' },

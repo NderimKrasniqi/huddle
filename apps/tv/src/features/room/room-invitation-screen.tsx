@@ -149,7 +149,7 @@ export function RoomInvitationScreen({
           </View>
         </View>
         <View style={styles.roomSide}>
-          <PlayroomMoment art="lounge" width={760} height={380} style={styles.scene} />
+          <PlayroomMoment art="lounge" width={760} height={380} glow style={styles.scene} />
           <View style={styles.greeting}>
             {welcomeIds.length > 0 ? <View style={styles.welcome} accessible accessibilityLiveRegion="polite"
               accessibilityLabel={`${visiblePlayers.filter((player) => welcomeIds.includes(player.id)).map((player) => player.name).join(', ')} joined the room`} testID="tv-join-welcome">

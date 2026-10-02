@@ -67,7 +67,7 @@ export function RoomCodeScreen({
           </>
         }>
           <PlayroomWordmark height={34} testID="huddle-heartbeat-mark" />
-          <PlayroomMoment art="lounge" width={300} height={230} style={styles.illustration} />
+          <PlayroomMoment art="lounge" width={300} height={230} glow style={styles.illustration} />
           <PlayroomHeading type={playroomPhone.type.hero}>{'Good times.\nStart here.'}</PlayroomHeading>
           <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
             Type the four-letter code on the TV.

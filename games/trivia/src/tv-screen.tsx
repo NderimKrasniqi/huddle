@@ -10,7 +10,10 @@ import {
   cosmic,
   CosmicText,
   CountdownRing,
+  Confetti,
+  CountUp,
   Enter,
+  LaunchWipe,
   LetterBadge,
   Logo,
   Mascot,
@@ -63,10 +66,10 @@ export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScree
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="trivia-tv-screen">
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
         <Image source={TRIVIA_ART.space} resizeMode="cover" style={styles.space} accessible={false} testID="trivia-tv-world" />
-        <Twinkle size={40} style={{ left: 40, top: 420 }} />
-        <Twinkle size={30} style={{ left: 1420, top: 330 }} />
-        <Twinkle size={34} style={{ right: 130, top: 520 }} />
-        <Twinkle size={26} style={{ left: 50, top: 760 }} />
+        <Twinkle size={40} style={{ left: 40, top: 420 }} reduceMotion={reduceMotion} period={3400} />
+        <Twinkle size={30} style={{ left: 1420, top: 330 }} reduceMotion={reduceMotion} period={4600} />
+        <Twinkle size={34} style={{ right: 130, top: 520 }} reduceMotion={reduceMotion} period={3900} />
+        <Twinkle size={26} style={{ left: 50, top: 760 }} reduceMotion={reduceMotion} period={5200} />
         <View style={styles.logo} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Logo width={330} on="dark" />
         </View>
@@ -158,6 +161,7 @@ function IntroStage({
           ))}
         </View>
       </View>
+      <LaunchWipe width={STAGE_WIDTH} height={STAGE_HEIGHT} reduceMotion={reduceMotion} />
     </View>
   );
 }
@@ -324,7 +328,23 @@ function RevealStage({
                       </CosmicText>
                     )}
                   </View>
-                  <CosmicText weight="black" size={compact ? 32 : roomy ? 46 : 38} align="right" style={compact ? styles.resultScoreCompact : styles.resultScore}>{row.score}</CosmicText>
+                  {row.gain !== undefined && row.gain > 0 && !compact ? (
+                    <Enter reduceMotion={reduceMotion} delay={600 + index * 70} scale={0.5} from={0}>
+                      <Pill color={cosmic.butter} style={styles.gainPill}>
+                        <CosmicText weight="black" size={roomy ? 30 : 26}>{`+${row.gain}`}</CosmicText>
+                      </Pill>
+                    </Enter>
+                  ) : null}
+                  <CountUp
+                    from={row.score - (row.gain ?? 0)}
+                    to={row.score}
+                    delay={650 + index * 70}
+                    reduceMotion={reduceMotion}
+                    weight="black"
+                    size={compact ? 32 : roomy ? 46 : 38}
+                    align="right"
+                    style={compact ? styles.resultScoreCompact : styles.resultScore}
+                  />
                 </Enter>
               );
             })}
@@ -344,6 +364,9 @@ function RevealStage({
     </View>
   );
 }
+
+/** Width of one podium step. */
+const PODIUM_SLOT_WIDTH = 386;
 
 /** Left to right: the second, first and third finisher take these slots. */
 const PODIUM_SLOTS = [2, 1, 3] as const;
@@ -390,8 +413,17 @@ function FinishedStage({
           const { color, height, avatar } = stepFor(standing.rank);
           return (
             <Enter key={standing.playerId} reduceMotion={reduceMotion} delay={250 + index * 160} from={120} style={styles.podiumSlot} testID={`trivia-tv-final-row-${standing.playerId}`}>
+              {standing.winner && standing.avatar ? (
+                // A gold ring and a sparkle for every winner; a tie shares the honour.
+                <>
+                  <View style={[styles.winnerRing, { width: avatar + 28, height: avatar + 28, borderRadius: (avatar + 28) / 2, top: -14 }]} pointerEvents="none" />
+                  <Twinkle size={44} style={{ top: -30, left: PODIUM_SLOT_WIDTH / 2 + avatar / 2 - 6 }} reduceMotion={reduceMotion} period={2600} />
+                  <Twinkle size={28} style={{ top: avatar * 0.55, left: PODIUM_SLOT_WIDTH / 2 - avatar / 2 - 40 }} reduceMotion={reduceMotion} period={3300} />
+                </>
+              ) : null}
               {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={avatar} disabled={standing.away} /> : null}
               <View style={[styles.podiumBlock, { height, backgroundColor: color }]}>
+                <View style={styles.podiumTop} pointerEvents="none" />
                 <View style={styles.rankBadge}>
                   <CosmicText weight="black" size={36} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
                 </View>
@@ -412,7 +444,7 @@ function FinishedStage({
               </View>
               {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={rest.length > 4 ? 48 : 64} disabled={standing.away} /> : null}
               <View>
-                <CosmicText weight="black" size={rest.length > 4 ? 24 : 30} numberOfLines={1} style={{ maxWidth: 140 }}>{standing.nickname}</CosmicText>
+                <CosmicText weight="black" size={rest.length > 4 ? 24 : 30} numberOfLines={1} style={{ maxWidth: rest.length > 4 ? 140 : 240 }}>{standing.nickname}</CosmicText>
                 <CosmicText weight="black" size={rest.length > 4 ? 24 : 30}>{standing.score}</CosmicText>
               </View>
             </View>
@@ -423,6 +455,7 @@ function FinishedStage({
         Thanks for playing together!
       </CosmicText>
       <Mascot pose="celebrate" width={220} reduceMotion={reduceMotion} style={styles.revealMascot} />
+      <Confetti width={STAGE_WIDTH} height={STAGE_HEIGHT} reduceMotion={reduceMotion} />
     </View>
   );
 }
@@ -520,6 +553,7 @@ const styles = StyleSheet.create({
   verdictCompact: { width: 38 },
   verdictRoomy: { width: 250 },
   resultScore: { width: 110 },
+  gainPill: { paddingHorizontal: 14, paddingVertical: 2 },
   resultScoreCompact: { width: 76 },
   nextBar: { position: 'absolute', left: 0, right: 0, bottom: SAFE_Y + 4, alignItems: 'center' },
   clockRow: { flexDirection: 'row', alignItems: 'baseline' },
@@ -528,9 +562,12 @@ const styles = StyleSheet.create({
   revealMascot: { position: 'absolute', right: 24, bottom: 8 },
 
   winnerPill: { ...panel, position: 'absolute', top: 150, left: 520, right: 520, paddingVertical: 22, paddingHorizontal: 40, alignItems: 'center' },
-  podium: { position: 'absolute', left: 380, right: 380, bottom: 330, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
-  podiumSlot: { width: 386, alignItems: 'center' },
+  podium: { position: 'absolute', left: 360, right: 360, bottom: 330, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 14 },
+  podiumSlot: { width: PODIUM_SLOT_WIDTH, alignItems: 'center' },
   podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 16, marginTop: -16 },
+  winnerRing: { position: 'absolute', alignSelf: 'center', borderWidth: 6, borderColor: cosmic.butter },
+  // A lighter top face gives the flat steps some depth, like the pack's podium art.
+  podiumTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 22, borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: 'rgba(255,255,255,0.32)' },
   rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   restRow: { ...panel, position: 'absolute', left: 200, right: 200, bottom: 132, minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
   restSeat: { flexDirection: 'row', alignItems: 'center', gap: 14 },

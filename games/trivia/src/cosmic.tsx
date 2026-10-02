@@ -260,11 +260,141 @@ export function Mascot({
 }
 
 /** A four-point twinkle, drawn as text so it needs no asset. Decorative. */
-export function Twinkle({ size, color = cosmic.butter, style }: { readonly size: number; readonly color?: string; readonly style?: StyleProp<TextStyle> }) {
+export function Twinkle({
+  size,
+  color = cosmic.butter,
+  style,
+  reduceMotion = true,
+  period = 3200,
+}: {
+  readonly size: number;
+  readonly color?: string;
+  readonly style?: StyleProp<ViewStyle>;
+  /** Pass the device setting to let it twinkle; still by default. */
+  readonly reduceMotion?: boolean | undefined;
+  /** Twinkles use different periods so they never pulse in step. */
+  readonly period?: number;
+}) {
+  const pulse = useLoop(reduceMotion !== false, period);
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.35] });
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] });
   return (
-    <CosmicText weight="black" size={size} color={color} style={[{ position: 'absolute' }, style]} accessibilityElementsHidden importantForAccessibility="no">
-      ✦
-    </CosmicText>
+    <Animated.View style={[{ position: 'absolute', opacity, transform: [{ scale }] }, style]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <CosmicText weight="black" size={size} color={color}>✦</CosmicText>
+    </Animated.View>
+  );
+}
+
+/**
+ * The hand-off into Trivia: the platform's cream countdown lifts away like a
+ * launch, uncovering the night sky. Not drawn at all with reduced motion; held
+ * in place for the frame or two before the setting is known.
+ */
+export function LaunchWipe({
+  width,
+  height,
+  reduceMotion,
+}: {
+  readonly width: number;
+  readonly height: number;
+  readonly reduceMotion: boolean | undefined;
+}) {
+  const [progress] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduceMotion !== false) return;
+    const animation = Animated.timing(progress, { toValue: 1, duration: 750, delay: 120, easing: Easing.in(Easing.cubic), useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [progress, reduceMotion]);
+  if (reduceMotion === true) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width,
+        height,
+        // The platform countdown's own canvas, so the cut is seamless.
+        backgroundColor: PLATFORM_CANVAS,
+        opacity: progress.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
+        transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [0, -height] }) }],
+      }}
+    />
+  );
+}
+
+/** The platform screens' background, used only where Trivia hands over from them. */
+const PLATFORM_CANVAS = '#F9F1E6';
+
+const CONFETTI_COLORS = [cosmic.butter, cosmic.turquoise, cosmic.coral, cosmic.periwinkle, cosmic.cream] as const;
+
+/**
+ * A one-off confetti shower over the stage, for the final scores. Pieces fall
+ * from above the top edge with a little sway and spin. Nothing with reduced
+ * motion. Positions are fixed per mount so a re-render does not reshuffle them.
+ */
+export function Confetti({
+  width,
+  height,
+  count = 44,
+  reduceMotion,
+}: {
+  readonly width: number;
+  readonly height: number;
+  readonly count?: number;
+  readonly reduceMotion: boolean | undefined;
+}) {
+  const [pieces] = useState(() =>
+    Array.from({ length: count }, (_unused, index) => ({
+      left: ((index * 0.6180339) % 1) * width,
+      delay: (index % 11) * 140 + Math.floor(index / 11) * 90,
+      duration: 2600 + ((index * 37) % 1400),
+      sway: 30 + ((index * 53) % 60),
+      spin: (index % 2 === 0 ? 1 : -1) * (360 + ((index * 97) % 360)),
+      color: CONFETTI_COLORS[index % CONFETTI_COLORS.length] ?? cosmic.butter,
+      size: 14 + ((index * 7) % 12),
+      round: index % 3 === 0,
+      progress: new Animated.Value(0),
+    })),
+  );
+  useEffect(() => {
+    if (reduceMotion !== false) return;
+    const animation = Animated.parallel(
+      pieces.map((piece) =>
+        Animated.timing(piece.progress, { toValue: 1, duration: piece.duration, delay: piece.delay, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      ),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [pieces, reduceMotion]);
+  if (reduceMotion !== false) return null;
+  return (
+    <View style={{ position: 'absolute', left: 0, top: 0, width, height }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {pieces.map((piece, index) => (
+        <Animated.View
+          key={index}
+          style={{
+            position: 'absolute',
+            left: piece.left,
+            top: -40,
+            width: piece.size,
+            height: piece.round ? piece.size : piece.size * 0.45,
+            borderRadius: piece.round ? piece.size / 2 : 3,
+            backgroundColor: piece.color,
+            opacity: piece.progress.interpolate({ inputRange: [0, 0.05, 0.85, 1], outputRange: [0, 1, 1, 0] }),
+            transform: [
+              { translateY: piece.progress.interpolate({ inputRange: [0, 1], outputRange: [0, height + 80] }) },
+              { translateX: piece.progress.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, piece.sway, 0, -piece.sway, 0] }) },
+              { rotate: piece.progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${piece.spin}deg`] }) },
+            ],
+          }}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -278,6 +408,11 @@ export function useReducedMotion(): boolean | undefined {
   const [reduce, setReduce] = useState<boolean | undefined>(undefined);
   useEffect(() => {
     let alive = true;
+    // A device that never answers is treated as asking for less motion, so
+    // nothing that waits on the answer (the launch wipe) can hang.
+    const fallback = setTimeout(() => {
+      if (alive) setReduce((current) => current ?? true);
+    }, 400);
     void AccessibilityInfo.isReduceMotionEnabled()
       .then((value) => {
         if (alive) setReduce(value);
@@ -288,6 +423,7 @@ export function useReducedMotion(): boolean | undefined {
     const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
     return () => {
       alive = false;
+      clearTimeout(fallback);
       subscription.remove();
     };
   }, []);
@@ -398,6 +534,40 @@ export function useCountdownSeconds(clockRemainingMs: number | undefined, fallba
   }, [beat, startingMs]);
 
   return seconds;
+}
+
+/**
+ * A number that counts up from `from` to `to` once, so a score visibly grows
+ * at the reveal. With reduced motion it simply shows `to`.
+ */
+export function CountUp({
+  from,
+  to,
+  delay = 0,
+  reduceMotion,
+  ...text
+}: Omit<Parameters<typeof CosmicText>[0], 'children'> & {
+  readonly from: number;
+  readonly to: number;
+  readonly delay?: number;
+  readonly reduceMotion: boolean | undefined;
+}) {
+  const [value] = useState(() => new Animated.Value(from));
+  const [shown, setShown] = useState(reduceMotion === false ? from : to);
+  useEffect(() => {
+    if (reduceMotion !== false || from === to) {
+      value.setValue(to);
+      return;
+    }
+    const id = value.addListener(({ value: next }) => setShown(Math.round(next)));
+    const animation = Animated.timing(value, { toValue: to, duration: 700, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    animation.start();
+    return () => {
+      animation.stop();
+      value.removeListener(id);
+    };
+  }, [delay, from, reduceMotion, to, value]);
+  return <CosmicText {...text}>{reduceMotion === false ? shown : to}</CosmicText>;
 }
 
 /** "08s": two digits, as the mockups' timer pills read. */

@@ -99,7 +99,7 @@ convention:
 | Surface | Allowed | Withheld |
 | --- | --- | --- |
 | TV stage | shared prompt, timer, participation, aggregate tally, reveal, recap, standings | raw player-to-choice mapping, private controls, hidden/future content |
-| Player Phone | that player's choices, lock state, busy/error feedback, eyes-up guidance | other players' choices/timing, hidden answer key, pre-reveal correctness, future prompts |
+| Player Phone | that player's choices, lock state, their own result once revealed, shared standings, busy/error feedback, eyes-up guidance | other players' choices and raw timing, hidden answer key, pre-reveal correctness, future prompts |
 
 Trivia's TV reveal receives normalized verdicts and standings. Voting's TV
 reveal receives aggregate counts and optionally grouped labels after reveal;

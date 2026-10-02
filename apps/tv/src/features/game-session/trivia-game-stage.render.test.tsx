@@ -139,6 +139,17 @@ describe('Trivia TV game renderer', () => {
     expect(result.getByText(quip, { includeHiddenElements: true })).toBeTruthy();
   });
 
+  it('shows each player\'s round points and their new total', async () => {
+    const result = await render(
+      <TvTrivia state={{ ...revealState, standings: [{ playerId: 'ada', score: 300 }, { playerId: 'bo', score: 0 }], revealGains: { ada: 100, bo: 0 } }} />,
+    );
+
+    expect(result.getByText('+100', { includeHiddenElements: true })).toBeTruthy();
+    // Until the device says it wants motion, the total shows its final value.
+    expect(result.getByText('300', { includeHiddenElements: true })).toBeTruthy();
+    expect(result.queryByText('+0', { includeHiddenElements: true })).toBeNull();
+  });
+
   it('keeps ten-player reveal outcomes inside a compact two-column stage', async () => {
     const result = await render(
       <TvTrivia state={tenPlayerRevealState} players={tenPlayers} />,
