@@ -69,6 +69,35 @@ Record the commands run and whether a failure is introduced, pre-existing, or
 blocked by the environment. Do not “fix” an unrelated failure by rewriting
 unrelated code.
 
+## Working notes
+
+- Dev builds: the TV Metro runs on port 8081 and the phone Metro on 8082. Run
+  them without `CI=1`, which turns off file watching. The Android TV emulator
+  needs `adb reverse tcp:8081 tcp:8081`. If a phone keeps showing old game
+  code after an edit under `games/`, reload the app; Fast Refresh does not
+  always reach game packages.
+- Room views (roster, setup, browsed card, running game) answer only the
+  room's TV, which passes `tvSessionToken`, or a seated phone, which passes
+  `sessionToken`. A new room query must use `roomViewer` from
+  `convex/convex/lib/authorization.ts`. Changing these arguments breaks clients
+  in both directions, so follow the release order in
+  [`docs/implementation-plan.md`](docs/implementation-plan.md).
+- Game packages animate with React Native `Animated`, never Reanimated, and keep
+  their own palettes: the Cosmic Quiz colours belong to `games/trivia` only.
+  `pnpm validate:architecture` enforces both.
+- Runtime artwork is pinned by file name, size, alpha and SHA-256 in
+  `tools/validate-architecture.py`. Replacing an image means updating its
+  spec. PNG and JPEG are both read; use JPEG for opaque, photo-like backdrops.
+- Use the shared text components (`PlayroomText`, `HuddleText`, Trivia's
+  `CosmicText`) rather than a bare `Text`. They cap how far type follows the
+  system text size (`fontScaleCap`), so display headings do not split
+  mid-word at the largest accessibility sizes.
+- Trivia and Voting keep `playerRange.min: 1` so a single device can test the
+  whole flow.
+- Check visual changes on the iPhone simulator and the Android TV emulator,
+  not only in render tests. Cover a guest phone, ten players, long names,
+  reduced motion and the largest text size when the change touches them.
+
 ## GitHub publishing from Codex
 
 The managed sandbox restricts `.git` writes and outbound GitHub access. Run

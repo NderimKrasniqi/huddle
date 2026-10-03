@@ -2,8 +2,10 @@
 
 ## Execution state
 
-**Current phase:** Playroom redesign built on branch `feat/platform-redesign`;
-simulator review, fresh bundle evidence, and independent review pending
+**Current phase:** Playroom redesign, Cosmic Quiz Trivia and the visual
+polish pass are merged on `main`. Open: the release order for the room-view
+credential change (below), the physical party check, Voting on devices, and
+the live seat preview.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -36,10 +38,10 @@ artwork rather than source-master design material.
 - [x] Heartbeat runtime art, components, and design references removed; app
   icons and splash regenerated from the Huddle-Platform app artwork; the
   architecture validator pins the Playroom and game artwork.
-- [ ] Simulator and emulator pass on iPhone and Android TV (1920 and 1280)
-  compared against the concept boards and the prototype.
-- [ ] Fresh Phone and TV exports through `pnpm verify:bundle-seam`.
-- [ ] Independent review of the redesign.
+- [x] Simulator and emulator pass on iPhone and Android TV, compared against
+  the concept boards and the prototype (visual audit, PRs 61–69).
+- [x] Fresh Phone and TV exports through `pnpm verify:bundle-seam`.
+- [x] Independent review of the redesign (reviewer passes on PRs 61–63).
 - [ ] Live seat preview while a player picks a look, which needs the server
   to share a player's look before they finish joining.
 
@@ -174,7 +176,7 @@ artwork rather than source-master design material.
   picker return, join handoff, navigation-motion, and contact-sheet findings.
 - [x] Obtain follow-up independent approval against the repaired implementation.
 
-### 9. Game-night lounge screens — in review
+### 9. Game-night lounge screens — complete except Voting on devices
 
 Native Phone and TV screens follow the fifth-pass lounge prototype in
 `output/playroom-review/`. Trivia and Voting gameplay is unchanged.
@@ -190,11 +192,12 @@ Native Phone and TV screens follow the fifth-pass lounge prototype in
   duplicate-action, and finished-game confirmation findings are repaired.
 - [x] Trivia and Voting accept one player (`playerRange.min: 1`) so a single
   device can test the whole flow; range tests follow the declared minimum.
-- [ ] Two-seat run covering guest views, 10 seats, long names, larger text,
-  reduced motion and Voting.
+- [x] Two-seat run covering guest views, 10 seats, long names (PR 58), the
+  largest text sizes (PR 67) and reduced motion (PR 68).
+- [ ] Voting on devices with guest phones.
 - [ ] Android Phone and tvOS checks (not run; tvOS project not generated).
 
-### 10. Cosmic Quiz Trivia — in review
+### 10. Cosmic Quiz Trivia — complete
 
 Trivia's TV and Phone screens follow the approved Cosmic Quiz mockups (Huddle
 Playroom v10; the reference pack is kept locally and is not in git). Voting and
@@ -212,9 +215,54 @@ the platform screens are unchanged.
 - [x] One-seat traversal on iPhone 17 and Android TV dev builds, including the
   Host skipping a break and the final scores; independent review repaired the
   6–10 player reveal, podium and crew-row layouts.
-- [ ] Two-seat run with guest phones, ten players and long names on devices.
-- [ ] Question categories (the mockups' "SPACE" chip) need the category in
-  game state; not shown yet.
+- [x] Two-seat run with guest phones, ten players and long names on devices
+  (PRs 58, 63).
+- [x] Question categories: each question carries its category chip (PR 59).
+
+### 11. Visual polish and room-view access — complete
+
+- [x] Audit fixes: spacing, contrast and copy across the flow (PR 61).
+- [x] Celebration and feedback: round points, the owner's private "You got
+  it!" verdict, launch wipe, confetti and winner rings (PR 62); the owner's
+  finishing place on the phone (PR 63).
+- [x] A returning guest whose remembered avatar is taken gets a free one
+  (PR 64).
+- [x] Room views — roster, setup, browsed card and running game — answer only
+  this room's TV (its TV session credential) or a seated phone (PRs 65, 66).
+  Session-token authority is unchanged: a token still proves exactly one seat.
+- [x] Text follows the system size up to a cap by type size (PR 67).
+- [x] Under reduced motion the Trivia stage waits for its sky (PR 68); the sky
+  ships as a 112 KB JPEG (PR 69).
+
+### 12. Release order for the room-view credential change — pending
+
+PRs 65 and 66 change the room-view protocol in both directions:
+
+- An updated server gives a client that sends no credential an empty roster,
+  no setup or card, and an `unavailable` game.
+- A new client sends `sessionToken` / `tvSessionToken` arguments that an old
+  server's validators reject as extra fields ("Object contains extra field").
+
+So neither "apps first" nor "server first" is safe alone. Pick one:
+
+- **Cutover (small private rollout):**
+  - [ ] Build the TV and phone release apps from `main` (PR 66 or later) and
+    check them against the dev deployment: join, lobby roster, picker, a full
+    Trivia game, back to lobby.
+  - [ ] With owner approval for the production action, deploy Convex to
+    production (`pnpm --filter convex exec convex deploy`) and install the
+    new builds on every TV and phone straight after. Old builds see an empty
+    room until updated.
+- **Zero-downtime (anyone on an old build):**
+  - [ ] Deploy a transitional server that accepts the new optional arguments
+    but does not yet refuse callers without them. This needs a small code
+    change; it is not on `main`.
+  - [ ] Release the new TV and phone builds and wait until old builds are gone.
+  - [ ] Deploy `main` (the enforcing server).
+- [ ] Either way: smoke-test production on one TV and two phones. An empty
+  roster on the TV means an old build is still installed somewhere.
+- [ ] Rollback is not free: an older server rejects the new clients' extra
+  arguments, so roll forward, or roll back server and apps together.
 
 ## Validation ledger
 
@@ -232,6 +280,11 @@ focused Convex and Phone regressions. Independent re-review previously approved
 the room-handoff availability gate and complete Trivia/Voting TV accessibility
 summaries after 18 focused render cases passed. Recovery/reduced-motion physical
 observation and the mixed physical party check remain open.
+
+The visual polish pass (PRs 61–69) adds: full `pnpm test`, typecheck, lint and
+validators on every PR; fresh bundle-seam exports; device runs on iPhone 17 /
+17 Pro simulators and the Android TV emulator with one guest phone and up to
+ten bot players; the largest iOS text sizes; and reduced motion on the TV.
 
 ## Non-negotiable constraints
 
