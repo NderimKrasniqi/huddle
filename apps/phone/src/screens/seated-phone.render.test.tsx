@@ -196,8 +196,11 @@ describe('Phone picker', () => {
       />,
     );
 
+    // The card already in the middle does nothing; another one moves the room there.
     await fireEvent.press(result.getByTestId('phone-game-card-trivia'));
-    expect(onBrowse).toHaveBeenCalledWith(0);
+    expect(onBrowse).not.toHaveBeenCalled();
+    await fireEvent.press(result.getByTestId('phone-game-card-voting'));
+    expect(onBrowse).toHaveBeenCalledWith(1);
     expect(onChoose).not.toHaveBeenCalled();
     await fireEvent.press(result.getByTestId('picker-back-top'));
     expect(onBackToRoom).toHaveBeenCalledTimes(1);

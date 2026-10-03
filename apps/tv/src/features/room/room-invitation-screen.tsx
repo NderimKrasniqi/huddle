@@ -43,6 +43,15 @@ function seatArrival(delay: number) {
     .reduceMotion(ReduceMotion.System);
 }
 
+/** Someone new dropping into their seat: a rare, happy moment, so it bounces once. */
+const SEAT_DROP_IN = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: -60 }, { scale: 0.9 }] },
+  60: { opacity: 1, transform: [{ translateY: 6 }, { scale: 1.04 }], easing: Easing.bezier(...playroomEasing.out) },
+  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: Easing.bezier(...playroomEasing.inOut) },
+})
+  .duration(520)
+  .reduceMotion(ReduceMotion.System);
+
 /** How far a seat rises: the middle seats sit highest, like a row round the couch. */
 function arcLift(position: number): number {
   return Math.round(Math.sin((Math.PI * (position + 0.5)) / PLAYER_CAPACITY) * 64);
@@ -174,14 +183,17 @@ export function RoomInvitationScreen({
               const seat = arrival ? (
                 <ArrivingSeat arrival={arrival} reduceMotion={reduceMotion} />
               ) : player ? (
-                <JoinedPlayer player={player} arrivalDelay={firstShow ? position * playroomMotion.stagger : 0} reduceMotion={reduceMotion} />
+                <JoinedPlayer player={player} arrivalDelay={firstShow ? position * playroomMotion.stagger : 0} justArrived={!firstShow && welcomeIds.includes(player.id)} reduceMotion={reduceMotion} />
               ) : (
                 <EmptySlot position={position} />
               );
               return (
-                <View key={arrival ? `arriving-${arrival.id}` : player ? player.id : `empty-${position + 1}`} style={{ marginBottom: arcLift(position) }}>
+                <Animated.View
+                  key={arrival ? `arriving-${arrival.id}` : player ? player.id : `empty-${position + 1}`}
+                  style={{ marginBottom: arcLift(position) }}
+                >
                   {seat}
-                </View>
+                </Animated.View>
               );
             })}
           </View>
@@ -194,16 +206,19 @@ export function RoomInvitationScreen({
 function JoinedPlayer({
   player,
   arrivalDelay,
+  justArrived = false,
   reduceMotion,
 }: {
   readonly player: RoomInvitationPlayer;
   readonly arrivalDelay: number;
+  /** Joined while the room was already showing: drop in and light up the name. */
+  readonly justArrived?: boolean;
   readonly reduceMotion: boolean;
 }) {
   const name = player.name.trim() || 'Player';
   return (
     <Animated.View
-      entering={reduceMotion ? undefined : seatArrival(arrivalDelay)}
+      entering={reduceMotion ? undefined : justArrived ? SEAT_DROP_IN : seatArrival(arrivalDelay)}
       style={styles.seat}
       pointerEvents="none"
       focusable={false}
@@ -221,10 +236,10 @@ function JoinedPlayer({
           </PlayroomText>
         </View>
       )}
-      <PlayroomText numberOfLines={1} style={[playroomTv.type.caption, styles.name]} accessibilityElementsHidden>
+      <PlayroomText numberOfLines={1} style={[playroomTv.type.caption, styles.name, justArrived ? styles.nameNew : null]} accessibilityElementsHidden>
         {name}
       </PlayroomText>
-      {player.away ? <SeatTag label="AWAY" /> : null}
+      {player.away ? <SeatTag label="Away" /> : null}
     </Animated.View>
   );
 }
@@ -255,14 +270,14 @@ function ArrivingSeat({ arrival, reduceMotion }: { readonly arrival: RoomInvitat
       <PlayroomText color="muted" numberOfLines={1} style={[playroomTv.type.caption, styles.name]} accessibilityElementsHidden>
         {name || 'Joining…'}
       </PlayroomText>
-      {name ? <SeatTag label="JOINING" /> : null}
+      {name ? <SeatTag label="Joining" tone="joining" /> : null}
     </Animated.View>
   );
 }
 
-function SeatTag({ label }: { readonly label: string }) {
+function SeatTag({ label, tone = 'away' }: { readonly label: string; readonly tone?: 'away' | 'joining' }) {
   return (
-    <View style={[styles.tag, styles.tagAway]} pointerEvents="none" focusable={false}>
+    <View style={[styles.tag, tone === 'joining' ? styles.tagJoining : styles.tagAway]} pointerEvents="none" focusable={false}>
       <PlayroomText color="ink" style={styles.tagText} accessibilityElementsHidden>
         {label}
       </PlayroomText>
@@ -404,6 +419,13 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: playroomColors.lavender,
   },
+  // A new arrival's name, lit for the few seconds the room says hello.
+  nameNew: {
+    paddingHorizontal: 12,
+    borderRadius: playroomRadii.pill,
+    overflow: 'hidden',
+    backgroundColor: playroomColors.orange,
+  },
   name: {
     marginTop: 6,
     maxWidth: 152,
@@ -412,19 +434,32 @@ const styles = StyleSheet.create({
     marginTop: 6,
     height: playroomTv.type.caption.lineHeight,
   },
+  // A status sits above the head like a little speech tag, clear of the name below.
   tag: {
     position: 'absolute',
-    top: 100 - 26,
+    top: -30,
+    alignSelf: 'center',
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 1,
+    backgroundColor: playroomColors.surface,
+    borderWidth: 2,
+    borderColor: playroomColors.border,
+    ...playroomShadows.card,
   },
   tagAway: {
-    backgroundColor: playroomColors.disabled,
+    borderColor: playroomColors.border,
+  },
+  tagJoining: {
+    backgroundColor: playroomColors.orange,
+    borderColor: playroomColors.orange,
   },
   tagText: {
     ...playroomTv.type.caption,
-    letterSpacing: 1,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: playroomTv.type.title.fontFamily,
+    letterSpacing: 0.5,
   },
   footer: {
     flexDirection: 'row',

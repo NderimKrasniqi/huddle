@@ -117,10 +117,14 @@ const SHELF_GAP = 14;
  */
 function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly busy: boolean; readonly onBrowse: (index: number) => void }) {
   const { width } = useWindowDimensions();
-  const inset = Math.max((width - SHELF_CARD) / 2, 16);
+  // The shelf spans the full screen width, so this centres each card exactly.
+  const inset = Math.max((width - SHELF_CARD) / 2, 0);
   const ref = useRef<ScrollView>(null);
+  const moving = useRef(false);
+  const settle = (to: number) => ref.current?.scrollTo({ x: to * (SHELF_CARD + SHELF_GAP), animated: true });
+  // Follow the room's index, but never yank the shelf out from under a finger.
   useEffect(() => {
-    ref.current?.scrollTo({ x: index * (SHELF_CARD + SHELF_GAP), animated: true });
+    if (!moving.current) settle(index);
   }, [index]);
   return (
     <>
@@ -132,9 +136,15 @@ function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly
       decelerationRate="fast"
       contentContainerStyle={{ paddingHorizontal: inset, gap: SHELF_GAP }}
       style={styles.shelf}
+      onScrollBeginDrag={() => {
+        moving.current = true;
+      }}
       onMomentumScrollEnd={(event) => {
-        const next = Math.round(event.nativeEvent.contentOffset.x / (SHELF_CARD + SHELF_GAP));
-        if (next !== index && !busy) onBrowse(Math.min(Math.max(next, 0), CAROUSEL_REGISTRY.length - 1));
+        moving.current = false;
+        const next = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / (SHELF_CARD + SHELF_GAP)), 0), CAROUSEL_REGISTRY.length - 1);
+        // While a previous move is still landing, put the shelf back where the room is.
+        if (busy) settle(index);
+        else if (next !== index) onBrowse(next);
       }}
       testID="phone-game-shelf"
     >
@@ -144,7 +154,7 @@ function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly
         return (
           <PlayroomPressable
             key={module.metadata.id}
-            onPress={() => onBrowse(position)}
+            onPress={() => (position === index ? undefined : onBrowse(position))}
             disabled={busy}
             accessibilityRole="button"
             accessibilityLabel={`${module.metadata.title}${soon ? ', coming soon' : ''}${focused ? ', selected' : ''}`}
