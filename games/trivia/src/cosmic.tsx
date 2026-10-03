@@ -37,6 +37,36 @@ export const cosmic = {
   missed: '#6B7891',
 } as const;
 
+/**
+ * Trivia's motion. The curve and press timing match the platform's
+ * (`playroomEasing.out`, `playroomMotion.press`), so the hand-off from the room
+ * screens feels like one product; a game keeps its own copy because it may not
+ * import the platform's motion tokens.
+ */
+export const COSMIC_MOTION = {
+  /** An element arriving: under the 300 ms UI budget, no overshoot. */
+  enter: 280,
+  /** Press-in feedback, and the quicker-feeling release. */
+  press: 120,
+  release: 160,
+  /** The once-per-game curtain into the night sky. */
+  wipe: 600,
+  /** One beat drawing the eye to the revealed answer. */
+  pulse: 320,
+} as const;
+
+let strongEaseOut: ((progress: number) => number) | undefined;
+
+/**
+ * Strong ease-out: starts fast, so motion answers the moment it begins. Built
+ * on first use, because the Node-run contract tests load this module without
+ * React Native's `Easing`.
+ */
+export function cosmicEaseOut(progress: number): number {
+  strongEaseOut ??= Easing.bezier(0.23, 1, 0.32, 1);
+  return strongEaseOut(progress);
+}
+
 /** A, B, C and D always wear the same colour on both screens. */
 export const ANSWER_TONES = [cosmic.turquoise, cosmic.butter, cosmic.coral, cosmic.periwinkle] as const;
 
@@ -304,7 +334,7 @@ export function LaunchWipe({
   const [progress] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (reduceMotion !== false) return;
-    const animation = Animated.timing(progress, { toValue: 1, duration: 750, delay: 120, easing: Easing.in(Easing.cubic), useNativeDriver: true });
+    const animation = Animated.timing(progress, { toValue: 1, duration: COSMIC_MOTION.wipe, delay: 120, easing: cosmicEaseOut, useNativeDriver: true });
     animation.start();
     return () => animation.stop();
   }, [progress, reduceMotion]);
@@ -481,9 +511,9 @@ export function Enter({
     }
     const animation = Animated.timing(progress, {
       toValue: 1,
-      duration: 420,
+      duration: COSMIC_MOTION.enter,
       delay,
-      easing: Easing.out(Easing.back(1.4)),
+      easing: cosmicEaseOut,
       useNativeDriver: true,
     });
     animation.start();
@@ -503,6 +533,41 @@ export function Enter({
         },
       ]}
     >
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
+ * One gentle beat — up to 1.04 and back — after `delay`, so the room's eyes
+ * land on what just appeared. It plays once per mount and never under reduced
+ * motion.
+ */
+export function Pulse({
+  children,
+  delay = 0,
+  reduceMotion,
+  style,
+}: {
+  readonly children: ReactNode;
+  readonly delay?: number;
+  readonly reduceMotion: boolean | undefined;
+  readonly style?: StyleProp<ViewStyle>;
+}) {
+  const [beat] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (reduceMotion !== false) return;
+    const half = { duration: COSMIC_MOTION.pulse / 2, easing: cosmicEaseOut, useNativeDriver: true };
+    const animation = Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(beat, { toValue: 1, ...half }),
+      Animated.timing(beat, { toValue: 0, ...half }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [beat, delay, reduceMotion]);
+  return (
+    <Animated.View style={[style, { transform: [{ scale: beat.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] }]}>
       {children}
     </Animated.View>
   );

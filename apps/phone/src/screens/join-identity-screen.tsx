@@ -16,12 +16,13 @@ import {
   PlayroomStatusImage,
   PlayroomText,
   PlayroomWordmark,
+  PlayroomPressable,
 } from '@huddle/ui/native';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { joinFailureMessage } from '../features/join/join-rejection';
@@ -356,7 +357,7 @@ export default function JoinIdentityScreen() {
             const taken = availability?.takenAvatarIds.includes(candidate) === true;
             const selected = candidate === avatarId;
             return (
-              <Pressable
+              <PlayroomPressable
                 key={candidate}
                 onPress={() => {
                   setAvatarId(candidate);
@@ -386,7 +387,7 @@ export default function JoinIdentityScreen() {
                     </View>
                   ) : null}
                 </View>
-              </Pressable>
+              </PlayroomPressable>
             );
           })}
         </View>

@@ -7,8 +7,9 @@ import {
   PlayroomPill,
   PlayroomMoment,
   PlayroomText,
+  PlayroomPressable,
 } from '@huddle/ui/native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { rosterRowControls, type lobbyStanding, type RosterSeat } from '../../features/room';
 import type { PlayerSession } from '../../platform/session';
@@ -92,7 +93,7 @@ function HostLobby({ session, roster, onManage }: LobbyScreenProps) {
           const manageable = rosterRowControls(seat).length > 0;
           const tile = <PlayerTile seat={seat} />;
           return manageable ? (
-            <Pressable
+            <PlayroomPressable
               key={seat.playerId}
               onPress={() => onManage(seat)}
               accessibilityRole="button"
@@ -102,7 +103,7 @@ function HostLobby({ session, roster, onManage }: LobbyScreenProps) {
               style={styles.cell}
             >
               {tile}
-            </Pressable>
+            </PlayroomPressable>
           ) : (
             <View key={seat.playerId} style={styles.cell} testID={`lobby-player-${seat.playerId}`}>
               {tile}

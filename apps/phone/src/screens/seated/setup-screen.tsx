@@ -17,6 +17,7 @@ import {
   PlayroomPill,
   PlayroomSettingIcon,
   PlayroomText,
+  PlayroomPressable,
 } from '@huddle/ui/native';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
@@ -224,7 +225,7 @@ function SettingControlView({
   }
 
   return (
-    <Pressable
+    <PlayroomPressable
       onPress={onOpenSheet}
       accessibilityRole="button"
       accessibilityLabel={`${control.label}: ${chosen?.label ?? ''}`}
@@ -236,7 +237,7 @@ function SettingControlView({
       <PlayroomText style={[playroomPhone.type.label, styles.flex]}>{control.label}</PlayroomText>
       <PlayroomText color="muted" style={playroomPhone.type.body}>{chosen?.label}</PlayroomText>
       <PlayroomText style={styles.chevron}>›</PlayroomText>
-    </Pressable>
+    </PlayroomPressable>
   );
 }
 
@@ -252,7 +253,7 @@ function Segment({
   readonly testID?: string;
 }) {
   return (
-    <Pressable
+    <PlayroomPressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -263,7 +264,7 @@ function Segment({
       <PlayroomText color={selected ? 'ink' : 'muted'} numberOfLines={1} style={playroomPhone.type.caption}>
         {label}
       </PlayroomText>
-    </Pressable>
+    </PlayroomPressable>
   );
 }
 
@@ -281,7 +282,7 @@ function StepButton({
   readonly testID?: string;
 }) {
   return (
-    <Pressable
+    <PlayroomPressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -291,7 +292,7 @@ function StepButton({
       style={[styles.step, disabled ? styles.stepOff : null]}
     >
       <PlayroomText color={disabled ? 'muted' : 'ink'} style={styles.stepLabel}>{label}</PlayroomText>
-    </Pressable>
+    </PlayroomPressable>
   );
 }
 
@@ -317,7 +318,7 @@ function OptionSheet({
           <PlayroomText style={playroomPhone.type.heading}>{control.label}</PlayroomText>
         </View>
         {control.options.map((option) => (
-          <Pressable
+          <PlayroomPressable
             key={option.value}
             onPress={() => onChoose(option.value)}
             accessibilityRole="button"
@@ -329,7 +330,7 @@ function OptionSheet({
             <View style={[styles.check, option.chosen ? styles.checkOn : null]}>
               {option.chosen ? <View style={styles.tick} /> : null}
             </View>
-          </Pressable>
+          </PlayroomPressable>
         ))}
         <PlayroomButton label="Done" onPress={onClose} />
       </View>

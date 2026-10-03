@@ -13,7 +13,9 @@ import {
   CountdownRing,
   Confetti,
   CountUp,
+  COSMIC_MOTION,
   Enter,
+  Pulse,
   LaunchWipe,
   LetterBadge,
   Logo,
@@ -155,7 +157,7 @@ function IntroStage({
         </Enter>
         <View style={styles.introRow}>
           <Mascot pose="wave" width={420} reduceMotion={reduceMotion} />
-          <Enter reduceMotion={reduceMotion} delay={200} scale={0.6} from={0} style={styles.introClock}>
+          <Enter reduceMotion={reduceMotion} delay={200} scale={0.88} from={0} style={styles.introClock}>
             <CountdownRing seconds={seconds} size={250} />
             <CosmicText weight="extraBold" size={30} color={cosmic.cream} tracking={5} style={{ marginTop: 18 }}>
               FIRST QUESTION IN
@@ -312,14 +314,17 @@ function RevealStage({
             {screen.text}
           </CosmicText>
           {correct ? (
-            <Enter reduceMotion={reduceMotion} delay={350} scale={0.8} from={0} style={{ alignSelf: 'stretch', marginTop: 36 }}>
-              <View style={[styles.correctTile, { backgroundColor: answerTone(correct.optionIndex) }]}>
-                <LetterBadge optionIndex={correct.optionIndex} size={72} />
-                <CosmicText weight="black" size={correctAnswerSize(correct.text)} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.answerText}>
-                  {correct.text}
-                </CosmicText>
-                <CheckBadge size={60} />
-              </View>
+            <Enter reduceMotion={reduceMotion} delay={350} scale={0.9} from={0} style={{ alignSelf: 'stretch', marginTop: 36 }}>
+              {/* After the tile lands, one beat so the room finds the answer. */}
+              <Pulse reduceMotion={reduceMotion} delay={350 + COSMIC_MOTION.enter}>
+                <View style={[styles.correctTile, { backgroundColor: answerTone(correct.optionIndex) }]}>
+                  <LetterBadge optionIndex={correct.optionIndex} size={72} />
+                  <CosmicText weight="black" size={correctAnswerSize(correct.text)} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.answerText}>
+                    {correct.text}
+                  </CosmicText>
+                  <CheckBadge size={60} />
+                </View>
+              </Pulse>
             </Enter>
           ) : null}
           <Enter reduceMotion={reduceMotion} delay={700} from={10} style={styles.tally} testID="trivia-tv-tally">
@@ -350,7 +355,7 @@ function RevealStage({
                     )}
                   </View>
                   {row.gain !== undefined && row.gain > 0 && !compact ? (
-                    <Enter reduceMotion={reduceMotion} delay={600 + index * 70} scale={0.5} from={0}>
+                    <Enter reduceMotion={reduceMotion} delay={600 + index * 70} scale={0.85} from={0}>
                       <Pill color={cosmic.butter} style={styles.gainPill}>
                         <CosmicText weight="black" size={roomy ? 30 : 26}>{`+${row.gain}`}</CosmicText>
                       </Pill>

@@ -7,6 +7,8 @@ import {
   answerTone,
   cosmic,
   CosmicText,
+  COSMIC_MOTION,
+  cosmicEaseOut,
   Enter,
   LetterBadge,
   LockMark,
@@ -94,18 +96,21 @@ export function TriviaPhoneScreen({
         <Enter reduceMotion={reduceMotion}>
           <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Answer locked!</CosmicText>
         </Enter>
-        <Enter reduceMotion={reduceMotion} scale={0.6} from={0} delay={80}>
+        <Enter reduceMotion={reduceMotion} scale={0.88} from={0} delay={80}>
           <LockMark size={130} />
         </Enter>
-        {answered !== undefined ? (
-          <CosmicText weight="bold" size={19} align="center" style={{ marginTop: 18 }}>
-            {`${answered} of ${current.standings.length} answered`}
-          </CosmicText>
-        ) : null}
-        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 4 }}>Waiting for others…</CosmicText>
-        <Mascot pose="point" width={170} reduceMotion={reduceMotion} style={{ marginTop: 16 }} />
-        <CosmicText weight="black" size={22} align="center">Eyes on the TV!</CosmicText>
-        <CosmicText size={16} color={cosmic.muted} align="center">The reveal is coming.</CosmicText>
+        {/* The rest follows the lock in, so the swap from four answers never teleports. */}
+        <Enter reduceMotion={reduceMotion} delay={160} style={{ alignItems: 'center' }}>
+          {answered !== undefined ? (
+            <CosmicText weight="bold" size={19} align="center" style={{ marginTop: 18 }}>
+              {`${answered} of ${current.standings.length} answered`}
+            </CosmicText>
+          ) : null}
+          <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 4 }}>Waiting for others…</CosmicText>
+          <Mascot pose="point" width={170} reduceMotion={reduceMotion} style={{ marginTop: 16 }} />
+          <CosmicText weight="black" size={22} align="center">Eyes on the TV!</CosmicText>
+          <CosmicText size={16} color={cosmic.muted} align="center">The reveal is coming.</CosmicText>
+        </Enter>
       </Surface>
     );
   }
@@ -240,7 +245,7 @@ function RevealSurface({
       ) : (
         <>
           {/* Only this phone's own outcome: the TV is showing everyone's. */}
-          <Enter reduceMotion={reduceMotion} scale={0.7} from={0} testID="trivia-phone-verdict">
+          <Enter reduceMotion={reduceMotion} scale={0.88} from={0} testID="trivia-phone-verdict">
             <View style={[styles.verdictBadge, { backgroundColor: verdict ? cosmic.turquoise : cosmic.coral }]}>
               <CosmicText weight="black" size={30} align="center" accessibilityRole="header">
                 {verdict ? 'You got it!' : 'Not this time'}
@@ -371,12 +376,18 @@ function PressScale({
   const scale = useState(() => new Animated.Value(1))[0];
   const to = (value: number) => {
     if (reduceMotion !== false) return;
-    Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: value === 1 ? 8 : 0 }).start();
+    // Feedback the instant the finger lands; the release settles without a wobble.
+    Animated.timing(scale, {
+      toValue: value,
+      duration: value === 1 ? COSMIC_MOTION.release : COSMIC_MOTION.press,
+      easing: cosmicEaseOut,
+      useNativeDriver: true,
+    }).start();
   };
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={() => to(0.96)}
+      onPressIn={() => to(0.97)}
       onPressOut={() => to(1)}
       disabled={disabled}
       accessibilityRole="button"
