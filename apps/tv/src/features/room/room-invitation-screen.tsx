@@ -15,7 +15,7 @@ import {
   PlayroomTvStage,
 } from '@huddle/ui/native';
 import QRCode from 'react-native-qrcode-svg';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -31,6 +31,7 @@ import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduc
 
 /** The room's seat count comes from the room rules, not from the avatar set. */
 const PLAYER_CAPACITY = ROOM_PLAYER_CAP;
+const GOODBYE_MS = 520;
 
 /** A seat's portrait arriving: from 0.9 and transparent, never from nothing. */
 function seatArrival(delay: number) {
@@ -42,6 +43,17 @@ function seatArrival(delay: number) {
     .delay(delay)
     .reduceMotion(ReduceMotion.System);
 }
+
+/**
+ * Someone leaving: a copy of their portrait rises and fades over the seat
+ * they left, so the room sees them wave goodbye without any seat moving.
+ */
+const SEAT_GOODBYE = new Keyframe({
+  0: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] },
+  100: { opacity: 0, transform: [{ translateY: -46 }, { scale: 0.9 }], easing: Easing.bezier(...playroomEasing.out) },
+})
+  .duration(GOODBYE_MS)
+  .reduceMotion(ReduceMotion.System);
 
 /** Someone new dropping into their seat: a rare, happy moment, so it bounces once. */
 const SEAT_DROP_IN = new Keyframe({
@@ -107,6 +119,21 @@ export function RoomInvitationScreen({
   // Seats present when the room first appears cascade in; anyone joining
   // afterwards arrives on their own, without waiting on a stagger.
   const [firstShow, setFirstShow] = useState(true);
+  // Who just left, and the seat they sat in, kept for one goodbye.
+  const [seen, setSeen] = useState(visiblePlayers);
+  const [leaving, setLeaving] = useState<readonly { readonly player: RoomInvitationPlayer; readonly position: number }[]>([]);
+  if (seen !== visiblePlayers && seen.map((player) => player.id).join() !== visiblePlayers.map((player) => player.id).join()) {
+    const gone = seen
+      .map((player, position) => ({ player, position }))
+      .filter(({ player }) => !visiblePlayers.some((current) => current.id === player.id));
+    setSeen(visiblePlayers);
+    if (gone.length > 0 && !reduceMotion) setLeaving((current) => [...current, ...gone]);
+  }
+  useEffect(() => {
+    if (leaving.length === 0) return;
+    const timer = setTimeout(() => setLeaving([]), GOODBYE_MS + 80);
+    return () => clearTimeout(timer);
+  }, [leaving]);
   useEffect(() => {
     const timer = setTimeout(() => setFirstShow(false), PLAYER_CAPACITY * playroomMotion.stagger + playroomMotion.entrance);
     return () => clearTimeout(timer);
@@ -188,12 +215,15 @@ export function RoomInvitationScreen({
                 <EmptySlot position={position} />
               );
               return (
-                <Animated.View
-                  key={arrival ? `arriving-${arrival.id}` : player ? player.id : `empty-${position + 1}`}
-                  style={{ marginBottom: arcLift(position) }}
-                >
-                  {seat}
-                </Animated.View>
+                // Seats are keyed by place, so a departure never shifts the row.
+                <View key={`seat-${position}`} style={{ marginBottom: arcLift(position) }}>
+                  <Fragment key={arrival ? `arriving-${arrival.id}` : player ? player.id : 'empty'}>{seat}</Fragment>
+                  {leaving.filter((gone) => gone.position === position).map(({ player: gone }) => (
+                    <Animated.View key={`goodbye-${gone.id}`} entering={SEAT_GOODBYE} style={styles.goodbye} pointerEvents="none" testID="leaving-player">
+                      {gone.avatarId ? <PlayroomAvatar avatarId={gone.avatarId} size={100} /> : null}
+                    </Animated.View>
+                  ))}
+                </View>
               );
             })}
           </View>
@@ -420,6 +450,13 @@ const styles = StyleSheet.create({
     backgroundColor: playroomColors.lavender,
   },
   // A new arrival's name, lit for the few seconds the room says hello.
+  goodbye: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   nameNew: {
     paddingHorizontal: 12,
     borderRadius: playroomRadii.pill,
