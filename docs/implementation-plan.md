@@ -42,8 +42,9 @@ artwork rather than source-master design material.
   the concept boards and the prototype (visual audit, PRs 61–69).
 - [x] Fresh Phone and TV exports through `pnpm verify:bundle-seam`.
 - [x] Independent review of the redesign (reviewer passes on PRs 61–63).
-- [ ] Live seat preview while a player picks a look, which needs the server
-  to share a player's look before they finish joining.
+- [x] Live seat preview while a player picks a look: the TV shows an arriving
+  seat with the avatar and the name as typed (owner-approved `seatPreviews`
+  table; TV-only `arrivals`; never a reservation).
 
 ## Completed implementation
 
@@ -263,6 +264,11 @@ So neither "apps first" nor "server first" is safe alone. Pick one:
   roster on the TV means an old build is still installed somewhere.
 - [ ] Rollback is not free: an older server rejects the new clients' extra
   arguments, so roll forward, or roll back server and apps together.
+- [ ] Ship the live seat preview (`seatPreviews`) in the same server deploy.
+  A TV build that subscribes to `seatPreviews.arrivals` against a server
+  without it fails the query ("Could not find public function"), and the TV
+  app crashes rather than degrading, so the server must be live first or at
+  the same moment.
 
 ## Validation ledger
 

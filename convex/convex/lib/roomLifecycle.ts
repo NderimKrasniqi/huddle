@@ -3,7 +3,7 @@ import type { MutationCtx } from '../_generated/server';
 import { cancelDeadline } from './gameClock';
 import { playersInRoom } from './presence';
 
-/** Delete every player and TV credential owned by a room before its row. */
+/** Delete every player, TV credential and seat preview owned by a room before its row. */
 export async function deleteRoomChildren(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<void> {
   const players = await playersInRoom(ctx, roomId);
   for (const player of players) await ctx.db.delete('players', player._id);
@@ -13,6 +13,15 @@ export async function deleteRoomChildren(ctx: MutationCtx, roomId: Id<'rooms'>):
     .withIndex('by_room', (q) => q.eq('roomId', roomId))
     .collect();
   for (const session of sessions) await ctx.db.delete('tvSessions', session._id);
+
+  const previews = await ctx.db
+    .query('seatPreviews')
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
+    .collect();
+  for (const preview of previews) {
+    if (preview.expiryJob !== undefined) await ctx.scheduler.cancel(preview.expiryJob);
+    await ctx.db.delete('seatPreviews', preview._id);
+  }
 }
 
 /** Delete a room, its owned rows, and any game clock as one lifecycle action. */

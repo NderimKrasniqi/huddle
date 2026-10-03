@@ -19,6 +19,7 @@ import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_roomLifecycle from "../lib/roomLifecycle.js";
 import type * as players from "../players.js";
 import type * as rooms from "../rooms.js";
+import type * as seatPreviews from "../seatPreviews.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   "lib/roomLifecycle": typeof lib_roomLifecycle;
   players: typeof players;
   rooms: typeof rooms;
+  seatPreviews: typeof seatPreviews;
 }>;
 
 /**

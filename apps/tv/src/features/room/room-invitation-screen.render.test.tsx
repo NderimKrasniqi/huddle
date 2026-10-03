@@ -66,6 +66,30 @@ describe('RoomInvitationScreen', () => {
     expect(screen.getByLabelText('Empty player slot 3')).toBeTruthy();
   });
 
+  it('fills the next seats with people still choosing their look', async () => {
+    await render(
+      <RoomInvitationScreen
+        roomCode="ABCD"
+        joinUrl="huddle://join/ABCD"
+        reduceMotion
+        players={[{ id: 'ada', name: 'Ada', host: true, avatarId: 'fox' }]}
+        arriving={[
+          { id: 'p1', name: 'Gra', avatarId: 'puppy' },
+          { id: 'p2', name: '', avatarId: 'mint-cat' },
+        ]}
+      />,
+    );
+
+    const arriving = screen.getAllByTestId('arriving-player-slot');
+    expect(arriving.map((slot) => slot.props.accessibilityLabel)).toEqual(['Gra is joining', 'Someone is joining']);
+    expect(arriving.every((slot) => slot.props.focusable === false)).toBe(true);
+    expect(screen.getByText('Joining…', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getAllByTestId('joined-player-slot')).toHaveLength(1);
+    expect(screen.getAllByTestId('empty-player-slot')).toHaveLength(7);
+    // An arriving seat is not a joined player.
+    expect(screen.getByText('1 / 10 joined')).toBeTruthy();
+  });
+
   it('renders at most the ten-player room capacity', async () => {
     const players = Array.from({ length: 11 }, (_unused, position) => ({
       id: `player-${position + 1}`,

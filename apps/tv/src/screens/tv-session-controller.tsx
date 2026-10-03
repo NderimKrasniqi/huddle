@@ -8,7 +8,7 @@ import { useEffect, useMemo } from 'react';
 import { TvGameFlowStage, TvPlatformStatusScreen, type TvGameSetupProjection } from '../features/game-flow/native';
 import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage } from '../features/room/native';
-import type { RosterSeat } from '../models';
+import type { RosterSeat, SeatArrival } from '../models';
 import type { OpenRoom, RoomOpening } from '../platform/room-session';
 import { keepRoomPresent, tvSessionToken, useRoomExpiry } from '../platform/room-session/native';
 import { tvPurposeForSurface } from './tv-purpose';
@@ -47,6 +47,8 @@ export function TvSessionController({
     runningPending: running === undefined,
     hasRunningGame: room.hasRunningGame,
   });
+  // Arrivals change on every keystroke of a join form; only the room screen draws them.
+  const arrivals = useQuery(api.seatPreviews.arrivals, surface === 'room' ? asTv : 'skip');
 
   const playerIds = useMemo(() => roster?.map((player) => String(player.playerId)), [roster]);
   const moments = useRoomMoments({ playerIds, runtime: runtime.kind,
@@ -64,6 +66,7 @@ export function TvSessionController({
       gameId={gameId}
       roomCode={room.code}
       roster={roster ?? []}
+      arrivals={arrivals ?? []}
       browsingAt={browsingAt}
       setup={setup}
     />
@@ -78,6 +81,7 @@ export function TvSessionPresentation({
   gameId,
   roomCode,
   roster,
+  arrivals = [],
   browsingAt,
   setup,
   reduceMotion,
@@ -92,6 +96,8 @@ export function TvSessionPresentation({
   readonly gameId?: string;
   readonly roomCode: string;
   readonly roster: readonly RosterSeat[];
+  /** People on the join form, shown as arriving seats in the room. */
+  readonly arrivals?: readonly SeatArrival[];
   readonly browsingAt?: number | null;
   readonly setup?: TvGameSetupProjection | null;
   readonly reduceMotion?: boolean;
@@ -136,7 +142,7 @@ export function TvSessionPresentation({
   }
 
   if (surface === 'room') {
-    return <RoomStage roomCode={roomCode} roster={roster} returned={returned} welcomeIds={welcomeIds} />;
+    return <RoomStage roomCode={roomCode} roster={roster} arrivals={arrivals} returned={returned} welcomeIds={welcomeIds} />;
   }
 
   if (surface === 'carousel' || surface === 'setup') {

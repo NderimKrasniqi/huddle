@@ -14,6 +14,8 @@ describe('party-safe rate-limit policy', () => {
       hostCommand: { kind: 'token bucket', rate: 120, period: MINUTE, capacity: 240 },
       tvCommand: { kind: 'token bucket', rate: 120, period: MINUTE, capacity: 240 },
       gameEvent: { kind: 'token bucket', rate: 30, period: SECOND, capacity: 60 },
+      seatPreviewRoom: { kind: 'token bucket', rate: 600, period: MINUTE, capacity: 300 },
+      seatPreviewKey: { kind: 'token bucket', rate: 120, period: MINUTE, capacity: 60 },
     });
   });
 });
