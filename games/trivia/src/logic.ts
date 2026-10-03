@@ -213,14 +213,20 @@ function revealGainsFor(state: PlayableTriviaState): Readonly<Record<GamePlayerI
   );
 }
 
-/** Every outcome for the TV; only the viewer's own for a phone. */
-function verdictsForViewer(
-  state: PlayableTriviaState,
+/** Every entry for the TV; only the viewer's own for a phone. */
+function forViewer(
+  all: Readonly<Record<GamePlayerId, boolean>>,
   viewer: GamePlayerId | undefined,
 ): Readonly<Record<GamePlayerId, boolean>> | undefined {
-  const all = revealVerdictsFor(state);
   if (viewer === undefined) return all;
   return Object.hasOwn(all, viewer) ? { [viewer]: all[viewer] === true } : undefined;
+}
+
+/** Whether each seated player answered the question just revealed at all. */
+function revealAnsweredFor(state: PlayableTriviaState): Readonly<Record<GamePlayerId, boolean>> {
+  return Object.fromEntries(
+    state.standings.map(({ playerId }) => [playerId, state.answers?.[playerId] !== undefined]),
+  );
 }
 
 /** Normalize the just-revealed outcome for the shared TV projection. */
@@ -267,7 +273,9 @@ export function redactTriviaStateFor(
     // The TV gets every normalized reveal outcome. A phone gets only its own,
     // which the TV is showing the whole room at that moment anyway; it never
     // receives a field from which it could infer another player's answer.
-    revealVerdicts: current.phase === 'reveal' ? verdictsForViewer(current, viewer) : undefined,
+    revealVerdicts: current.phase === 'reveal' ? forViewer(revealVerdictsFor(current), viewer) : undefined,
+    // A phone's own "did I answer at all"; the TV shows only right or wrong.
+    revealAnswered: current.phase === 'reveal' && viewer !== undefined ? forViewer(revealAnsweredFor(current), viewer) : undefined,
     // The TV alone draws everyone's round points.
     revealGains: current.phase === 'reveal' && viewer === undefined ? revealGainsFor(current) : undefined,
   };

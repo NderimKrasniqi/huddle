@@ -157,7 +157,7 @@ export function TriviaPhoneScreen({
       <RevealSurface
         {...frame}
         state={current}
-        verdict={current.revealVerdicts?.[player.playerId]}
+        verdict={revealVerdict(current, player.playerId)}
         progress={progress}
         seconds={seconds}
         isHost={isHost}
@@ -207,6 +207,28 @@ export function TriviaPhoneScreen({
   return <EyesUp {...frame} pose="point" line={model.kind === 'eyesUp' ? model.line : ''} reduceMotion={reduceMotion} testID={`trivia-phone-${current.phase}`} />;
 }
 
+type RevealVerdict = 'right' | 'wrong' | 'missed';
+
+const VERDICT_COPY: Readonly<Record<RevealVerdict, { readonly title: string; readonly line: string; readonly tone: string }>> = {
+  right: { title: 'You got it!', line: 'Nice one. See how everyone did on the TV.', tone: cosmic.turquoise },
+  wrong: { title: 'Not this time', line: 'The answer and scores are on the TV.', tone: cosmic.coral },
+  // Not a wrong answer: the clock simply beat them to it.
+  missed: { title: 'Out of time', line: 'No answer this round. The next one is yours.', tone: cosmic.butter },
+};
+
+/** The verdict's line, minding that the last question has no next one. */
+function verdictLine(verdict: RevealVerdict, last: boolean): string {
+  return verdict === 'missed' && last ? 'No answer on the last one. Final scores are next.' : VERDICT_COPY[verdict].line;
+}
+
+/** This phone's own outcome, once the room has seen the reveal. */
+function revealVerdict(state: PlayableTriviaState, playerId: string): RevealVerdict | undefined {
+  const right = state.revealVerdicts?.[playerId];
+  if (right === undefined) return undefined;
+  if (right) return 'right';
+  return state.revealAnswered?.[playerId] === false ? 'missed' : 'wrong';
+}
+
 function RevealSurface({
   insets,
   chromeTop,
@@ -222,7 +244,7 @@ function RevealSurface({
   readonly chromeTop: number;
   readonly state: PlayableTriviaState;
   /** This phone's own outcome, when the room has revealed it. */
-  readonly verdict: boolean | undefined;
+  readonly verdict: RevealVerdict | undefined;
   readonly progress: string;
   readonly seconds: number;
   readonly isHost: boolean;
@@ -246,29 +268,25 @@ function RevealSurface({
         <>
           {/* Only this phone's own outcome: the TV is showing everyone's. */}
           <Enter reduceMotion={reduceMotion} scale={0.88} from={0} testID="trivia-phone-verdict">
-            <View style={[styles.verdictBadge, { backgroundColor: verdict ? cosmic.turquoise : cosmic.coral }]}>
+            <View style={[styles.verdictBadge, { backgroundColor: VERDICT_COPY[verdict].tone }]}>
               <CosmicText weight="black" size={30} align="center" accessibilityRole="header">
-                {verdict ? 'You got it!' : 'Not this time'}
+                {VERDICT_COPY[verdict].title}
               </CosmicText>
             </View>
           </Enter>
-          <Mascot pose={verdict ? 'celebrate' : 'point'} width={190} reduceMotion={reduceMotion} />
+          <Mascot pose={verdict === 'right' ? 'celebrate' : 'point'} width={190} reduceMotion={reduceMotion} />
           <CosmicText size={17} align="center" style={{ marginTop: 6 }}>
-            {verdict ? 'Nice one. See how everyone did on the TV.' : 'The answer and scores are on the TV.'}
+            {verdictLine(verdict, last)}
           </CosmicText>
         </>
       )}
-      <Pill style={[styles.pill, styles.nextPill]} testID="trivia-phone-next-clock">
-        <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`}>
-          <CosmicText weight="bold" size={18}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
-          <CosmicText weight="black" size={24}>{`${seconds}s`}</CosmicText>
-        </View>
-      </Pill>
+      {/* A plain line, not a pill: the only thing shaped like a button is the button. */}
+      <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`} testID="trivia-phone-next-clock">
+        <CosmicText weight="bold" size={18} color={cosmic.muted}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
+        <CosmicText weight="black" size={24}>{`${seconds}s`}</CosmicText>
+      </View>
       {isHost ? (
         <>
-          <CosmicText size={15} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>
-            {last ? 'Seen enough?' : 'Ready for the next one?'}
-          </CosmicText>
           <PressScale
             onPress={onNext}
             reduceMotion={reduceMotion}
@@ -498,9 +516,8 @@ const styles = StyleSheet.create({
   answerText: { flex: 1 },
   placeCard: { alignItems: 'center', borderRadius: 28, paddingHorizontal: 36, paddingVertical: 12, marginBottom: 14 },
   verdictBadge: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 999, marginVertical: 8 },
-  nextPill: { marginTop: 16, paddingHorizontal: 26, paddingVertical: 12, alignSelf: 'stretch' },
   nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
   pressable: { alignSelf: 'stretch' },
-  clockRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
+  clockRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginTop: 16 },
   rule: { alignSelf: 'stretch', height: 1, backgroundColor: 'rgba(4,27,57,0.12)', marginVertical: 14 },
 });

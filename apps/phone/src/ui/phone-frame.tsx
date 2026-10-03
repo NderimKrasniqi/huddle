@@ -1,8 +1,17 @@
 import type { AvatarId } from '@huddle/domain';
 import { playroomAvatarCircles, playroomColors, playroomPhone, playroomRadii, playroomShadows } from '@huddle/design-tokens';
 import { PlayroomAvatar, PlayroomText, PlayroomWordmark } from '@huddle/ui/native';
-import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height of the band in the player's colour below the status bar. */
@@ -25,6 +34,7 @@ export type PhoneFrameProps = {
  */
 export function PhoneFrame({ children, avatarId, footer, contentStyle, testID }: PhoneFrameProps) {
   const insets = useSafeAreaInsets();
+  const moreBelow = useMoreBelow();
   return (
     <View style={styles.screen} testID={testID}>
       {avatarId ? (
@@ -36,12 +46,56 @@ export function PhoneFrame({ children, avatarId, footer, contentStyle, testID }:
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: footer ? 16 : insets.bottom + 24 }, contentStyle]}
         showsVerticalScrollIndicator={false}
+        testID="phone-frame-scroll"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        scrollEventThrottle={32}
+        onLayout={(event) => moreBelow.measure({ viewport: event.nativeEvent.layout.height })}
+        onContentSizeChange={(_width, height) => moreBelow.measure({ content: height })}
+        onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => moreBelow.measure({ offset: event.nativeEvent.contentOffset.y })}
       >
         {children}
       </ScrollView>
-      {footer ? <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>{footer}</View> : null}
+      {footer ? (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+          {moreBelow.value ? <ScrollFade /> : null}
+          {footer}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Whether scrolled content continues under the footer. Then it fades out above
+ * the footer, so a list cut off mid-line reads as "more below", not broken.
+ */
+function useMoreBelow() {
+  const sizes = useRef({ viewport: 0, content: 0, offset: 0 });
+  const [value, setValue] = useState(false);
+  const measure = (next: Partial<{ viewport: number; content: number; offset: number }>) => {
+    Object.assign(sizes.current, next);
+    const { viewport, content, offset } = sizes.current;
+    const hidden = viewport > 0 && content - (offset + viewport) > 4;
+    setValue((current) => (current === hidden ? current : hidden));
+  };
+  return { value, measure };
+}
+
+const FADE_STEPS = 8;
+const FADE_STEP_HEIGHT = 4;
+
+/**
+ * Content fading into the footer instead of being sliced mid-line. Stacked
+ * bands of the canvas colour stand in for a gradient, which would need a
+ * native dependency.
+ */
+function ScrollFade() {
+  return (
+    <View style={styles.fade} pointerEvents="none" testID="phone-footer-fade">
+      {Array.from({ length: FADE_STEPS }, (_unused, step) => (
+        <View key={step} style={[styles.fadeBand, { opacity: (step + 1) / FADE_STEPS }]} />
+      ))}
     </View>
   );
 }
@@ -131,6 +185,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: playroomPhone.gutter + 4,
     paddingTop: 8,
     gap: 4,
+  },
+  fade: {
+    position: 'absolute',
+    top: -FADE_STEPS * FADE_STEP_HEIGHT,
+    left: 0,
+    right: 0,
+  },
+  fadeBand: {
+    height: FADE_STEP_HEIGHT,
+    backgroundColor: playroomColors.canvas,
   },
   topBar: {
     minHeight: 44,

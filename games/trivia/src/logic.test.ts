@@ -990,6 +990,20 @@ describe('the game as a client is shown it', () => {
     }
     expect(redact(revealed, ADA).revealVerdicts).toEqual({ [ADA]: true });
     expect(redact(revealed, GRACE).revealVerdicts).toEqual({ [GRACE]: false });
+    expect(redact(revealed, GRACE).revealAnswered).toEqual({ [GRACE]: true });
+  });
+
+  it('tells a phone that ran out of time apart from one that answered wrong', () => {
+    const playing = gameWith(ADA, GRACE);
+    // Ada answers; Grace never does, so the clock ends the question.
+    const revealed = advancing(answering(playing, ADA, wrongAnswerTo(playing)));
+
+    expect(revealed.phase).toBe('reveal');
+    expect(redact(revealed, undefined).revealAnswered).toBeUndefined();
+    expect(redact(revealed, GRACE).revealAnswered).toEqual({ [GRACE]: false });
+    expect(redact(revealed, GRACE).revealVerdicts).toEqual({ [GRACE]: false });
+    // Like the verdicts, a phone learns only about itself.
+    expect(Object.keys(redact(revealed, ADA).revealAnswered ?? {})).toEqual([ADA]);
   });
 
   it('still withholds the rest of the game at the reveal', () => {

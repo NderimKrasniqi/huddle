@@ -142,13 +142,22 @@ describe('Trivia Phone game renderer', () => {
   });
 
   it.each([
-    [true, 'You got it!'],
-    [false, 'Not this time'],
-  ])('tells the owner their own result at the reveal (%s)', async (correct, line) => {
-    const result = await renderPhone({ ...revealState, revealVerdicts: { ada: correct } });
+    [true, true, 'You got it!'],
+    [false, true, 'Not this time'],
+    [false, false, 'Out of time'],
+  ])('tells the owner their own result at the reveal (right: %s, answered: %s)', async (correct, answered, line) => {
+    const result = await renderPhone({ ...revealState, revealVerdicts: { ada: correct }, revealAnswered: { ada: answered } });
 
     expect(result.getByText(line)).toBeTruthy();
     expect(result.queryByText('Eyes on the TV!')).toBeNull();
+  });
+
+  it('does not promise a next question after timing out on the last one', async () => {
+    // The fixture game has a single question, so its reveal is the last.
+    const result = await renderPhone({ ...revealState, revealVerdicts: { ada: false }, revealAnswered: { ada: false } });
+
+    expect(result.getByText('Out of time')).toBeTruthy();
+    expect(result.getByText('No answer on the last one. Final scores are next.')).toBeTruthy();
   });
 
   it('gives only the Host a Next question control during the reveal', async () => {

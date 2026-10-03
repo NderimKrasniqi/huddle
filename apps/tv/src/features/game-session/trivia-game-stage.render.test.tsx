@@ -187,9 +187,13 @@ describe('Trivia TV game renderer', () => {
 
   it('keeps ten-player reveal outcomes inside a compact two-column stage', async () => {
     const result = await render(
-      <TvTrivia state={tenPlayerRevealState} players={tenPlayers} />,
+      <TvTrivia state={{ ...tenPlayerRevealState, revealGains: { [tenPlayers[0]!.playerId]: 100 } }} players={tenPlayers} />,
     );
     const grid = StyleSheet.flatten(result.getByTestId('trivia-tv-verdict-grid').props.style);
+    // A crowded room still sees this round's points beside the running total,
+    // and every row keeps the slot so the totals stay in one column.
+    expect(result.getByText('+100', { includeHiddenElements: true })).toBeTruthy();
+    expect(result.getAllByTestId('trivia-tv-gain-slot')).toHaveLength(10);
 
     expect(grid).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
     const rows = result.getAllByTestId(/trivia-tv-verdict-row-/);
@@ -197,6 +201,12 @@ describe('Trivia TV game renderer', () => {
     // Two 510-wide columns and their gap fit the 1048-wide panel interior.
     expect(StyleSheet.flatten(rows[0]?.props.style)).toMatchObject({ width: 510 });
     expect(result.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('drops the empty points slot when nobody scored this round', async () => {
+    const result = await render(<TvTrivia state={{ ...tenPlayerRevealState, revealGains: {} }} players={tenPlayers} />);
+
+    expect(result.queryAllByTestId('trivia-tv-gain-slot')).toHaveLength(0);
   });
 
   it('shows all ten final standings: a podium and the rest below', async () => {
