@@ -6,6 +6,7 @@ import {
   settingsRefusal,
   settingsRefusalForMode,
   settingSummary,
+  settingOptionLabel,
   settingSummaryText,
 } from './game-settings';
 
@@ -181,5 +182,11 @@ describe('a setting as a summary reads it', () => {
   it('falls back to the label, and to the raw value for anything undeclared', () => {
     expect(settingSummary(timer, 'plain')).toEqual({ value: 'Plain', unit: 'seconds' });
     expect(settingSummary(timer, 'gone')).toEqual({ value: 'gone' });
+  });
+
+  it('gives a labelled row the option exactly as the host picked it', () => {
+    expect(settingOptionLabel(timer, undefined)).toBe('20 sec');
+    expect(settingOptionLabel(timer, 'none')).toBe('No timer');
+    expect(settingOptionLabel(timer, 'gone')).toBe('gone');
   });
 });

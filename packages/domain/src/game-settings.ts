@@ -158,6 +158,16 @@ export function settingSummary(setting: GameSetting, value: string | undefined):
   return unit === undefined ? { value: option.short ?? option.label } : { value: option.short ?? option.label, unit };
 }
 
+/**
+ * A setting's value beside its own label, as the host picked it: “Mixed”,
+ * “20 sec”, “Flat — 100 a question”. Rows that already say “Difficulty” use
+ * this; a chip with no label uses `settingSummaryText` instead.
+ */
+export function settingOptionLabel(setting: GameSetting, value: string | undefined): string {
+  const chosen = value ?? setting.defaultValue;
+  return setting.options.find((candidate) => candidate.value === chosen)?.label ?? chosen;
+}
+
 /** The same summary as one phrase: “20 seconds”, “No timer”, “Mixed difficulty”. */
 export function settingSummaryText(setting: GameSetting, value: string | undefined): string {
   const summary = settingSummary(setting, value);

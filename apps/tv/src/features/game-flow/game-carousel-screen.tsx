@@ -1,5 +1,5 @@
-import { playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
-import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage, PlayroomGameCover, playroomCoverColor } from '@huddle/ui/native';
+import { playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomShadows, playroomTv } from '@huddle/design-tokens';
+import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage, PlayroomGameCover } from '@huddle/ui/native';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
@@ -95,7 +95,7 @@ function GameCard({
       // A new key when selection moves replays the settle on the new card only.
       key={selected ? 'selected' : 'side'}
       entering={selected && !reduceMotion ? SELECT : undefined}
-      style={[styles.card, { backgroundColor: playroomCoverColor(card.id) }, selected ? styles.selected : null]}
+      style={[styles.card, !available ? styles.soon : null, selected ? styles.selected : null]}
       pointerEvents="none"
       focusable={false}
       accessible
@@ -111,7 +111,8 @@ function GameCard({
           {card.subtitle}
         </PlayroomText>
       ) : null}
-      <PlayroomPill tone="surface" textStyle={playroomTv.type.caption} style={styles.pill}>
+      {/* A white pill on the lavender selection or a grey coming-soon card, lavender on a white card. */}
+      <PlayroomPill tone={selected || !available ? 'surface' : 'lavender'} textStyle={playroomTv.type.caption} style={styles.pill}>
         {available ? 'Available' : 'Coming soon'}
       </PlayroomPill>
     </Animated.View>
@@ -153,11 +154,16 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 26,
     borderRadius: playroomRadii.card,
+    // Every game is a white card; only the one the host is on is lavender.
     backgroundColor: playroomColors.surface,
-
+    borderWidth: 3,
+    borderColor: 'transparent',
+    ...playroomShadows.card,
   },
   selected: {
     width: 820,
+    backgroundColor: playroomColors.lavender,
+    borderColor: playroomColors.ink,
   },
   soon: {
     backgroundColor: playroomColors.disabled,

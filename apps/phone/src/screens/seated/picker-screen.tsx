@@ -76,7 +76,7 @@ export function PickerScreen({
         accessibilityLabel={`${focused.metadata.title}${soon ? ', coming soon' : ''}`}
         testID={`phone-game-card-${focused.metadata.id}`}
       >
-        <PhoneCard style={[styles.featured, { backgroundColor: playroomCoverColor(focused.metadata.id) }]}>
+        <PhoneCard style={styles.featured}>
           <PlayroomGameCover gameId={focused.metadata.id} height={180} style={styles.cover} />
           <PlayroomText color={soon ? 'muted' : 'ink'} style={playroomPhone.type.hero}>
             {focused.metadata.title}
@@ -146,16 +146,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: playroomColors.lavender,
   },
+  // The game the host is on is the selection, so it is lavender whatever the game.
   featured: {
+    backgroundColor: playroomColors.lavender,
     alignItems: 'center',
     gap: 4,
     paddingTop: 12,
     paddingBottom: 18,
-  },
-  soon: {
-    backgroundColor: playroomColors.disabled,
   },
   featuredArt: {
     width: '80%',

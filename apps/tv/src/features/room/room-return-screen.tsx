@@ -1,4 +1,4 @@
-import { playroomColors, playroomTv } from '@huddle/design-tokens';
+import { playroomTv } from '@huddle/design-tokens';
 import { PlayroomHeading, PlayroomMoment, PlayroomText, PlayroomTvStage, PlayroomRosterRow } from '@huddle/ui/native';
 import { StyleSheet, View } from 'react-native';
 import type { RoomInvitationPlayer } from './room-invitation-screen';
@@ -22,5 +22,5 @@ const styles = StyleSheet.create({
   stack: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, top: 140, bottom: 290,
     alignItems: 'center', justifyContent: 'center', gap: 20 },
   roster: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, bottom: 90,
-    paddingHorizontal: 20, paddingTop: 34, paddingBottom: 20, borderRadius: 32, backgroundColor: playroomColors.lavender },
+    paddingHorizontal: 20, paddingTop: 34, paddingBottom: 20 },
 });
