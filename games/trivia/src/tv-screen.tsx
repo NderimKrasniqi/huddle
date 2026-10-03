@@ -414,15 +414,18 @@ const REST_SEAT_WIDTH = 236;
 function WinnersCircle({ winners, reduceMotion }: { readonly winners: readonly FinalStanding[]; readonly reduceMotion: boolean | undefined }) {
   const size = winners.length > 6 ? 96 : 120;
   const score = winners[0]?.score ?? 0;
+  // Balanced rows (5 + 5, not 8 + 2), each seat wide enough for a name.
+  const seat = size + 90;
+  const columns = winners.length > 6 ? Math.ceil(winners.length / 2) : winners.length;
   return (
     <View style={styles.circle} testID="trivia-tv-winners-circle">
-      <View style={styles.circleRow}>
+      <View style={[styles.circleRow, { width: columns * seat + (columns - 1) * 28 }]}>
         {winners.map((winner, index) => (
-          <Enter key={winner.playerId} reduceMotion={reduceMotion} delay={250 + index * 60} scale={0.88} from={0} style={styles.circleSeat} testID={`trivia-tv-final-row-${winner.playerId}`}>
+          <Enter key={winner.playerId} reduceMotion={reduceMotion} delay={250 + index * 60} scale={0.88} from={0} style={[styles.circleSeat, { width: seat }]} testID={`trivia-tv-final-row-${winner.playerId}`}>
             <View style={[styles.circleRing, { width: size + 20, height: size + 20, borderRadius: (size + 20) / 2 }]}>
               {winner.avatar ? <AvatarPortrait avatarId={winner.avatar} displayName={winner.nickname} size={size} disabled={winner.away} /> : null}
             </View>
-            <CosmicText weight="extraBold" size={28} color={cosmic.cream} numberOfLines={1} style={{ maxWidth: size + 60 }}>{winner.nickname}</CosmicText>
+            <CosmicText weight="extraBold" size={28} color={cosmic.cream} numberOfLines={1} style={{ maxWidth: seat }}>{winner.nickname}</CosmicText>
           </Enter>
         ))}
       </View>
