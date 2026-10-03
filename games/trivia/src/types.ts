@@ -34,6 +34,12 @@ export type PlayableTriviaState = {
    * player's outcome; a phone gets only its owner's, never anybody's option.
    */
   readonly revealVerdicts?: Readonly<Record<GamePlayerId, boolean>>;
+  /**
+   * Reveal projection: whether each player answered the question at all, so a
+   * phone can tell "out of time" from "wrong". Phone-only, and only its
+   * owner's: the TV draws right or wrong and needs nothing more.
+   */
+  readonly revealAnswered?: Readonly<Record<GamePlayerId, boolean>>;
   /** TV-only reveal projection: each player's points on the question just revealed. */
   readonly revealGains?: Readonly<Record<GamePlayerId, number>>;
   readonly standings: readonly TriviaStanding[];

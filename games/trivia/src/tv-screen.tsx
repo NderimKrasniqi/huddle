@@ -299,6 +299,7 @@ function RevealStage({
   const compact = screen.scoreboard.length > 5;
   // Four or fewer rows would leave the panel mostly empty, so they read bigger.
   const roomy = screen.scoreboard.length <= 4;
+  const anyGain = screen.scoreboard.some((row) => row.gain !== undefined && row.gain > 0);
   const gotIt = screen.verdicts.filter((verdict) => verdict.correct).length;
   const verdictOf = (playerId: string) => screen.verdicts.find((verdict) => verdict.playerId === playerId)?.correct === true;
 
@@ -344,7 +345,7 @@ function RevealStage({
               const right = verdictOf(row.playerId);
               return (
                 <Enter key={row.playerId} reduceMotion={reduceMotion} delay={300 + index * 70} from={14} style={[styles.resultRow, compact ? styles.resultRowCompact : null]} testID={`trivia-tv-verdict-row-${row.playerId}`}>
-                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 52 : roomy ? 84 : 66} disabled={row.away} /> : null}
+                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 48 : roomy ? 84 : 66} disabled={row.away} /> : null}
                   <CosmicText weight="black" size={compact ? 30 : roomy ? 44 : 36} numberOfLines={1} style={styles.resultName}>{row.nickname}</CosmicText>
                   <View style={[styles.verdict, compact ? styles.verdictCompact : null, roomy ? styles.verdictRoomy : null]}>
                     {right ? <CheckBadge size={compact ? 38 : roomy ? 50 : 42} /> : <MissBadge size={compact ? 38 : roomy ? 50 : 42} />}
@@ -354,7 +355,21 @@ function RevealStage({
                       </CosmicText>
                     )}
                   </View>
-                  {row.gain !== undefined && row.gain > 0 && !compact ? (
+                  {/* This round's points, so the total beside a cross never reads as points won.
+                      Compact rows keep the slot whenever anyone scored, so every total lines up. */}
+                  {compact ? (
+                    anyGain ? (
+                      <View style={styles.gainSlotCompact} testID="trivia-tv-gain-slot">
+                        {row.gain !== undefined && row.gain > 0 ? (
+                          <Enter reduceMotion={reduceMotion} delay={600 + index * 70} scale={0.85} from={0}>
+                            <Pill color={cosmic.butter} style={styles.gainPillCompact}>
+                              <CosmicText weight="black" size={22}>{`+${row.gain}`}</CosmicText>
+                            </Pill>
+                          </Enter>
+                        ) : null}
+                      </View>
+                    ) : null
+                  ) : row.gain !== undefined && row.gain > 0 ? (
                     <Enter reduceMotion={reduceMotion} delay={600 + index * 70} scale={0.85} from={0}>
                       <Pill color={cosmic.butter} style={styles.gainPill}>
                         <CosmicText weight="black" size={roomy ? 30 : 26}>{`+${row.gain}`}</CosmicText>
@@ -585,13 +600,16 @@ const styles = StyleSheet.create({
   resultRowsRoomy: { flex: 1, justifyContent: 'center', gap: 18, marginTop: 0 },
   resultRowsCompact: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, columnGap: 24 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(4,27,57,0.04)' },
-  resultRowCompact: { width: 510, gap: 10, paddingVertical: 4 },
+  resultRowCompact: { width: 510, gap: 8, paddingVertical: 4 },
   resultName: { flex: 1 },
   verdict: { flexDirection: 'row', alignItems: 'center', gap: 12, width: 200 },
   verdictCompact: { width: 38 },
   verdictRoomy: { width: 250 },
   resultScore: { width: 110 },
   gainPill: { paddingHorizontal: 14, paddingVertical: 2 },
+  // A floor, not a fixed width: a pill grown by the TV's text size pushes the name, not the badge.
+  gainSlotCompact: { minWidth: 72, alignItems: 'flex-end' },
+  gainPillCompact: { paddingHorizontal: 10, paddingVertical: 0 },
   resultScoreCompact: { width: 76 },
   nextBar: { position: 'absolute', left: 0, right: 0, bottom: SAFE_Y + 4, alignItems: 'center' },
   clockRow: { flexDirection: 'row', alignItems: 'baseline' },

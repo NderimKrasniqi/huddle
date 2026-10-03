@@ -461,7 +461,7 @@ function ReadyScreen({
             accessible={false}
           />
         </View>
-        <PlayroomText style={playroomPhone.type.heading}>{currentReady ? 'Hand’s up!' : 'Raise your hand'}</PlayroomText>
+        <PlayroomText style={playroomPhone.type.heading}>{currentReady ? 'Hands up!' : 'Raise your hand'}</PlayroomText>
       </Pressable>
       <PlayroomPill textStyle={playroomPhone.type.caption}>{`${readyCount} of ${roster.length} hands up`}</PlayroomPill>
       <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>

@@ -69,7 +69,11 @@ export function TvGameCarouselScreen({
               <GameCard key={card.id} card={card} selected={position === 1} reduceMotion={reduceMotion} />
             ) : <View key={`edge-${position}`} style={styles.edge} />)}
           </View>
-          <TvRosterRow players={players} />
+          {/* Sits on the overscan-safe bottom edge; in the flow, so larger system text
+              moves it down rather than drawing it over the cards. */}
+          <View style={styles.roster} pointerEvents="none" focusable={false}>
+            <TvRosterRow players={players} />
+          </View>
         </View>
       </PlayroomTvStage>
     </View>
@@ -98,7 +102,7 @@ function GameCard({
       accessibilityLabel={`${card.title}${available ? '' : ', coming soon'}${selected ? ', selected' : ''}`}
       testID={`tv-game-card-${card.id}`}
     >
-      <PlayroomGameCover gameId={card.id} height={selected ? 390 : 235} style={styles.cover} />
+      <PlayroomGameCover gameId={card.id} height={selected ? 280 : 235} style={styles.cover} />
       <PlayroomText color={available ? 'ink' : 'muted'} numberOfLines={1} style={selected ? styles.titleSelected : styles.title}>
         {card.title}
       </PlayroomText>
@@ -128,15 +132,18 @@ const styles = StyleSheet.create({
   column: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
-    paddingTop: 170,
+    paddingTop: 150,
+    paddingBottom: playroomTv.safeY,
     gap: 16,
+  },
+  roster: {
+    marginTop: 'auto',
   },
   cards: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 28,
     marginTop: 8,
-    marginBottom: 34,
   },
   card: {
     width: 380,
