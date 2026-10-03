@@ -823,9 +823,9 @@
       "difficulty": "medium"
     },
     {
-      "text": "The croissant is generally credited to which country?",
-      "options": ["France", "Belgium", "Austria", "Switzerland"],
-      "correctIndex": 2,
+      "text": "Roquefort cheese comes from which country?",
+      "options": ["Spain", "France", "Switzerland", "Italy"],
+      "correctIndex": 1,
       "category": "Food & Drink",
       "difficulty": "hard"
     },
@@ -865,8 +865,8 @@
       "difficulty": "medium"
     },
     {
-      "text": "In which film does Tom Hanks say \"Life is like a box of chocolates\"?",
-      "options": ["Big", "The Green Mile", "Forrest Gump", "Cast Away"],
+      "text": "Which film is set mostly aboard a spaceship called the Nostromo?",
+      "options": ["Sunshine", "Solaris", "Alien", "Event Horizon"],
       "correctIndex": 2,
       "category": "Movies",
       "difficulty": "medium"
@@ -914,9 +914,9 @@
       "difficulty": "medium"
     },
     {
-      "text": "Who composed the score for \"Jaws\"?",
-      "options": ["John Williams", "Ennio Morricone", "Hans Zimmer", "Danny Elfman"],
-      "correctIndex": 0,
+      "text": "Who directed \"Jurassic Park\"?",
+      "options": ["Robert Zemeckis", "James Cameron", "George Lucas", "Steven Spielberg"],
+      "correctIndex": 3,
       "category": "Movies",
       "difficulty": "hard"
     },
@@ -977,9 +977,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "In The Matrix, what color pill does Neo take?",
-      "options": ["White", "Blue", "Red", "Green"],
-      "correctIndex": 2,
+      "text": "Which 1994 film is set mostly in Shawshank State Penitentiary?",
+      "options": ["The Shawshank Redemption", "Escape from Alcatraz", "Papillon", "The Green Mile"],
+      "correctIndex": 0,
       "category": "Movies",
       "difficulty": "hard"
     },
@@ -1061,8 +1061,8 @@
       "difficulty": "medium"
     },
     {
-      "text": "Which composer wrote \"The Magic Flute\"?",
-      "options": ["Giuseppe Verdi", "Wolfgang Amadeus Mozart", "Ludwig van Beethoven", "Richard Wagner"],
+      "text": "Which composer went deaf but kept composing?",
+      "options": ["Johann Sebastian Bach", "Ludwig van Beethoven", "Antonín Dvořák", "Franz Liszt"],
       "correctIndex": 1,
       "category": "Music",
       "difficulty": "hard"
@@ -1075,9 +1075,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "What does \"forte\" mean in music?",
-      "options": ["Soft", "Loud", "Fast", "Slow"],
-      "correctIndex": 1,
+      "text": "What does \"a cappella\" mean?",
+      "options": ["Singing without instruments", "Singing very fast", "Singing in falsetto", "Singing in a church choir"],
+      "correctIndex": 0,
       "category": "Music",
       "difficulty": "hard"
     },
@@ -1124,9 +1124,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "What gas do plants absorb from the air?",
-      "options": ["Oxygen", "Helium", "Nitrogen", "Carbon dioxide"],
-      "correctIndex": 3,
+      "text": "What do bees collect from flowers to make honey?",
+      "options": ["Nectar", "Pollen", "Sap", "Dew"],
+      "correctIndex": 0,
       "category": "Science",
       "difficulty": "easy"
     },
@@ -1194,9 +1194,9 @@
       "difficulty": "medium"
     },
     {
-      "text": "What is the speed of light, approximately, in kilometres per second?",
-      "options": ["300,000", "30,000", "3,000,000", "3,000"],
-      "correctIndex": 0,
+      "text": "Which planet in our solar system has the shortest year?",
+      "options": ["Mars", "Earth", "Mercury", "Venus"],
+      "correctIndex": 2,
       "category": "Science",
       "difficulty": "medium"
     },
@@ -1285,30 +1285,30 @@
       "difficulty": "easy"
     },
     {
-      "text": "Which explorer led the first expedition to circumnavigate the globe?",
-      "options": ["Christopher Columbus", "Ferdinand Magellan", "James Cook", "Vasco da Gama"],
-      "correctIndex": 1,
+      "text": "Which ancient wonder stood in the harbour of Rhodes?",
+      "options": ["The Lighthouse", "The Mausoleum", "The Hanging Gardens", "The Colossus"],
+      "correctIndex": 3,
       "category": "History",
       "difficulty": "easy"
     },
     {
-      "text": "Which wall fell in 1989?",
-      "options": ["The Western Wall", "The Berlin Wall", "The Great Wall", "Hadrian's Wall"],
-      "correctIndex": 1,
-      "category": "History",
-      "difficulty": "easy"
-    },
-    {
-      "text": "Which wall divided a European city from 1961 to 1989?",
-      "options": ["The Western Wall", "Hadrian's Wall", "The Berlin Wall", "The Great Wall"],
+      "text": "Which ancient city was home to the Parthenon?",
+      "options": ["Rome", "Troy", "Athens", "Sparta"],
       "correctIndex": 2,
       "category": "History",
       "difficulty": "easy"
     },
     {
-      "text": "Julius Caesar was a leader of which ancient city-state?",
-      "options": ["Sparta", "Rome", "Carthage", "Athens"],
+      "text": "Which famous queen of Egypt allied with Mark Antony?",
+      "options": ["Nefertiti", "Cleopatra", "Nefertari", "Hatshepsut"],
       "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Julius Caesar was a leader of which ancient republic?",
+      "options": ["Sparta", "Carthage", "Athens", "Rome"],
+      "correctIndex": 3,
       "category": "History",
       "difficulty": "easy"
     },
@@ -1341,9 +1341,9 @@
       "difficulty": "medium"
     },
     {
-      "text": "Which queen ruled the United Kingdom for over 70 years?",
-      "options": ["Victoria", "Elizabeth II", "Mary I", "Elizabeth I"],
-      "correctIndex": 1,
+      "text": "Who was the first woman to win a Nobel Prize?",
+      "options": ["Ada Lovelace", "Florence Nightingale", "Marie Curie", "Rosalind Franklin"],
+      "correctIndex": 2,
       "category": "History",
       "difficulty": "medium"
     },
@@ -1404,8 +1404,8 @@
       "difficulty": "hard"
     },
     {
-      "text": "Which country is home to the city of Venice?",
-      "options": ["Greece", "France", "Croatia", "Italy"],
+      "text": "Which country has the most people?",
+      "options": ["United States", "Indonesia", "China", "India"],
       "correctIndex": 3,
       "category": "Geography",
       "difficulty": "easy"
@@ -1537,16 +1537,16 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the highest mountain in Africa?",
-      "options": ["Mount Kenya", "Mount Stanley", "Ras Dashen", "Mount Kilimanjaro"],
+      "text": "Which is the longest river in Africa?",
+      "options": ["The Congo", "The Zambezi", "The Niger", "The Nile"],
       "correctIndex": 3,
       "category": "Geography",
       "difficulty": "hard"
     },
     {
-      "text": "What fruit is used to make guacamole?",
-      "options": ["Kiwi", "Lime", "Mango", "Avocado"],
-      "correctIndex": 3,
+      "text": "Which country is famous for the dish pad thai?",
+      "options": ["Vietnam", "Thailand", "China", "Malaysia"],
+      "correctIndex": 1,
       "category": "Food & Drink",
       "difficulty": "easy"
     },
@@ -1558,9 +1558,9 @@
       "difficulty": "easy"
     },
     {
-      "text": "What is the main ingredient in a traditional falafel?",
-      "options": ["Rice", "Lentils", "Potatoes", "Chickpeas or fava beans"],
-      "correctIndex": 3,
+      "text": "What is falafel most commonly made from?",
+      "options": ["Chickpeas", "Corn", "Potatoes", "Rice"],
+      "correctIndex": 0,
       "category": "Food & Drink",
       "difficulty": "easy"
     },
@@ -1600,9 +1600,9 @@
       "difficulty": "medium"
     },
     {
-      "text": "What kind of nut is used to make marzipan?",
-      "options": ["Almond", "Hazelnut", "Walnut", "Pistachio"],
-      "correctIndex": 0,
+      "text": "Which nut is traditionally used in pesto alla genovese?",
+      "options": ["Walnuts", "Cashews", "Pine nuts", "Almonds"],
+      "correctIndex": 2,
       "category": "Food & Drink",
       "difficulty": "medium"
     },
@@ -1621,9 +1621,9 @@
       "difficulty": "medium"
     },
     {
-      "text": "Which spice gives curry its yellow colour?",
-      "options": ["Cumin", "Turmeric", "Cinnamon", "Paprika"],
-      "correctIndex": 1,
+      "text": "Which grain is used to make risotto?",
+      "options": ["Couscous", "Quinoa", "Rice", "Barley"],
+      "correctIndex": 2,
       "category": "Food & Drink",
       "difficulty": "hard"
     },
@@ -1635,8 +1635,8 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the Japanese spirit sake made from?",
-      "options": ["Rice", "Barley", "Potatoes", "Wheat"],
+      "text": "What is the main ingredient of the Spanish cold soup gazpacho?",
+      "options": ["Tomato", "Pepper", "Onion", "Cucumber"],
       "correctIndex": 0,
       "category": "Food & Drink",
       "difficulty": "hard"
@@ -2027,16 +2027,16 @@
       "difficulty": "easy"
     },
     {
-      "text": "What color is a polar bear's fur?",
-      "options": ["White", "Black", "Grey", "Brown"],
-      "correctIndex": 0,
+      "text": "Which animal is famous for changing the colour of its skin to blend in?",
+      "options": ["Iguana", "Gecko", "Frog", "Chameleon"],
+      "correctIndex": 3,
       "category": "Animals & Nature",
       "difficulty": "easy"
     },
     {
-      "text": "Which animal is known for carrying its home on its back?",
-      "options": ["Turtle", "Crab", "Hedgehog", "Snail"],
-      "correctIndex": 3,
+      "text": "Which animal sleeps hanging upside down?",
+      "options": ["Owl", "Sloth", "Bat", "Monkey"],
+      "correctIndex": 2,
       "category": "Animals & Nature",
       "difficulty": "easy"
     },
@@ -2188,9 +2188,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the scientific study of birds called?",
-      "options": ["Ichthyology", "Herpetology", "Ornithology", "Entomology"],
-      "correctIndex": 2,
+      "text": "What is the scientific study of fish called?",
+      "options": ["Ornithology", "Entomology", "Herpetology", "Ichthyology"],
+      "correctIndex": 3,
       "category": "Animals & Nature",
       "difficulty": "hard"
     },
@@ -2216,9 +2216,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the largest living species of lizard?",
-      "options": ["Green iguana", "Komodo dragon", "Gila monster", "Monitor lizard"],
-      "correctIndex": 1,
+      "text": "What is the scientific study of insects called?",
+      "options": ["Entomology", "Zoology", "Ichthyology", "Ornithology"],
+      "correctIndex": 0,
       "category": "Animals & Nature",
       "difficulty": "hard"
     },
@@ -2237,9 +2237,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "Which sea creature has three hearts and blue blood?",
-      "options": ["Jellyfish", "Squid", "Octopus", "Starfish"],
-      "correctIndex": 2,
+      "text": "Which animal has the largest eyes of any living creature?",
+      "options": ["Colossal squid", "Blue whale", "Giant octopus", "Ostrich"],
+      "correctIndex": 0,
       "category": "Animals & Nature",
       "difficulty": "hard"
     },
@@ -2468,9 +2468,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "What was the first home console made by Nintendo outside Japan known as?",
-      "options": ["Game Cube", "Super Nintendo", "Nintendo 64", "Nintendo Entertainment System"],
-      "correctIndex": 3,
+      "text": "What was Nintendo's first home console called outside Japan?",
+      "options": ["Nintendo Entertainment System", "Super Nintendo", "GameCube", "Nintendo 64"],
+      "correctIndex": 0,
       "category": "TV & Games",
       "difficulty": "hard"
     },
@@ -2573,9 +2573,9 @@
       "difficulty": "easy"
     },
     {
-      "text": "What is the name of the hobbit who carries the One Ring?",
-      "options": ["Peregrin Took", "Bilbo Baggins", "Samwise Gamgee", "Frodo Baggins"],
-      "correctIndex": 3,
+      "text": "Who wrote \"The Hobbit\"?",
+      "options": ["J.R.R. Tolkien", "C.S. Lewis", "Terry Pratchett", "Philip Pullman"],
+      "correctIndex": 0,
       "category": "Art & Literature",
       "difficulty": "easy"
     },
@@ -2776,16 +2776,16 @@
       "difficulty": "hard"
     },
     {
-      "text": "Which artist painted the ceiling of the Paris Opera, Garnier's, in 1964?",
-      "options": ["Henri Matisse", "Pablo Picasso", "Joan Miró", "Marc Chagall"],
-      "correctIndex": 3,
+      "text": "Which artist painted the ceiling of the Palais Garnier opera house in Paris in 1964?",
+      "options": ["Henri Matisse", "Joan Miró", "Marc Chagall", "Pablo Picasso"],
+      "correctIndex": 2,
       "category": "Art & Literature",
       "difficulty": "hard"
     },
     {
-      "text": "What is the first book of the Bible?",
-      "options": ["Psalms", "Matthew", "Genesis", "Exodus"],
-      "correctIndex": 2,
+      "text": "Who sculpted \"The Thinker\"?",
+      "options": ["Auguste Rodin", "Michelangelo", "Antonio Canova", "Donatello"],
+      "correctIndex": 0,
       "category": "Art & Literature",
       "difficulty": "hard"
     },
@@ -3343,9 +3343,9 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the name of the asteroid belt beyond Neptune?",
-      "options": ["Trojan Belt", "Oort Cloud", "Main Belt", "Kuiper Belt"],
-      "correctIndex": 3,
+      "text": "What is the name of the region of icy bodies beyond Neptune?",
+      "options": ["Oort Cloud", "Kuiper Belt", "Trojan Belt", "Main Belt"],
+      "correctIndex": 1,
       "category": "Space",
       "difficulty": "hard"
     },
