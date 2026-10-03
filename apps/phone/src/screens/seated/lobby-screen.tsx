@@ -15,6 +15,7 @@ import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimate
 import { rosterRowControls, type lobbyStanding, type RosterSeat } from '../../features/room';
 import type { PlayerSession } from '../../platform/session';
 import type { BusyAction } from '../use-seated-room';
+import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import { RoomFaces } from './room-faces';
 
@@ -45,6 +46,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
       testID="phone-lobby"
       footer={
         <>
+          {standing.youAreHost ? <HostSteps current="Room" /> : null}
           {standing.youAreHost ? (
             <PlayroomButton
               label={returned ? "Choose next game" : "Choose a game"}

@@ -1,5 +1,5 @@
 import type { AvatarId } from '@huddle/domain';
-import { playroomAvatarCircles, playroomColors, playroomPhone, playroomRadii, playroomShadows } from '@huddle/design-tokens';
+import { playroomAvatarCircles, playroomColors, playroomEasing, playroomMotion, playroomPhone, playroomRadii, playroomShadows } from '@huddle/design-tokens';
 import { PlayroomAvatar, PlayroomText, PlayroomWordmark } from '@huddle/ui/native';
 import { useRef, useState, type ReactNode } from 'react';
 import {
@@ -12,6 +12,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height of the band in the player's colour below the status bar. */
@@ -50,7 +51,7 @@ export function PhoneFrame({ children, avatarId, footer, contentStyle, backdrop,
         />
       ) : null}
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: footer ? 16 : insets.bottom + 24 }, contentStyle]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: footer ? 16 : insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         testID="phone-frame-scroll"
         keyboardShouldPersistTaps="handled"
@@ -60,7 +61,10 @@ export function PhoneFrame({ children, avatarId, footer, contentStyle, backdrop,
         onContentSizeChange={(_width, height) => moreBelow.measure({ content: height })}
         onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => moreBelow.measure({ offset: event.nativeEvent.contentOffset.y })}
       >
-        {children}
+        {/* Each step of the flow arrives with a short lift, so moving on reads as moving on. */}
+        <Animated.View entering={STEP_ENTER} style={[styles.stepBody, contentStyle]}>
+          {children}
+        </Animated.View>
       </ScrollView>
       {footer ? (
         <View style={[styles.footer, backdrop ? styles.footerClear : null, { paddingBottom: insets.bottom + 12 }]}>
@@ -87,6 +91,13 @@ function useMoreBelow() {
   };
   return { value, measure };
 }
+
+const STEP_ENTER = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: playroomMotion.entranceTravel }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }], easing: Easing.bezier(...playroomEasing.out) },
+})
+  .duration(playroomMotion.entrance)
+  .reduceMotion(ReduceMotion.System);
 
 const FADE_STEPS = 8;
 const FADE_STEP_HEIGHT = 4;
@@ -191,6 +202,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: playroomPhone.gutter + 4,
     paddingTop: 8,
     gap: 4,
+  },
+  // The animated wrapper takes the content's own column layout.
+  stepBody: {
+    flexGrow: 1,
+    gap: 16,
   },
   footerClear: {
     backgroundColor: 'transparent',

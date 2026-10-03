@@ -1,7 +1,7 @@
 import { settingSummaryText } from '@huddle/domain';
-import { playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
+import { playroomAvatarCircles, playroomColors, playroomEasing, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
 import { PlayroomAvatar, PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage } from '@huddle/ui/native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -96,6 +96,17 @@ function Seat({
     lift.set(reduceMotion ? to : withTiming(to, { duration: playroomMotion.entrance, easing: Easing.bezier(...playroomEasing.out) }));
   }, [lift, ready, reduceMotion]);
   const lifted = useAnimatedStyle(() => ({ transform: [{ translateY: lift.get() }] }));
+  // The phone that raised its hand flashes in this player's colour; the TV echoes it.
+  const echo = useSharedValue(0);
+  const raised = useRef(ready);
+  useEffect(() => {
+    const justRaised = ready && !raised.current;
+    raised.current = ready;
+    if (!justRaised || reduceMotion) return;
+    echo.set(0.9);
+    echo.set(withTiming(0, { duration: playroomMotion.highlight, easing: Easing.bezier(...playroomEasing.out) }));
+  }, [echo, ready, reduceMotion]);
+  const echoStyle = useAnimatedStyle(() => ({ opacity: echo.get(), transform: [{ scale: 1 + echo.get() * 0.25 }] }));
 
   return (
     <Animated.View
@@ -103,6 +114,12 @@ function Seat({
       accessible
       accessibilityLabel={`${player.name}${player.isHost ? ', host' : ''}${player.away ? ', reconnecting' : ready ? ', ready' : ', waiting'}`}
     >
+      {player.avatarId ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.echo, { backgroundColor: playroomAvatarCircles[player.avatarId] }, echoStyle]}
+        />
+      ) : null}
       {player.avatarId ? (
         <PlayroomAvatar
           avatarId={player.avatarId}
@@ -156,6 +173,15 @@ const styles = StyleSheet.create({
     // Heads break out of the top of their circles, so rows need room above.
     rowGap: 20,
     marginTop: 44,
+  },
+  // A disc in the player's own colour behind their avatar, flashed when they raise a hand.
+  echo: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: playroomTv.avatar.ready,
+    height: playroomTv.avatar.ready,
+    borderRadius: playroomTv.avatar.ready / 2,
   },
   seat: {
     width: 216,

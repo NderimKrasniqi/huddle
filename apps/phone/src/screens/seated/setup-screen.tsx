@@ -1,6 +1,7 @@
 import {
   COUNTDOWN_MS,
   settingOptionLabel,
+  settingSummaryText,
   type AvatarId,
   type GameModule,
   type GameSetting,
@@ -28,6 +29,7 @@ import type { RosterSeat } from '../../features/room';
 import { settingsControls, type SettingControl } from '../../features/game-picker/settings-choice';
 import { setupModeLabel, setupReadiness } from '../seated-phone-model';
 import type { BusyAction } from '../use-seated-room';
+import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 
 export type SetupScreenProps = {
@@ -117,7 +119,10 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
       avatarId={you?.avatarId}
       testID="phone-game-setup"
       footer={
+        <>
+        <HostSteps current="Setup" />
         <PlayroomButton label="Ready check" onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" />
+        </>
       }
     >
       <PhoneTopBar back={{ label: 'Room', onPress: onCancel, testID: 'setup-nav-back' }} you={you} />
@@ -134,14 +139,16 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
           />
         ))}
       </View>
-      {setup.mode !== 'custom' ? <>
-        <PhoneCard>
+      {setup.mode !== 'custom' ? (
+        // A preset reads as one sentence; changing it is one tap away, not five rows.
+        <PhoneCard style={styles.presetCard}>
           <PlayroomText style={playroomPhone.type.title}>{presentation?.presets?.find((preset) => preset.mode === setup.mode)?.label ?? setupModeLabel(setup.mode)}</PlayroomText>
-          {presentation?.presets?.find((preset) => preset.mode === setup.mode)?.description ?
-            <PlayroomText color="muted" style={playroomPhone.type.body}>{presentation.presets.find((preset) => preset.mode === setup.mode)?.description}</PlayroomText> : null}
+          <PlayroomText style={[playroomPhone.type.body, styles.center]}>
+            {module.settingsSchema.map((setting) => settingSummaryText(setting, settings[setting.key] ?? setting.defaultValue)).join(' · ')}
+          </PlayroomText>
+          <PlayroomButton label="Customize" variant="link" onPress={() => chooseMode('custom')} accessibilityLabel="Customize settings" testID="setup-customize" />
         </PhoneCard>
-        <Summary module={module} settings={settings} />
-      </> : <View style={styles.settings}>
+      ) : <View style={styles.settings}>
         {controls.map((control) => {
           const setting = module.settingsSchema.find((candidate) => candidate.key === control.key);
           if (setting === undefined) return null;
@@ -418,6 +425,7 @@ function ReadyScreen({
       footer={
         youAreHost ? (
           <>
+            <HostSteps current="Ready" />
             <PlayroomButton
               // The waiting line above says who is missing; the button only says what it does.
               label={`Start ${module.metadata.title}`}
@@ -707,6 +715,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2.5,
     transform: [{ rotate: '45deg' }],
   },
+  presetCard: { alignItems: 'center', gap: 6 },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
