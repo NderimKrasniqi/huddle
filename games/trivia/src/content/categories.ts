@@ -27,6 +27,12 @@ export const CURATED_CATEGORIES: readonly string[] = [
   'History',
   'Geography',
   'Food & Drink',
+  'Sports',
+  'Animals & Nature',
+  'TV & Games',
+  'Art & Literature',
+  'Technology',
+  'Space',
 ];
 
 // Re-exported from the client-safe entry so a consumer that needs the "all

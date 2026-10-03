@@ -201,12 +201,7 @@
     },
     {
       "text": "Who composed \"The Four Seasons\"?",
-      "options": [
-        "Johann Sebastian Bach",
-        "George Frideric Handel",
-        "Antonio Vivaldi",
-        "Wolfgang Amadeus Mozart"
-      ],
+      "options": ["Johann Sebastian Bach", "George Frideric Handel", "Antonio Vivaldi", "Wolfgang Amadeus Mozart"],
       "correctIndex": 2,
       "category": "Music",
       "difficulty": "medium"
@@ -248,12 +243,7 @@
     },
     {
       "text": "Who composed the opera \"The Magic Flute\"?",
-      "options": [
-        "Giuseppe Verdi",
-        "Wolfgang Amadeus Mozart",
-        "Richard Wagner",
-        "Giacomo Puccini"
-      ],
+      "options": ["Giuseppe Verdi", "Wolfgang Amadeus Mozart", "Richard Wagner", "Giacomo Puccini"],
       "correctIndex": 1,
       "category": "Music",
       "difficulty": "medium"
@@ -330,12 +320,7 @@
     },
     {
       "text": "What does DNA stand for?",
-      "options": [
-        "Dinucleic acid",
-        "Diribonucleic acid",
-        "Deoxyribonucleic acid",
-        "Deoxyribose nucleic anhydride"
-      ],
+      "options": ["Dinucleic acid", "Diribonucleic acid", "Deoxyribonucleic acid", "Deoxyribose nucleic anhydride"],
       "correctIndex": 2,
       "category": "Science",
       "difficulty": "medium"
@@ -349,12 +334,7 @@
     },
     {
       "text": "Roughly how fast does light travel in a vacuum?",
-      "options": [
-        "300,000 km per second",
-        "30,000 km per second",
-        "3,000 km per second",
-        "3 million km per second"
-      ],
+      "options": ["300,000 km per second", "30,000 km per second", "3,000 km per second", "3 million km per second"],
       "correctIndex": 0,
       "category": "Science",
       "difficulty": "medium"
@@ -494,24 +474,14 @@
     },
     {
       "text": "Who delivered the \"I Have a Dream\" speech in 1963?",
-      "options": [
-        "Martin Luther King Jr.",
-        "Malcolm X",
-        "Frederick Douglass",
-        "Thurgood Marshall"
-      ],
+      "options": ["Martin Luther King Jr.", "Malcolm X", "Frederick Douglass", "Thurgood Marshall"],
       "correctIndex": 0,
       "category": "History",
       "difficulty": "easy"
     },
     {
       "text": "Which war was ended by the Treaty of Versailles?",
-      "options": [
-        "The Second World War",
-        "The Crimean War",
-        "The First World War",
-        "The Franco-Prussian War"
-      ],
+      "options": ["The Second World War", "The Crimean War", "The First World War", "The Franco-Prussian War"],
       "correctIndex": 2,
       "category": "History",
       "difficulty": "medium"
@@ -546,12 +516,7 @@
     },
     {
       "text": "Whose expedition was the first to sail all the way around the world?",
-      "options": [
-        "Ferdinand Magellan",
-        "Christopher Columbus",
-        "Vasco da Gama",
-        "James Cook"
-      ],
+      "options": ["Ferdinand Magellan", "Christopher Columbus", "Vasco da Gama", "James Cook"],
       "correctIndex": 0,
       "category": "History",
       "difficulty": "medium"
@@ -572,12 +537,7 @@
     },
     {
       "text": "Who led the Soviet Union during the Cuban Missile Crisis?",
-      "options": [
-        "Nikita Khrushchev",
-        "Joseph Stalin",
-        "Leonid Brezhnev",
-        "Mikhail Gorbachev"
-      ],
+      "options": ["Nikita Khrushchev", "Joseph Stalin", "Leonid Brezhnev", "Mikhail Gorbachev"],
       "correctIndex": 0,
       "category": "History",
       "difficulty": "hard"
@@ -731,12 +691,7 @@
     },
     {
       "text": "Which strait separates Europe from Africa at their closest point?",
-      "options": [
-        "The Bosphorus",
-        "The Strait of Gibraltar",
-        "The Strait of Hormuz",
-        "The Bering Strait"
-      ],
+      "options": ["The Bosphorus", "The Strait of Gibraltar", "The Strait of Hormuz", "The Bering Strait"],
       "correctIndex": 1,
       "category": "Geography",
       "difficulty": "medium"
@@ -841,12 +796,7 @@
     },
     {
       "text": "What does \"al dente\" describe?",
-      "options": [
-        "Pasta cooked firm to the bite",
-        "Bread baked twice",
-        "Meat served rare",
-        "A sauce reduced by half"
-      ],
+      "options": ["Pasta cooked firm to the bite", "Bread baked twice", "Meat served rare", "A sauce reduced by half"],
       "correctIndex": 0,
       "category": "Food & Drink",
       "difficulty": "easy"
@@ -892,6 +842,2526 @@
       "correctIndex": 3,
       "category": "Food & Drink",
       "difficulty": "medium"
+    },
+    {
+      "text": "Which animated film features a snowman named Olaf?",
+      "options": ["Moana", "Frozen", "Tangled", "Brave"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What kind of animal is Simba in The Lion King?",
+      "options": ["Cheetah", "Lion", "Leopard", "Tiger"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who directed the 2010 film Inception?",
+      "options": ["Steven Spielberg", "Ridley Scott", "James Cameron", "Christopher Nolan"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which film does Tom Hanks say \"Life is like a box of chocolates\"?",
+      "options": ["Big", "The Green Mile", "Forrest Gump", "Cast Away"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which 2003 Pixar film features a clownfish searching for his son?",
+      "options": ["Ratatouille", "Shark Tale", "Up", "Finding Nemo"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which actor played Black Panther in the 2018 Marvel film?",
+      "options": ["Chadwick Boseman", "Idris Elba", "Daniel Kaluuya", "Michael B. Jordan"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which actor plays Jack Sparrow in Pirates of the Caribbean?",
+      "options": ["Brad Pitt", "Johnny Depp", "Keanu Reeves", "Orlando Bloom"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In The Wizard of Oz, what color are Dorothy's slippers?",
+      "options": ["Silver", "Gold", "Ruby red", "Emerald green"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which 1997 film was the first to earn over one billion dollars worldwide?",
+      "options": ["Men in Black", "Jurassic Park", "The Lost World", "Titanic"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does E.T. want to do in the 1982 film?",
+      "options": ["Learn to fly", "Phone home", "Find treasure", "Build a ship"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who composed the score for \"Jaws\"?",
+      "options": ["John Williams", "Ennio Morricone", "Hans Zimmer", "Danny Elfman"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which film was the first ever to win the Academy Award for Best Picture?",
+      "options": ["Metropolis", "Wings", "Sunrise", "The Jazz Singer"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In Citizen Kane, what is \"Rosebud\"?",
+      "options": ["A sled", "A boat", "A ring", "A horse"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which film features the line \"I'll be back\"?",
+      "options": ["Total Recall", "The Terminator", "Predator", "RoboCop"],
+      "correctIndex": 1,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which studio made \"My Neighbor Totoro\"?",
+      "options": ["Madhouse", "Pixar", "Toei Animation", "Studio Ghibli"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the highest-grossing film of all time, not adjusted for inflation?",
+      "options": ["Avatar", "Star Wars: The Force Awakens", "Titanic", "Avengers: Endgame"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In what year was the film Casablanca released?",
+      "options": ["1939", "1951", "1946", "1942"],
+      "correctIndex": 3,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which actor has won the most Academy Awards for Best Actor?",
+      "options": ["Daniel Day-Lewis", "Jack Nicholson", "Tom Hanks", "Marlon Brando"],
+      "correctIndex": 0,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What was the first feature-length film made entirely with computer animation?",
+      "options": ["Antz", "Shrek", "Toy Story", "A Bug's Life"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In The Matrix, what color pill does Neo take?",
+      "options": ["White", "Blue", "Red", "Green"],
+      "correctIndex": 2,
+      "category": "Movies",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many strings does a standard guitar have?",
+      "options": ["Four", "Five", "Eight", "Six"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which singer is known as the \"Queen of Pop\"?",
+      "options": ["Cher", "Madonna", "Beyoncé", "Whitney Houston"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which instrument does a drummer hit with brushes or sticks?",
+      "options": ["Snare drum", "Harp", "Oboe", "Cello"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which band sang \"Hey Jude\"?",
+      "options": ["The Beatles", "Queen", "The Rolling Stones", "The Who"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country is the band ABBA from?",
+      "options": ["Denmark", "Norway", "Sweden", "Finland"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What was Elvis Presley's famous Memphis home called?",
+      "options": ["Graceland", "Sun Studio", "Paisley Park", "Neverland"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which composer wrote the Moonlight Sonata?",
+      "options": ["Franz Schubert", "Wolfgang Amadeus Mozart", "Frédéric Chopin", "Ludwig van Beethoven"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Freddie Mercury was the lead singer of which band?",
+      "options": ["Queen", "Led Zeppelin", "The Police", "Genesis"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "How many musicians are in a quartet?",
+      "options": ["Five", "Three", "Six", "Four"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which artist released the album \"Lemonade\" in 2016?",
+      "options": ["Taylor Swift", "Rihanna", "Adele", "Beyoncé"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which instrument did Jimi Hendrix famously play?",
+      "options": ["Bass guitar", "Saxophone", "Electric guitar", "Drums"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which composer wrote \"The Magic Flute\"?",
+      "options": ["Giuseppe Verdi", "Wolfgang Amadeus Mozart", "Ludwig van Beethoven", "Richard Wagner"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which opera features the aria \"Nessun dorma\"?",
+      "options": ["La Bohème", "Turandot", "Tosca", "Aida"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What does \"forte\" mean in music?",
+      "options": ["Soft", "Loud", "Fast", "Slow"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which band released the album \"The Dark Side of the Moon\"?",
+      "options": ["The Doors", "Pink Floyd", "Led Zeppelin", "Deep Purple"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which city was Wolfgang Amadeus Mozart born?",
+      "options": ["Salzburg", "Munich", "Vienna", "Prague"],
+      "correctIndex": 0,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the lowest standard female singing voice?",
+      "options": ["Mezzo-soprano", "Soprano", "Contralto", "Alto-tenor"],
+      "correctIndex": 2,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which band released the album \"OK Computer\" in 1997?",
+      "options": ["Oasis", "Blur", "Coldplay", "Radiohead"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which artist released the album \"Thriller\" in 1982?",
+      "options": ["Lionel Richie", "Stevie Wonder", "Prince", "Michael Jackson"],
+      "correctIndex": 3,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many beats does a whole note last in 4/4 time?",
+      "options": ["Two", "Four", "One", "Eight"],
+      "correctIndex": 1,
+      "category": "Music",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What gas do plants absorb from the air?",
+      "options": ["Oxygen", "Helium", "Nitrogen", "Carbon dioxide"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the freezing point of water in Celsius?",
+      "options": ["-10 degrees", "0 degrees", "10 degrees", "32 degrees"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many legs does an insect have?",
+      "options": ["Ten", "Eight", "Four", "Six"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the chemical symbol for sodium?",
+      "options": ["S", "Na", "So", "Sd"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the boiling point of water at sea level in Fahrenheit?",
+      "options": ["180°F", "300°F", "212°F", "100°F"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which organ in the human body produces insulin?",
+      "options": ["Liver", "Pancreas", "Kidney", "Spleen"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the pH of pure water at 25°C?",
+      "options": ["5", "14", "0", "7"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the largest bone in the human body?",
+      "options": ["Femur", "Tibia", "Pelvis", "Humerus"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What type of energy is stored in a stretched rubber band?",
+      "options": ["Elastic potential energy", "Kinetic energy", "Thermal energy", "Chemical energy"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which part of a plant cell carries out photosynthesis?",
+      "options": ["Nucleus", "Cell wall", "Vacuole", "Chloroplast"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the speed of light, approximately, in kilometres per second?",
+      "options": ["300,000", "30,000", "3,000,000", "3,000"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the atomic number of carbon?",
+      "options": ["6", "12", "8", "14"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who developed the laws of motion and universal gravitation?",
+      "options": ["Albert Einstein", "Galileo Galilei", "Isaac Newton", "Johannes Kepler"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the chemical formula for table salt?",
+      "options": ["NaCO3", "NaCl", "CaCl2", "KCl"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which element has the chemical symbol \"K\"?",
+      "options": ["Krypton", "Potassium", "Phosphorus", "Calcium"],
+      "correctIndex": 1,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What part of the brain controls balance and coordination?",
+      "options": ["Cerebellum", "Brainstem", "Hypothalamus", "Cerebrum"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the SI unit of electrical resistance?",
+      "options": ["Ohm", "Ampere", "Watt", "Volt"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which particle in an atom has no electric charge?",
+      "options": ["Proton", "Positron", "Electron", "Neutron"],
+      "correctIndex": 3,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the most abundant element in the universe?",
+      "options": ["Hydrogen", "Oxygen", "Carbon", "Helium"],
+      "correctIndex": 0,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which scientist discovered penicillin?",
+      "options": ["Louis Pasteur", "Joseph Lister", "Alexander Fleming", "Marie Curie"],
+      "correctIndex": 2,
+      "category": "Science",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which Roman emperor was said to have fiddled while Rome burned?",
+      "options": ["Trajan", "Nero", "Augustus", "Caligula"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who was the first emperor of Rome?",
+      "options": ["Nero", "Augustus", "Constantine", "Julius Caesar"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which country did the Olympic Games originate?",
+      "options": ["Egypt", "Italy", "Greece", "Turkey"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which explorer led the first expedition to circumnavigate the globe?",
+      "options": ["Christopher Columbus", "Ferdinand Magellan", "James Cook", "Vasco da Gama"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which wall fell in 1989?",
+      "options": ["The Western Wall", "The Berlin Wall", "The Great Wall", "Hadrian's Wall"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which wall divided a European city from 1961 to 1989?",
+      "options": ["The Western Wall", "Hadrian's Wall", "The Berlin Wall", "The Great Wall"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Julius Caesar was a leader of which ancient city-state?",
+      "options": ["Sparta", "Rome", "Carthage", "Athens"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country did Germany invade in September 1939, starting World War II?",
+      "options": ["France", "Belgium", "Czechoslovakia", "Poland"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who painted the ceiling of the Sistine Chapel?",
+      "options": ["Raphael", "Donatello", "Leonardo da Vinci", "Michelangelo"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which French leader was exiled to the island of Elba?",
+      "options": ["Napoleon Bonaparte", "Charles de Gaulle", "Louis XVI", "Robespierre"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who was the first woman to fly solo across the Atlantic?",
+      "options": ["Amelia Earhart", "Amy Johnson", "Bessie Coleman", "Harriet Quimby"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which queen ruled the United Kingdom for over 70 years?",
+      "options": ["Victoria", "Elizabeth II", "Mary I", "Elizabeth I"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which city was President John F. Kennedy assassinated?",
+      "options": ["Dallas", "Chicago", "Washington, D.C.", "Houston"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In what year did the Battle of Hastings take place?",
+      "options": ["1215", "1166", "1066", "966"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who was the first emperor of China?",
+      "options": ["Qin Shi Huang", "Sun Yat-sen", "Kublai Khan", "Liu Bang"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which English king was defeated at the Battle of Hastings?",
+      "options": ["Harold II", "Edward the Confessor", "William I", "Richard I"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which civilisation built the city of Tenochtitlan?",
+      "options": ["The Maya", "The Olmecs", "The Inca", "The Aztecs"],
+      "correctIndex": 3,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who was the British Prime Minister for most of World War II?",
+      "options": ["Neville Chamberlain", "Winston Churchill", "Anthony Eden", "Clement Attlee"],
+      "correctIndex": 1,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which French queen was executed in 1793?",
+      "options": ["Marie Antoinette", "Anne of Austria", "Catherine de Medici", "Josephine"],
+      "correctIndex": 0,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What was the capital of the Byzantine Empire?",
+      "options": ["Athens", "Alexandria", "Constantinople", "Rome"],
+      "correctIndex": 2,
+      "category": "History",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which country is home to the city of Venice?",
+      "options": ["Greece", "France", "Croatia", "Italy"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which continent is Brazil in?",
+      "options": ["Europe", "Africa", "North America", "South America"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the capital of France?",
+      "options": ["Marseille", "Nice", "Paris", "Lyon"],
+      "correctIndex": 2,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country is shaped like a boot?",
+      "options": ["Croatia", "Italy", "Portugal", "Greece"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the largest country in the world by area?",
+      "options": ["United States", "Russia", "China", "Canada"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country has the city of Tokyo?",
+      "options": ["South Korea", "China", "Thailand", "Japan"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the longest river in South America?",
+      "options": ["Paraná", "Magdalena", "Orinoco", "Amazon"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the capital of Morocco?",
+      "options": ["Rabat", "Casablanca", "Fez", "Marrakesh"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which desert covers much of Mongolia and northern China?",
+      "options": ["The Karakum", "The Kalahari", "The Thar", "The Gobi"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which mountain is the highest in Africa?",
+      "options": ["Kilimanjaro", "Ras Dashen", "Mount Kenya", "Mount Elgon"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which African country was formerly known as Abyssinia?",
+      "options": ["Ethiopia", "Eritrea", "Sudan", "Somalia"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the capital of Peru?",
+      "options": ["La Paz", "Quito", "Bogotá", "Lima"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which river flows through Baghdad?",
+      "options": ["Jordan", "Euphrates", "Nile", "Tigris"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Lake Titicaca lies on the border of Peru and which country?",
+      "options": ["Brazil", "Bolivia", "Chile", "Ecuador"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the capital of Mongolia?",
+      "options": ["Ulaanbaatar", "Almaty", "Bishkek", "Astana"],
+      "correctIndex": 0,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which country has the longest coastline in the world?",
+      "options": ["Australia", "Norway", "Russia", "Canada"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the capital of Vietnam?",
+      "options": ["Da Nang", "Hanoi", "Hue", "Ho Chi Minh City"],
+      "correctIndex": 1,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the deepest lake in the world?",
+      "options": ["Caspian Sea", "Lake Tanganyika", "Lake Superior", "Lake Baikal"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which country has the most time zones, counting overseas territories?",
+      "options": ["Russia", "United States", "United Kingdom", "France"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the highest mountain in Africa?",
+      "options": ["Mount Kenya", "Mount Stanley", "Ras Dashen", "Mount Kilimanjaro"],
+      "correctIndex": 3,
+      "category": "Geography",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What fruit is used to make guacamole?",
+      "options": ["Kiwi", "Lime", "Mango", "Avocado"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country is famous for tacos?",
+      "options": ["Peru", "Mexico", "Argentina", "Spain"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the main ingredient in a traditional falafel?",
+      "options": ["Rice", "Lentils", "Potatoes", "Chickpeas or fava beans"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What color is a ripe banana?",
+      "options": ["Orange", "Red", "Yellow", "Green"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country does the dish paella come from?",
+      "options": ["Mexico", "Portugal", "Spain", "Italy"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What type of pasta is shaped like little bow ties?",
+      "options": ["Penne", "Rigatoni", "Farfalle", "Fusilli"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the main ingredient of traditional Japanese miso?",
+      "options": ["Soybeans", "Rice flour", "Seaweed", "Mushrooms"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which spice gives curry its yellow color?",
+      "options": ["Saffron", "Turmeric", "Cumin", "Paprika"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What kind of nut is used to make marzipan?",
+      "options": ["Almond", "Hazelnut", "Walnut", "Pistachio"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which drink is made from fermented grapes?",
+      "options": ["Sake", "Wine", "Beer", "Cider"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "From which country does the dish goulash originate?",
+      "options": ["Austria", "Czech Republic", "Hungary", "Poland"],
+      "correctIndex": 2,
+      "category": "Food & Drink",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which spice gives curry its yellow colour?",
+      "options": ["Cumin", "Turmeric", "Cinnamon", "Paprika"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which Italian cheese is traditionally grated over pasta?",
+      "options": ["Cheddar", "Brie", "Feta", "Parmesan"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the Japanese spirit sake made from?",
+      "options": ["Rice", "Barley", "Potatoes", "Wheat"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which country is the world's largest producer of tea?",
+      "options": ["Sri Lanka", "India", "Kenya", "China"],
+      "correctIndex": 3,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Kimchi is a traditional dish from which country?",
+      "options": ["South Korea", "Japan", "Vietnam", "China"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the main ingredient in the Middle Eastern dish tabbouleh?",
+      "options": ["Bulgur wheat", "Rice", "Quinoa", "Couscous"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which fruit is a cross between a tangerine and a pomelo or grapefruit?",
+      "options": ["Tangelo", "Kumquat", "Satsuma", "Clementine"],
+      "correctIndex": 0,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which French region gives its name to a sparkling wine?",
+      "options": ["Bordeaux", "Champagne", "Burgundy", "Alsace"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the main flavor of the liqueur Amaretto?",
+      "options": ["Coffee", "Almond", "Orange", "Cherry"],
+      "correctIndex": 1,
+      "category": "Food & Drink",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many players are on the field for one soccer team?",
+      "options": ["11", "9", "10", "12"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which sport do you score a \"touchdown\"?",
+      "options": ["Baseball", "American football", "Basketball", "Rugby"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many rings are on the Olympic flag?",
+      "options": ["Six", "Five", "Four", "Seven"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What sport is played at Wimbledon?",
+      "options": ["Cricket", "Badminton", "Golf", "Tennis"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In basketball, how many points is a free throw worth?",
+      "options": ["Zero", "Three", "Two", "One"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which sport uses a puck?",
+      "options": ["Polo", "Lacrosse", "Curling", "Ice hockey"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What color is the center of an archery target?",
+      "options": ["Blue", "Gold", "Red", "White"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In golf, what is one stroke under par called?",
+      "options": ["Albatross", "Bogey", "Eagle", "Birdie"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country hosted the 2016 Summer Olympics?",
+      "options": ["United Kingdom", "Brazil", "Japan", "China"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many holes are on a standard golf course?",
+      "options": ["9", "12", "18", "24"],
+      "correctIndex": 2,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Usain Bolt is famous for which sport?",
+      "options": ["Cycling", "Sprinting", "Swimming", "Long jump"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which sport would you perform a slam dunk?",
+      "options": ["Handball", "Volleyball", "Water polo", "Basketball"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What shape is a rugby ball?",
+      "options": ["Round", "Triangular", "Square", "Oval"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many bases are there on a baseball field, including home plate?",
+      "options": ["Five", "Six", "Four", "Three"],
+      "correctIndex": 2,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country invented the sport of judo?",
+      "options": ["China", "Korea", "Brazil", "Japan"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How long is a marathon, in kilometres, approximately?",
+      "options": ["42", "26", "35", "50"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which nation has won the most FIFA World Cups?",
+      "options": ["Brazil", "Italy", "Germany", "Argentina"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In tennis, what is a score of zero called?",
+      "options": ["Duck", "Love", "Zip", "Nil"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "How many players are on a volleyball team on court?",
+      "options": ["Six", "Five", "Seven", "Eight"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which swimmer has won the most Olympic gold medals?",
+      "options": ["Ryan Lochte", "Mark Spitz", "Ian Thorpe", "Michael Phelps"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which sport is the Stanley Cup awarded?",
+      "options": ["Ice hockey", "American football", "Baseball", "Basketball"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "How many minutes is a standard soccer match, excluding stoppages?",
+      "options": ["120", "90", "100", "80"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "The Tour de France is a race in which sport?",
+      "options": ["Sailing", "Cycling", "Motor racing", "Running"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the maximum break in snooker?",
+      "options": ["155", "147", "100", "180"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In cricket, how many balls are in a standard over?",
+      "options": ["Eight", "Ten", "Six", "Five"],
+      "correctIndex": 2,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which boxer was known as \"The Greatest\"?",
+      "options": ["Muhammad Ali", "George Foreman", "Joe Frazier", "Mike Tyson"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which city were the first modern Olympic Games held in 1896?",
+      "options": ["Rome", "Paris", "London", "Athens"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the highest score possible with three darts?",
+      "options": ["150", "180", "200", "160"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which country is known for the martial art taekwondo?",
+      "options": ["Thailand", "China", "Japan", "South Korea"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "How many players are on a basketball team on court?",
+      "options": ["Five", "Six", "Seven", "Four"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which country won the first FIFA World Cup in 1930?",
+      "options": ["Italy", "Uruguay", "Argentina", "Brazil"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many Grand Slam tournaments are played each year in tennis?",
+      "options": ["Five", "Four", "Three", "Six"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which year did Jesse Owens win four gold medals in Berlin?",
+      "options": ["1948", "1932", "1936", "1952"],
+      "correctIndex": 2,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the diameter of a basketball hoop, in inches?",
+      "options": ["18", "16", "24", "20"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which country has won the most Rugby Union World Cups?",
+      "options": ["New Zealand", "England", "Australia", "South Africa"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In sumo wrestling, what is the highest rank?",
+      "options": ["Sekiwake", "Ozeki", "Komusubi", "Yokozuna"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which Formula 1 driver has won the most World Championships, tied with Lewis Hamilton?",
+      "options": ["Ayrton Senna", "Michael Schumacher", "Sebastian Vettel", "Alain Prost"],
+      "correctIndex": 1,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How long is an Olympic swimming pool, in metres?",
+      "options": ["25", "100", "50", "75"],
+      "correctIndex": 2,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In bowling, what is three strikes in a row called?",
+      "options": ["A turkey", "A hat-trick", "A triple", "A clean sweep"],
+      "correctIndex": 0,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which country hosted the 2002 FIFA World Cup together with Japan?",
+      "options": ["Thailand", "China", "Australia", "South Korea"],
+      "correctIndex": 3,
+      "category": "Sports",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the largest animal on Earth?",
+      "options": ["Great white shark", "African elephant", "Giraffe", "Blue whale"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do bees make?",
+      "options": ["Wax paper", "Milk", "Honey", "Silk"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many legs does a spider have?",
+      "options": ["Six", "Eight", "Ten", "Twelve"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is a baby cat called?",
+      "options": ["Calf", "Kitten", "Puppy", "Cub"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which animal is known as the \"King of the Jungle\"?",
+      "options": ["Elephant", "Lion", "Gorilla", "Tiger"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the fastest land animal?",
+      "options": ["Cheetah", "Lion", "Horse", "Greyhound"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which bird is a symbol of peace?",
+      "options": ["Dove", "Owl", "Swan", "Eagle"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do caterpillars turn into?",
+      "options": ["Beetles", "Dragonflies", "Butterflies", "Bees"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which animal has a long trunk?",
+      "options": ["Giraffe", "Elephant", "Hippo", "Rhinoceros"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What color is a polar bear's fur?",
+      "options": ["White", "Black", "Grey", "Brown"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which animal is known for carrying its home on its back?",
+      "options": ["Turtle", "Crab", "Hedgehog", "Snail"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do pandas mainly eat?",
+      "options": ["Bamboo", "Grass", "Fish", "Berries"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is a baby dog called?",
+      "options": ["Puppy", "Lamb", "Foal", "Kitten"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which is the tallest animal?",
+      "options": ["Ostrich", "Giraffe", "Camel", "Elephant"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is a group of wolves called?",
+      "options": ["A pack", "A flock", "A herd", "A school"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which mammal can truly fly?",
+      "options": ["Colugo", "Bat", "Flying squirrel", "Sugar glider"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the largest species of shark?",
+      "options": ["Great white shark", "Whale shark", "Tiger shark", "Hammerhead shark"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "How many hearts does an octopus have?",
+      "options": ["Two", "Three", "One", "Five"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the tallest type of tree in the world?",
+      "options": ["Giant sequoia", "Eucalyptus", "Coast redwood", "Douglas fir"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which animal is the national symbol of Australia, along with the emu?",
+      "options": ["Koala", "Wombat", "Platypus", "Kangaroo"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What do you call an animal that eats both plants and meat?",
+      "options": ["Insectivore", "Herbivore", "Carnivore", "Omnivore"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which bird lays the largest eggs?",
+      "options": ["Penguin", "Albatross", "Emu", "Ostrich"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "A group of crows is called what?",
+      "options": ["A pride", "A parliament", "A murder", "A gaggle"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which is the only mammal that lays eggs, along with the echidna?",
+      "options": ["Platypus", "Opossum", "Pangolin", "Armadillo"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "How long is an elephant pregnant for, roughly?",
+      "options": ["22 months", "12 months", "36 months", "9 months"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the largest rainforest in the world?",
+      "options": ["Daintree", "The Amazon", "The Congo", "Borneo"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which flower is associated with the Netherlands?",
+      "options": ["Tulip", "Rose", "Daffodil", "Orchid"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which animal has the longest lifespan among mammals?",
+      "options": ["Bowhead whale", "Blue whale", "Human", "Elephant"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What type of animal is a Komodo dragon?",
+      "options": ["Dinosaur", "Crocodile", "Snake", "Lizard"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is a female deer called?",
+      "options": ["Mare", "Sow", "Doe", "Ewe"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the only bird known to fly backwards?",
+      "options": ["Kestrel", "Hummingbird", "Swift", "Kingfisher"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which animal has the most powerful bite in the world?",
+      "options": ["Great white shark", "Jaguar", "Saltwater crocodile", "Hippopotamus"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the scientific study of birds called?",
+      "options": ["Ichthyology", "Herpetology", "Ornithology", "Entomology"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which tree produces acorns?",
+      "options": ["Maple", "Beech", "Oak", "Ash"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many species of penguin are there, approximately?",
+      "options": ["18", "8", "30", "45"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which plant pigment makes leaves green?",
+      "options": ["Anthocyanin", "Chlorophyll", "Melanin", "Carotene"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the largest living species of lizard?",
+      "options": ["Green iguana", "Komodo dragon", "Gila monster", "Monitor lizard"],
+      "correctIndex": 1,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which bird has the largest wingspan?",
+      "options": ["Wandering albatross", "Great white pelican", "Andean condor", "Bald eagle"],
+      "correctIndex": 0,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is a baby kangaroo called?",
+      "options": ["Pup", "Cub", "Kit", "Joey"],
+      "correctIndex": 3,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which sea creature has three hearts and blue blood?",
+      "options": ["Jellyfish", "Squid", "Octopus", "Starfish"],
+      "correctIndex": 2,
+      "category": "Animals & Nature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the name of the plumber hero in Nintendo's most famous series?",
+      "options": ["Wario", "Mario", "Link", "Luigi"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In Pac-Man, what does Pac-Man eat?",
+      "options": ["Coins", "Dots", "Stars", "Mushrooms"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which yellow family lives in Springfield?",
+      "options": ["The Flintstones", "The Simpsons", "The Griffins", "The Belchers"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In Minecraft, what green creature explodes?",
+      "options": ["Creeper", "Zombie", "Slime", "Enderman"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which Pokémon is Ash Ketchum's famous yellow partner?",
+      "options": ["Raichu", "Jigglypuff", "Psyduck", "Pikachu"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is SpongeBob's job?",
+      "options": ["Lifeguard", "Mail carrier", "Fry cook", "Teacher"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In the game Tetris, what do you stack?",
+      "options": ["Balls", "Falling blocks", "Cards", "Coins"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which show features the coffee shop Central Perk?",
+      "options": ["Seinfeld", "Friends", "How I Met Your Mother", "Frasier"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What color is Sonic the Hedgehog?",
+      "options": ["Yellow", "Green", "Red", "Blue"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In chess, which piece can only move diagonally?",
+      "options": ["Knight", "Bishop", "King", "Rook"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which company makes the PlayStation?",
+      "options": ["Microsoft", "Sony", "Nintendo", "Sega"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In Monopoly, what do you collect for passing Go?",
+      "options": ["$200", "$50", "$100", "$500"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which animated show features a talking dog named Scooby-Doo?",
+      "options": ["Looney Tunes", "The Jetsons", "Scooby-Doo, Where Are You!", "Tom and Jerry"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many squares are on a chessboard?",
+      "options": ["64", "32", "100", "81"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In the game Among Us, what are the hidden saboteurs called?",
+      "options": ["Traitors", "Spies", "Impostors", "Ghosts"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which TV series is set in the fictional town of Hawkins, Indiana?",
+      "options": ["Twin Peaks", "Stranger Things", "Riverdale", "Dark"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of the princess Link often rescues?",
+      "options": ["Peach", "Rosalina", "Daisy", "Zelda"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which game series features the character Master Chief?",
+      "options": ["Destiny", "Halo", "Call of Duty", "Gears of War"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In Breaking Bad, what subject does Walter White teach?",
+      "options": ["Mathematics", "Chemistry", "Biology", "Physics"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the best-selling video game of all time?",
+      "options": ["Wii Sports", "Tetris", "Grand Theft Auto V", "Minecraft"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In Game of Thrones, what is the name of the Stark family seat?",
+      "options": ["Winterfell", "Casterly Rock", "The Eyrie", "Riverrun"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which board game features Colonel Mustard and Miss Scarlett?",
+      "options": ["Trivial Pursuit", "Risk", "Cluedo", "Scrabble"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What year was the original Nintendo Game Boy released?",
+      "options": ["1996", "1989", "1985", "1993"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In The Office (US), which company does Michael Scott work for?",
+      "options": ["Initech", "Dunder Mifflin", "Wernham Hogg", "Vandelay Industries"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which game has players build towns as a mayor among animal villagers?",
+      "options": ["The Sims", "Stardew Valley", "Harvest Moon", "Animal Crossing"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the highest-scoring tile value in English Scrabble?",
+      "options": ["10", "12", "15", "8"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which TV doctor travels in the TARDIS?",
+      "options": ["The Doctor", "Dr. House", "Dr. Strange", "Dr. Watson"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In Fortnite, what is the vehicle players jump from at the start?",
+      "options": ["The Party Plane", "The Battle Bus", "The Sky Train", "The Drop Ship"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which sitcom family lives at 742 Evergreen Terrace?",
+      "options": ["The Simpsons", "The Bradys", "The Bundys", "The Tanners"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What company created the game Fortnite?",
+      "options": ["Epic Games", "Blizzard", "Valve", "Riot Games"],
+      "correctIndex": 0,
+      "category": "TV & Games",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which 1972 arcade game is often called the first commercially successful video game?",
+      "options": ["Space Invaders", "Computer Space", "Pong", "Asteroids"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which city is the TV series The Wire set?",
+      "options": ["Philadelphia", "Chicago", "Detroit", "Baltimore"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What was the first home console made by Nintendo outside Japan known as?",
+      "options": ["Game Cube", "Super Nintendo", "Nintendo 64", "Nintendo Entertainment System"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who created The Legend of Zelda and Super Mario?",
+      "options": ["Hideo Kojima", "Satoru Iwata", "Shigeru Miyamoto", "Yuji Naka"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In Seinfeld, what is Kramer's first name?",
+      "options": ["Kenny", "Newman", "Morty", "Cosmo"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which video game introduced the character Lara Croft?",
+      "options": ["Resident Evil", "Tomb Raider", "Uncharted", "Prince of Persia"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many seasons did Friends run for?",
+      "options": ["8", "10", "12", "9"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In the game Go, what color stones does the first player use?",
+      "options": ["White", "Black", "Red", "Blue"],
+      "correctIndex": 1,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which company developed the game series The Witcher?",
+      "options": ["BioWare", "Ubisoft", "CD Projekt Red", "Bethesda"],
+      "correctIndex": 2,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the name of the AI antagonist in Portal?",
+      "options": ["SHODAN", "HAL 9000", "Cortana", "GLaDOS"],
+      "correctIndex": 3,
+      "category": "TV & Games",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who painted the Mona Lisa?",
+      "options": ["Raphael", "Michelangelo", "Vincent van Gogh", "Leonardo da Vinci"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who wrote the Harry Potter books?",
+      "options": ["C.S. Lewis", "Roald Dahl", "J.K. Rowling", "J.R.R. Tolkien"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who wrote Romeo and Juliet?",
+      "options": ["Geoffrey Chaucer", "Charles Dickens", "William Shakespeare", "Jane Austen"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which artist cut off part of his own ear?",
+      "options": ["Vincent van Gogh", "Salvador Dalí", "Pablo Picasso", "Claude Monet"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which book series would you find Hogwarts?",
+      "options": ["Percy Jackson", "Harry Potter", "Narnia", "The Hunger Games"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What are the three primary colors in traditional painting?",
+      "options": ["Red, yellow and blue", "Black, white and red", "Red, green and blue", "Orange, green and purple"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who wrote \"The Cat in the Hat\"?",
+      "options": ["Dr. Seuss", "Roald Dahl", "Maurice Sendak", "Eric Carle"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the name of the hobbit who carries the One Ring?",
+      "options": ["Peregrin Took", "Bilbo Baggins", "Samwise Gamgee", "Frodo Baggins"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which famous detective lived at 221B Baker Street?",
+      "options": ["Sherlock Holmes", "Hercule Poirot", "Philip Marlowe", "Miss Marple"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "In which museum does the Mona Lisa hang?",
+      "options": ["The Prado", "The Uffizi", "The Louvre", "The British Museum"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who wrote \"Charlie and the Chocolate Factory\"?",
+      "options": ["Lewis Carroll", "Beatrix Potter", "Enid Blyton", "Roald Dahl"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do you call a painting of a person?",
+      "options": ["A landscape", "A portrait", "A still life", "A mural"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which author wrote \"The Adventures of Tom Sawyer\"?",
+      "options": ["Mark Twain", "Herman Melville", "Jack London", "Charles Dickens"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Alice falls down a rabbit hole into which land?",
+      "options": ["Oz", "Neverland", "Wonderland", "Narnia"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who painted \"The Starry Night\"?",
+      "options": ["Vincent van Gogh", "Henri Matisse", "Paul Gauguin", "Edvard Munch"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who wrote \"Pride and Prejudice\"?",
+      "options": ["Jane Austen", "Charlotte Brontë", "Emily Brontë", "George Eliot"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which artist is famous for paintings of melting clocks?",
+      "options": ["Joan Miró", "Max Ernst", "René Magritte", "Salvador Dalí"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who wrote the novel \"1984\"?",
+      "options": ["George Orwell", "H.G. Wells", "Aldous Huxley", "Ray Bradbury"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which art movement is Claude Monet associated with?",
+      "options": ["Surrealism", "Cubism", "Expressionism", "Impressionism"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who wrote \"The Odyssey\"?",
+      "options": ["Sophocles", "Homer", "Virgil", "Plato"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who painted \"The Scream\"?",
+      "options": ["Edvard Munch", "Egon Schiele", "Wassily Kandinsky", "Gustav Klimt"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In \"Moby-Dick\", what is the name of the captain?",
+      "options": ["Queequeg", "Ahab", "Hook", "Nemo"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which artist co-founded Cubism with Georges Braque?",
+      "options": ["Marc Chagall", "Henri Matisse", "Paul Cézanne", "Pablo Picasso"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who wrote \"The Great Gatsby\"?",
+      "options": ["John Steinbeck", "Ernest Hemingway", "William Faulkner", "F. Scott Fitzgerald"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What nationality was the painter Rembrandt?",
+      "options": ["Belgian", "German", "French", "Dutch"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who wrote \"Don Quixote\"?",
+      "options": ["Lope de Vega", "Gabriel García Márquez", "Federico García Lorca", "Miguel de Cervantes"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which pop artist is famous for Campbell's Soup Cans?",
+      "options": ["Jasper Johns", "Andy Warhol", "Roy Lichtenstein", "Keith Haring"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who wrote \"To Kill a Mockingbird\"?",
+      "options": ["Toni Morrison", "Maya Angelou", "Harper Lee", "Truman Capote"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Michelangelo's famous marble statue of a biblical hero is called what?",
+      "options": ["Moses", "Goliath", "Samson", "David"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which Russian author wrote \"War and Peace\"?",
+      "options": ["Anton Chekhov", "Leo Tolstoy", "Fyodor Dostoevsky", "Ivan Turgenev"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who painted \"Girl with a Pearl Earring\"?",
+      "options": ["Rembrandt", "Jan van Eyck", "Frans Hals", "Johannes Vermeer"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which poet wrote \"The Raven\"?",
+      "options": ["Edgar Allan Poe", "Emily Dickinson", "Walt Whitman", "Robert Frost"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In which city is Michelangelo's statue of David displayed?",
+      "options": ["Milan", "Venice", "Florence", "Rome"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who wrote \"One Hundred Years of Solitude\"?",
+      "options": ["Gabriel García Márquez", "Mario Vargas Llosa", "Isabel Allende", "Jorge Luis Borges"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which Japanese artist made \"The Great Wave off Kanagawa\"?",
+      "options": ["Utamaro", "Hokusai", "Hiroshige", "Kuniyoshi"],
+      "correctIndex": 1,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who wrote the epic poem \"Paradise Lost\"?",
+      "options": ["John Milton", "William Blake", "Dante Alighieri", "Geoffrey Chaucer"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which artist painted the ceiling of the Paris Opera, Garnier's, in 1964?",
+      "options": ["Henri Matisse", "Pablo Picasso", "Joan Miró", "Marc Chagall"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the first book of the Bible?",
+      "options": ["Psalms", "Matthew", "Genesis", "Exodus"],
+      "correctIndex": 2,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who wrote \"Crime and Punishment\"?",
+      "options": ["Nikolai Gogol", "Alexander Pushkin", "Leo Tolstoy", "Fyodor Dostoevsky"],
+      "correctIndex": 3,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Frida Kahlo was an artist from which country?",
+      "options": ["Mexico", "Spain", "Colombia", "Argentina"],
+      "correctIndex": 0,
+      "category": "Art & Literature",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What does \"www\" stand for in a website address?",
+      "options": ["World Wide Web", "World Web Wide", "Wide World Web", "Web World Wide"],
+      "correctIndex": 0,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which company makes the iPhone?",
+      "options": ["Samsung", "Google", "Apple", "Nokia"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does a computer mouse control?",
+      "options": ["The volume", "The pointer on screen", "The power", "The printer"],
+      "correctIndex": 1,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which company created the Windows operating system?",
+      "options": ["Microsoft", "Apple", "IBM", "Google"],
+      "correctIndex": 0,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the most popular internet search engine?",
+      "options": ["DuckDuckGo", "Yahoo", "Bing", "Google"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does \"Wi-Fi\" let devices do?",
+      "options": ["Play music louder", "Charge faster", "Print photos", "Connect wirelessly"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the name of Amazon's voice assistant?",
+      "options": ["Bixby", "Siri", "Cortana", "Alexa"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many bits are in a byte?",
+      "options": ["Sixteen", "Eight", "Four", "Two"],
+      "correctIndex": 1,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do you call a small image used to show emotion in messages?",
+      "options": ["Pixel", "Avatar", "Emoji", "Icon"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which key is usually used to delete the character to the left of the cursor?",
+      "options": ["Shift", "Tab", "Backspace", "Escape"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does \"USB\" help you do?",
+      "options": ["Connect devices", "Store electricity", "Print faster", "Cool a computer"],
+      "correctIndex": 0,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which social network uses a little bird as its classic logo?",
+      "options": ["Facebook", "Snapchat", "Twitter", "Instagram"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does \"PC\" stand for?",
+      "options": ["Private computer", "Public computer", "Processing computer", "Personal computer"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which company makes the Galaxy line of phones?",
+      "options": ["LG", "Huawei", "Sony", "Samsung"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do you call a program that harms a computer?",
+      "options": ["Plugin", "Virus", "Cookie", "Widget"],
+      "correctIndex": 1,
+      "category": "Technology",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who co-founded Microsoft with Paul Allen?",
+      "options": ["Steve Jobs", "Steve Wozniak", "Larry Page", "Bill Gates"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does \"CPU\" stand for?",
+      "options": ["Core processing unit", "Central program utility", "Central processing unit", "Computer power unit"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which year was the first iPhone released?",
+      "options": ["2010", "2009", "2007", "2005"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does \"HTML\" stand for?",
+      "options": ["Hyperlink Text Machine Language", "High Tech Modern Language", "Home Tool Markup Language", "HyperText Markup Language"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which company owns Instagram?",
+      "options": ["Meta", "Microsoft", "Snap", "Google"],
+      "correctIndex": 0,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does \"AI\" stand for?",
+      "options": ["Advanced interface", "Automated internet", "Analog input", "Artificial intelligence"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of the first widely used graphical web browser, released in 1993?",
+      "options": ["Opera", "Netscape Navigator", "Internet Explorer", "Mosaic"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does a \"QR\" code stand for?",
+      "options": ["Quick Read", "Quick Response", "Query Result", "Quality Rating"],
+      "correctIndex": 1,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which programming language is named after a British comedy group?",
+      "options": ["Python", "Perl", "Java", "Ruby"],
+      "correctIndex": 0,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Roughly how many bytes are in a kilobyte?",
+      "options": ["100", "1,000", "10,000", "1,000,000"],
+      "correctIndex": 1,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What was the first name of Google, before it was renamed?",
+      "options": ["PageRank", "Searchly", "BackRub", "Googol"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which company developed the Android operating system after acquiring it?",
+      "options": ["Samsung", "Apple", "Microsoft", "Google"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does \"GPS\" stand for?",
+      "options": ["Geographic Position Signal", "Global Positioning System", "Global Path Search", "General Pointing Service"],
+      "correctIndex": 1,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What does \"LED\" stand for?",
+      "options": ["Light electric device", "Laser emission diode", "Low-energy display", "Light-emitting diode"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which inventor is credited with the first practical telephone patent in 1876?",
+      "options": ["Guglielmo Marconi", "Thomas Edison", "Nikola Tesla", "Alexander Graham Bell"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Who is considered the first computer programmer?",
+      "options": ["Grace Hopper", "Alan Turing", "Ada Lovelace", "Charles Babbage"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What does \"RAM\" stand for?",
+      "options": ["Read-access memory", "Rapid application memory", "Run-time allocated memory", "Random-access memory"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "In what year was the World Wide Web invented by Tim Berners-Lee?",
+      "options": ["1979", "1983", "1989", "1995"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What was the name of the first general-purpose electronic computer, built in 1945?",
+      "options": ["Z3", "UNIVAC", "ENIAC", "Colossus"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which number system uses only 0 and 1?",
+      "options": ["Decimal", "Hexadecimal", "Binary", "Octal"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What does \"SSD\" stand for?",
+      "options": ["System storage device", "Secure software drive", "Solid-state drive", "Super speed disk"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which company was founded by Jensen Huang in 1993?",
+      "options": ["AMD", "Intel", "Nvidia", "Qualcomm"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who is known as the father of theoretical computer science and AI?",
+      "options": ["John von Neumann", "Claude Shannon", "Ada Lovelace", "Alan Turing"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What does the \"S\" in \"HTTPS\" stand for?",
+      "options": ["Standard", "Server", "System", "Secure"],
+      "correctIndex": 3,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What was the first home video game console, released in 1972?",
+      "options": ["ColecoVision", "Atari 2600", "Magnavox Odyssey", "Intellivision"],
+      "correctIndex": 2,
+      "category": "Technology",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the closest star to Earth?",
+      "options": ["Polaris", "Sirius", "The Sun", "Proxima Centauri"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the Sun mostly made of?",
+      "options": ["Hydrogen", "Carbon", "Oxygen", "Iron"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the largest planet in our solar system?",
+      "options": ["Earth", "Saturn", "Neptune", "Jupiter"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which planet is famous for its rings?",
+      "options": ["Venus", "Saturn", "Mars", "Mercury"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What do we call a person who travels into space?",
+      "options": ["Pilot", "Astronaut", "Astronomer", "Navigator"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "How many planets are in our solar system?",
+      "options": ["Seven", "Ten", "Eight", "Nine"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is Earth's only natural satellite?",
+      "options": ["Phobos", "Titan", "Europa", "The Moon"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which planet is closest to the Sun?",
+      "options": ["Mercury", "Venus", "Mars", "Earth"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is the name of our galaxy?",
+      "options": ["Whirlpool", "Andromeda", "The Milky Way", "Sombrero"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What shape is the Earth's orbit around the Sun, roughly?",
+      "options": ["A straight line", "A square", "A spiral", "An ellipse"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which planet do we live on?",
+      "options": ["Mars", "Jupiter", "Venus", "Earth"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What is a shooting star really?",
+      "options": ["A comet", "A planet", "A meteor", "A satellite"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "What does NASA explore?",
+      "options": ["Space", "Deserts", "Oceans", "Volcanoes"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which planet is the hottest in our solar system?",
+      "options": ["Venus", "Mercury", "Jupiter", "Mars"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which country launched the first artificial satellite, Sputnik?",
+      "options": ["The United States", "France", "The Soviet Union", "China"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "easy"
+    },
+    {
+      "text": "Who was the first human in space?",
+      "options": ["Yuri Gagarin", "Alan Shepard", "John Glenn", "Neil Armstrong"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "In which year did humans first land on the Moon?",
+      "options": ["1959", "1972", "1965", "1969"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of the largest volcano in the solar system?",
+      "options": ["Maxwell Montes", "Olympus Mons", "Mount Etna", "Mauna Kea"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which planet has the Great Red Spot?",
+      "options": ["Saturn", "Neptune", "Mars", "Jupiter"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which NASA rover landed on Mars in 2012?",
+      "options": ["Sojourner", "Curiosity", "Zhurong", "Spirit"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which dwarf planet was reclassified from a planet in 2006?",
+      "options": ["Pluto", "Eris", "Ceres", "Makemake"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of the space telescope launched in 1990?",
+      "options": ["Spitzer", "Kepler", "Hubble", "James Webb"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which planet rotates on its side?",
+      "options": ["Uranus", "Neptune", "Venus", "Saturn"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of NASA's Moon program that followed Apollo in the 2020s?",
+      "options": ["Mercury", "Artemis", "Gemini", "Orion"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which planet has the most known moons?",
+      "options": ["Saturn", "Uranus", "Jupiter", "Neptune"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of the rover that landed on Mars in 2021?",
+      "options": ["Spirit", "Curiosity", "Perseverance", "Opportunity"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is a light-year a measure of?",
+      "options": ["Speed", "Distance", "Brightness", "Time"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which company built the Falcon 9 rocket?",
+      "options": ["Blue Origin", "Rocket Lab", "SpaceX", "Boeing"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the name of the boundary around a black hole beyond which nothing escapes?",
+      "options": ["Photon ring", "Accretion disk", "Event horizon", "Singularity"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "Which planet has a day longer than its year?",
+      "options": ["Venus", "Neptune", "Mars", "Mercury"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "medium"
+    },
+    {
+      "text": "What is the closest star system to the Sun?",
+      "options": ["Sirius", "Alpha Centauri", "Barnard's Star", "Vega"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which moon of Saturn has a thick atmosphere?",
+      "options": ["Rhea", "Enceladus", "Mimas", "Titan"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the nearest large spiral galaxy to the Milky Way?",
+      "options": ["Pinwheel", "Whirlpool", "Triangulum", "Andromeda"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Who was the first woman in space?",
+      "options": ["Sally Ride", "Svetlana Savitskaya", "Mae Jemison", "Valentina Tereshkova"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the name of the first space station, launched in 1971?",
+      "options": ["Skylab", "Mir", "Tiangong-1", "Salyut 1"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which planet has the strongest winds in the solar system?",
+      "options": ["Saturn", "Jupiter", "Neptune", "Uranus"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What type of star is the Sun?",
+      "options": ["Neutron star", "Yellow dwarf", "White dwarf", "Red giant"],
+      "correctIndex": 1,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the name of the asteroid belt beyond Neptune?",
+      "options": ["Trojan Belt", "Oort Cloud", "Main Belt", "Kuiper Belt"],
+      "correctIndex": 3,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which space probe is the farthest human-made object from Earth?",
+      "options": ["New Horizons", "Pioneer 10", "Voyager 1", "Voyager 2"],
+      "correctIndex": 2,
+      "category": "Space",
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many astronauts walked on the Moon in total?",
+      "options": ["12", "18", "6", "24"],
+      "correctIndex": 0,
+      "category": "Space",
+      "difficulty": "hard"
     }
   ]
 }
