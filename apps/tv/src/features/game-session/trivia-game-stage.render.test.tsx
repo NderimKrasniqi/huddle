@@ -226,6 +226,23 @@ describe('Trivia TV game renderer', () => {
     expect(result.queryAllByRole('button')).toHaveLength(0);
   });
 
+  it('gathers a tie too big for the podium into one winners circle', async () => {
+    const finishedState = {
+      ...tenPlayerRevealState,
+      phase: 'finished' as const,
+      answers: {},
+      revealVerdicts: undefined,
+      standings: tenPlayers.map(({ playerId }, index) => ({ playerId, score: index < 8 ? 100 : 0 })),
+    };
+    const result = await render(<TvTrivia state={finishedState} players={tenPlayers} />);
+
+    // No podium of three equal 1s: all eight winners share the circle.
+    expect(result.getByTestId('trivia-tv-winners-circle')).toBeTruthy();
+    expect(result.getByText('8 winners · 100 points each', { includeHiddenElements: true })).toBeTruthy();
+    expect(result.getAllByTestId(/trivia-tv-final-row-/)).toHaveLength(10);
+    expect(result.getByText('It’s a tie!', { includeHiddenElements: true })).toBeTruthy();
+  });
+
   it('puts a two-player game on the podium with every result visible', async () => {
     const finishedState = {
       ...revealState,

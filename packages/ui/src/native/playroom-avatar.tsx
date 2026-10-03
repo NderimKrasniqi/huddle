@@ -120,7 +120,8 @@ export function PlayroomAvatar({
       {handUp && !ready ? (
         <Animated.View
           entering={BADGE_POP}
-          style={[styles.badge, badgeBox(badge, border), { top: -badge * 0.1, bottom: undefined, backgroundColor: playroomColors.orange }]}
+          // Bottom-left, mirroring the crown: a badge on the head would cover a face.
+          style={[styles.badge, badgeBox(badge, border), { right: undefined, left: -badge * 0.12, backgroundColor: playroomColors.orange }]}
         >
           <Image source={PLAYROOM_ARTWORK.props.hand} style={{ width: badge * 0.62, height: badge * 0.62 }} resizeMode="contain" accessible={false} />
         </Animated.View>

@@ -16,6 +16,7 @@ import { rosterRowControls, type lobbyStanding, type RosterSeat } from '../../fe
 import type { PlayerSession } from '../../platform/session';
 import type { BusyAction } from '../use-seated-room';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
+import { RoomFaces } from './room-faces';
 
 export type LobbyScreenProps = {
   readonly session: PlayerSession;
@@ -64,10 +65,12 @@ export function LobbyScreen(props: LobbyScreenProps) {
       </PhoneCard> : null}
       {returned ? <>
         <PlayroomMoment art="highFive" width={280} height={240} style={styles.moment} />
-        <PlayroomHeading type={playroomPhone.type.hero}>One more?</PlayroomHeading>
+        {/* "One more?" is the host's question to answer; a guest just had a good game. */}
+        <PlayroomHeading type={playroomPhone.type.hero}>{standing.youAreHost ? 'One more?' : 'Good game!'}</PlayroomHeading>
         <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
           {standing.youAreHost ? 'Same people. New surprises. Choose what’s next.' : `${standing.hostNickname ?? 'The host'} is choosing what’s next. Your seat stays yours.`}
         </PlayroomText>
+        <RoomFaces roster={roster} />
       </> : standing.youAreHost ? <HostLobby {...props} /> : <GuestLobby {...props} />}
       {failure ? <PhoneNotice testID="phone-lifecycle-error">{failure}</PhoneNotice> : null}
       {success ? (
@@ -132,7 +135,8 @@ function PlayerTile({ seat }: { readonly seat: RosterSeat }) {
         <PlayroomText numberOfLines={1} style={styles.tileName}>
           {seat.nickname}
         </PlayroomText>
-        {seat.host ? <Tag label="HOST" tone="host" /> : seat.away ? <Tag label="AWAY" tone="away" /> : null}
+        {/* The crown on the avatar already marks the host; only "away" needs a word. */}
+        {seat.away ? <Tag label="AWAY" tone="away" /> : null}
       </View>
     </Animated.View>
   );
@@ -153,13 +157,14 @@ function GuestLobby({ session, roster }: LobbyScreenProps) {
     <>
       <PlayroomHeading type={playroomPhone.type.heading}>You’re in!</PlayroomHeading>
       <PhoneCard style={styles.pass}>
-        <PlayroomAvatar avatarId={me?.avatar ?? session.avatar} size={88} />
+        <PlayroomAvatar avatarId={me?.avatar ?? session.avatar} size={72} />
         <View style={styles.infoText}>
           <PlayroomText style={playroomPhone.type.title}>{me?.nickname ?? session.nickname}</PlayroomText>
-          <PlayroomText color="muted" style={playroomPhone.type.body}>{`Room ${session.code} · ${me?.away ? 'Reconnecting' : 'Connected'}`}</PlayroomText>
+          <PlayroomText color="muted" style={playroomPhone.type.body}>{me?.away ? `Room ${session.code} · Reconnecting` : `Room ${session.code}`}</PlayroomText>
         </View>
       </PhoneCard>
-      <PlayroomMoment art="tvHandoff" width={240} height={190} style={styles.moment} />
+      {/* Smaller than a hero: the room below is what a guest looks at while waiting. */}
+      <PlayroomMoment art="tvHandoff" width={170} height={135} style={styles.moment} />
       {host ? (
         <PhoneCard style={styles.infoCard}>
           <PlayroomAvatar avatarId={host.avatar} size={52} host />
@@ -169,6 +174,7 @@ function GuestLobby({ session, roster }: LobbyScreenProps) {
           </View>
         </PhoneCard>
       ) : null}
+      <RoomFaces roster={roster} />
 
     </>
   );
