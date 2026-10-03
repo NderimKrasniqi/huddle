@@ -43,6 +43,11 @@ function seatArrival(delay: number) {
     .reduceMotion(ReduceMotion.System);
 }
 
+/** How far a seat rises: the middle seats sit highest, like a row round the couch. */
+function arcLift(position: number): number {
+  return Math.round(Math.sin((Math.PI * (position + 0.5)) / PLAYER_CAPACITY) * 64);
+}
+
 /** The stable roster data needed by the display-only invitation renderer. */
 export type RoomInvitationPlayer = {
   readonly id: string;
@@ -101,13 +106,12 @@ export function RoomInvitationScreen({
   return (
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="room-invitation-viewport">
       <PlayroomTvStage testID="room-invitation-stage">
-        <View style={styles.column} pointerEvents="none" focusable={false}>
-          <PlayroomText accessibilityRole="header" style={playroomTv.type.heading} testID="room-invitation-heading">
-            {/* Deliberate breaks, so neither heading leaves one word alone on a line. */}
-            {joined === 0 ? 'Good company.\nGreat games.' : 'Make yourself\nat home.'}
+        {/* The lounge sets the scene behind everything; the code is the hero. */}
+        <PlayroomMoment art="lounge" width={1100} height={550} glow style={styles.backdrop} />
+        <View style={styles.stack} pointerEvents="none" focusable={false}>
+          <PlayroomText accessibilityRole="header" style={[playroomTv.type.heading, styles.center]} testID="room-invitation-heading">
+            {joined === 0 ? 'Grab your phone and join in' : joined >= PLAYER_CAPACITY ? 'Everyone’s here!' : 'Make yourself at home.'}
           </PlayroomText>
-
-          <PlayroomText color="muted" style={playroomTv.type.body}>Your phone is your controller. Join the room and let the good times begin.</PlayroomText>
           <View style={styles.joinRow} pointerEvents="none" focusable={false}>
             <View
               style={styles.codeBlock}
@@ -120,15 +124,12 @@ export function RoomInvitationScreen({
               <View style={styles.tiles} accessibilityElementsHidden>
                 {Array.from(normalizedCode).map((letter, position) => (
                   <View key={position} style={styles.tile}>
-                    <PlayroomText style={playroomTv.type.roomCode}>{letter}</PlayroomText>
+                    <PlayroomText style={styles.tileLetter}>{letter}</PlayroomText>
                   </View>
                 ))}
               </View>
-              <PlayroomText color="muted" style={playroomTv.type.caption}>Type this code on your phone</PlayroomText>
+              <PlayroomText color="muted" style={playroomTv.type.label}>Type this code on your phone</PlayroomText>
             </View>
-            <PlayroomText color="muted" style={playroomTv.type.caption} accessibilityElementsHidden>
-              or
-            </PlayroomText>
             <View
               style={styles.qrBlock}
               accessible
@@ -137,64 +138,53 @@ export function RoomInvitationScreen({
               focusable={false}
             >
               <View style={styles.qrCard}>
-                <QRCode
-                  value={joinUrl}
-                  size={164}
-                  color={playroomColors.ink}
-                  backgroundColor={playroomColors.surface}
-                  testID="room-join-qr"
-                />
+                <QRCode value={joinUrl} size={200} color={playroomColors.ink} backgroundColor={playroomColors.surface} testID="room-join-qr" />
               </View>
-              <PlayroomText color="muted" style={playroomTv.type.caption} accessibilityElementsHidden>
+              <PlayroomText color="muted" style={playroomTv.type.label} accessibilityElementsHidden>
                 Scan to join
               </PlayroomText>
             </View>
           </View>
-
-          <PlayroomPill style={styles.status} textStyle={playroomTv.type.label} testID="room-roster-count">
-            {joined >= PLAYER_CAPACITY ? `Room full · ${PLAYER_CAPACITY} / ${PLAYER_CAPACITY}` : `${joined} / ${PLAYER_CAPACITY} joined`}
-          </PlayroomPill>
-
-          <View style={styles.footer} pointerEvents="none" focusable={false}>
-            
-            <PlayroomText style={[playroomTv.type.label, styles.footerText]} testID="room-invitation-footer">
+          <View style={styles.statusRow}>
+            <PlayroomPill style={styles.status} textStyle={playroomTv.type.label} testID="room-roster-count">
+              {joined >= PLAYER_CAPACITY ? `Room full · ${PLAYER_CAPACITY} / ${PLAYER_CAPACITY}` : `${joined} / ${PLAYER_CAPACITY} joined`}
+            </PlayroomPill>
+            <PlayroomText style={[playroomTv.type.label, styles.footerLine]} testID="room-invitation-footer">
               {joined === 0
                 ? 'The first phone to join becomes the host'
                 : joined < 2
                   ? `${hostName || 'The host'} is the host · waiting for one more player`
                   : `${hostName || 'The host'} is choosing what’s next`}
             </PlayroomText>
-            
           </View>
         </View>
-        <View style={styles.roomSide}>
-          <PlayroomMoment art="lounge" width={760} height={380} glow style={styles.scene} />
-          <View style={styles.greeting}>
+        <View style={styles.greeting}>
             {welcomeIds.length > 0 ? <View style={styles.welcome} accessible accessibilityLiveRegion="polite"
               accessibilityLabel={`${visiblePlayers.filter((player) => welcomeIds.includes(player.id)).map((player) => player.name).join(', ')} joined the room`} testID="tv-join-welcome">
               {visiblePlayers.filter((player) => welcomeIds.includes(player.id)).slice(0, 3).map((player) =>
                 player.avatarId ? <PlayroomAvatar key={player.id} avatarId={player.avatarId} size={56} /> : null)}
               <PlayroomText style={playroomTv.type.label}>{welcomeIds.length === 1 ? `${visiblePlayers.find((player) => player.id === welcomeIds[0])?.name ?? 'Your friend'} is in!` : `${welcomeIds.length} new faces. Welcome in!`}</PlayroomText>
-            </View> : <PlayroomText color="muted" style={playroomTv.type.caption}>There’s a seat for everyone.</PlayroomText>}
-          </View>
+            </View> : null}
+        </View>
+        <View style={styles.seats} pointerEvents="none" focusable={false}>
           <View style={styles.grid} pointerEvents="none" focusable={false} testID="player-grid">
             {Array.from({ length: PLAYER_CAPACITY }, (_unused, position) => {
               const player = visiblePlayers[position];
               const arrival = player ? undefined : arriving[position - joined];
-              if (arrival) return <ArrivingSeat key={`arriving-${arrival.id}`} arrival={arrival} reduceMotion={reduceMotion} />;
-              return player ? (
-                <JoinedPlayer
-                  key={player.id}
-                  player={player}
-                  arrivalDelay={firstShow ? position * playroomMotion.stagger : 0}
-                  reduceMotion={reduceMotion}
-                />
+              const seat = arrival ? (
+                <ArrivingSeat arrival={arrival} reduceMotion={reduceMotion} />
+              ) : player ? (
+                <JoinedPlayer player={player} arrivalDelay={firstShow ? position * playroomMotion.stagger : 0} reduceMotion={reduceMotion} />
               ) : (
-                <EmptySlot key={`empty-${position + 1}`} position={position} />
+                <EmptySlot position={position} />
+              );
+              return (
+                <View key={arrival ? `arriving-${arrival.id}` : player ? player.id : `empty-${position + 1}`} style={{ marginBottom: arcLift(position) }}>
+                  {seat}
+                </View>
               );
             })}
           </View>
-
         </View>
       </PlayroomTvStage>
     </View>
@@ -306,16 +296,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: playroomColors.canvas,
   },
-  column: { position: 'absolute', left: playroomTv.safeX, top: 190, width: 720, gap: 26 },
-  roomSide: { position: 'absolute', right: playroomTv.safeX, top: 156, width: 900, alignItems: 'center' },
-  scene: { alignItems: 'center' },
-  greeting: { height: 100, alignItems: 'center', justifyContent: 'center' },
+  // Behind the seats, not the code: the couch the room gathers round.
+  backdrop: { position: 'absolute', left: 410, bottom: 20, opacity: 0.28, alignItems: 'center' },
+  stack: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, top: 168, alignItems: 'center', gap: 34 },
+  center: { textAlign: 'center' },
+  statusRow: { alignSelf: 'stretch', alignItems: 'center', gap: 14 },
+  footerLine: { alignSelf: 'stretch', textAlign: 'center' },
+  tileLetter: { ...playroomTv.type.roomCode, fontSize: 132, lineHeight: 140 },
+  greeting: { position: 'absolute', left: 0, right: 0, bottom: 300, height: 80, alignItems: 'center', justifyContent: 'center' },
+  // The room along the bottom, one row of ten, lifted at the middle like seats round a couch.
+  seats: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, bottom: playroomTv.safeY, alignItems: 'center' },
   welcome: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 24,
     borderRadius: 28, backgroundColor: playroomColors.successSurface },
+  // The code owns the centre; the QR waits off to the right for anyone scanning.
   joinRow: {
-    flexDirection: 'row',
+    alignSelf: 'stretch',
     alignItems: 'center',
-    gap: 18,
   },
   codeBlock: {
     alignItems: 'center',
@@ -326,8 +322,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tile: {
-    width: 112,
-    height: 132,
+    width: 156,
+    height: 184,
     borderRadius: playroomRadii.card,
     backgroundColor: playroomColors.surface,
     alignItems: 'center',
@@ -335,6 +331,9 @@ const styles = StyleSheet.create({
     ...playroomShadows.card,
   },
   qrBlock: {
+    position: 'absolute',
+    right: 60,
+    top: -10,
     alignItems: 'center',
     gap: 6,
   },
@@ -344,25 +343,18 @@ const styles = StyleSheet.create({
     backgroundColor: playroomColors.surface,
   },
   status: {
-    // On the column's left edge with the heading, not centred under the tiles.
-    alignSelf: 'flex-start',
-    minWidth: 560,
+    paddingHorizontal: 28,
     paddingVertical: 10,
   },
   // Seats sit on the room itself; lavender is kept for selection and status.
   grid: {
-    width: 900,
-    padding: 20,
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'flex-end',
     justifyContent: 'center',
-    columnGap: 20,
-    // Heads break out of the top of their circles, so rows need room above.
-    rowGap: 30,
-    marginTop: 0,
+    columnGap: 16,
   },
   seat: {
-    width: 145,
+    width: 152,
     alignItems: 'center',
   },
   initial: {
@@ -414,7 +406,7 @@ const styles = StyleSheet.create({
   },
   name: {
     marginTop: 6,
-    maxWidth: 145,
+    maxWidth: 152,
   },
   nameSpacer: {
     marginTop: 6,

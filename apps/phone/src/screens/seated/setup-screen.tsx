@@ -1,7 +1,6 @@
 import {
   COUNTDOWN_MS,
   settingOptionLabel,
-  settingSummaryText,
   type AvatarId,
   type GameModule,
   type GameSetting,
@@ -15,7 +14,6 @@ import {
   PlayroomAvatar,
   PlayroomButton,
   PlayroomHeading,
-  PlayroomPill,
   PlayroomSettingIcon,
   PlayroomText,
   PlayroomPressable,
@@ -439,13 +437,7 @@ function ReadyScreen({
       <PhoneTopBar back={youAreHost ? { label: 'Setup', onPress: onReopen, testID: 'setup-nav-back' } : undefined} you={you} />
       {/* The hand sits in the lower half, where a thumb reaches it. */}
       <View style={styles.thumbSpacer} />
-      <PlayroomHeading type={playroomPhone.type.heading}>{currentReady ? 'You’re all set!' : `Ready for ${module.metadata.title}?`}</PlayroomHeading>
-      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
-        {module.settingsSchema
-          .slice(0, 2)
-          .map((setting) => settingSummaryText(setting, setup.settings[setting.key] ?? setting.defaultValue))
-          .join(' · ') || module.metadata.title}
-      </PlayroomText>
+      {/* One message: the hand and what it means. Settings and the count live on the TV. */}
       <Pressable
         onPress={raise}
         disabled={busy === 'ready'}
@@ -466,9 +458,8 @@ function ReadyScreen({
         <PlayroomText style={playroomPhone.type.heading}>{currentReady ? 'Hands up!' : 'Raise your hand'}</PlayroomText>
       </Pressable>
       {/* The host sees everyone below, so the count is the guests' summary only. */}
-      {youAreHost ? null : <PlayroomPill textStyle={playroomPhone.type.caption}>{`${readyCount} of ${roster.length} hands up`}</PlayroomPill>}
       <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
-        {status}
+        {youAreHost ? status : `${readyCount} of ${roster.length} hands up`}
       </PlayroomText>
       {youAreHost && roster.length > 0 ? (
         <View style={styles.waiting} accessible accessibilityLabel={`Players: ${roster.map((seat) => `${seat.nickname}, ${seat.away ? 'reconnecting' : setup.readyPlayerIds.includes(seat.playerId) ? 'ready' : 'waiting'}`).join('; ')}`}>
@@ -536,8 +527,7 @@ function CountdownScreen({
     >
       <PhoneTopBar you={you} />
       <View style={styles.flex} />
-      <PlayroomHeading type={playroomPhone.type.heading}>Get ready!</PlayroomHeading>
-      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>{`${module.metadata.title} starts in`}</PlayroomText>
+      <PlayroomHeading type={playroomPhone.type.heading}>{`${module.metadata.title} starts in`}</PlayroomHeading>
       <View style={styles.ring} accessible accessibilityLabel={seconds > 0 ? `${seconds}` : 'Go'} accessibilityLiveRegion="polite">
         <PlayroomText style={seconds > 0 ? styles.number : styles.go}>{seconds > 0 ? String(seconds) : 'Go!'}</PlayroomText>
       </View>
