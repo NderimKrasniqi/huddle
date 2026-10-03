@@ -1,7 +1,7 @@
 import type { AvatarId, GameModule } from '@huddle/domain';
 import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
 import { CAROUSEL_REGISTRY, carouselWindow } from '@huddle/game-registry';
-import { PlayroomAvatar, PlayroomButton, PlayroomHeading, PlayroomPill, PlayroomText, PlayroomGameCover, playroomCoverColor, playroomGameArt } from '@huddle/ui/native';
+import { PlayroomAvatar, PlayroomButton, PlayroomHeading, PlayroomPill, PlayroomPressable, PlayroomText, PlayroomGameCover, playroomCoverColor, playroomGameArt } from '@huddle/ui/native';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { pickerControlState } from '../seated-phone-model';
@@ -69,7 +69,7 @@ export function PickerScreen({
           </View>
         </PhoneCard>
       ) : null}
-      <Pressable
+      <PlayroomPressable
         onPress={() => onBrowse(index)}
         disabled={controls.cardAction === null}
         accessibilityRole={youAreHost ? 'button' : 'image'}
@@ -88,7 +88,7 @@ export function PickerScreen({
             <PlayroomPill tone="disabled" textStyle={playroomPhone.type.caption}>Coming soon</PlayroomPill>
           ) : null}
         </PhoneCard>
-      </Pressable>
+      </PlayroomPressable>
       {failure ? <PhoneNotice testID="picker-error">{failure}</PhoneNotice> : null}
       {youAreHost ? (
         <View style={styles.list}>

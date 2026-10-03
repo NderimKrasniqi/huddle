@@ -32,6 +32,7 @@ export {
   type PlayroomButtonProps,
   type PlayroomButtonVariant,
 } from './playroom-button';
+export { PlayroomPressable, type PlayroomPressableProps } from './playroom-pressable';
 export {
   PlayroomFloat,
   PlayroomPill,
