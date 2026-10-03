@@ -29,6 +29,7 @@ import type { RosterSeat } from '../../features/room';
 import { settingsControls, type SettingControl } from '../../features/game-picker/settings-choice';
 import { setupModeLabel, setupReadiness } from '../seated-phone-model';
 import type { BusyAction } from '../use-seated-room';
+import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 
 export type SetupScreenProps = {
@@ -118,7 +119,10 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
       avatarId={you?.avatarId}
       testID="phone-game-setup"
       footer={
+        <>
+        <HostSteps current="Setup" />
         <PlayroomButton label="Ready check" onPress={onFinalize} busy={busy === 'finalize'} accessibilityLabel="Lock game setup" testID="lock-game-setup" />
+        </>
       }
     >
       <PhoneTopBar back={{ label: 'Room', onPress: onCancel, testID: 'setup-nav-back' }} you={you} />
@@ -421,6 +425,7 @@ function ReadyScreen({
       footer={
         youAreHost ? (
           <>
+            <HostSteps current="Ready" />
             <PlayroomButton
               // The waiting line above says who is missing; the button only says what it does.
               label={`Start ${module.metadata.title}`}

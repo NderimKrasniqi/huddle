@@ -8,6 +8,7 @@ import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { pickerControlState } from '../seated-phone-model';
 import type { BusyAction } from '../use-seated-room';
 import type { RosterSeat } from '../../features/room';
+import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import { RoomFaces } from './room-faces';
 
@@ -56,10 +57,10 @@ export function PickerScreen({
     <PhoneFrame
       avatarId={you?.avatarId}
       testID="phone-game-picker"
-      footer={youAreHost ? <PlayroomButton label={soon ? 'Coming soon' : `Set up ${focused.metadata.title}`}
+      footer={youAreHost ? <><HostSteps current="Game" /><PlayroomButton label={soon ? 'Coming soon' : `Set up ${focused.metadata.title}`}
         onPress={() => onChoose(focused)} busy={busy === 'select'} disabled={!controls.selectEnabled}
         accessibilityLabel={soon ? `${focused.metadata.title}, coming soon` : `Set up ${focused.metadata.title}`}
-        testID={soon ? 'picker-coming-soon' : 'picker-select'} /> : <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" />}
+        testID={soon ? 'picker-coming-soon' : 'picker-select'} /></> : <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" />}
     >
       <PhoneTopBar
         back={youAreHost ? { label: 'Room', onPress: onBackToRoom, testID: 'picker-back-top' } : undefined}
