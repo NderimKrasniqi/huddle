@@ -2,10 +2,9 @@
 
 ## Execution state
 
-**Current phase:** Playroom redesign, Cosmic Quiz Trivia and the visual
-polish pass are merged on `main`. Open: the release order for the room-view
-credential change (below), the physical party check, Voting on devices, and
-the live seat preview.
+**Current phase:** Playroom redesign, Cosmic Quiz Trivia, the visual polish
+pass and the live seat preview are merged on `main` and live on the only
+Convex deployment. Open: the physical party check and Voting on devices.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -235,40 +234,27 @@ the platform screens are unchanged.
 - [x] Under reduced motion the Trivia stage waits for its sky (PR 68); the sky
   ships as a 112 KB JPEG (PR 69).
 
-### 12. Release order for the room-view credential change — pending
+### 12. Release order for the room-view credential change — not needed yet
 
-PRs 65 and 66 change the room-view protocol in both directions:
+There is no separate production deployment. Both apps' `.env` point at the
+one Convex deployment, `colorful-viper-224` (type dev), which already runs
+PRs 65, 66 and 71, and Huddle runs only on the iPhone simulators and the
+Android TV emulator, built from `main`. Nothing is left to cut over.
 
-- An updated server gives a client that sends no credential an empty roster,
-  no setup or card, and an `unavailable` game.
-- A new client sends `sessionToken` / `tvSessionToken` arguments that an old
-  server's validators reject as extra fields ("Object contains extra field").
+Keep this for the day a production deployment or installed release builds
+exist. PRs 65, 66 and 71 change the room-view protocol in both directions:
 
-So neither "apps first" nor "server first" is safe alone. Pick one:
+- An updated server gives a client without credentials an empty roster, no
+  setup or card, and an `unavailable` game.
+- An older server rejects the new clients' `sessionToken` / `tvSessionToken`
+  arguments as extra fields, and a new TV crashes subscribing to
+  `seatPreviews.arrivals` on a server that lacks it.
 
-- **Cutover (small private rollout):**
-  - [ ] Build the TV and phone release apps from `main` (PR 66 or later) and
-    check them against the dev deployment: join, lobby roster, picker, a full
-    Trivia game, back to lobby.
-  - [ ] With owner approval for the production action, deploy Convex to
-    production (`pnpm --filter convex exec convex deploy`) and install the
-    new builds on every TV and phone straight after. Old builds see an empty
-    room until updated.
-- **Zero-downtime (anyone on an old build):**
-  - [ ] Deploy a transitional server that accepts the new optional arguments
-    but does not yet refuse callers without them. This needs a small code
-    change; it is not on `main`.
-  - [ ] Release the new TV and phone builds and wait until old builds are gone.
-  - [ ] Deploy `main` (the enforcing server).
-- [ ] Either way: smoke-test production on one TV and two phones. An empty
-  roster on the TV means an old build is still installed somewhere.
-- [ ] Rollback is not free: an older server rejects the new clients' extra
-  arguments, so roll forward, or roll back server and apps together.
-- [ ] Ship the live seat preview (`seatPreviews`) in the same server deploy.
-  A TV build that subscribes to `seatPreviews.arrivals` against a server
-  without it fails the query ("Could not find public function"), and the TV
-  app crashes rather than degrading, so the server must be live first or at
-  the same moment.
+So deploy the server and update every installed app together (cutover), or
+first deploy a transitional server that accepts the new optional arguments
+without enforcing them, then release the apps, then deploy `main`. Rolling
+back means rolling back server and apps together. Any production deploy needs
+explicit owner approval.
 
 ## Validation ledger
 
