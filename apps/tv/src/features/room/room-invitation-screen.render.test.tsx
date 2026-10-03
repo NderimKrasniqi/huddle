@@ -90,6 +90,27 @@ describe('RoomInvitationScreen', () => {
     expect(screen.getByText('1 / 10 joined')).toBeTruthy();
   });
 
+  it('waves a leaving player goodbye from their seat without moving the others', async () => {
+    const players = [
+      { id: 'ada', name: 'Ada', host: true, avatarId: 'fox' as const },
+      { id: 'bo', name: 'Bo', avatarId: 'puppy' as const },
+      { id: 'cy', name: 'Cy', avatarId: 'mint-cat' as const },
+    ];
+    const view = await render(<RoomInvitationScreen roomCode="ABCD" joinUrl="huddle://join/ABCD" reduceMotion={false} players={players} />);
+    await view.rerender(<RoomInvitationScreen roomCode="ABCD" joinUrl="huddle://join/ABCD" reduceMotion={false} players={[players[0]!, players[2]!]} />);
+
+    expect(screen.getAllByTestId('leaving-player')).toHaveLength(1);
+    expect(screen.getAllByTestId('joined-player-slot')).toHaveLength(2);
+  });
+
+  it('skips the goodbye under reduced motion', async () => {
+    const players = [{ id: 'ada', name: 'Ada', avatarId: 'fox' as const }, { id: 'bo', name: 'Bo', avatarId: 'puppy' as const }];
+    const view = await render(<RoomInvitationScreen roomCode="ABCD" joinUrl="huddle://join/ABCD" reduceMotion players={players} />);
+    await view.rerender(<RoomInvitationScreen roomCode="ABCD" joinUrl="huddle://join/ABCD" reduceMotion players={[players[0]!]} />);
+
+    expect(screen.queryAllByTestId('leaving-player')).toHaveLength(0);
+  });
+
   it('renders at most the ten-player room capacity', async () => {
     const players = Array.from({ length: 11 }, (_unused, position) => ({
       id: `player-${position + 1}`,
