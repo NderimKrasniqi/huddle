@@ -18,7 +18,7 @@ describe('RoomInvitationScreen', () => {
       <RoomInvitationScreen roomCode="KWRD" joinUrl="huddle://join/KWRD" reduceMotion />,
     );
 
-    expect(screen.getByText('Good company.\nGreat games.')).toBeTruthy();
+    expect(screen.getByText('Grab your phone and join in')).toBeTruthy();
     expect(screen.getByText('Type this code on your phone')).toBeTruthy();
     expect(screen.getByText('0 / 10 joined')).toBeTruthy();
     expect(screen.getByText('The first phone to join becomes the host')).toBeTruthy();
@@ -60,7 +60,7 @@ describe('RoomInvitationScreen', () => {
     expect(screen.getByText('Ada', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText('Grace', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('joined-player-avatar')).toBeTruthy();
-    expect(screen.getByText('Make yourself\nat home.')).toBeTruthy();
+    expect(screen.getByText('Make yourself at home.')).toBeTruthy();
     expect(screen.getByText('Ada is choosing what’s next')).toBeTruthy();
     expect(screen.getAllByTestId('empty-player-slot')).toHaveLength(8);
     expect(screen.getByLabelText('Empty player slot 3')).toBeTruthy();
@@ -105,7 +105,7 @@ describe('RoomInvitationScreen', () => {
     );
 
     expect(screen.getAllByTestId('joined-player-slot')).toHaveLength(10);
-    expect(screen.getByText('Make yourself\nat home.')).toBeTruthy();
+    expect(screen.getByText('Everyone’s here!')).toBeTruthy();
     expect(screen.getByText('Room full · 10 / 10')).toBeTruthy();
     expect(screen.queryByLabelText('Player Player 11 joined')).toBeNull();
     expect(screen.queryAllByTestId('empty-player-slot')).toHaveLength(0);
