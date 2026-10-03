@@ -1,5 +1,5 @@
 import { ROOM_PLAYER_CAP } from '@huddle/domain';
-import { playroomColors, playroomPhone, playroomRadii, playroomShadows } from '@huddle/design-tokens';
+import { playroomColors, playroomEasing, playroomMotion, playroomPhone, playroomRadii, playroomShadows } from '@huddle/design-tokens';
 import {
   PlayroomAvatar,
   PlayroomButton,
@@ -10,6 +10,7 @@ import {
   PlayroomPressable,
 } from '@huddle/ui/native';
 import { StyleSheet, View } from 'react-native';
+import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
 import { rosterRowControls, type lobbyStanding, type RosterSeat } from '../../features/room';
 import type { PlayerSession } from '../../platform/session';
@@ -115,9 +116,17 @@ function HostLobby({ session, roster, onManage }: LobbyScreenProps) {
   );
 }
 
+/** A player arriving in the lobby, the same arrival the TV gives their seat. */
+const TILE_ARRIVAL = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.9 }] },
+  100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
+})
+  .duration(playroomMotion.entrance)
+  .reduceMotion(ReduceMotion.System);
+
 function PlayerTile({ seat }: { readonly seat: RosterSeat }) {
   return (
-    <View style={styles.tile}>
+    <Animated.View entering={TILE_ARRIVAL} style={styles.tile}>
       <PlayroomAvatar avatarId={seat.avatar} size={playroomPhone.avatar.tile} host={seat.host} away={seat.away} />
       <View style={styles.tileText}>
         <PlayroomText numberOfLines={1} style={styles.tileName}>
@@ -125,7 +134,7 @@ function PlayerTile({ seat }: { readonly seat: RosterSeat }) {
         </PlayroomText>
         {seat.host ? <Tag label="HOST" tone="host" /> : seat.away ? <Tag label="AWAY" tone="away" /> : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
