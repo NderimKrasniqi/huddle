@@ -1,6 +1,7 @@
 import {
   COUNTDOWN_MS,
   settingOptionLabel,
+  settingSummaryText,
   type AvatarId,
   type GameModule,
   type GameSetting,
@@ -134,14 +135,16 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
           />
         ))}
       </View>
-      {setup.mode !== 'custom' ? <>
-        <PhoneCard>
+      {setup.mode !== 'custom' ? (
+        // A preset reads as one sentence; changing it is one tap away, not five rows.
+        <PhoneCard style={styles.presetCard}>
           <PlayroomText style={playroomPhone.type.title}>{presentation?.presets?.find((preset) => preset.mode === setup.mode)?.label ?? setupModeLabel(setup.mode)}</PlayroomText>
-          {presentation?.presets?.find((preset) => preset.mode === setup.mode)?.description ?
-            <PlayroomText color="muted" style={playroomPhone.type.body}>{presentation.presets.find((preset) => preset.mode === setup.mode)?.description}</PlayroomText> : null}
+          <PlayroomText style={[playroomPhone.type.body, styles.center]}>
+            {module.settingsSchema.map((setting) => settingSummaryText(setting, settings[setting.key] ?? setting.defaultValue)).join(' · ')}
+          </PlayroomText>
+          <PlayroomButton label="Customize" variant="link" onPress={() => chooseMode('custom')} accessibilityLabel="Customize settings" testID="setup-customize" />
         </PhoneCard>
-        <Summary module={module} settings={settings} />
-      </> : <View style={styles.settings}>
+      ) : <View style={styles.settings}>
         {controls.map((control) => {
           const setting = module.settingsSchema.find((candidate) => candidate.key === control.key);
           if (setting === undefined) return null;
@@ -707,6 +710,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2.5,
     transform: [{ rotate: '45deg' }],
   },
+  presetCard: { alignItems: 'center', gap: 6 },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
