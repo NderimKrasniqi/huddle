@@ -130,9 +130,6 @@ export function RoomInvitationScreen({
               </View>
               <PlayroomText color="muted" style={playroomTv.type.label}>Type this code on your phone</PlayroomText>
             </View>
-            <PlayroomText color="muted" style={playroomTv.type.label} accessibilityElementsHidden>
-              or
-            </PlayroomText>
             <View
               style={styles.qrBlock}
               accessible
@@ -311,10 +308,10 @@ const styles = StyleSheet.create({
   seats: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, bottom: playroomTv.safeY, alignItems: 'center' },
   welcome: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 24,
     borderRadius: 28, backgroundColor: playroomColors.successSurface },
+  // The code owns the centre; the QR waits off to the right for anyone scanning.
   joinRow: {
-    flexDirection: 'row',
+    alignSelf: 'stretch',
     alignItems: 'center',
-    gap: 40,
   },
   codeBlock: {
     alignItems: 'center',
@@ -334,6 +331,9 @@ const styles = StyleSheet.create({
     ...playroomShadows.card,
   },
   qrBlock: {
+    position: 'absolute',
+    right: 60,
+    top: -10,
     alignItems: 'center',
     gap: 6,
   },

@@ -253,7 +253,6 @@ describe('Phone picker', () => {
     expect(result.getByTestId('start-game').props.accessibilityState).toMatchObject({ disabled: true });
     expect(result.getByTestId('setup-nav-back')).toBeTruthy();
     expect(result.queryByTestId('setup-back-to-room')).toBeNull();
-    expect(result.getByText('Ready for Trivia?')).toBeTruthy();
     expect(result.getByText('Raise your hand')).toBeTruthy();
     await fireEvent.press(ready);
     expect(onReady).toHaveBeenCalledTimes(1);

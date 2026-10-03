@@ -108,8 +108,6 @@ export function TriviaPhoneScreen({
           ) : null}
           <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 4 }}>Waiting for others…</CosmicText>
           <Mascot pose="point" width={170} reduceMotion={reduceMotion} style={{ marginTop: 16 }} />
-          <CosmicText weight="black" size={22} align="center">Eyes on the TV!</CosmicText>
-          <CosmicText size={16} color={cosmic.muted} align="center">The reveal is coming.</CosmicText>
         </Enter>
       </Surface>
     );
