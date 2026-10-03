@@ -421,7 +421,8 @@ function ReadyScreen({
         youAreHost ? (
           <>
             <PlayroomButton
-              label={canStart ? `Start ${module.metadata.title}` : `Waiting for ${Math.max(roster.length - readyCount, 1)} more`}
+              // The waiting line above says who is missing; the button only says what it does.
+              label={`Start ${module.metadata.title}`}
                 onPress={onStart}
               busy={busy === 'start'}
               disabled={!canStart}
@@ -464,13 +465,14 @@ function ReadyScreen({
         </View>
         <PlayroomText style={playroomPhone.type.heading}>{currentReady ? 'Hands up!' : 'Raise your hand'}</PlayroomText>
       </Pressable>
-      <PlayroomPill textStyle={playroomPhone.type.caption}>{`${readyCount} of ${roster.length} hands up`}</PlayroomPill>
+      {/* The host sees everyone below, so the count is the guests' summary only. */}
+      {youAreHost ? null : <PlayroomPill textStyle={playroomPhone.type.caption}>{`${readyCount} of ${roster.length} hands up`}</PlayroomPill>}
       <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
         {status}
       </PlayroomText>
       {youAreHost && roster.length > 0 ? (
         <View style={styles.waiting} accessible accessibilityLabel={`Players: ${roster.map((seat) => `${seat.nickname}, ${seat.away ? 'reconnecting' : setup.readyPlayerIds.includes(seat.playerId) ? 'ready' : 'waiting'}`).join('; ')}`}>
-          {roster.map((seat) => <View key={seat.playerId} style={styles.readyPerson}>
+          {roster.map((seat) => <View key={seat.playerId} style={[styles.readyPerson, !seat.away && setup.readyPlayerIds.includes(seat.playerId) ? styles.readyPersonUp : null]}>
             <PlayroomAvatar avatarId={seat.avatar} size={36} away={seat.away} />
             <PlayroomText color={seat.away ? 'muted' : setup.readyPlayerIds.includes(seat.playerId) ? 'success' : 'ink'} style={playroomPhone.type.caption}>{seat.nickname}</PlayroomText>
           </View>)}
@@ -523,13 +525,15 @@ function CountdownScreen({
         />
       }
       contentStyle={styles.countdown}
+      backdrop={
+        you ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: playroomAvatarCircles[you.avatarId] }, flashStyle]}
+          />
+        ) : undefined
+      }
     >
-      {you ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: playroomAvatarCircles[you.avatarId] }, flashStyle]}
-        />
-      ) : null}
       <PhoneTopBar you={you} />
       <View style={styles.flex} />
       <PlayroomHeading type={playroomPhone.type.heading}>Get ready!</PlayroomHeading>
@@ -562,6 +566,8 @@ const styles = StyleSheet.create({
   thumbSpacerBelow: { flexGrow: 0.4 },
   readyPerson: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 20, backgroundColor: playroomColors.surface },
+  // A raised hand reads at a glance: the chip turns the success colour.
+  readyPersonUp: { backgroundColor: playroomColors.successSurface },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
   summaryValue: { flexShrink: 1, textAlign: 'right', maxWidth: '55%' },
   flex: {

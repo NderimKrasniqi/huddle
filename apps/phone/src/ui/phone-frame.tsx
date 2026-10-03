@@ -24,6 +24,11 @@ export type PhoneFrameProps = {
   /** Pinned to the bottom, outside the scrolling content. */
   readonly footer?: ReactNode;
   readonly contentStyle?: StyleProp<ViewStyle>;
+  /**
+   * Drawn behind the whole screen, footer included, so a full-screen colour
+   * (the countdown's flash) never stops at the footer in a visible seam.
+   */
+  readonly backdrop?: ReactNode;
   readonly testID?: string;
 };
 
@@ -32,11 +37,12 @@ export type PhoneFrameProps = {
  * colour so everyone can tell whose phone is whose, scrolling content, and
  * an optional footer for the main action.
  */
-export function PhoneFrame({ children, avatarId, footer, contentStyle, testID }: PhoneFrameProps) {
+export function PhoneFrame({ children, avatarId, footer, contentStyle, backdrop, testID }: PhoneFrameProps) {
   const insets = useSafeAreaInsets();
   const moreBelow = useMoreBelow();
   return (
     <View style={styles.screen} testID={testID}>
+      {backdrop}
       {avatarId ? (
         <View
           style={[styles.band, { height: insets.top + BAND, backgroundColor: playroomAvatarCircles[avatarId] }]}
@@ -57,7 +63,7 @@ export function PhoneFrame({ children, avatarId, footer, contentStyle, testID }:
         {children}
       </ScrollView>
       {footer ? (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.footer, backdrop ? styles.footerClear : null, { paddingBottom: insets.bottom + 12 }]}>
           {moreBelow.value ? <ScrollFade /> : null}
           {footer}
         </View>
@@ -185,6 +191,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: playroomPhone.gutter + 4,
     paddingTop: 8,
     gap: 4,
+  },
+  footerClear: {
+    backgroundColor: 'transparent',
   },
   fade: {
     position: 'absolute',

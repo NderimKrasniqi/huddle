@@ -134,6 +134,7 @@ export function SeatedPhone({
           hostNickname={standing.hostNickname}
           hostAvatar={standing.hostAvatar}
           you={you}
+          roster={roster}
           busy={busy}
           failure={failure}
           onBrowse={room.browse}

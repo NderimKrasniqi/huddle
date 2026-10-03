@@ -6,7 +6,9 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { pickerControlState } from '../seated-phone-model';
 import type { BusyAction } from '../use-seated-room';
+import type { RosterSeat } from '../../features/room';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
+import { RoomFaces } from './room-faces';
 
 export type PickerScreenProps = {
   readonly browsingAt: number;
@@ -14,6 +16,8 @@ export type PickerScreenProps = {
   readonly hostNickname?: string;
   readonly hostAvatar?: AvatarId;
   readonly you?: { readonly nickname: string; readonly avatarId: AvatarId };
+  /** Shown to guests, who wait on the host's choice with the room. */
+  readonly roster?: readonly RosterSeat[];
   readonly busy: BusyAction;
   readonly failure?: string;
   readonly onBrowse: (index: number) => void;
@@ -32,6 +36,7 @@ export function PickerScreen({
   hostNickname,
   hostAvatar,
   you,
+  roster = [],
   busy,
   failure,
   onBrowse,
@@ -77,7 +82,8 @@ export function PickerScreen({
         testID={`phone-game-card-${focused.metadata.id}`}
       >
         <PhoneCard style={styles.featured}>
-          <PlayroomGameCover gameId={focused.metadata.id} height={180} style={styles.cover} />
+          {/* Guests also see the room below, so their cover is a little smaller. */}
+          <PlayroomGameCover gameId={focused.metadata.id} height={youAreHost ? 180 : 140} style={styles.cover} />
           <PlayroomText color={soon ? 'muted' : 'ink'} style={playroomPhone.type.hero}>
             {focused.metadata.title}
           </PlayroomText>
@@ -90,6 +96,7 @@ export function PickerScreen({
         </PhoneCard>
       </PlayroomPressable>
       {failure ? <PhoneNotice testID="picker-error">{failure}</PhoneNotice> : null}
+      {youAreHost ? null : <RoomFaces roster={roster} />}
       {youAreHost ? (
         <View style={styles.list}>
           {CAROUSEL_REGISTRY.map((module, position) => {
