@@ -9,7 +9,7 @@ import type { RosterSeat } from '../features/room';
 import type { PlayerSession } from '../platform/session';
 import { PhoneLoadingScreen } from '../ui/native';
 import { LobbyScreen, ManagePlayerScreen } from './seated/lobby-screen';
-import { PhoneFrame, PhoneNotice } from './seated/phone-frame';
+import { PhoneFrame, PhoneNotice, PhoneTopBar, type PhoneTopBarProps } from './seated/phone-frame';
 import { PickerScreen } from './seated/picker-screen';
 import { SetupScreen } from './seated/setup-screen';
 import { useSeatedRoom, type BusyAction, type Confirmation } from './use-seated-room';
@@ -89,6 +89,7 @@ export function SeatedPhone({
           busy={busy}
           primary={disconnected ? { label: 'Continue without waiting', onPress: room.continueGame, action: 'continue' } : undefined}
           onBackToLobby={room.end}
+          you={you}
         />
         {sheet}
       </>
@@ -248,6 +249,7 @@ function PhoneRuntimeStatus({
   busy,
   primary,
   onBackToLobby,
+  you,
 }: {
   readonly variant: 'paused' | 'unavailable';
   readonly title: string;
@@ -257,11 +259,12 @@ function PhoneRuntimeStatus({
   readonly busy: BusyAction;
   readonly primary?: { readonly label: string; readonly onPress: () => void; readonly action: Exclude<BusyAction, null> };
   readonly onBackToLobby: () => void;
+  readonly you: PhoneTopBarProps['you'];
 }) {
   return (
     <PhoneFrame
       testID={`phone-runtime-${variant}`}
-      contentStyle={styles.status}
+      avatarId={you?.avatarId}
       footer={
         youAreHost ? (
           <>
@@ -280,17 +283,21 @@ function PhoneRuntimeStatus({
         ) : undefined
       }
     >
-      <PlayroomStatusImage art={variant === 'paused' ? 'paused' : 'disconnected'} width={220} height={220} />
-      <PlayroomHeading type={playroomPhone.type.heading}>{title}</PlayroomHeading>
-      <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
-        {message}
-      </PlayroomText>
-      {youAreHost ? null : (
-        <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.center]}>
-          Waiting for the Host to return to the room.
+      {/* The same top bar as every seated screen, so a pause never looks like a different app. */}
+      <PhoneTopBar you={you} />
+      <View style={styles.status}>
+        <PlayroomStatusImage art={variant === 'paused' ? 'paused' : 'disconnected'} width={220} height={220} />
+        <PlayroomHeading type={playroomPhone.type.heading}>{title}</PlayroomHeading>
+        <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
+          {message}
         </PlayroomText>
-      )}
-      {failure ? <PhoneNotice testID="runtime-status-error">{failure}</PhoneNotice> : null}
+        {youAreHost ? null : (
+          <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.center]}>
+            Waiting for the host to return to the room.
+          </PlayroomText>
+        )}
+        {failure ? <PhoneNotice testID="runtime-status-error">{failure}</PhoneNotice> : null}
+      </View>
     </PhoneFrame>
   );
 }
@@ -350,9 +357,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     gap: 4,
   },
+  // Below the top bar, the status itself stays centred in the remaining space.
   status: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 16,
   },
   scrim: {
     flex: 1,

@@ -1,5 +1,5 @@
 import type { GameSettingsSchema } from '@huddle/domain';
-import { playroomColors, playroomMotion, playroomRadii, playroomTv } from '@huddle/design-tokens';
+import { playroomColors, playroomMotion, playroomRadii, playroomShadows, playroomTv } from '@huddle/design-tokens';
 import {
   PlayroomAvatar,
   PlayroomHeading,
@@ -7,7 +7,6 @@ import {
   PlayroomText,
   PlayroomTvStage,
   PlayroomGameCover,
-  playroomCoverColor,
 } from '@huddle/ui/native';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -79,7 +78,7 @@ function SetupBoard({
         <View style={styles.column} pointerEvents="none" focusable={false}>
           <PlayroomHeading type={playroomTv.type.heading}>{`Setting up ${title}`}</PlayroomHeading>
           <View style={styles.board}>
-            <View style={[styles.artCard, { backgroundColor: playroomCoverColor(gameId) }]} accessible accessibilityLabel={`${title}. ${tvHostCopy(hostName, 'is choosing the settings.')}`}>
+            <View style={styles.artCard} accessible accessibilityLabel={`${title}. ${tvHostCopy(hostName, 'is choosing the settings.')}`}>
               <PlayroomGameCover gameId={gameId} height={288} style={styles.cover} />
               <PlayroomText style={playroomTv.type.title}>{title}</PlayroomText>
               <View style={styles.hostLine}>
@@ -186,7 +185,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     borderRadius: playroomRadii.card,
     backgroundColor: playroomColors.surface,
-
+    ...playroomShadows.card,
   },
   art: {
     width: 460,
@@ -213,17 +212,17 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 6,
     borderRadius: playroomRadii.pill,
-    backgroundColor: playroomColors.lavender,
+    backgroundColor: playroomColors.surface,
+    ...playroomShadows.card,
   },
   mode: {
     paddingHorizontal: 30,
     paddingVertical: 6,
     borderRadius: playroomRadii.pill,
   },
+  // The chosen preset is the selection, so it is the lavender one.
   modeOn: {
-    backgroundColor: playroomColors.surface,
-    borderWidth: 1,
-    borderColor: playroomColors.border,
+    backgroundColor: playroomColors.lavender,
   },
   rows: {
     gap: 14,
@@ -237,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: playroomColors.surface,
     overflow: 'hidden',
-
+    ...playroomShadows.card,
   },
   rowGlow: {
     ...StyleSheet.absoluteFill,

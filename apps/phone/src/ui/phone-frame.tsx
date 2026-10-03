@@ -203,15 +203,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  // A back link reads as a control: a white pill like the "You" chip opposite.
   back: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minHeight: playroomPhone.minTarget,
+    gap: 6,
+    minHeight: 40,
+    paddingLeft: 10,
+    paddingRight: 16,
+    borderRadius: playroomRadii.pill,
+    backgroundColor: playroomColors.surface,
+    ...playroomShadows.card,
   },
   backChevron: {
-    fontSize: 30,
-    lineHeight: 32,
+    fontSize: 28,
+    lineHeight: 30,
+    marginTop: -2,
   },
   you: {
     flexDirection: 'row',

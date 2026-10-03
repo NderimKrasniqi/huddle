@@ -228,12 +228,14 @@ export function ManagePlayerScreen({ player, you, busy, onBack, onTransfer, onRe
 const styles = StyleSheet.create({
   welcome: { backgroundColor: playroomColors.successSurface, gap: 4 },
   moment: { alignItems: 'center' },
-  pass: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: playroomColors.lavender },
+  // A white card like every other container; lavender is for selection and status.
+  pass: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   code: {
     alignItems: 'center',
     paddingVertical: 10,
     borderRadius: playroomRadii.button,
-    backgroundColor: playroomColors.lavender,
+    backgroundColor: playroomColors.surface,
+    ...playroomShadows.card,
   },
   grid: {
     flexDirection: 'row',
@@ -283,9 +285,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-  },
-  lavender: {
-    backgroundColor: playroomColors.lavender,
   },
   infoText: {
     flex: 1,

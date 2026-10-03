@@ -1,5 +1,6 @@
 import {
   COUNTDOWN_MS,
+  settingOptionLabel,
   settingSummaryText,
   type AvatarId,
   type GameModule,
@@ -369,7 +370,7 @@ function Summary({ module, settings }: { readonly module: GameModule; readonly s
     {module.settingsSchema.map((setting) => <View key={setting.key} style={styles.summaryRow}>
       <PlayroomSettingIcon icon={setting.icon} size={26} />
       <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.flex]}>{setting.label}</PlayroomText>
-      <PlayroomText style={[playroomPhone.type.label, styles.summaryValue]}>{settingSummaryText(setting, settings[setting.key])}</PlayroomText>
+      <PlayroomText style={[playroomPhone.type.label, styles.summaryValue]}>{settingOptionLabel(setting, settings[setting.key])}</PlayroomText>
     </View>)}
   </View>;
 }
@@ -714,7 +715,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: playroomColors.lavender,
   },
   summary: {
     paddingHorizontal: 14,

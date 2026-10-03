@@ -3,6 +3,7 @@ export {
   settingsFrom,
   settingsRefusal,
   settingsRefusalForMode,
+  settingOptionLabel,
   settingSummary,
   settingSummaryText,
   type SettingSummary,

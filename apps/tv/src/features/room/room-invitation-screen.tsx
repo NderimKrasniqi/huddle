@@ -103,7 +103,8 @@ export function RoomInvitationScreen({
       <PlayroomTvStage testID="room-invitation-stage">
         <View style={styles.column} pointerEvents="none" focusable={false}>
           <PlayroomText accessibilityRole="header" style={playroomTv.type.heading} testID="room-invitation-heading">
-            {joined === 0 ? 'Good company. Great games.' : 'Make yourself at home.'}
+            {/* Deliberate breaks, so neither heading leaves one word alone on a line. */}
+            {joined === 0 ? 'Good company.\nGreat games.' : 'Make yourself\nat home.'}
           </PlayroomText>
 
           <PlayroomText color="muted" style={playroomTv.type.body}>Your phone is your controller. Join the room and let the good times begin.</PlayroomText>
@@ -343,14 +344,15 @@ const styles = StyleSheet.create({
     backgroundColor: playroomColors.surface,
   },
   status: {
+    // On the column's left edge with the heading, not centred under the tiles.
+    alignSelf: 'flex-start',
     minWidth: 560,
     paddingVertical: 10,
   },
+  // Seats sit on the room itself; lavender is kept for selection and status.
   grid: {
     width: 900,
     padding: 20,
-    borderRadius: 36,
-    backgroundColor: playroomColors.lavender,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',

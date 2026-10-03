@@ -1,4 +1,4 @@
-import { readiness, type AvatarId, type GameSettingIcon, type GameSettingsSchema, type GameSetupStage } from '@huddle/domain';
+import { readiness, settingOptionLabel, type AvatarId, type GameSettingIcon, type GameSettingsSchema, type GameSetupStage } from '@huddle/domain';
 export type TvGameCarouselCard = {
   readonly id: string;
   readonly title: string;
@@ -60,10 +60,10 @@ export function visibleTvSetupSettings(
     const key = definition.key;
     const setting = entries.find((entry) => entry.key === key);
     const rawValue = setting?.value ?? definition.defaultValue;
-    const optionLabel = definition.options.find((option) => option.value === rawValue)?.label;
     return [{
       key,
-      value: optionLabel ?? rawValue,
+      // The same words as the phone's labelled rows.
+      value: settingOptionLabel(definition, rawValue),
       // Labels belong to the installed schema; persisted values cannot rename
       // a setting on a display-only surface.
       label: definition.label ?? SETUP_LABELS[key],
