@@ -288,6 +288,12 @@ export type FinishedSummary = {
 export type GameSetup<Settings> = {
   readonly players: readonly GamePlayer[];
   readonly settings: Settings;
+  /**
+   * A random number the server picks at each start, so a game that deals
+   * content (Trivia's questions) can vary it between games while staying a
+   * pure function of what it is handed. Absent, a game deals its default.
+   */
+  readonly seed?: number;
 };
 
 /**

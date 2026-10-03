@@ -497,6 +497,11 @@ export const launchCountdown = internalMutation({
  * Shared by the Host's `startGame` and the countdown's `launchCountdown`, so
  * both starts are judged by the same rules.
  */
+/** A new game's seed: every start, including a replay, deals afresh. */
+function freshSeed(): number {
+  return Math.floor(Math.random() * 2 ** 31);
+}
+
 async function startFromSetup(
   ctx: MutationCtx,
   room: Doc<'rooms'>,
@@ -510,6 +515,7 @@ async function startFromSetup(
       game.createInitialState({
         players,
         settings: settingsFrom(game.settingsSchema, requestedSettings),
+        seed: freshSeed(),
       }),
     );
     if (state === undefined) throw new Error('initial state decoder returned undefined');
@@ -688,7 +694,7 @@ export const replayGame = mutation({
       }
       if (game.isFinished === undefined) throw new Error('no finished predicate');
       const settings = settingsFrom(game.settingsSchema, running.settings);
-      state = game.decodeState(game.createInitialState({ players, settings }));
+      state = game.decodeState(game.createInitialState({ players, settings, seed: freshSeed() }));
       if (state === undefined) throw new Error('initial state decoder returned undefined');
       const clock = await windGameClock(
         ctx,

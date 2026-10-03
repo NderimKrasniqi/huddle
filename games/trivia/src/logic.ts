@@ -290,11 +290,11 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
   metadata: triviaMetadata,
   settingsSchema: TRIVIA_SETTINGS_SCHEMA,
   settingsPresentation: TRIVIA_SETTINGS_PRESENTATION,
-  createInitialState: ({ players, settings }) => {
+  createInitialState: ({ players, settings, seed }) => {
     const chosen = triviaSettings(settings);
 
     return {
-      questions: questionsFor(chosen.category, chosen.questions, chosen.difficulty),
+      questions: questionsFor(chosen.category, chosen.questions, chosen.difficulty, seed),
       questionIndex: 0,
       questionSeconds: chosen.questionSeconds,
       phase: 'intro',
