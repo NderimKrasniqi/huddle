@@ -14,6 +14,8 @@ export const RATE_LIMITS = {
   hostCommand: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 240 },
   tvCommand: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 240 },
   gameEvent: { kind: 'token bucket' as const, rate: 30, period: SECOND, capacity: 60 },
+  seatPreviewRoom: { kind: 'token bucket' as const, rate: 600, period: MINUTE, capacity: 300 },
+  seatPreviewKey: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 60 },
 };
 
 const limiter = new RateLimiter(components.rateLimiter, RATE_LIMITS);
@@ -54,4 +56,10 @@ export async function limitTvCommand(ctx: MutationCtx, credential: string): Prom
 
 export async function limitGameEvent(ctx: MutationCtx, credential: string): Promise<void> {
   await consume(ctx, 'gameEvent', credential, 'gameEvent');
+}
+
+/** Join-form previews: generous for typing, bounded per room and per visit. */
+export async function limitSeatPreview(ctx: MutationCtx, roomId: string, previewKey: string): Promise<void> {
+  await consume(ctx, 'seatPreviewRoom', roomId, 'seatPreview');
+  await consume(ctx, 'seatPreviewKey', previewKey, 'seatPreview');
 }

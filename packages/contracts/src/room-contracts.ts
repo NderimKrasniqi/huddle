@@ -42,7 +42,8 @@ export type RateLimitOperation =
   | 'memberCommand'
   | 'hostCommand'
   | 'tvCommand'
-  | 'gameEvent';
+  | 'gameEvent'
+  | 'seatPreview';
 
 export type RateLimitRejection = {
   readonly kind: 'rateLimited';

@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { joinFailureMessage } from '../features/join/join-rejection';
 import { rememberProfile as persistProfile, loadGuestProfile } from '../features/join/identity';
 import { codeEntry, nicknameEntry } from '../features/join/join-entry';
+import { useSeatPreview } from '../features/join/native';
 import { hostControlFailureMessage } from '../features/room';
 import { phoneSessionTokenStore } from '../platform/session/native';
 import { joinScreenState, rememberSession, usePhoneSession } from '../platform/session';
@@ -142,6 +143,13 @@ export default function JoinIdentityScreen() {
   const roomUnavailable = availability === null;
   const pending = availability === undefined;
   const canJoin = session === null && profile !== undefined && nickname.trim() !== '' && !selectedTaken && !pending && !roomUnavailable && availability?.full !== true && !isJoining && !isChangingRooms;
+  // The TV shows this form as an arriving seat while it could still join.
+  useSeatPreview({
+    code,
+    nickname,
+    avatarId,
+    active: session === null && profile !== undefined && availability !== undefined && availability !== null && availability.full !== true && !selectedTaken && !isJoining,
+  });
   // A deep link must not evict the current seat until the destination has
   // answered the same capacity check used by the room-code route. Keeping the
   // guard beside the mutation also protects against a stale disabled render or

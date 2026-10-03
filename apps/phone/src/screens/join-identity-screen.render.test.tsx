@@ -56,6 +56,11 @@ jest.mock('../features/join/identity', () => ({
 
 jest.mock('../ui/reduced-motion', () => ({ usePhoneReducedMotion: () => true }));
 
+const mockUseSeatPreview = jest.fn();
+jest.mock('../features/join/native', () => ({
+  useSeatPreview: (options: unknown) => mockUseSeatPreview(options),
+}));
+
 const METRICS = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
   insets: { top: 47, right: 0, bottom: 34, left: 0 },
@@ -75,6 +80,7 @@ describe('JoinIdentityScreen', () => {
     mockSession = null;
     mockSessionToken = undefined;
     mockAvailability = { full: false, takenAvatarIds: [] };
+    mockUseSeatPreview.mockClear();
     (SecureStore.setItemAsync as jest.Mock).mockClear();
   });
 
@@ -216,6 +222,20 @@ describe('JoinIdentityScreen', () => {
 
     await act(async () => finishLeave?.());
     await waitFor(() => expect(screen.getByTestId('identity-join')).toBeTruthy());
+  });
+
+  it('shows the TV an arriving seat only while this form could still join', async () => {
+    await render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <JoinIdentityScreen />
+      </SafeAreaProvider>,
+    );
+    await waitFor(() => expect(screen.getByDisplayValue('Ada')).toBeTruthy());
+    expect(mockUseSeatPreview).toHaveBeenLastCalledWith({ code: 'KWRD', nickname: 'Ada', avatarId: 'fox', active: true });
+
+    mockAvailability = { full: true, takenAvatarIds: [] };
+    await fireEvent.changeText(screen.getByTestId('identity-display-name'), 'Ada L');
+    expect(mockUseSeatPreview).toHaveBeenLastCalledWith(expect.objectContaining({ nickname: 'Ada L', active: false }));
   });
 
   it('swaps a remembered avatar someone already has for a free one instead of erroring', async () => {

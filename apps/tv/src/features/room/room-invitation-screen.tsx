@@ -17,7 +17,15 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  Keyframe,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduced-motion';
 
@@ -44,8 +52,17 @@ export type RoomInvitationPlayer = {
   readonly away?: boolean;
 };
 
+/** Someone on the join form: the avatar and name they are picking. */
+export type RoomInvitationArrival = {
+  readonly id: string;
+  readonly name: string;
+  readonly avatarId: AvatarId;
+};
+
 export type RoomInvitationScreenProps = {
   readonly welcomeIds?: readonly string[];
+  /** People still on the join form; they fill the next empty seats, faded. */
+  readonly arriving?: readonly RoomInvitationArrival[];
   readonly roomCode: string;
   readonly joinUrl: string;
   readonly players?: readonly RoomInvitationPlayer[];
@@ -62,6 +79,7 @@ export function RoomInvitationScreen({
   roomCode,
   joinUrl,
   players = [],
+  arriving = [],
   welcomeIds = [],
   reduceMotion: reduceMotionOverride,
 }: RoomInvitationScreenProps) {
@@ -161,6 +179,8 @@ export function RoomInvitationScreen({
           <View style={styles.grid} pointerEvents="none" focusable={false} testID="player-grid">
             {Array.from({ length: PLAYER_CAPACITY }, (_unused, position) => {
               const player = visiblePlayers[position];
+              const arrival = player ? undefined : arriving[position - joined];
+              if (arrival) return <ArrivingSeat key={`arriving-${arrival.id}`} arrival={arrival} reduceMotion={reduceMotion} />;
               return player ? (
                 <JoinedPlayer
                   key={player.id}
@@ -214,6 +234,37 @@ function JoinedPlayer({
         {name}
       </PlayroomText>
       {player.away ? <SeatTag label="AWAY" /> : null}
+    </Animated.View>
+  );
+}
+
+/** Someone choosing their look on the join form: faded, ringed, gently breathing. */
+function ArrivingSeat({ arrival, reduceMotion }: { readonly arrival: RoomInvitationArrival; readonly reduceMotion: boolean }) {
+  const name = arrival.name.trim();
+  const breath = useSharedValue(1);
+  useEffect(() => {
+    breath.value = reduceMotion ? 1 : withRepeat(withTiming(0.6, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true);
+  }, [breath, reduceMotion]);
+  const breathing = useAnimatedStyle(() => ({ opacity: breath.value }));
+
+  return (
+    <Animated.View
+      entering={reduceMotion ? undefined : seatArrival(0)}
+      style={styles.seat}
+      pointerEvents="none"
+      focusable={false}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`${name || 'Someone'} is joining`}
+      testID="arriving-player-slot"
+    >
+      <Animated.View style={[styles.arrivingRing, breathing]} pointerEvents="none" focusable={false}>
+        <PlayroomAvatar avatarId={arrival.avatarId} size={88} testID="arriving-player-avatar" />
+      </Animated.View>
+      <PlayroomText color="muted" numberOfLines={1} style={[playroomTv.type.caption, styles.name]} accessibilityElementsHidden>
+        {name || 'Joining…'}
+      </PlayroomText>
+      {name ? <SeatTag label="JOINING" /> : null}
     </Animated.View>
   );
 }
@@ -317,6 +368,18 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 100 / 2,
     backgroundColor: playroomColors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Someone choosing their look: the seat they are heading for, ringed in the
+  // room's orange and held back until they join.
+  arrivingRing: {
+    width: 100,
+    height: 100,
+    borderRadius: 100 / 2,
+    borderWidth: 3,
+    borderStyle: 'dashed',
+    borderColor: playroomColors.orange,
     alignItems: 'center',
     justifyContent: 'center',
   },

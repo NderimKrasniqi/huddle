@@ -1,1 +1,1 @@
-export type { RosterSeat } from './roster';
+export type { RosterSeat, SeatArrival } from './roster';

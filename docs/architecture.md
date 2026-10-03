@@ -99,6 +99,13 @@ an empty roster, no setup or card, and `unavailable` for a game, never the TV's
 shared view. Only `stillOpen` and `connection`, which carry no room content,
 answer by room ID alone.
 
+While someone is on the join form, the phone sends a best-effort seat preview
+(`seatPreviews.previewSeat`): their avatar and the name as typed so far. The
+room's TV alone reads them (`seatPreviews.arrivals`) and draws arriving seats.
+A preview is not a seat or a reservation. `joinRoom` stays the only authority,
+there are never more previews than free seats, and a preview its phone stops
+refreshing is deleted 20 seconds later.
+
 The redaction contract is part of each module's logic, not a renderer
 convention:
 

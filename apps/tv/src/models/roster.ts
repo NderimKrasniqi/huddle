@@ -3,3 +3,6 @@ import type { FunctionReturnType } from 'convex/server';
 
 /** The shared TV roster projection, independent of any renderer. */
 export type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
+
+/** Someone on the join form, shown as an arriving seat before they join. */
+export type SeatArrival = FunctionReturnType<typeof api.seatPreviews.arrivals>[number];

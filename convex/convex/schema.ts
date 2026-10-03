@@ -245,4 +245,23 @@ export default defineSchema({
     .index('by_session_token', ['sessionToken'])
     .index('by_room', ['roomId']),
 
+  /**
+   * Someone on the join form, shown on the TV as an arriving seat before they
+   * join. Not a seat and not a reservation: it holds no avatar and no place,
+   * `joinRoom` stays the only authority, and a preview nobody refreshes is
+   * deleted by its own scheduled check (`seatPreviews.ts`).
+   */
+  seatPreviews: defineTable({
+    roomId: v.id('rooms'),
+    /** Random per join-form visit; it only names this preview, never a seat. */
+    previewKey: v.string(),
+    /** The name as typed so far, trimmed and capped; may be empty. */
+    nickname: v.string(),
+    avatar: avatarValidator,
+    updatedAt: v.number(),
+    /** The one pending expiry check; each refresh cancels it and schedules the next. */
+    expiryJob: v.optional(v.id('_scheduled_functions')),
+  })
+    .index('by_room', ['roomId'])
+    .index('by_preview_key', ['previewKey']),
 });
