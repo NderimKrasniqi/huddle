@@ -60,8 +60,8 @@ export function TriviaPhoneScreen({
     return (
       <Surface {...frame} testID="trivia-phone-legacy">
         <Logo width={190} on="light" />
-        <CosmicText weight="black" size={30} align="center" style={styles.heading}>Room needs an update</CosmicText>
-        <CosmicText size={17} color={cosmic.muted} align="center">Ask the host to return to the room and start Trivia again.</CosmicText>
+        <CosmicText weight="black" size={28} align="center" style={styles.heading}>Room needs an update</CosmicText>
+        <CosmicText size={16} color={cosmic.muted} align="center">Ask the host to return to the room and start Trivia again.</CosmicText>
       </Surface>
     );
   }
@@ -94,7 +94,7 @@ export function TriviaPhoneScreen({
       <Surface {...frame} testID="trivia-phone-waiting-after-answer">
         <Header progress={progress} seconds={seconds} />
         <Enter reduceMotion={reduceMotion}>
-          <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Answer locked!</CosmicText>
+          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Answer locked!</CosmicText>
         </Enter>
         <Enter reduceMotion={reduceMotion} scale={0.88} from={0} delay={80}>
           <LockMark size={130} />
@@ -102,7 +102,7 @@ export function TriviaPhoneScreen({
         {/* The rest follows the lock in, so the swap from four answers never teleports. */}
         <Enter reduceMotion={reduceMotion} delay={160} style={{ alignItems: 'center' }}>
           {answered !== undefined ? (
-            <CosmicText weight="bold" size={19} align="center" style={{ marginTop: 18 }}>
+            <CosmicText weight="bold" size={18} align="center" style={{ marginTop: 18 }}>
               {`${answered} of ${current.standings.length} answered`}
             </CosmicText>
           ) : null}
@@ -124,7 +124,7 @@ export function TriviaPhoneScreen({
             <CosmicText weight="black" size={13} tracking={1.5}>{model.category.toUpperCase()}</CosmicText>
           </Pill>
         ) : null}
-        <CosmicText weight="black" size={model.text.length > 80 ? 21 : 25} align="center" accessibilityRole="header" style={styles.question}>
+        <CosmicText weight="black" size={model.text.length > 80 ? 22 : 22} align="center" accessibilityRole="header" style={styles.question}>
           {model.text}
         </CosmicText>
         <View style={styles.answers}>
@@ -145,7 +145,7 @@ export function TriviaPhoneScreen({
             </Enter>
           ))}
         </View>
-        <CosmicText size={15} color={cosmic.muted} align="center" style={{ marginTop: 14 }}>
+        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 14 }}>
           Tap an answer to lock it in. Your choice stays on this phone until the reveal.
         </CosmicText>
       </Surface>
@@ -177,7 +177,7 @@ export function TriviaPhoneScreen({
       <Surface {...frame} testID="trivia-phone-finished" scrollTestID="trivia-phone-finished-scroll">
         <Logo width={190} on="light" />
         <Pill color={cosmic.turquoise} style={styles.pill}>
-          <CosmicText weight="black" size={15} tracking={1.5}>GAME COMPLETE</CosmicText>
+          <CosmicText weight="black" size={16} tracking={1.5}>GAME COMPLETE</CosmicText>
         </Pill>
         <Enter reduceMotion={reduceMotion}>
           <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>
@@ -189,13 +189,13 @@ export function TriviaPhoneScreen({
           <Enter reduceMotion={reduceMotion} delay={250} scale={0.85} from={0} testID="trivia-phone-place">
             <View style={[styles.placeCard, { backgroundColor: won ? cosmic.butter : cosmic.periwinkle }]}>
               <CosmicText weight="black" size={40}>{ordinal(place.rank)}</CosmicText>
-              <CosmicText weight="bold" size={17}>
+              <CosmicText weight="bold" size={16}>
                 of {place.of} · {place.score} {place.score === 1 ? 'point' : 'points'}
               </CosmicText>
             </View>
           </Enter>
         ) : null}
-        <CosmicText weight="black" size={19} align="center">Final scores are on the TV.</CosmicText>
+        <CosmicText weight="black" size={18} align="center">Final scores are on the TV.</CosmicText>
         <View style={styles.rule} />
         <CosmicText size={16} color={cosmic.muted} align="center">
           {isHost ? 'Bring everyone back to the room.' : 'Waiting for the host to choose what’s next.'}
@@ -259,23 +259,23 @@ function RevealSurface({
       {verdict === undefined ? (
         <>
           <Enter reduceMotion={reduceMotion}>
-            <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Eyes on the TV!</CosmicText>
+            <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Eyes on the TV!</CosmicText>
           </Enter>
           <Mascot pose="point" width={200} reduceMotion={reduceMotion} />
-          <CosmicText size={17} align="center" style={{ marginTop: 6 }}>The answer and scores are on the TV.</CosmicText>
+          <CosmicText size={16} align="center" style={{ marginTop: 6 }}>The answer and scores are on the TV.</CosmicText>
         </>
       ) : (
         <>
           {/* Only this phone's own outcome: the TV is showing everyone's. */}
           <Enter reduceMotion={reduceMotion} scale={0.88} from={0} testID="trivia-phone-verdict">
             <View style={[styles.verdictBadge, { backgroundColor: VERDICT_COPY[verdict].tone }]}>
-              <CosmicText weight="black" size={30} align="center" accessibilityRole="header">
+              <CosmicText weight="black" size={28} align="center" accessibilityRole="header">
                 {VERDICT_COPY[verdict].title}
               </CosmicText>
             </View>
           </Enter>
           <Mascot pose={verdict === 'right' ? 'celebrate' : 'point'} width={190} reduceMotion={reduceMotion} />
-          <CosmicText size={17} align="center" style={{ marginTop: 6 }}>
+          <CosmicText size={16} align="center" style={{ marginTop: 6 }}>
             {verdictLine(verdict, last)}
           </CosmicText>
         </>
@@ -283,7 +283,7 @@ function RevealSurface({
       {/* A plain line, not a pill: the only thing shaped like a button is the button. */}
       <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`} testID="trivia-phone-next-clock">
         <CosmicText weight="bold" size={18} color={cosmic.muted}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
-        <CosmicText weight="black" size={24}>{`${seconds}s`}</CosmicText>
+        <CosmicText weight="black" size={22}>{`${seconds}s`}</CosmicText>
       </View>
       {isHost ? (
         <>
@@ -298,7 +298,7 @@ function RevealSurface({
           </PressScale>
         </>
       ) : (
-        <CosmicText size={15} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>The host can move on sooner.</CosmicText>
+        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>The host can move on sooner.</CosmicText>
       )}
     </Surface>
   );
@@ -322,9 +322,9 @@ function EyesUp({
   return (
     <Surface insets={insets} chromeTop={chromeTop} testID={testID}>
       <Logo width={190} on="light" />
-      <CosmicText weight="black" size={34} align="center" accessibilityRole="header" style={styles.heading}>Eyes up.</CosmicText>
+      <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Eyes up.</CosmicText>
       <Mascot pose={pose} width={200} reduceMotion={reduceMotion} />
-      <CosmicText size={17} align="center">{line}</CosmicText>
+      <CosmicText size={16} align="center">{line}</CosmicText>
     </Surface>
   );
 }
@@ -334,7 +334,7 @@ function Header({ progress, seconds }: { readonly progress: string; readonly sec
     <View style={styles.header}>
       <Logo width={120} on="light" />
       <View style={styles.headerRow}>
-        <CosmicText weight="black" size={17} accessibilityLabel={`Question ${progress.replace(' / ', ' of ')}`}>{progress}</CosmicText>
+        <CosmicText weight="black" size={16} accessibilityLabel={`Question ${progress.replace(' / ', ' of ')}`}>{progress}</CosmicText>
         <Pill style={styles.timer} testID="trivia-phone-clock">
           <CosmicText weight="black" size={22} accessibilityLabel={`${seconds} seconds remaining`}>{timerLabel(seconds)}</CosmicText>
         </Pill>
@@ -364,7 +364,7 @@ function AnswerButton({
       style={[styles.answer, { backgroundColor: answerTone(option.optionIndex) }, option.state === 'closed' ? styles.answerClosed : null]}
     >
       <LetterBadge optionIndex={option.optionIndex} size={46} />
-      <CosmicText weight="black" size={option.text.length > 26 ? 18 : 22} numberOfLines={2} style={styles.answerText}>
+      <CosmicText weight="black" size={option.text.length > 28 ? 18 : 22} numberOfLines={2} style={styles.answerText}>
         {option.text}
       </CosmicText>
     </PressScale>
@@ -441,7 +441,7 @@ function Surface({
       <Twinkle size={22} style={{ left: 28, top: insets.top + 90 }} />
       <Twinkle size={18} style={{ right: 32, top: insets.top + 60 }} />
       <Twinkle size={16} style={{ right: 40, top: '55%' }} />
-      <Twinkle size={20} style={{ left: 30, bottom: insets.bottom + 120 }} />
+      <Twinkle size={18} style={{ left: 30, bottom: insets.bottom + 120 }} />
       <ScrollView
         contentContainerStyle={[
           styles.scroll,

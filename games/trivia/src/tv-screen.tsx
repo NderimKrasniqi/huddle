@@ -90,8 +90,8 @@ export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScree
         <View style={[StyleSheet.absoluteFill, { opacity: skyShown || reduceMotion === false ? 1 : 0 }]} testID="trivia-tv-stage-content">
           <Twinkle size={40} style={{ left: 40, top: 420 }} reduceMotion={reduceMotion} period={3400} />
           <Twinkle size={30} style={{ left: 1420, top: 330 }} reduceMotion={reduceMotion} period={4600} />
-          <Twinkle size={34} style={{ right: 130, top: 520 }} reduceMotion={reduceMotion} period={3900} />
-          <Twinkle size={26} style={{ left: 50, top: 760 }} reduceMotion={reduceMotion} period={5200} />
+          <Twinkle size={30} style={{ right: 130, top: 520 }} reduceMotion={reduceMotion} period={3900} />
+          <Twinkle size={24} style={{ left: 50, top: 760 }} reduceMotion={reduceMotion} period={5200} />
           <View style={styles.logo} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <Logo width={330} on="dark" />
           </View>
@@ -149,7 +149,7 @@ function IntroStage({
       <View style={styles.introColumn}>
         <Enter reduceMotion={reduceMotion}>
           <Pill style={styles.countPill}>
-            <CosmicText weight="black" size={38} tracking={1}>{`${screen.questionCount} QUESTIONS`}</CosmicText>
+            <CosmicText weight="black" size={40} tracking={1}>{`${screen.questionCount} QUESTIONS`}</CosmicText>
           </Pill>
         </Enter>
         <Enter reduceMotion={reduceMotion} delay={80}>
@@ -164,7 +164,7 @@ function IntroStage({
             </CosmicText>
           </Enter>
         </View>
-        <CosmicText weight="black" size={46} color={cosmic.cream} align="center">
+        <CosmicText weight="black" size={40} color={cosmic.cream} align="center">
           Answer on your phone. Watch the TV for the reveal.
         </CosmicText>
       </View>
@@ -177,7 +177,7 @@ function IntroStage({
           {players.slice(0, 10).map((player, index) => (
             <Enter key={player.playerId} reduceMotion={reduceMotion} delay={300 + index * 60} style={[styles.crewSeat, { width: crewSeatWidth(players.length) }]}>
               <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 92 : 112} disabled={player.away} />
-              <CosmicText weight="black" size={players.length > 7 ? 26 : 30} color={cosmic.cream} numberOfLines={1} align="center" style={{ marginTop: 6, alignSelf: 'stretch' }}>
+              <CosmicText weight="black" size={players.length > 7 ? 24 : 30} color={cosmic.cream} numberOfLines={1} align="center" style={{ marginTop: 6, alignSelf: 'stretch' }}>
                 {player.nickname}
               </CosmicText>
             </Enter>
@@ -207,7 +207,7 @@ function QuestionStage({
   const named = players.length <= 6;
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={questionAccessibilityLabel(screen)}>
-      <CosmicText weight="extraBold" size={36} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
+      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
         {`QUESTION ${screen.questionNumber} OF ${screen.questionCount}`}
       </CosmicText>
       <Pill style={styles.timer} testID="trivia-tv-clock">
@@ -216,7 +216,7 @@ function QuestionStage({
       <View style={styles.questionColumn}>
         {screen.category ? (
           <Pill color={cosmic.turquoise} style={styles.categoryChip} testID="trivia-tv-category">
-            <CosmicText weight="black" size={28} tracking={3}>{screen.category.toUpperCase()}</CosmicText>
+            <CosmicText weight="black" size={30} tracking={3}>{screen.category.toUpperCase()}</CosmicText>
           </Pill>
         ) : null}
         <Enter reduceMotion={reduceMotion} style={styles.questionPanel}>
@@ -243,7 +243,7 @@ function QuestionStage({
           <View style={styles.footerAvatars}>
             {players.slice(0, 10).map((player) => (
               <View key={player.playerId} style={[styles.footerSeat, named ? styles.footerSeatNamed : null]}>
-                <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 60 : 72} disabled={player.away} />
+                <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 56 : 72} disabled={player.away} />
                 {named ? (
                   <CosmicText weight="bold" size={24} color={cosmic.cream} numberOfLines={1} style={styles.footerName}>{player.nickname}</CosmicText>
                 ) : null}
@@ -278,7 +278,7 @@ function AnswerTile({ option }: { readonly option: WatchedOption }) {
   return (
     <View style={[styles.answerTile, { backgroundColor: answerTone(option.optionIndex) }]}>
       <LetterBadge optionIndex={option.optionIndex} size={82} />
-      <CosmicText weight="black" size={option.text.length > 22 ? 40 : 52} numberOfLines={2} style={styles.answerText}>
+      <CosmicText weight="black" size={option.text.length > 24 ? 40 : 56} numberOfLines={2} style={styles.answerText}>
         {option.text}
       </CosmicText>
     </View>
@@ -305,12 +305,12 @@ function RevealStage({
 
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={revealAccessibilityLabel(screen, seconds)}>
-      <CosmicText weight="extraBold" size={36} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
+      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
         {`THE REVEAL • ${screen.questionNumber} / ${screen.questionCount}`}
       </CosmicText>
       <View style={styles.revealRow}>
         <Enter reduceMotion={reduceMotion} style={styles.answerPanel}>
-          <CosmicText weight="black" size={58} align="center" numberOfLines={1}>Correct answer</CosmicText>
+          <CosmicText weight="black" size={56} align="center" numberOfLines={1}>Correct answer</CosmicText>
           <CosmicText weight="extraBold" size={40} align="center" numberOfLines={4} style={{ marginTop: 28 }}>
             {screen.text}
           </CosmicText>
@@ -323,7 +323,7 @@ function RevealStage({
                   <CosmicText weight="black" size={correctAnswerSize(correct.text)} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.answerText}>
                     {correct.text}
                   </CosmicText>
-                  <CheckBadge size={60} />
+                  <CheckBadge size={56} />
                 </View>
               </Pulse>
             </Enter>
@@ -331,7 +331,7 @@ function RevealStage({
           <Enter reduceMotion={reduceMotion} delay={700} from={10} style={styles.tally} testID="trivia-tv-tally">
             <View style={styles.tallyRow}>
               <CosmicText weight="black" size={64} color={cosmic.correct}>{gotIt}</CosmicText>
-              <CosmicText weight="extraBold" size={34}>{` of ${screen.verdicts.length} got it right`}</CosmicText>
+              <CosmicText weight="extraBold" size={30}>{` of ${screen.verdicts.length} got it right`}</CosmicText>
             </View>
             {tallyQuip(gotIt, screen.verdicts.length) ? (
               <CosmicText weight="bold" size={30} color={cosmic.muted} align="center">{tallyQuip(gotIt, screen.verdicts.length)}</CosmicText>
@@ -339,18 +339,18 @@ function RevealStage({
           </Enter>
         </Enter>
         <Enter reduceMotion={reduceMotion} delay={120} style={styles.resultsPanel}>
-          <CosmicText weight="black" size={66} align="center">Round results</CosmicText>
+          <CosmicText weight="black" size={72} align="center">Round results</CosmicText>
           <View style={[styles.resultRows, compact ? styles.resultRowsCompact : null, roomy ? styles.resultRowsRoomy : null]} testID="trivia-tv-verdict-grid">
             {screen.scoreboard.map((row, index) => {
               const right = verdictOf(row.playerId);
               return (
                 <Enter key={row.playerId} reduceMotion={reduceMotion} delay={150 + index * 40} from={14} style={[styles.resultRow, compact ? styles.resultRowCompact : null]} testID={`trivia-tv-verdict-row-${row.playerId}`}>
-                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 48 : roomy ? 84 : 66} disabled={row.away} /> : null}
-                  <CosmicText weight="bold" size={compact ? 30 : roomy ? 44 : 36} numberOfLines={1} style={styles.resultName}>{row.nickname}</CosmicText>
+                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 48 : roomy ? 84 : 72} disabled={row.away} /> : null}
+                  <CosmicText weight="bold" size={compact ? 30 : roomy ? 40 : 40} numberOfLines={1} style={styles.resultName}>{row.nickname}</CosmicText>
                   <View style={[styles.verdict, compact ? styles.verdictCompact : null, roomy ? styles.verdictRoomy : null]}>
-                    {right ? <CheckBadge size={compact ? 38 : roomy ? 50 : 42} /> : <MissBadge size={compact ? 38 : roomy ? 50 : 42} />}
+                    {right ? <CheckBadge size={compact ? 40 : roomy ? 56 : 40} /> : <MissBadge size={compact ? 40 : roomy ? 56 : 40} />}
                     {compact ? null : (
-                      <CosmicText weight="extraBold" size={roomy ? 36 : 32} color={right ? cosmic.correct : cosmic.missed}>
+                      <CosmicText weight="extraBold" size={roomy ? 40 : 30} color={right ? cosmic.correct : cosmic.missed}>
                         {right ? 'Correct' : 'Missed'}
                       </CosmicText>
                     )}
@@ -363,7 +363,7 @@ function RevealStage({
                         {row.gain !== undefined && row.gain > 0 ? (
                           <Enter reduceMotion={reduceMotion} delay={350 + index * 40} scale={0.85} from={0}>
                             <Pill color={cosmic.butter} style={styles.gainPillCompact}>
-                              <CosmicText weight="black" size={22}>{`+${row.gain}`}</CosmicText>
+                              <CosmicText weight="black" size={24}>{`+${row.gain}`}</CosmicText>
                             </Pill>
                           </Enter>
                         ) : null}
@@ -372,7 +372,7 @@ function RevealStage({
                   ) : row.gain !== undefined && row.gain > 0 ? (
                     <Enter reduceMotion={reduceMotion} delay={350 + index * 40} scale={0.85} from={0}>
                       <Pill color={cosmic.butter} style={styles.gainPill}>
-                        <CosmicText weight="black" size={roomy ? 30 : 26}>{`+${row.gain}`}</CosmicText>
+                        <CosmicText weight="black" size={roomy ? 30 : 24}>{`+${row.gain}`}</CosmicText>
                       </Pill>
                     </Enter>
                   ) : null}
@@ -382,7 +382,7 @@ function RevealStage({
                     delay={400 + index * 40}
                     reduceMotion={reduceMotion}
                     weight="black"
-                    size={compact ? 32 : roomy ? 46 : 38}
+                    size={compact ? 30 : roomy ? 40 : 40}
                     align="right"
                     style={compact ? styles.resultScoreCompact : styles.resultScore}
                   />
@@ -396,10 +396,10 @@ function RevealStage({
         <Pill style={styles.nextPill}>
           <View style={styles.clockRow}>
             <CosmicText weight="extraBold" size={40}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
-            <CosmicText weight="black" size={52}>{`${seconds}s`}</CosmicText>
+            <CosmicText weight="black" size={56}>{`${seconds}s`}</CosmicText>
           </View>
         </Pill>
-        <CosmicText weight="bold" size={32} color={cosmic.cream} align="center" style={styles.nextHint}>The host can move on sooner</CosmicText>
+        <CosmicText weight="bold" size={30} color={cosmic.cream} align="center" style={styles.nextHint}>The host can move on sooner</CosmicText>
       </View>
       <Mascot pose="celebrate" width={220} reduceMotion={reduceMotion} style={styles.revealMascot} />
     </View>
@@ -425,15 +425,15 @@ function WinnersCircle({ winners, reduceMotion }: { readonly winners: readonly F
             <View style={[styles.circleRing, { width: size + 20, height: size + 20, borderRadius: (size + 20) / 2 }]}>
               {winner.avatar ? <AvatarPortrait avatarId={winner.avatar} displayName={winner.nickname} size={size} disabled={winner.away} /> : null}
             </View>
-            <CosmicText weight="extraBold" size={28} color={cosmic.cream} numberOfLines={1} style={{ maxWidth: seat }}>{winner.nickname}</CosmicText>
+            <CosmicText weight="extraBold" size={30} color={cosmic.cream} numberOfLines={1} style={{ maxWidth: seat }}>{winner.nickname}</CosmicText>
           </Enter>
         ))}
       </View>
       <Pill color={cosmic.butter} style={styles.circleScore}>
-        <CosmicText weight="black" size={34}>{`${winners.length} winners · ${score} points each`}</CosmicText>
+        <CosmicText weight="black" size={30}>{`${winners.length} winners · ${score} points each`}</CosmicText>
       </Pill>
-      <Twinkle size={44} style={{ top: -10, left: 40 }} reduceMotion={reduceMotion} period={2600} />
-      <Twinkle size={32} style={{ top: 40, right: 30 }} reduceMotion={reduceMotion} period={3300} />
+      <Twinkle size={40} style={{ top: -10, left: 40 }} reduceMotion={reduceMotion} period={2600} />
+      <Twinkle size={30} style={{ top: 40, right: 30 }} reduceMotion={reduceMotion} period={3300} />
     </View>
   );
 }
@@ -475,11 +475,11 @@ function FinishedStage({
 
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={finishedAccessibilityLabel(screen)}>
-      <CosmicText weight="extraBold" size={36} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
+      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
         FINAL SCORES
       </CosmicText>
       <Enter reduceMotion={reduceMotion} scale={0.85} from={0} style={styles.winnerPill}>
-        <CosmicText weight="black" size={screen.headline.length > 18 ? 76 : 100} align="center" numberOfLines={1} adjustsFontSizeToFit>
+        <CosmicText weight="black" size={screen.headline.length > 24 ? 72 : 104} align="center" numberOfLines={1} adjustsFontSizeToFit>
           {screen.headline}
         </CosmicText>
       </Enter>
@@ -495,19 +495,19 @@ function FinishedStage({
                 // A gold ring and a sparkle for every winner; a tie shares the honour.
                 <>
                   <View style={[styles.winnerRing, { width: avatar + 28, height: avatar + 28, borderRadius: (avatar + 28) / 2, top: -14 }]} pointerEvents="none" />
-                  <Twinkle size={44} style={{ top: -30, left: PODIUM_SLOT_WIDTH / 2 + avatar / 2 - 6 }} reduceMotion={reduceMotion} period={2600} />
-                  <Twinkle size={28} style={{ top: avatar * 0.55, left: PODIUM_SLOT_WIDTH / 2 - avatar / 2 - 40 }} reduceMotion={reduceMotion} period={3300} />
+                  <Twinkle size={40} style={{ top: -30, left: PODIUM_SLOT_WIDTH / 2 + avatar / 2 - 6 }} reduceMotion={reduceMotion} period={2600} />
+                  <Twinkle size={30} style={{ top: avatar * 0.55, left: PODIUM_SLOT_WIDTH / 2 - avatar / 2 - 40 }} reduceMotion={reduceMotion} period={3300} />
                 </>
               ) : null}
               {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={avatar} disabled={standing.away} /> : null}
               <View style={[styles.podiumBlock, { height, backgroundColor: color }]}>
                 <View style={styles.podiumTop} pointerEvents="none" />
                 <View style={styles.rankBadge}>
-                  <CosmicText weight="black" size={36} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
+                  <CosmicText weight="black" size={40} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
                 </View>
                 {/* Badge, name and score must fit the shortest (3rd rank) step. */}
-                <CosmicText weight="black" size={38} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
-                <CosmicText weight="black" size={38}>{standing.score}</CosmicText>
+                <CosmicText weight="black" size={40} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
+                <CosmicText weight="black" size={40}>{standing.score}</CosmicText>
               </View>
             </Enter>
           );
@@ -519,7 +519,7 @@ function FinishedStage({
           {rest.slice(0, 7).map((standing) => (
             <View key={standing.playerId} style={[styles.restSeat, compactRest ? styles.restSeatCompact : null]} testID={`trivia-tv-final-row-${standing.playerId}`}>
               <View style={styles.restRank}>
-                <CosmicText weight="black" size={28} style={{ lineHeight: 34 }}>{standing.rank}</CosmicText>
+                <CosmicText weight="black" size={30} style={{ lineHeight: 34 }}>{standing.rank}</CosmicText>
               </View>
               {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={compactRest ? 48 : 64} disabled={standing.away} /> : null}
               <View style={compactRest ? styles.restText : null}>
