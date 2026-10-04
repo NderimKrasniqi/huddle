@@ -54,9 +54,9 @@ function SeatLostRecoverySurface({
       contentStyle={styles.content}
       footer={
         <PlayroomButton
-          label="Join another room"
+          label="Join a room"
           onPress={onJoinAnotherRoom}
-          accessibilityLabel="Join another room"
+          accessibilityLabel="Join a room"
           testID="phone-seat-lost-join-another-room"
         />
       }

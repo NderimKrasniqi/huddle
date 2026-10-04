@@ -44,6 +44,9 @@ const PhoneSessionContext = createContext<PhoneSessionContextValue | null>(null)
  * answer behavior: a slow session query may fill the form after its patience
  * deadline, but it can never overwrite a newly joined seat.
  */
+/** Shown when a phone reopens with a saved seat the room has since let go. */
+const RESTORED_SEAT_GONE = 'Your seat was freed while Huddle was closed. Join again with the code on the TV.';
+
 export function PhoneSessionProvider({ children }: PropsWithChildren) {
   const convex = useConvex();
   const [session, setSession] = useState<PlayerSession | null | undefined>();
@@ -126,6 +129,9 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
         ) {
           restoreNullClearedRef.current = true;
           clearPersistedCredential();
+          // This phone had a seat and the room no longer holds it: say so,
+          // rather than dropping the player on the join form without a word.
+          setNotice(RESTORED_SEAT_GONE);
         }
       },
       undefined,

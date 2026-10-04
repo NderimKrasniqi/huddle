@@ -446,6 +446,19 @@ function ReadyScreen({
       }
     >
       <PhoneTopBar back={youAreHost ? { label: 'Setup', onPress: onReopen, testID: 'setup-nav-back' } : undefined} you={you} />
+      {/* What the hand is for: a guest never saw setup, so name the game and how it's set. */}
+      {youAreHost ? null : (
+        <View style={styles.readyContext} testID="ready-game-context">
+          <PlayroomHeading type={playroomPhone.type.title}>{module.metadata.title}</PlayroomHeading>
+          <View style={styles.summaryChips} accessible accessibilityLabel={module.settingsSchema.map((setting) => settingSummaryText(setting, setup.settings[setting.key] ?? setting.defaultValue)).join(', ')}>
+            {module.settingsSchema.map((setting) => (
+              <PlayroomPill key={setting.key} textStyle={playroomPhone.type.caption}>
+                {settingSummaryText(setting, setup.settings[setting.key] ?? setting.defaultValue)}
+              </PlayroomPill>
+            ))}
+          </View>
+        </View>
+      )}
       {/* The hand sits in the lower half, where a thumb reaches it. */}
       <View style={styles.thumbSpacer} />
       {/* One message: the hand and what it means. Settings and the count live on the TV. */}
@@ -697,6 +710,11 @@ const styles = StyleSheet.create({
     borderRightWidth: 2.5,
     borderBottomWidth: 2.5,
     transform: [{ rotate: '45deg' }],
+  },
+  readyContext: {
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
   },
   summaryChips: {
     flexDirection: 'row',
