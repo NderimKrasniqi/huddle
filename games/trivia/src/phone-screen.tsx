@@ -108,17 +108,17 @@ export function TriviaPhoneScreen({
           <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Answer locked!</CosmicText>
         </Enter>
         <Enter reduceMotion={reduceMotion} scale={0.88} from={0} delay={80}>
-          <LockMark size={130} />
+          <LockMark size={150} />
         </Enter>
         {/* The rest follows the lock in, so the swap from four answers never teleports. */}
         <Enter reduceMotion={reduceMotion} delay={160} style={{ alignItems: 'center' }}>
           {answered !== undefined ? (
-            <CosmicText weight="bold" size={18} align="center" style={{ marginTop: 18 }}>
+            <CosmicText weight="bold" size={20} align="center" style={{ marginTop: 28 }}>
               {`${answered} of ${current.standings.length} answered`}
             </CosmicText>
           ) : null}
           <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 4 }}>Waiting for others…</CosmicText>
-          <Mascot pose="point" width={170} reduceMotion={reduceMotion} style={{ marginTop: 16 }} />
+          <Mascot pose="point" width={190} reduceMotion={reduceMotion} style={{ marginTop: 40 }} />
         </Enter>
       </Surface>
     );

@@ -352,6 +352,7 @@ export default function JoinIdentityScreen() {
         </View>
         </View>
         {nickname.trim() === '' ? <Line testID="identity-name-hint">Add your name to save your seat.</Line> : null}
+        <View style={styles.picker}>
         <PlayroomText color="muted" style={[playroomPhone.type.label, styles.gridLabel]}>Pick your look</PlayroomText>
         <View style={styles.grid} testID="identity-avatar-grid">
           {AVATAR_IDS.map((candidate) => {
@@ -392,6 +393,7 @@ export default function JoinIdentityScreen() {
             );
           })}
         </View>
+        </View>
         {pending ? <Line testID="identity-availability-pending">Checking room availability…</Line> : null}
         {availability?.full ? <PhoneNotice testID="identity-room-full">That room is full. Ask someone to leave before joining.</PhoneNotice> : null}
         {selectedTaken ? <PhoneNotice testID="identity-avatar-taken">Someone just took that avatar. Pick another one.</PhoneNotice> : null}
@@ -424,8 +426,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 28,
+    rowGap: 36,
     marginTop: 4,
+  },
+  // Label and grid move as one group, centred in the space down to the button,
+  // instead of stopping halfway and leaving the bottom of the screen empty.
+  picker: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   gridLabel: {
     marginTop: 16,
