@@ -6,7 +6,6 @@ import { answerScreen, type AnswerOption } from './answering';
 import {
   answerTone,
   cosmic,
-  cosmicWash,
   CosmicText,
   COSMIC_MOTION,
   cosmicEaseOut,
@@ -43,6 +42,7 @@ export function TriviaPhoneScreen({
   clockRemainingMs,
   isHost = false,
   feedback,
+  hostNickname,
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
   const reduceMotion = useReducedMotion();
   const device = safeAreaInsets ?? ZERO_INSETS;
@@ -128,14 +128,17 @@ export function TriviaPhoneScreen({
     return (
       <Surface {...frame} testID="trivia-phone-screen" scrollTestID="trivia-phone-scroll" align="stretch">
         <Header progress={progress} seconds={seconds} />
-        {model.category ? (
-          <Pill color={cosmic.turquoise} style={styles.categoryChip} testID="trivia-phone-category">
-            <CosmicText weight="black" size={13} tracking={1.5}>{model.category.toUpperCase()}</CosmicText>
-          </Pill>
-        ) : null}
-        <CosmicText weight="black" size={model.text.length > 80 ? 22 : 22} align="center" accessibilityRole="header" style={styles.question}>
-          {model.text}
-        </CosmicText>
+        {/* The question takes the space above; the answers sit low, where a thumb reaches. */}
+        <View style={styles.questionArea}>
+          {model.category ? (
+            <Pill color={cosmic.turquoise} style={styles.categoryChip} testID="trivia-phone-category">
+              <CosmicText weight="black" size={13} tracking={1.5}>{model.category.toUpperCase()}</CosmicText>
+            </Pill>
+          ) : null}
+          <CosmicText weight="black" size={22} align="center" accessibilityRole="header" style={styles.question}>
+            {model.text}
+          </CosmicText>
+        </View>
         <View style={styles.answers}>
           {model.options.map((option, index) => (
             <Enter key={option.optionIndex} reduceMotion={reduceMotion} delay={index * 60} from={16}>
@@ -171,6 +174,7 @@ export function TriviaPhoneScreen({
         progress={progress}
         seconds={seconds}
         isHost={isHost}
+        hostNickname={hostNickname}
         reduceMotion={reduceMotion}
         onNext={() =>
           sendEvent({ kind: 'advance', playerId: player.playerId, questionIndex: current.questionIndex, phase: 'reveal' })
@@ -185,7 +189,7 @@ export function TriviaPhoneScreen({
     const won = place?.rank === 1;
     return (
       <Surface {...frame} testID="trivia-phone-finished" scrollTestID="trivia-phone-finished-scroll">
-        <Logo width={190} on="light" />
+        <Logo width={130} on="light" />
         <Pill color={cosmic.turquoise} style={styles.pill}>
           <CosmicText weight="black" size={16} tracking={1.5}>GAME COMPLETE</CosmicText>
         </Pill>
@@ -205,10 +209,8 @@ export function TriviaPhoneScreen({
             </View>
           </Enter>
         ) : null}
-        <CosmicText weight="black" size={18} align="center">Final scores are on the TV.</CosmicText>
-        <View style={styles.rule} />
         <CosmicText size={16} color={cosmic.muted} align="center">
-          {isHost ? 'Bring everyone back to the room.' : 'Waiting for the host to choose what’s next.'}
+          {isHost ? 'Final scores are on the TV. Bring everyone back when you’re ready.' : `Final scores are on the TV. ${hostNickname ?? 'The host'} chooses what’s next.`}
         </CosmicText>
       </Surface>
     );
@@ -247,9 +249,11 @@ function RevealSurface({
   progress,
   seconds,
   isHost,
+  hostNickname,
   reduceMotion,
   onNext,
 }: {
+  readonly hostNickname?: string;
   readonly insets: PhoneSafeAreaInsets;
   readonly chromeTop: number;
   readonly state: PlayableTriviaState;
@@ -264,7 +268,7 @@ function RevealSurface({
   const last = state.questionIndex + 1 >= state.questions.length;
   return (
     <Surface insets={insets} chromeTop={chromeTop} testID="trivia-phone-reveal">
-      <Logo width={170} on="light" />
+      <Logo width={130} on="light" />
       <CosmicText weight="black" size={16} align="center">{progress}</CosmicText>
       {verdict === undefined ? (
         <>
@@ -308,7 +312,7 @@ function RevealSurface({
           </PressScale>
         </>
       ) : (
-        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>The host can move on sooner.</CosmicText>
+        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>{`${hostNickname ?? 'The host'} can move on sooner.`}</CosmicText>
       )}
     </Surface>
   );
@@ -520,6 +524,7 @@ const styles = StyleSheet.create({
   timer: { paddingHorizontal: 16, paddingVertical: 4, minWidth: 74 },
   categoryChip: { alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 4, marginTop: 12 },
   question: { marginTop: 10, marginBottom: 16 },
+  questionArea: { flexGrow: 1, justifyContent: 'center' },
   answers: { gap: 12 },
   answer: { minHeight: 68, borderRadius: 24, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
   answerClosed: { opacity: 0.45 },
@@ -529,5 +534,4 @@ const styles = StyleSheet.create({
   nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
   pressable: { alignSelf: 'stretch' },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginTop: 16 },
-  rule: { alignSelf: 'stretch', height: 1, backgroundColor: cosmicWash.panelRule, marginVertical: 14 },
 });

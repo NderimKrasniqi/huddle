@@ -111,6 +111,7 @@ export function TvSessionPresentation({
         state={runtimeScreen.state}
         players={gamePlayersFrom(roster)}
         clockRemainingMs={runtimeScreen.kind === 'game' ? runtimeScreen.clockRemainingMs : undefined}
+        hostNickname={roster.find((seat) => seat.host)?.nickname}
       />
     );
   }

@@ -155,7 +155,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 96,
     paddingBottom: playroomTv.safeY,
-    gap: 16,
+    // Generous rhythm: a small room fills the stage instead of leaving a band empty below.
+    gap: 32,
   },
   chips: {
     flexDirection: 'row',
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     columnGap: 60,
     // Heads break out of the top of their circles, so rows need room above.
     rowGap: 20,
-    marginTop: 44,
+    marginTop: 48,
   },
   // A disc in the player's own colour behind their avatar, flashed when they raise a hand.
   echo: {

@@ -233,8 +233,7 @@ describe('Trivia Phone game renderer', () => {
     // Everyone still on 0 is the TV's tie too.
     expect(result.getByText('It’s a tie!')).toBeTruthy();
     expect(result.queryByText('You won!')).toBeNull();
-    expect(result.getByText('Final scores are on the TV.')).toBeTruthy();
-    expect(result.getByText('Waiting for the host to choose what’s next.')).toBeTruthy();
+    expect(result.getByText('Final scores are on the TV. The host chooses what’s next.')).toBeTruthy();
     expect(result.queryAllByRole('button')).toHaveLength(0);
   });
 });

@@ -63,7 +63,7 @@ type Players = TvGameScreenProps<TriviaState>['players'];
  * answered, the reveal and the scores — never who chose what. Answers happen
  * on the phones (`TriviaPhoneScreen`).
  */
-export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScreenProps<TriviaState>) {
+export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<TriviaState>) {
   const viewport = useWindowDimensions();
   const scale = safeScale(viewport.width, viewport.height);
   const reduceMotion = useReducedMotion();
@@ -104,7 +104,7 @@ export function TriviaTvScreen({ state, players, clockRemainingMs }: TvGameScree
             <QuestionStage key={`q${screen.questionNumber}`} screen={screen} players={players} reduceMotion={reduceMotion} />
           ) : null}
           {screen.kind === 'reveal' ? (
-            <RevealStage key={`r${screen.questionNumber}`} screen={screen} seconds={seconds} reduceMotion={reduceMotion} />
+            <RevealStage key={`r${screen.questionNumber}`} screen={screen} seconds={seconds} reduceMotion={reduceMotion} hostNickname={hostNickname} />
           ) : null}
           {screen.kind === 'finished' ? <FinishedStage key="finished" screen={screen} reduceMotion={reduceMotion} /> : null}
         </View>
@@ -206,6 +206,8 @@ function QuestionStage({
 }) {
   // Names fit under the faces only for a smaller room; seats stay avatar-wide otherwise.
   const named = players.length <= 6;
+  // Named seats share the footer's middle, so a small crew shows whole names.
+  const seatWidth = named ? Math.min(220, Math.floor((FOOTER_SEATS_WIDTH - 14 * (players.length - 1)) / Math.max(1, players.length))) : undefined;
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={questionAccessibilityLabel(screen)}>
       <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
@@ -243,7 +245,7 @@ function QuestionStage({
           </View>
           <View style={styles.footerAvatars}>
             {players.slice(0, 10).map((player) => (
-              <View key={player.playerId} style={[styles.footerSeat, named ? styles.footerSeatNamed : null]}>
+              <View key={player.playerId} style={[styles.footerSeat, seatWidth === undefined ? null : { width: seatWidth }]}>
                 <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 56 : 72} disabled={player.away} />
                 {named ? (
                   <CosmicText weight="bold" size={24} color={cosmic.cream} numberOfLines={1} style={styles.footerName}>{player.nickname}</CosmicText>
@@ -290,10 +292,12 @@ function RevealStage({
   screen,
   seconds,
   reduceMotion,
+  hostNickname,
 }: {
   readonly screen: Extract<WatchedScreen, { kind: 'reveal' }>;
   readonly seconds: number;
   readonly reduceMotion: boolean | undefined;
+  readonly hostNickname?: string;
 }) {
   const correct = screen.options.find((option) => option.correct === true);
   const last = screen.questionNumber >= screen.questionCount;
@@ -400,7 +404,7 @@ function RevealStage({
             <CosmicText weight="black" size={56}>{`${seconds}s`}</CosmicText>
           </View>
         </Pill>
-        <CosmicText weight="bold" size={30} color={cosmic.cream} align="center" style={styles.nextHint}>The host can move on sooner</CosmicText>
+        <CosmicText weight="bold" size={30} color={cosmic.cream} align="center" style={styles.nextHint}>{`${hostNickname ?? 'The host'} can move on sooner`}</CosmicText>
       </View>
       <Mascot pose="celebrate" width={220} reduceMotion={reduceMotion} style={styles.revealMascot} />
     </View>
@@ -513,6 +517,8 @@ function FinishedStage({
             </Enter>
           );
         })}
+        {/* The steps stand on a lit stage edge instead of ending in mid-air. */}
+        {circle ? null : <View style={styles.podiumFloor} pointerEvents="none" />}
       </View>
       {rest.length > 0 ? (
         <Enter reduceMotion={reduceMotion} delay={800} style={styles.restDock}>
@@ -589,6 +595,9 @@ function correctAnswerSize(text: string): number {
   return 34;
 }
 
+/** Room for the named seats between the answered count and the hint. */
+const FOOTER_SEATS_WIDTH = 900;
+
 const styles = StyleSheet.create({
   viewport: { flex: 1, backgroundColor: cosmic.navy, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   space: { position: 'absolute', left: 0, top: 0, width: STAGE_WIDTH, height: STAGE_HEIGHT },
@@ -624,8 +633,7 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 30 },
   footerAvatars: { flexDirection: 'row', gap: 14, flex: 1, justifyContent: 'center' },
   footerSeat: { alignItems: 'center' },
-  footerSeatNamed: { width: 128 },
-  footerName: { marginTop: 2, maxWidth: 128 },
+  footerName: { marginTop: 2, maxWidth: '100%' },
   footerDivider: { width: 2, height: 64, backgroundColor: cosmicWash.divider },
 
   revealRow: { position: 'absolute', top: 220, left: SAFE_X, right: SAFE_X, bottom: 200, flexDirection: 'row', gap: 40 },
@@ -664,7 +672,8 @@ const styles = StyleSheet.create({
   podiumTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 22, borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: cosmicWash.highlight },
   rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   // The panel hugs its seats, so one 4th place is a pill rather than an empty bar.
-  restDock: { position: 'absolute', left: 200, right: 200, bottom: 132, alignItems: 'center' },
+  restDock: { position: 'absolute', left: 200, right: 200, bottom: 186, alignItems: 'center' },
+  podiumFloor: { position: 'absolute', left: -48, right: -48, bottom: -14, height: 14, borderRadius: 7, backgroundColor: cosmic.turquoise, opacity: 0.55 },
   restRow: { ...panel, maxWidth: '100%', minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
   restSeat: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   restSeatCompact: { width: REST_SEAT_WIDTH, gap: 10 },

@@ -311,6 +311,8 @@ export type TvGameScreenProps<State> = {
    * the room remains the authority and advances the game itself.
    */
   readonly clockRemainingMs?: number;
+  /** The Host's nickname, so a screen can say who decides ("Mil can move on"). Display only. */
+  readonly hostNickname?: string;
 };
 
 /**
@@ -365,6 +367,8 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
    * which the hub stamps, never this.
    */
   readonly isHost?: boolean;
+  /** The Host's nickname, so a guest's screen can say who decides. Display only. */
+  readonly hostNickname?: string;
   /**
    * Touch feedback the Phone host can give (a haptic tap), for a game to call
    * at the moment it confirms something: `select` when an answer locks in,

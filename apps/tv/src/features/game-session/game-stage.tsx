@@ -19,15 +19,17 @@ export function GameStage({
   state,
   players,
   clockRemainingMs,
+  hostNickname,
 }: {
   readonly module: GameModule;
   readonly state: unknown;
   readonly players: readonly GamePlayer[];
   readonly clockRemainingMs?: number;
+  readonly hostNickname?: string;
 }) {
   return (
     <StatusBoundary>
-      {module.screens.tv({ state, players, clockRemainingMs })}
+      {module.screens.tv({ state, players, clockRemainingMs, hostNickname })}
     </StatusBoundary>
   );
 }
