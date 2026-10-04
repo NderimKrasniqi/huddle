@@ -1,7 +1,8 @@
-import type { GameEvent, GameModule, GamePlayer } from '@huddle/domain';
+import type { GameEvent, GameModule, GamePlayer, PhoneFeedback } from '@huddle/domain';
 import { playroomPhone } from '@huddle/design-tokens';
 import type { RunningGameScreen } from '@huddle/game-registry';
 import { PlayroomButton, PlayroomHeading, PlayroomSheet, PlayroomStatusImage, PlayroomText } from '@huddle/ui/native';
+import * as Haptics from 'expo-haptics';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -49,7 +50,7 @@ export function SeatedPhone({
     managedPlayer,
   } = room;
   const me = roster.find((seat) => seat.playerId === session.playerId);
-  const you = { nickname: me?.nickname ?? session.nickname, avatarId: me?.avatar ?? session.avatar };
+  const you = { nickname: me?.nickname ?? session.nickname, avatarId: me?.avatar ?? session.avatar, roomCode: session.code };
   const sheet = <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} onCancel={room.dismissConfirmation} />;
 
   if (screen.kind === 'game' || screen.kind === 'finished') {
@@ -72,6 +73,8 @@ export function SeatedPhone({
 
   if (screen.kind === 'paused' || screen.kind === 'unavailable') {
     const disconnected = screen.kind === 'paused' && screen.reason === 'playerDisconnected';
+    const missing = roster.filter((seat) => seat.away).map((seat) => seat.nickname);
+    const hostSeat = roster.find((seat) => seat.host);
     return (
       <>
         <PhoneRuntimeStatus
@@ -79,9 +82,9 @@ export function SeatedPhone({
           title={screen.kind === 'paused' ? 'Game paused' : 'Game unavailable'}
           message={
             screen.kind === 'unavailable'
-              ? 'This game could not be restored on this phone. The host can return the room to the lobby.'
+              ? `This game could not be restored on this phone. ${hostSeat?.nickname ?? 'The host'} can return the room to the lobby.`
               : disconnected
-                ? 'A player’s phone went quiet. The room will resume when everyone is back.'
+                ? `${missing.length === 1 ? `${missing[0]}’s phone` : missing.length > 1 ? `${missing.length} phones` : 'A phone'} went quiet. The game resumes when everyone is back.`
                 : 'The TV is reconnecting. Keep Huddle open on the phones.'
           }
           youAreHost={standing.youAreHost}
@@ -90,6 +93,7 @@ export function SeatedPhone({
           primary={disconnected ? { label: 'Continue without waiting', onPress: room.continueGame, action: 'continue' } : undefined}
           onBackToLobby={room.end}
           you={you}
+          hostNickname={hostSeat?.nickname}
         />
         {sheet}
       </>
@@ -225,6 +229,7 @@ function PhoneRuntimeMount({
         hostChromeInsetBottom: hostBackToLobby ? RUNTIME_BACK_TO_LOBBY_OFFSET + playroomPhone.buttonHeight : undefined,
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
         isHost: youAreHost,
+        feedback: phoneFeedback,
       })}
       {hostBackToLobby ? (
         <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>
@@ -251,7 +256,9 @@ function PhoneRuntimeStatus({
   primary,
   onBackToLobby,
   you,
+  hostNickname,
 }: {
+  readonly hostNickname?: string;
   readonly variant: 'paused' | 'unavailable';
   readonly title: string;
   readonly message: string;
@@ -294,7 +301,7 @@ function PhoneRuntimeStatus({
         </PlayroomText>
         {youAreHost ? null : (
           <PlayroomText color="muted" style={[playroomPhone.type.caption, styles.center]}>
-            Waiting for the host to return to the room.
+            {disconnectedHint(hostNickname, primary !== undefined)}
           </PlayroomText>
         )}
         {failure ? <PhoneNotice testID="runtime-status-error">{failure}</PhoneNotice> : null}
@@ -337,6 +344,17 @@ function ConfirmationSheet({
           <PlayroomButton label="Cancel" variant="secondary" onPress={onCancel} disabled={busy !== null} accessibilityLabel="Cancel" testID="confirmation-cancel" />
     </PlayroomSheet>
   );
+}
+
+/** What a guest waits on while the game is stopped: the host, by name. */
+function disconnectedHint(hostNickname: string | undefined, canContinue: boolean): string {
+  return `${hostNickname ?? 'The host'} can ${canContinue ? 'continue without them or ' : ''}head back to the room.`;
+}
+
+/** A game's request for touch feedback, as a haptic. Silent where haptics are off. */
+function phoneFeedback(kind: PhoneFeedback): void {
+  if (kind === 'select') void Haptics.selectionAsync();
+  else void Haptics.notificationAsync(kind === 'success' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error);
 }
 
 // Gap between the device's bottom inset and the Host's Back to lobby button.

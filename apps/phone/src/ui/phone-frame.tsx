@@ -120,7 +120,8 @@ function ScrollFade() {
 export type PhoneTopBarProps = {
   /** A back link on the left; the wordmark shows when there is none. */
   readonly back?: { readonly label: string; readonly onPress: () => void; readonly testID?: string };
-  readonly you?: { readonly nickname: string; readonly avatarId: AvatarId };
+  /** Who this phone is; `roomCode` adds the room to the chip, so it is never out of sight. */
+  readonly you?: { readonly nickname: string; readonly avatarId: AvatarId; readonly roomCode?: string };
 };
 
 /** Back link or wordmark on the left, and who this phone belongs to on the right. */
@@ -142,17 +143,18 @@ export function PhoneTopBar({ back, you }: PhoneTopBarProps) {
       ) : (
         <PlayroomWordmark height={34} />
       )}
-      {you ? <YouChip nickname={you.nickname} avatarId={you.avatarId} /> : null}
+      {you ? <YouChip nickname={you.nickname} avatarId={you.avatarId} roomCode={you.roomCode} /> : null}
     </View>
   );
 }
 
-function YouChip({ nickname, avatarId }: { readonly nickname: string; readonly avatarId: AvatarId }) {
+function YouChip({ nickname, avatarId, roomCode }: { readonly nickname: string; readonly avatarId: AvatarId; readonly roomCode?: string }) {
+  const room = roomCode ? ` in room ${roomCode.split('').join(' ')}` : '';
   return (
-    <View style={styles.you} accessible accessibilityLabel={`You are ${nickname}`} testID="phone-you-chip">
+    <View style={styles.you} accessible accessibilityLabel={`You are ${nickname}${room}`} testID="phone-you-chip">
       <PlayroomAvatar avatarId={avatarId} size={30} />
       <PlayroomText numberOfLines={1} style={[playroomPhone.type.caption, styles.youName]}>
-        You
+        {roomCode ? `You · ${roomCode}` : 'You'}
       </PlayroomText>
     </View>
   );

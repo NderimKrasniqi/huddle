@@ -1,5 +1,5 @@
 import type { PhoneGameScreenProps, PhoneSafeAreaInsets } from '@huddle/domain';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
@@ -42,6 +42,7 @@ export function TriviaPhoneScreen({
   hostChromeInsetBottom,
   clockRemainingMs,
   isHost = false,
+  feedback,
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
   const reduceMotion = useReducedMotion();
   const device = safeAreaInsets ?? ZERO_INSETS;
@@ -56,6 +57,15 @@ export function TriviaPhoneScreen({
     current === undefined ? 'legacy' : `${current.questionIndex}:${current.phase}`,
   );
   const frame = { insets, chromeTop };
+  // One tap of feedback when this phone's own result lands, matching the badge.
+  const ownVerdict = current?.phase === 'reveal' ? revealVerdict(current, player.playerId) : undefined;
+  const verdictKey = ownVerdict === undefined ? undefined : `${current?.questionIndex}:${ownVerdict}`;
+  useEffect(() => {
+    if (verdictKey === undefined) return;
+    feedback?.(verdictKey.endsWith(':right') ? 'success' : 'error');
+    // Fires once per question's verdict; `feedback` identity is not a trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verdictKey]);
 
   if (current === undefined) {
     return (
@@ -132,14 +142,15 @@ export function TriviaPhoneScreen({
               <AnswerButton
                 option={option}
                 reduceMotion={reduceMotion}
-                onPress={() =>
+                onPress={() => {
+                  feedback?.('select');
                   sendEvent({
                     kind: 'answer',
                     playerId: player.playerId,
                     questionIndex: model.questionIndex,
                     optionIndex: option.optionIndex,
-                  })
-                }
+                  });
+                }}
               />
             </Enter>
           ))}
