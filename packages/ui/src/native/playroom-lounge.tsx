@@ -20,7 +20,13 @@ export function PlayroomRosterRow({ players, size = 100, width }: {
     {shown.map((player) => <View key={player.id} style={[styles.seat, { width: seatWidth }]} accessible
       accessibilityLabel={`${player.name}${player.isHost ? ', host' : ''}${player.away ? ', reconnecting' : ''}`}>
       {player.avatarId ? <PlayroomAvatar avatarId={player.avatarId} size={size} host={player.isHost} away={player.away} /> : null}
-      <PlayroomText numberOfLines={1} style={[width === undefined ? playroomTv.type.caption : playroomTv.type.label, styles.seatName]}>{player.name}</PlayroomText>
+      <PlayroomText
+        numberOfLines={1}
+        // A full room has narrow seats: a long name shrinks a little before it truncates.
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        style={[width === undefined || seatWidth < 180 ? playroomTv.type.caption : playroomTv.type.label, styles.seatName]}
+      >{player.name}</PlayroomText>
     </View>)}
   </View>;
 }

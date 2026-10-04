@@ -178,7 +178,7 @@ function IntroStage({
           {players.slice(0, 10).map((player, index) => (
             <Enter key={player.playerId} reduceMotion={reduceMotion} delay={300 + index * 60} style={[styles.crewSeat, { width: crewSeatWidth(players.length) }]}>
               <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={players.length > 7 ? 92 : 112} disabled={player.away} />
-              <CosmicText weight="black" size={players.length > 7 ? 24 : 30} color={cosmic.cream} numberOfLines={1} align="center" style={{ marginTop: 6, alignSelf: 'stretch' }}>
+              <CosmicText weight="black" size={players.length > 7 ? 24 : 30} color={cosmic.cream} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} align="center" style={{ marginTop: 6, alignSelf: 'stretch' }}>
                 {player.nickname}
               </CosmicText>
             </Enter>
@@ -192,7 +192,7 @@ function IntroStage({
 
 /** Ten seats and their gaps must fit the 1728-wide safe area. */
 function crewSeatWidth(count: number): number {
-  return count > 7 ? 140 : 170;
+  return count > 7 ? 148 : 170;
 }
 
 function QuestionStage({
@@ -530,7 +530,7 @@ function FinishedStage({
               </View>
               {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={compactRest ? 48 : 64} disabled={standing.away} /> : null}
               <View style={compactRest ? styles.restText : null}>
-                <CosmicText weight="bold" size={compactRest ? 24 : 30} numberOfLines={1} style={compactRest ? null : { maxWidth: 240 }}>{standing.nickname}</CosmicText>
+                <CosmicText weight="bold" size={compactRest ? 24 : 30} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={compactRest ? null : { maxWidth: 240 }}>{standing.nickname}</CosmicText>
                 <CosmicText weight="black" size={compactRest ? 24 : 30}>{standing.score}</CosmicText>
               </View>
             </View>

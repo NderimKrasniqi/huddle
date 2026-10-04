@@ -152,12 +152,13 @@ function Tag({ label, tone }: { readonly label: string; readonly tone: 'host' | 
   );
 }
 
-function GuestLobby({ session, roster }: LobbyScreenProps) {
+function GuestLobby({ session, roster, welcoming }: LobbyScreenProps) {
   const me = roster.find((seat) => seat.playerId === session.playerId);
   const host = roster.find((seat) => seat.host);
   return (
     <>
-      <PlayroomHeading type={playroomPhone.type.heading}>You’re in!</PlayroomHeading>
+      {/* The welcome banner already says it; one greeting is enough. */}
+      {welcoming ? null : <PlayroomHeading type={playroomPhone.type.heading}>You’re in!</PlayroomHeading>}
       <PhoneCard style={styles.pass}>
         <PlayroomAvatar avatarId={me?.avatar ?? session.avatar} size={72} />
         <View style={styles.infoText}>
@@ -165,16 +166,11 @@ function GuestLobby({ session, roster }: LobbyScreenProps) {
           <PlayroomText color="muted" style={playroomPhone.type.body}>{me?.away ? `Room ${session.code} · Reconnecting` : `Room ${session.code}`}</PlayroomText>
         </View>
       </PhoneCard>
-      {/* Smaller than a hero: the room below is what a guest looks at while waiting. */}
-      <PlayroomMoment art="tvHandoff" width={170} height={135} style={styles.moment} />
+      {/* One line for the host (the crown marks them below); the room is what a guest watches. */}
       {host ? (
-        <PhoneCard style={styles.infoCard}>
-          <PlayroomAvatar avatarId={host.avatar} size={52} host />
-          <View style={styles.infoText}>
-            <PlayroomText style={playroomPhone.type.title}>{`${host.nickname} is the host`}</PlayroomText>
-            <PlayroomText color="muted" style={playroomPhone.type.body}>They pick the games</PlayroomText>
-          </View>
-        </PhoneCard>
+        <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]} testID="guest-lobby-host">
+          {`${host.nickname} is the host and picks the games.`}
+        </PlayroomText>
       ) : null}
       <RoomFaces roster={roster} />
 
@@ -287,11 +283,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginTop: 12,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
   },
   infoText: {
     flex: 1,

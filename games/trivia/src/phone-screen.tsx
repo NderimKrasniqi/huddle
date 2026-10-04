@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   timer: { paddingHorizontal: 16, paddingVertical: 4, minWidth: 74 },
   categoryChip: { alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 4, marginTop: 12 },
   question: { marginTop: 10, marginBottom: 16 },
-  questionArea: { flexGrow: 1, justifyContent: 'center' },
+  questionArea: { flexGrow: 1, justifyContent: 'flex-start', paddingTop: 16 },
   answers: { gap: 12 },
   answer: { minHeight: 68, borderRadius: 24, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 16 },
   answerClosed: { opacity: 0.45 },
