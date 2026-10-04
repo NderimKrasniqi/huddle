@@ -16,12 +16,13 @@ import {
   PlayroomButton,
   PlayroomHeading,
   PlayroomSettingIcon,
+  PlayroomSheet,
   PlayroomText,
   PlayroomPressable,
 } from '@huddle/ui/native';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -315,10 +316,7 @@ function OptionSheet({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal testID={`setup-sheet-${control.key}`}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-        <View style={styles.grab} />
+    <PlayroomSheet onClose={onClose} bottomInset={insets.bottom} testID={`setup-sheet-${control.key}`}>
         <View style={styles.blockHead}>
           <PlayroomSettingIcon icon={setting?.icon} size={34} />
           <PlayroomText style={playroomPhone.type.heading}>{control.label}</PlayroomText>
@@ -339,8 +337,7 @@ function OptionSheet({
           </PlayroomPressable>
         ))}
         <PlayroomButton label="Done" onPress={onClose} />
-      </View>
-    </Modal>
+    </PlayroomSheet>
   );
 }
 
@@ -659,26 +656,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 26,
   },
-  scrim: {
-    flex: 1,
-    backgroundColor: 'rgba(45, 11, 78, 0.35)',
-  },
-  sheet: {
-    gap: 10,
-    paddingHorizontal: playroomPhone.gutter,
-    paddingTop: 10,
-    borderTopLeftRadius: playroomRadii.card,
-    borderTopRightRadius: playroomRadii.card,
-    backgroundColor: playroomColors.canvas,
-  },
-  grab: {
-    alignSelf: 'center',
-    width: 44,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: playroomColors.border,
-    marginBottom: 6,
-  },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -777,14 +754,10 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   number: {
-    fontFamily: playroomPhone.type.hero.fontFamily,
-    fontSize: 120,
-    lineHeight: 130,
+    ...playroomPhone.type.countdown,
   },
   go: {
-    fontFamily: playroomPhone.type.hero.fontFamily,
-    fontSize: 64,
-    lineHeight: 72,
+    ...playroomPhone.type.display,
     color: playroomColors.orange,
   },
 });

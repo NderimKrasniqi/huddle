@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   statusRow: { alignSelf: 'stretch', alignItems: 'center', gap: 14 },
   footerLine: { alignSelf: 'stretch', textAlign: 'center' },
-  tileLetter: { ...playroomTv.type.roomCode, fontSize: 132, lineHeight: 140 },
+  tileLetter: { ...playroomTv.type.codeTile },
   greeting: { position: 'absolute', left: 0, right: 0, bottom: 300, height: 80, alignItems: 'center', justifyContent: 'center' },
   // The room along the bottom, one row of ten, lifted at the middle like seats round a couch.
   seats: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, bottom: playroomTv.safeY, alignItems: 'center' },
@@ -454,8 +454,6 @@ const styles = StyleSheet.create({
   },
   tagText: {
     ...playroomTv.type.caption,
-    fontSize: 22,
-    lineHeight: 28,
     fontFamily: playroomTv.type.title.fontFamily,
     letterSpacing: 0.5,
   },

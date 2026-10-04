@@ -192,9 +192,7 @@ const styles = StyleSheet.create({
     borderColor: playroomColors.danger,
   },
   letter: {
-    ...playroomPhone.type.hero,
-    fontSize: 44,
-    lineHeight: 50,
+    ...playroomPhone.type.codeTile,
   },
   caret: {
     position: 'absolute',
