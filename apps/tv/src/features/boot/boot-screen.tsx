@@ -36,7 +36,7 @@ function TvBootSystemState({
   const setupRequired = phase === 'misconfigured';
   const message = setupRequired
     ? 'Let’s get your TV set up so everyone can join.'
-    : 'Let’s get things back on track so the fun can continue.';
+    : 'Check the TV’s internet connection. We’ll keep trying on our own.';
 
   return (
     <View
