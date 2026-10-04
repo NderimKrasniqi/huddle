@@ -43,6 +43,7 @@ export {
   type PlayroomSettingIconProps,
   type PlayroomStatusImageProps,
 } from './playroom-pieces';
+export { PlayroomSheet, type PlayroomSheetProps } from './playroom-sheet';
 export { PlayroomTvStage, type PlayroomTvStageProps } from './playroom-stage';
 export {
   PlayroomBurst,

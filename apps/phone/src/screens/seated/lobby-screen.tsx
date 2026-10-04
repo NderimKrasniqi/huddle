@@ -279,10 +279,9 @@ const styles = StyleSheet.create({
     borderRadius: playroomRadii.pill,
   },
   tagText: {
+    ...playroomPhone.type.caption,
     fontFamily: playroomPhone.type.title.fontFamily,
-    fontSize: 11,
-    lineHeight: 16,
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   me: {
     alignItems: 'center',

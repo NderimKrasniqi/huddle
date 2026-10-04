@@ -6,6 +6,7 @@ import { answerScreen, type AnswerOption } from './answering';
 import {
   answerTone,
   cosmic,
+  cosmicWash,
   CosmicText,
   COSMIC_MOTION,
   cosmicEaseOut,
@@ -517,5 +518,5 @@ const styles = StyleSheet.create({
   nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
   pressable: { alignSelf: 'stretch' },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginTop: 16 },
-  rule: { alignSelf: 'stretch', height: 1, backgroundColor: 'rgba(4,27,57,0.12)', marginVertical: 14 },
+  rule: { alignSelf: 'stretch', height: 1, backgroundColor: cosmicWash.panelRule, marginVertical: 14 },
 });

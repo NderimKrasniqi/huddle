@@ -37,6 +37,20 @@ export const cosmic = {
   missed: '#6B7891',
 } as const;
 
+/** Translucent washes of the palette: rules, dividers and row tints. */
+export const cosmicWash = {
+  /** Turquoise rule across the dark sky. */
+  rule: 'rgba(121,225,222,0.35)',
+  /** Cream divider on the dark sky. */
+  divider: 'rgba(255,248,235,0.4)',
+  /** Navy rule on a cream panel. */
+  panelRule: 'rgba(4,27,57,0.12)',
+  /** Navy tint behind a result row on a cream panel; visible from the couch. */
+  rowTint: 'rgba(4,27,57,0.07)',
+  /** The lit top face of a podium step. */
+  highlight: 'rgba(255,255,255,0.32)',
+} as const;
+
 /**
  * Trivia's motion. The curve and press timing match the platform's
  * (`playroomEasing.out`, `playroomMotion.press`), so the hand-off from the room

@@ -101,9 +101,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   go: {
-    ...playroomTv.type.countdown,
-    fontSize: 200,
-    lineHeight: 220,
+    ...playroomTv.type.go,
     color: playroomColors.orange,
   },
   roster: {

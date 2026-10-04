@@ -186,9 +186,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   titleSelected: {
-    ...playroomTv.type.heading,
-    fontSize: 76,
-    lineHeight: 84,
+    ...playroomTv.type.feature,
     textAlign: 'center',
   },
   subtitle: {

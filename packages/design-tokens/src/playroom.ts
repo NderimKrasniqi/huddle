@@ -31,6 +31,9 @@ export const playroomColors = {
   disabled: '#E5DEE9',
 } as const;
 
+/** Ink at 35%: the dim behind a sheet or modal. */
+export const playroomScrim = 'rgba(45, 11, 78, 0.35)';
+
 /** The five lounge covers belong to platform presentation, not game themes. */
 export const playroomCoverColors: Readonly<Record<string, string>> = {
   trivia: '#DED2FF', voting: '#F9D9C1', 'doodle-dash': '#D8E8EC',
@@ -96,6 +99,12 @@ export const playroomTv = {
     hero: { fontFamily: fontFamilies.black, fontSize: 104, lineHeight: 112 },
     roomCode: { fontFamily: fontFamilies.black, fontSize: 96, lineHeight: 104 },
     countdown: { fontFamily: fontFamilies.black, fontSize: 384, lineHeight: 400 },
+    /** The selected game's name on the shelf: between heading and hero. */
+    feature: { fontFamily: fontFamilies.black, fontSize: 76, lineHeight: 84 },
+    /** One letter of the room code in its tile. */
+    codeTile: { fontFamily: fontFamilies.black, fontSize: 132, lineHeight: 140 },
+    /** "Go!" at the end of the countdown, sized to sit inside the ring. */
+    go: { fontFamily: fontFamilies.black, fontSize: 200, lineHeight: 220 },
   },
   avatar: { grid: 168, row: 108, ready: 176, mini: 116 },
 } as const;
@@ -114,6 +123,12 @@ export const playroomPhone = {
     heading: { fontFamily: fontFamilies.black, fontSize: 32, lineHeight: 38 },
     hero: { fontFamily: fontFamilies.black, fontSize: 40, lineHeight: 46 },
     code: { fontFamily: fontFamilies.black, fontSize: 36, lineHeight: 42, letterSpacing: 6 },
+    /** One letter of the room code in its entry box. */
+    codeTile: { fontFamily: fontFamilies.black, fontSize: 44, lineHeight: 50 },
+    /** "Go!" at the end of the countdown. */
+    display: { fontFamily: fontFamilies.black, fontSize: 64, lineHeight: 72 },
+    /** The countdown number itself. */
+    countdown: { fontFamily: fontFamilies.black, fontSize: 120, lineHeight: 130 },
   },
   avatar: { tile: 48, feature: 140, identity: 58 },
 } as const;
