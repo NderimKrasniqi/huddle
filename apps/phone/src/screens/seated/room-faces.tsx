@@ -23,7 +23,7 @@ export function RoomFaces({ roster }: { readonly roster: readonly RosterSeat[] }
         {roster.map((seat) => (
           <View key={seat.playerId} style={styles.face}>
             <PlayroomAvatar avatarId={seat.avatar} size={44} host={seat.host} away={seat.away} />
-            <PlayroomText numberOfLines={1} style={[playroomPhone.type.caption, styles.name]} accessibilityElementsHidden>
+            <PlayroomText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[playroomPhone.type.caption, styles.name]} accessibilityElementsHidden>
               {seat.nickname}
             </PlayroomText>
           </View>
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     rowGap: 10,
   },
   face: {
-    width: '20%',
+    width: '25%',
     alignItems: 'center',
     gap: 2,
   },

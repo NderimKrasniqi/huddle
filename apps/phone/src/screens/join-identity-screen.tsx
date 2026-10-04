@@ -352,6 +352,7 @@ export default function JoinIdentityScreen() {
         </View>
         </View>
         {nickname.trim() === '' ? <Line testID="identity-name-hint">Add your name to save your seat.</Line> : null}
+        <PlayroomText color="muted" style={[playroomPhone.type.label, styles.gridLabel]}>Pick your look</PlayroomText>
         <View style={styles.grid} testID="identity-avatar-grid">
           {AVATAR_IDS.map((candidate) => {
             const taken = availability?.takenAvatarIds.includes(candidate) === true;
@@ -423,8 +424,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 18,
-    marginTop: 12,
+    rowGap: 28,
+    marginTop: 4,
+  },
+  gridLabel: {
+    marginTop: 16,
   },
   cell: {
     width: '19%',

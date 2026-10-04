@@ -18,6 +18,7 @@ import {
   PlayroomSettingIcon,
   PlayroomSheet,
   PlayroomText,
+  PlayroomPill,
   PlayroomPressable,
 } from '@huddle/ui/native';
 import * as Haptics from 'expo-haptics';
@@ -144,9 +145,14 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
         // A preset reads as one sentence; changing it is one tap away, not five rows.
         <PhoneCard style={styles.presetCard}>
           <PlayroomText style={playroomPhone.type.title}>{presentation?.presets?.find((preset) => preset.mode === setup.mode)?.label ?? setupModeLabel(setup.mode)}</PlayroomText>
-          <PlayroomText style={[playroomPhone.type.body, styles.center]}>
-            {module.settingsSchema.map((setting) => settingSummaryText(setting, settings[setting.key] ?? setting.defaultValue)).join(' · ')}
-          </PlayroomText>
+          {/* One chip per setting, like the TV: scannable, never a sentence broken mid-phrase. */}
+          <View style={styles.summaryChips} accessible accessibilityLabel={module.settingsSchema.map((setting) => settingSummaryText(setting, settings[setting.key] ?? setting.defaultValue)).join(', ')}>
+            {module.settingsSchema.map((setting) => (
+              <PlayroomPill key={setting.key} textStyle={playroomPhone.type.caption}>
+                {settingSummaryText(setting, settings[setting.key] ?? setting.defaultValue)}
+              </PlayroomPill>
+            ))}
+          </View>
           <PlayroomButton label="Customize" variant="link" onPress={() => chooseMode('custom')} accessibilityLabel="Customize settings" testID="setup-customize" />
         </PhoneCard>
       ) : <View style={styles.settings}>
@@ -691,6 +697,12 @@ const styles = StyleSheet.create({
     borderRightWidth: 2.5,
     borderBottomWidth: 2.5,
     transform: [{ rotate: '45deg' }],
+  },
+  summaryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
   },
   presetCard: { alignItems: 'center', gap: 6 },
   infoCard: {

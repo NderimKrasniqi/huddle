@@ -230,6 +230,7 @@ function PhoneRuntimeMount({
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
         isHost: youAreHost,
         feedback: phoneFeedback,
+        hostNickname: roster.find((candidate) => candidate.host)?.nickname,
       })}
       {hostBackToLobby ? (
         <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>

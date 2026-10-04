@@ -131,6 +131,7 @@ describe('TvSessionPresentation', () => {
       state,
       players: [{ playerId: 'player-ada', nickname: 'Ada', away: false, avatar: 'fox' }],
       clockRemainingMs: 2_000,
+      hostNickname: 'Ada',
     });
   });
 
