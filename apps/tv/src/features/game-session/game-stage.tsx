@@ -64,7 +64,7 @@ export function TvRuntimeStatus({
       : 'Waiting for the room to reconnect'
     : 'Game unavailable';
   const rosterSummary = waitingForPlayers
-    ? players.slice(0, 5).map((player) => `${player.nickname}, ${player.away ? 'reconnecting' : 'connected'}`).join('. ')
+    ? players.map((player) => `${player.nickname}, ${player.away ? 'reconnecting' : 'connected'}`).join('. ')
     : '';
 
   return (
