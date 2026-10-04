@@ -365,7 +365,17 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
    * which the hub stamps, never this.
    */
   readonly isHost?: boolean;
+  /**
+   * Touch feedback the Phone host can give (a haptic tap), for a game to call
+   * at the moment it confirms something: `select` when an answer locks in,
+   * `success` / `error` for the player's own result. Optional and fire-and-
+   * forget; a screen must still show the same thing visually.
+   */
+  readonly feedback?: (kind: PhoneFeedback) => void;
 };
+
+/** The kinds of touch feedback a game screen may ask the Phone host for. */
+export type PhoneFeedback = 'select' | 'success' | 'error';
 
 /**
  * A self-contained game behind the hub's one interface.

@@ -105,6 +105,17 @@ export function useSeatedRoom({
     onSeatLost(seatLossNotice(roster));
   }, [onSeatLost, roster, seat]);
 
+  // A new host is announced once on every phone, so whoever holds the controls knows it.
+  const hostSeat = roster.find((candidate) => candidate.host);
+  const previousHostId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const hostId = hostSeat === undefined ? undefined : String(hostSeat.playerId);
+    const before = previousHostId.current;
+    previousHostId.current = hostId;
+    if (before === undefined || hostId === undefined || before === hostId || hostSeat === undefined) return;
+    setSuccess(hostSeat.playerId === session.playerId ? 'You’re the host now.' : `${hostSeat.nickname} is now the host.`);
+  }, [hostSeat, session.playerId]);
+
   useEffect(() => {
     if (success === undefined) return;
     const timeout = setTimeout(() => setSuccess(undefined), 2600);
@@ -212,7 +223,7 @@ export function useSeatedRoom({
           const didTransfer = await runAction('transfer', () => transferHost({ sessionToken: token as string, playerId: target.playerId }), hostControlFailureMessage);
           if (didTransfer) {
             setConfirmation(undefined);
-            setSuccess(`${target.nickname} is now the Host.`);
+            setSuccess(`${target.nickname} is now the host.`);
           }
         })();
       },

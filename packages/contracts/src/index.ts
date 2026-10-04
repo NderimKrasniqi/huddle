@@ -25,6 +25,7 @@ export type {
   GameSettingsSchema,
   GameSetup,
   PhoneSafeAreaInsets,
+  PhoneFeedback,
   PhoneGameScreenProps,
   PlayerRange,
   RosterSeatForGame,

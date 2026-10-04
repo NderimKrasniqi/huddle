@@ -407,7 +407,7 @@ function ReadyScreen({
       : !countInRange
         ? `Need ${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players to start.`
         : allReady
-          ? 'Everyone is ready. The host can start.'
+          ? `Everyone is ready. ${roster.find((seat) => seat.host)?.nickname ?? 'The host'} can start.`
           : `Waiting for ${roster.filter((seat) => !setup.readyPlayerIds.includes(seat.playerId)).map((seat) => seat.nickname).join(', ')}.`;
 
   function raise() {
