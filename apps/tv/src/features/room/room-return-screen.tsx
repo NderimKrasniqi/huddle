@@ -7,9 +7,9 @@ export function RoomReturnScreen({ players }: { readonly players: readonly RoomI
   const host = players.find((player) => player.host);
   return <PlayroomTvStage testID="tv-room-return">
     <View style={styles.stack}>
-      <PlayroomMoment art="highFive" width={420} height={330} glow />
+      <PlayroomMoment art="highFive" width={440} height={350} glow />
       <PlayroomText color="muted" style={playroomTv.type.label}>Back in the room</PlayroomText>
-      <PlayroomHeading type={playroomTv.type.heading}>Same people. New surprises.</PlayroomHeading>
+      <PlayroomHeading type={playroomTv.type.hero}>Same people. New surprises.</PlayroomHeading>
       <PlayroomText color="muted" numberOfLines={2} style={[playroomTv.type.body, styles.center]}>{`${host?.name ?? 'The host'} is choosing what’s next. Everyone keeps their seat.`}</PlayroomText>
     </View>
     <View style={styles.roster}>
