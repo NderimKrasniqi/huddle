@@ -10,7 +10,7 @@ import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, mutation, type MutationCtx, query } from './_generated/server';
 import { reconcileCountdown } from './lib/countdown';
 import { pauseGameClock, resumePausedGameClock } from './lib/gameClock';
-import { playersInRoom, roomSilenceMs } from './lib/presence';
+import { deletePresenceOf, playersInRoom, roomSilenceMs, touchTv, tvSeenAt, withSeenAt } from './lib/presence';
 import { deleteRoom } from './lib/roomLifecycle';
 import { limitRoomOpen } from './lib/rateLimits';
 
@@ -125,7 +125,8 @@ export const openRoom = mutation({
     if (existing !== null) {
       const room = await ctx.db.get(existing.roomId);
       if (room !== null) {
-        await ctx.db.patch(existing._id, { lastSeenAt: now, away: false });
+        await touchTv(ctx, existing, now);
+        if (existing.away) await ctx.db.patch(existing._id, { away: false });
         await restoreTvRoom(ctx, room, existing._id, now);
         if (existing.away || existing.awayCheckGeneration === undefined) {
           await watchTvForSilence(ctx, existing._id, existing.awayCheckGeneration);
@@ -140,6 +141,7 @@ export const openRoom = mutation({
       // A stale session row is not an identity failure. Clean it and let this
       // same durable token open a replacement without spending a new-token
       // rate-limit slot.
+      await deletePresenceOf(ctx, { tvSessionId: existing._id });
       await ctx.db.delete('tvSessions', existing._id);
       replacingStaleSession = true;
     }
@@ -209,11 +211,15 @@ export const tvHeartbeat = mutation({
     if (session === null) return null;
     const room = await ctx.db.get(session.roomId);
     if (room === null) {
+      await deletePresenceOf(ctx, { tvSessionId: session._id });
       await ctx.db.delete('tvSessions', session._id);
       return null;
     }
     const now = Date.now();
-    await ctx.db.patch(session._id, { lastSeenAt: now, away: false });
+    // The beat goes to `presence`; the session row, which room views read, is
+    // written only when the TV comes back.
+    await touchTv(ctx, session, now);
+    if (session.away) await ctx.db.patch(session._id, { away: false });
     await restoreTvRoom(ctx, room, session._id, now);
     if (session.away || session.awayCheckGeneration === undefined) {
       await watchTvForSilence(ctx, session._id, session.awayCheckGeneration);
@@ -245,7 +251,7 @@ export const markTvAway = internalMutation({
       return null;
     }
 
-    const silence = Date.now() - session.lastSeenAt;
+    const silence = Date.now() - (await tvSeenAt(ctx, session));
     if (silence < TV_SESSION_MAX_SILENCE_MS) {
       await watchTvForSilence(
         ctx,
@@ -257,6 +263,7 @@ export const markTvAway = internalMutation({
     }
     const room = await ctx.db.get(session.roomId);
     if (room === null) {
+      await deletePresenceOf(ctx, { tvSessionId: session._id });
       await ctx.db.delete('tvSessions', session._id);
       return null;
     }
@@ -283,9 +290,10 @@ export const expireTvRoom = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.tvSessionId);
-    if (session === null || Date.now() - session.lastSeenAt < ROOM_EXPIRY_MS) return null;
+    if (session === null || Date.now() - (await tvSeenAt(ctx, session)) < ROOM_EXPIRY_MS) return null;
     const room = await ctx.db.get(session.roomId);
     if (room === null) {
+      await deletePresenceOf(ctx, { tvSessionId: session._id });
       await ctx.db.delete('tvSessions', session._id);
       return null;
     }
@@ -360,7 +368,7 @@ function roomSilence(seated: readonly Doc<'players'>[]): number {
  * checks the clock again when it runs instead.
  */
 export async function watchForDesertion(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<void> {
-  const seated = await playersInRoom(ctx, roomId);
+  const seated = await withSeenAt(ctx, await playersInRoom(ctx, roomId));
 
   // "Every player is away" is vacuously true of no players, and that reading
   // would expire the room a television is showing to a party that has not
@@ -410,7 +418,7 @@ export const expireRoom = internalMutation({
       return null;
     }
 
-    const seated = await playersInRoom(ctx, args.roomId);
+    const seated = await withSeenAt(ctx, await playersInRoom(ctx, args.roomId));
 
     // Somebody has beaten since this check was scheduled, so the room is not
     // deserted and this check has nothing to do but leave it standing. Nothing
@@ -431,7 +439,7 @@ export const expireRoom = internalMutation({
       .query('tvSessions')
       .withIndex('by_room', (q) => q.eq('roomId', room._id))
       .first();
-    if (tvSession !== null && Date.now() - tvSession.lastSeenAt < ROOM_EXPIRY_MS) {
+    if (tvSession !== null && Date.now() - (await tvSeenAt(ctx, tvSession)) < ROOM_EXPIRY_MS) {
       return null;
     }
 
