@@ -101,6 +101,16 @@ TV uses a 1920×1080 design stage and a 5% overscan-safe frame, scaling down to
 per countdown number. Reduced-motion devices get immediate state changes or
 brief fades without losing status copy or accessibility semantics.
 
+## Local backend
+
+`pnpm dev:local` runs Convex on this Mac instead of the cloud dev deployment,
+and starts both Metro servers against it. Local function calls and database
+bandwidth do not count against the Convex plan, so use it for simulator work
+and bot-driven test games. The iPhone simulator reaches it directly and the TV
+emulator through `adb reverse`; real devices cannot, and keep the cloud URL in
+`apps/*/.env`. The script restores `convex/.env.local` to the cloud selection
+when it stops, so `convex dev --once` still deploys to the cloud.
+
 ## Verification commands
 
 Fast correctness and boundary checks:
