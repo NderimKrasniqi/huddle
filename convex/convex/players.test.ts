@@ -745,6 +745,26 @@ describe('presence', () => {
     }
   });
 
+  it('writes a present phone\'s beats where no screen reads them', async () => {
+    const t = convexTest(schema, modules);
+    const { sessionToken } = await roomWithAda(t);
+    const before = await t.run(async (ctx) =>
+      ctx.db.query('players').withIndex('by_session_token', (q) => q.eq('sessionToken', sessionToken)).first(),
+    );
+
+    await elapse(t, HEARTBEAT_INTERVAL_MS);
+    await t.mutation(api.players.heartbeat, { sessionToken });
+
+    // The player row is what every room view reads; a beat that rewrote it would
+    // re-run every screen's queries. The beat lands in `presence` instead.
+    const after = await t.run(async (ctx) => ctx.db.get(before!._id));
+    expect(after).toEqual(before);
+    const beats = await t.run(async (ctx) =>
+      ctx.db.query('presence').withIndex('by_player', (q) => q.eq('playerId', before!._id)).collect(),
+    );
+    expect(beats).toHaveLength(1);
+  });
+
   it('notices a phone that goes quiet mid-lobby, not only one that never spoke', async () => {
     const t = convexTest(schema, modules);
     const { roomId, sessionToken } = await roomWithAda(t);

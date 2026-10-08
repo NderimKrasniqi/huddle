@@ -233,6 +233,25 @@ export default defineSchema({
     // this is how that token finds the seat it still holds.
     .index('by_session_token', ['sessionToken']),
 
+  /**
+   * The latest heartbeat of each phone and TV, kept apart from `players` and
+   * `tvSessions`. Room views read those rows, and Convex re-runs a query when a
+   * row it read changes, so a beat written there re-ran every screen's room
+   * views three times a second in a full room. Nothing a screen reads looks at
+   * this table; only the room's own silence checks do. A row without a
+   * presence entry (one written before this table existed) falls back to its
+   * own `lastSeenAt`. Exactly one of `playerId` and `tvSessionId` is set.
+   */
+  presence: defineTable({
+    roomId: v.id('rooms'),
+    playerId: v.optional(v.id('players')),
+    tvSessionId: v.optional(v.id('tvSessions')),
+    lastSeenAt: v.number(),
+  })
+    .index('by_player', ['playerId'])
+    .index('by_tv_session', ['tvSessionId'])
+    .index('by_room', ['roomId']),
+
   /** High-churn TV presence, kept off the shared room document. */
   tvSessions: defineTable({
     roomId: v.id('rooms'),

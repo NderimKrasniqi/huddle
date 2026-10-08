@@ -18,7 +18,7 @@ import { internalMutation, mutation, type MutationCtx, query } from './_generate
 import { playerForSession, requireRoomHost, roomViewer, roomViewerArgs } from './lib/authorization';
 import { cancelCountdownJob, reconcileCountdown } from './lib/countdown';
 import { pauseGameClock, resumePausedGameClock, stopGameClock } from './lib/gameClock';
-import { playersInRoom } from './lib/presence';
+import { deletePresenceOf, playersInRoom, touchPlayer, withSeenAt } from './lib/presence';
 import { deleteRoom } from './lib/roomLifecycle';
 import { watchForDesertion } from './rooms';
 import { avatarValidator } from './schema';
@@ -161,7 +161,7 @@ async function handOverRoom(
     return;
   }
 
-  const seated = await playersInRoom(ctx, departing.roomId);
+  const seated = await withSeenAt(ctx, await playersInRoom(ctx, departing.roomId));
   // The departing player is excluded by id rather than by their own silence,
   // which is a number this very call was prompted by: the point is that a host
   // cannot succeed themselves, and that should not rest on arithmetic.
@@ -192,10 +192,11 @@ async function restoreConnectedHost(ctx: MutationCtx, roomId: Id<'rooms'>): Prom
   const room = await ctx.db.get(roomId);
   if (room === null) return;
 
-  const host = room.hostPlayerId === undefined ? null : await ctx.db.get(room.hostPlayerId);
+  const hostRow = room.hostPlayerId === undefined ? null : await ctx.db.get(room.hostPlayerId);
+  const host = hostRow === null ? null : (await withSeenAt(ctx, [hostRow]))[0] ?? null;
   if (host !== null && silenceOf(host) < AWAY_AFTER_MS) return;
 
-  const seated = await playersInRoom(ctx, roomId);
+  const seated = await withSeenAt(ctx, await playersInRoom(ctx, roomId));
   const successor = seated.find((player) => silenceOf(player) < AWAY_AFTER_MS);
   if (successor !== undefined && successor._id !== room.hostPlayerId) {
     await ctx.db.patch(room._id, { hostPlayerId: successor._id });
@@ -225,7 +226,7 @@ async function resumeWhenEveryoneReturns(
   const running = room?.game;
   if (room === null || running?.playerPaused !== true) return;
 
-  const seated = await playersInRoom(ctx, roomId);
+  const seated = await withSeenAt(ctx, await playersInRoom(ctx, roomId));
   if (seated.length === 0 || seated.some((player) => silenceOf(player) >= AWAY_AFTER_MS)) return;
 
   const recovered = { ...running, playerPaused: undefined };
@@ -499,7 +500,10 @@ export const heartbeat = mutation({
       return null;
     }
 
-    await ctx.db.patch(player._id, { lastSeenAt: Date.now(), away: false });
+    // The beat goes to `presence`, which no screen reads. The player row is
+    // written only when it changes, so a present phone's beats re-run nothing.
+    await touchPlayer(ctx, player, Date.now());
+    if (player.away) await ctx.db.patch(player._id, { away: false });
 
     // Coming back: the chain that had been watching them ended when it marked
     // them away, so their return is what starts a new one. It also repairs the
@@ -533,7 +537,8 @@ export const markAway = internalMutation({
   args: { playerId: v.id('players') },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const player = await ctx.db.get(args.playerId);
+    const row = await ctx.db.get(args.playerId);
+    const player = row === null ? null : (await withSeenAt(ctx, [row]))[0] ?? null;
 
     // The row can be gone by now — room expiry deletes players — and an already
     // away player is a chain that has done its work.
@@ -620,7 +625,8 @@ export const transferHost = mutation({
     const { player: actor, room } = await requireRoomHost(ctx, args.sessionToken);
     const target = await targetSeatIn(ctx, room, actor, args.playerId);
 
-    if (silenceOf(target) >= AWAY_AFTER_MS) {
+    const [seenTarget] = await withSeenAt(ctx, [target]);
+    if (seenTarget === undefined || silenceOf(seenTarget) >= AWAY_AFTER_MS) {
       throw new ConvexError<HostControlRejection>({ kind: 'targetAway' });
     }
 
@@ -713,6 +719,7 @@ export const leaveRoom = mutation({
     // room to a seat that has gone quiet. `markAway` passes nothing and keeps
     // its host; a leaver has no host to keep.
     await handOverRoom(ctx, player, true);
+    await deletePresenceOf(ctx, { playerId: player._id });
     await ctx.db.delete('players', player._id);
 
     const room = await ctx.db.get(player.roomId);

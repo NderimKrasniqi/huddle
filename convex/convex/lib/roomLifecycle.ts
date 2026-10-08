@@ -22,6 +22,12 @@ export async function deleteRoomChildren(ctx: MutationCtx, roomId: Id<'rooms'>):
     if (preview.expiryJob !== undefined) await ctx.scheduler.cancel(preview.expiryJob);
     await ctx.db.delete('seatPreviews', preview._id);
   }
+
+  const heartbeats = await ctx.db
+    .query('presence')
+    .withIndex('by_room', (q) => q.eq('roomId', roomId))
+    .collect();
+  for (const heartbeat of heartbeats) await ctx.db.delete('presence', heartbeat._id);
 }
 
 /** Delete a room, its owned rows, and any game clock as one lifecycle action. */
