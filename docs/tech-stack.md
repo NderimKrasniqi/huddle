@@ -108,7 +108,7 @@ and starts both Metro servers against it. Local function calls and database
 bandwidth do not count against the Convex plan, so use it for simulator work
 and bot-driven test games. The iPhone simulator reaches it directly and the TV
 emulator through `adb reverse`; real devices cannot, and keep the cloud URL in
-`apps/*/.env`. The script restores `convex/.env.local` to the cloud selection
+the apps' env files. The script restores the Convex env file to the cloud selection
 when it stops, so `convex dev --once` still deploys to the cloud.
 
 ## Verification commands
