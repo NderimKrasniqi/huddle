@@ -27,6 +27,12 @@ const PORTRAIT_SCALE = 1.3;
 const PORTRAIT_LEFT = -0.15;
 const PORTRAIT_TOP = -0.2;
 
+/**
+ * Art that fills more of its square than the rest (the dinosaur's spikes and
+ * neck run to the edges) is drawn smaller, so every face reads the same size.
+ */
+const PORTRAIT_FIT: Partial<Record<AvatarId, number>> = { puppy: 0.84 };
+
 export type PlayroomAvatarProps = {
   readonly avatarId: AvatarId;
   /** Circle diameter. */
@@ -82,7 +88,7 @@ export function PlayroomAvatar({
           },
         ]}
       >
-        <Portrait source={source} size={size} top={PORTRAIT_TOP * size} away={away} />
+        <Portrait source={source} size={size} top={PORTRAIT_TOP * size} away={away} fit={PORTRAIT_FIT[avatarId]} />
       </View>
       {/* The top half again, unclipped, so it can break out of the circle. An
           away portrait is translucent and stays inside its circle. */}
@@ -94,7 +100,7 @@ export function PlayroomAvatar({
           ]}
           pointerEvents="none"
         >
-          <Portrait source={source} size={size} top={0} left={0} away={false} />
+          <Portrait source={source} size={size} top={0} left={0} away={false} fit={PORTRAIT_FIT[avatarId]} />
         </View>
       )}
       {host ? (
@@ -136,15 +142,19 @@ type PortraitProps = {
   readonly top: number;
   readonly left?: number;
   readonly away: boolean;
+  readonly fit?: number;
 };
 
-function Portrait({ source, size, top, left = PORTRAIT_LEFT * size, away }: PortraitProps) {
+function Portrait({ source, size, top, left = PORTRAIT_LEFT * size, away, fit = 1 }: PortraitProps) {
+  // A smaller fit stays centred horizontally and keeps its chin on the circle's base.
+  const drawn = size * PORTRAIT_SCALE * fit;
+  const shift = size * PORTRAIT_SCALE - drawn;
   return (
     <Image
       source={source}
       style={[
         styles.portrait,
-        { width: size * PORTRAIT_SCALE, height: size * PORTRAIT_SCALE, left, top },
+        { width: drawn, height: drawn, left: left + shift / 2, top: top + shift },
         away ? styles.away : null,
       ]}
       resizeMode="contain"
