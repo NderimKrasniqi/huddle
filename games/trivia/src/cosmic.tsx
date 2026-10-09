@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  AccessibilityInfo,
   Animated,
   Easing,
   Image,
@@ -444,38 +443,6 @@ export function Confetti({
   );
 }
 
-/**
- * Whether the device asks for less motion: `undefined` until it has answered,
- * then the setting, following it as it changes. Entrances wait for the answer
- * so the first screen animates for those who want motion and never for those
- * who don't; idle motion treats "unknown" as "reduce".
- */
-export function useReducedMotion(): boolean | undefined {
-  const [reduce, setReduce] = useState<boolean | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    // A device that never answers is treated as asking for less motion, so
-    // nothing that waits on the answer (the launch wipe) can hang.
-    const fallback = setTimeout(() => {
-      if (alive) setReduce((current) => current ?? true);
-    }, 400);
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((value) => {
-        if (alive) setReduce(value);
-      })
-      .catch(() => {
-        if (alive) setReduce(false);
-      });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
-    return () => {
-      alive = false;
-      clearTimeout(fallback);
-      subscription.remove();
-    };
-  }, []);
-  return reduce;
-}
-
 /** A 0→1→0 loop for gentle idle motion; held at 0 when motion is reduced. */
 function useLoop(reduceMotion: boolean, periodMs: number): Animated.Value {
   const value = useState(() => new Animated.Value(0))[0];
@@ -585,36 +552,6 @@ export function Pulse({
       {children}
     </Animated.View>
   );
-}
-
-/**
- * A display countdown for the beat the room is on. The server's deadline moves
- * the game; this only draws the seconds, starting synchronously from the room's
- * remainder so a new beat never flashes the previous one's number.
- */
-export function useCountdownSeconds(clockRemainingMs: number | undefined, fallbackSeconds: number, beat: string): number {
-  const rawStartingMs = clockRemainingMs ?? fallbackSeconds * 1000;
-  const startingMs = Number.isFinite(rawStartingMs) ? Math.max(0, rawStartingMs) : Math.max(0, fallbackSeconds * 1000);
-  const initial = Math.max(0, Math.ceil(startingMs / 1000));
-  const [display, setDisplay] = useState({ beat, startingMs, seconds: initial });
-  const seconds = display.beat === beat && display.startingMs === startingMs ? display.seconds : initial;
-
-  useEffect(() => {
-    const startedAt = Date.now();
-    if (startingMs <= 0) return;
-    const timer = setInterval(() => {
-      const remainingMs = startingMs - (Date.now() - startedAt);
-      if (remainingMs <= 0) {
-        setDisplay({ beat, startingMs, seconds: 0 });
-        clearInterval(timer);
-        return;
-      }
-      setDisplay({ beat, startingMs, seconds: Math.ceil(remainingMs / 1000) });
-    }, 250);
-    return () => clearInterval(timer);
-  }, [beat, startingMs]);
-
-  return seconds;
 }
 
 /**

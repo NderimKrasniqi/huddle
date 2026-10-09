@@ -1,13 +1,14 @@
 import type { GamePlayer, TvGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait, HuddleText } from '@huddle/ui/game-kit';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Animated, Easing, StyleSheet, View, useWindowDimensions, type TextStyle } from 'react-native';
+import { AvatarPortrait, useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { CATCH_POINTS } from './logic';
-import { phaseSeconds, useCountdownSeconds, useReducedMotion, WIRE_COLOR, wireName } from './presentation';
+import { phaseSeconds, WIRE_COLOR, wireName } from './presentation';
 import { HowToDemo, useDemoBeat } from './how-to-demo';
 import { HazardStripes, SkiaBomb, SkiaDefused, SkiaExplosion } from './skia-art';
-import { bomb, FONT } from './theme';
+import { bomb } from './theme';
+import { BombText } from './text';
 import { type BombState, type Wire, WIRES } from './types';
 
 const STAGE_WIDTH = 1920;
@@ -17,7 +18,8 @@ const STAGE_HEIGHT = 1080;
 export function BombSquadTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<BombState>) {
   const viewport = useWindowDimensions();
   const scale = Math.min(viewport.width / STAGE_WIDTH, viewport.height / STAGE_HEIGHT) || 1;
-  const reduceMotion = useReducedMotion();
+  // Still until the device answers: the bomb shakes, so motion is opt-in.
+  const reduceMotion = useSystemReducedMotion() ?? true;
   const fallback = phaseSeconds(state);
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, fallback, `${state.round}:${state.phase}`);
   const label = `BOMB ${Math.min(state.round + 1, state.roundCount)} OF ${state.roundCount}`;
@@ -354,32 +356,9 @@ function Pop({ children, reduceMotion }: { readonly children: ReactNode; readonl
   return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
 }
 
-function Text({
-  children,
-  size,
-  weight = 'regular',
-  color = bomb.cream,
-  tracking,
-  numberOfLines,
-  style,
-}: {
-  readonly children: ReactNode;
-  readonly size: number;
-  readonly weight?: keyof typeof FONT;
-  readonly color?: string;
-  readonly tracking?: number;
-  readonly numberOfLines?: number;
-  readonly style?: TextStyle;
-}) {
-  return (
-    <HuddleText
-      numberOfLines={numberOfLines}
-      align="center"
-      style={[{ fontFamily: FONT[weight], fontSize: size, lineHeight: Math.round(size * 1.18), color, letterSpacing: tracking }, style]}
-    >
-      {children}
-    </HuddleText>
-  );
+/** The TV's text: Bomb Squad type, set tighter for reading across a room. */
+function Text(props: ComponentProps<typeof BombText>) {
+  return <BombText leading={1.18} {...props} />;
 }
 
 const styles = StyleSheet.create({

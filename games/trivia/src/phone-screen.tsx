@@ -1,3 +1,4 @@
+import { useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
 import type { PhoneGameScreenProps, PhoneSafeAreaInsets } from '@huddle/domain';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
@@ -17,8 +18,6 @@ import {
   Pill,
   timerLabel,
   Twinkle,
-  useCountdownSeconds,
-  useReducedMotion,
   type MascotPose,
 } from './cosmic';
 import { QUESTION_SECONDS, REVEAL_SECONDS } from './state';
@@ -44,7 +43,7 @@ export function TriviaPhoneScreen({
   feedback,
   hostNickname,
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSystemReducedMotion();
   const device = safeAreaInsets ?? ZERO_INSETS;
   // Platform chrome at the bottom (the Host's Back to lobby) extends the
   // device inset, so every surface's footer stays clear of it.

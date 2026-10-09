@@ -1,5 +1,5 @@
 import { playroomColors, playroomTv } from '@huddle/design-tokens';
-import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage } from '@huddle/ui/native';
+import { PlayroomHeading, PlayroomPill, PlayroomText, PlayroomTvStage, useSystemReducedMotion } from '@huddle/ui/native';
 import React, { useEffect } from 'react';
 import {
   Animated,
@@ -12,10 +12,6 @@ import {
   TvRestoreIndicator,
   type TvRestoreIndicatorStage,
 } from './tv-restore-indicator';
-import {
-  resolveTvReducedMotion,
-  useTvSystemReducedMotion,
-} from '../../ui/reduced-motion';
 
 export type TvRestoringRoomStage = TvRestoreIndicatorStage;
 
@@ -32,8 +28,8 @@ export function TvRestoringRoomScreen({
   roomCode,
   onReadyAnimationComplete,
 }: TvRestoringRoomScreenProps) {
-  const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(systemReduceMotion);
+  const systemReduceMotion = useSystemReducedMotion();
+  const reduceMotion = systemReduceMotion ?? true;
   const motionPreferenceResolved = systemReduceMotion !== undefined;
   const [internalStage, setInternalStage] = React.useState<TvRestoringRoomStage>('restoring');
   const readyCallback = onReadyAnimationComplete;

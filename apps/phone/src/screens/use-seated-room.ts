@@ -1,4 +1,4 @@
-import { useRoomMoments } from '@huddle/ui/native';
+import { useRoomMoments, useSystemReducedMotion } from '@huddle/ui/native';
 import { api } from '@huddle/convex';
 import type { GameEvent, GameModule, GameSettings, GameSettingsMode } from '@huddle/domain';
 import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
@@ -15,7 +15,6 @@ import {
 import { lifecycleFailureMessage } from '../models/lifecycle-rejection';
 import { useHeartbeat } from '../platform/presence/native';
 import { usePhoneSession, type PlayerSession } from '../platform/session';
-import { usePhoneReducedMotion } from '../ui/reduced-motion';
 import { pickerVisibility } from './seated-phone-model';
 
 export type BusyAction =
@@ -61,7 +60,7 @@ export function useSeatedRoom({
 }) {
   useHeartbeat();
   const { beginLeave, cancelLeave, sessionToken, joinWelcomeUntil } = usePhoneSession();
-  const reduceMotion = usePhoneReducedMotion();
+  const reduceMotion = useSystemReducedMotion();
   const token = sessionToken;
   // Every room view is asked as this seat; the server shows nobody else.
   const asSeat = token === undefined ? 'skip' : { roomId: session.roomId, sessionToken: token };

@@ -12,7 +12,7 @@ import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimate
 import type { TvAnimatedBootPhase } from './boot-state';
 import { tvBootAnimationCopy } from './boot-state';
 import { TvRestoreIndicator } from './tv-restore-indicator';
-import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduced-motion';
+import { useTvReducedMotion } from '../../ui';
 
 type TvCreatingRoomScreenProps = {
   readonly phase: TvAnimatedBootPhase;
@@ -38,7 +38,7 @@ const COPY_ENTER = new Keyframe({
 export function TvCreatingRoomScreen({
   phase,
 }: TvCreatingRoomScreenProps) {
-  const reduceMotion = resolveTvReducedMotion(useTvSystemReducedMotion());
+  const reduceMotion = useTvReducedMotion();
   const copy = tvBootAnimationCopy(phase);
 
   return (
