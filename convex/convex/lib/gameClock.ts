@@ -11,7 +11,7 @@ import {
 } from './gameRuntime';
 
 /** A scheduler clock kept alongside the room's game document. */
-export type RoomClock = {
+type RoomClock = {
   readonly deadline?: Id<'_scheduled_functions'>;
   readonly deadlineAt?: number;
 };
@@ -108,7 +108,7 @@ export async function windGameClock(
 }
 
 /** Re-arm a paused room from the exact remainder captured at disconnect. */
-export async function resumeGameClock(
+async function resumeGameClock(
   ctx: MutationCtx,
   room: Doc<'rooms'>,
   remaining: number,

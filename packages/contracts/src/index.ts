@@ -2,13 +2,11 @@ export { AVATAR_IDS, type AvatarId, isAvatarId } from './avatar';
 export type { HostControlRejection } from './host-control-rejection';
 export type { JoinRejection } from './join-rejection';
 export { isGuestId, type GuestProfileV1 } from './guest-profile';
-export { KEY_ART_COLOR_NAMES, type KeyArtColorName } from './key-art';
 export { GAME_SETTING_ICONS, gamePlayersFrom, type GameSettingIcon } from './game-module';
 export type {
   FinishedSummary,
   GameDeadline,
   GameEvent,
-  GameKeyArt,
   GameLogic,
   GameLogicRegistry,
   GameMetadata,

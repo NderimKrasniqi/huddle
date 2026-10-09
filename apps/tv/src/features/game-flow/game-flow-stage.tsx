@@ -60,7 +60,7 @@ export function TvGameFlowStage({
   reduceMotion: reduceMotionOverride,
 }: TvGameFlowStageProps) {
   const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
+  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride ?? systemReduceMotion);
   const hostName = roster.find((seat) => seat.host)?.nickname;
   const selectedIndex = carouselWindow(browsingAt ?? 0)?.index ?? 0;
   const players = useMemo(() => roster.map((seat) => tvPlayer(seat, [])), [roster]);

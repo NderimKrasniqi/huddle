@@ -26,7 +26,7 @@ export const SABOTAGE_POINTS = 150;
 /** An honest player who names a saboteur. */
 export const CATCH_POINTS = 50;
 /** A saboteur most of the room failed to name. */
-export const ESCAPE_POINTS = 50;
+const ESCAPE_POINTS = 50;
 
 /** Without a server seed (tests, legacy callers) the game still deals, just the same way each time. */
 const DEFAULT_SEED = 0x5eed;

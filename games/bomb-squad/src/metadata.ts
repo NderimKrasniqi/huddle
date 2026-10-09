@@ -4,7 +4,6 @@ import type { GameMetadata } from '@huddle/domain';
 export const bombSquadMetadata: GameMetadata = {
   id: 'bomb-squad',
   title: 'Bomb Squad',
-  keyArt: { color: 'ink' },
   playerRange: { min: 3, max: 10 },
   estimatedMinutes: 10,
   category: 'Party',

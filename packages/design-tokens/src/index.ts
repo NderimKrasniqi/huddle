@@ -18,6 +18,7 @@ export {
   playroomAwayCircle,
   playroomColors,
   playroomScrim,
+  playroomButtonEdge,
   playroomCoverColors,
   playroomEasing,
   playroomFonts,

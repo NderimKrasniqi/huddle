@@ -34,6 +34,9 @@ export const playroomColors = {
 /** Ink at 35%: the dim behind a sheet or modal. */
 export const playroomScrim = 'rgba(45, 11, 78, 0.35)';
 
+/** Ink at 18%: the pressed-in lower edge of a primary button. */
+export const playroomButtonEdge = 'rgba(45, 11, 78, 0.18)';
+
 /** Shelf cover colours belong to platform presentation, not game themes. */
 export const playroomCoverColors: Readonly<Record<string, string>> = {
   trivia: '#DED2FF', 'bomb-squad': '#CFEBDC',

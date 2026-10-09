@@ -21,7 +21,7 @@ import { limitRoomOpen } from './lib/rateLimits';
  * the wire intact, so the TV pairing screen can match on `kind` and tell the
  * room-is-unavailable story instead of showing an opaque failure.
  */
-export type RoomCodeExhausted = {
+type RoomCodeExhausted = {
   readonly kind: 'roomCodeExhausted';
   readonly draws: number;
 };

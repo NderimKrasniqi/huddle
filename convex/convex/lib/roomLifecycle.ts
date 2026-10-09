@@ -4,7 +4,7 @@ import { cancelDeadline } from './gameClock';
 import { playersInRoom } from './presence';
 
 /** Delete every player, TV credential and seat preview owned by a room before its row. */
-export async function deleteRoomChildren(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<void> {
+async function deleteRoomChildren(ctx: MutationCtx, roomId: Id<'rooms'>): Promise<void> {
   const players = await playersInRoom(ctx, roomId);
   for (const player of players) await ctx.db.delete('players', player._id);
 

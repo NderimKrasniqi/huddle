@@ -19,8 +19,8 @@ import { bomb } from './theme';
 import type { Wire } from './types';
 
 /** How long each beat holds before the next. */
-export const DEMO_BEAT_MS = 2500;
-export const DEMO_BEATS = 4;
+const DEMO_BEAT_MS = 2500;
+const DEMO_BEATS = 4;
 
 const WIDTH = 1500;
 const HEIGHT = 440;

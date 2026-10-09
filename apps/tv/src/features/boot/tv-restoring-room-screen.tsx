@@ -21,14 +21,8 @@ export type TvRestoringRoomStage = TvRestoreIndicatorStage;
 
 export type TvRestoringRoomScreenProps = {
   readonly roomCode: string;
-  /** Omit for the self-timed 1.3s restore transition; pass to control a stage in tests or a coordinator. */
-  readonly stage?: TvRestoringRoomStage;
-  /** Legacy alias retained for the coordinator seam. */
-  readonly onReady?: () => void;
   /** Called after the green-check spring completes. */
   readonly onReadyAnimationComplete?: () => void;
-  /** Override the motion preference for deterministic previews/tests. */
-  readonly reduceMotion?: boolean;
 };
 
 export const TV_RESTORE_READY_DELAY_MS = 1_300;
@@ -36,19 +30,15 @@ export const TV_RESTORE_READY_DELAY_MS = 1_300;
 /** Display-only restore handoff for a persisted TV room. */
 export function TvRestoringRoomScreen({
   roomCode,
-  stage,
-  onReady,
   onReadyAnimationComplete,
-  reduceMotion: reduceMotionOverride,
 }: TvRestoringRoomScreenProps) {
   const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
-  const motionPreferenceResolved = reduceMotionOverride !== undefined || systemReduceMotion !== undefined;
+  const reduceMotion = resolveTvReducedMotion(systemReduceMotion);
+  const motionPreferenceResolved = systemReduceMotion !== undefined;
   const [internalStage, setInternalStage] = React.useState<TvRestoringRoomStage>('restoring');
-  const readyCallback = onReadyAnimationComplete ?? onReady;
+  const readyCallback = onReadyAnimationComplete;
   const readyCallbackRef = React.useRef(readyCallback);
-  const renderedStage =
-    stage ?? (motionPreferenceResolved && reduceMotion ? 'ready' : internalStage);
+  const renderedStage = motionPreferenceResolved && reduceMotion ? 'ready' : internalStage;
   const code = roomCode.trim().toUpperCase().slice(0, 4);
   const spokenCode = code.split('').join(' ');
   const isReady = renderedStage === 'ready';
@@ -76,12 +66,11 @@ export function TvRestoringRoomScreen({
   }, [enter, reduceMotion]);
 
   useEffect(() => {
-    if (stage !== undefined) return;
     if (!motionPreferenceResolved) return;
     if (reduceMotion) return;
     const readyTimer = setTimeout(() => setInternalStage('ready'), TV_RESTORE_READY_DELAY_MS);
     return () => clearTimeout(readyTimer);
-  }, [motionPreferenceResolved, reduceMotion, stage]);
+  }, [motionPreferenceResolved, reduceMotion]);
 
   const title = isReady
     ? 'Your room is ready'

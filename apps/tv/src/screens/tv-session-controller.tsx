@@ -158,9 +158,8 @@ function TvSessionPresentation({
     );
   }
 
-  // Keep the presentation component total for direct previews and in-flight
-  // legacy callers that have only passed the resolved surface kind. The live
-  // controller always supplies `runtimeScreen` above.
+  // A surface with no matching screen above: keep the component total and say
+  // what the TV is waiting for, rather than render nothing.
   const title = tvPurposeForSurface(surface, runtime, gameId);
   return <TvPlatformStatusScreen
     kind="error"
