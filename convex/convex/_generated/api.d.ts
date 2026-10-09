@@ -9,6 +9,7 @@
  */
 
 import type * as developmentReset from "../developmentReset.js";
+import type * as gameSetup from "../gameSetup.js";
 import type * as games from "../games.js";
 import type * as lib_authorization from "../lib/authorization.js";
 import type * as lib_countdown from "../lib/countdown.js";
@@ -17,6 +18,7 @@ import type * as lib_gameRuntime from "../lib/gameRuntime.js";
 import type * as lib_presence from "../lib/presence.js";
 import type * as lib_rateLimits from "../lib/rateLimits.js";
 import type * as lib_roomLifecycle from "../lib/roomLifecycle.js";
+import type * as lib_seats from "../lib/seats.js";
 import type * as players from "../players.js";
 import type * as rooms from "../rooms.js";
 import type * as seatPreviews from "../seatPreviews.js";
@@ -29,6 +31,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   developmentReset: typeof developmentReset;
+  gameSetup: typeof gameSetup;
   games: typeof games;
   "lib/authorization": typeof lib_authorization;
   "lib/countdown": typeof lib_countdown;
@@ -37,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "lib/presence": typeof lib_presence;
   "lib/rateLimits": typeof lib_rateLimits;
   "lib/roomLifecycle": typeof lib_roomLifecycle;
+  "lib/seats": typeof lib_seats;
   players: typeof players;
   rooms: typeof rooms;
   seatPreviews: typeof seatPreviews;

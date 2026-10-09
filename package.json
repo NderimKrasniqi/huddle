@@ -25,7 +25,8 @@
     "validate:boundaries": "python3 tools/validate-architecture.py",
     "validate:ui-stack": "python3 tools/validate-architecture.py",
     "dev:local": "tools/dev-local.sh",
-    "tv:emulator": "tools/tv-emulator.sh"
+    "tv:emulator": "tools/tv-emulator.sh",
+    "e2e:bomb-squad": "tools/e2e-bomb-squad.sh"
   },
   "devDependencies": {
     "@types/node": "catalog:",

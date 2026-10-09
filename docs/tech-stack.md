@@ -122,7 +122,9 @@ pnpm verify:bundle-seam -- <fresh-export-directory>
 ```
 
 The project keeps end-to-end tests only; there are no unit, render or
-integration suites. Use `git diff --check` before handoff.
+integration suites. The Maestro flows live in `e2e/`; `pnpm e2e:bomb-squad`
+seeds a room through `convex/e2e/seed-bomb-room.mjs` and plays the phone from
+join to the first bomb on the iPhone simulator. Use `git diff --check` before handoff.
 
 For bundle proof, export Phone and TV into fresh directories and run the seam
 scanner. For device proof, use the repository's scoped simulator runner:

@@ -44,7 +44,7 @@ export async function beginCountdown(ctx: MutationCtx, room: Doc<'rooms'>): Prom
   const setup = room.setup;
   if (setup === undefined) return;
   const endsAt = Date.now() + COUNTDOWN_MS;
-  const job = await ctx.scheduler.runAfter(COUNTDOWN_MS, internal.games.launchCountdown, {
+  const job = await ctx.scheduler.runAfter(COUNTDOWN_MS, internal.gameSetup.launchCountdown, {
     roomId: room._id,
     endsAt,
   });
