@@ -64,6 +64,7 @@ export function SeatedPhone({
           busy={busy}
           youAreHost={standing.youAreHost}
           onBackToLobby={room.end}
+          onLeave={room.confirmLeave}
           onEvent={room.event}
         />
         {sheet}
@@ -195,8 +196,10 @@ function PhoneRuntimeMount({
   busy,
   youAreHost,
   onBackToLobby,
+  onLeave,
   onEvent,
 }: {
+  readonly onLeave: () => void;
   readonly screen: Extract<RunningGameScreen, { kind: 'game' | 'finished' }>;
   readonly roster: readonly RosterSeat[];
   readonly session: PlayerSession;
@@ -213,7 +216,10 @@ function PhoneRuntimeMount({
       ? { playerId: session.playerId, nickname: session.nickname, away: false, avatar: session.avatar }
       : { playerId: seat.playerId, nickname: seat.nickname, away: seat.away, avatar: seat.avatar };
   const module = screen.module as GameModule<unknown, GameEvent>;
-  const hostBackToLobby = youAreHost && screen.kind === 'finished';
+  // At the end everyone may leave; the host may also take the room back to the lobby.
+  const finished = screen.kind === 'finished';
+  const hostBackToLobby = youAreHost && finished;
+  const footerHeight = finished ? (hostBackToLobby ? 2 : 1) * playroomPhone.buttonHeight + (hostBackToLobby ? FOOTER_GAP : 0) + RUNTIME_BACK_TO_LOBBY_OFFSET : 0;
   return (
     <View style={styles.runtime} testID={`phone-runtime-${module.metadata.id}`}>
       {module.screens.phone({
@@ -226,15 +232,18 @@ function PhoneRuntimeMount({
         hostChromeInsetTop: undefined,
         // Reserve room for the Host's Back to lobby button below, so the
         // finished screen's own footer is not drawn underneath it.
-        hostChromeInsetBottom: hostBackToLobby ? RUNTIME_BACK_TO_LOBBY_OFFSET + playroomPhone.buttonHeight : undefined,
+        hostChromeInsetBottom: finished ? footerHeight : undefined,
         clockRemainingMs: screen.kind === 'game' ? screen.clockRemainingMs : undefined,
         isHost: youAreHost,
         feedback: phoneFeedback,
         hostNickname: roster.find((candidate) => candidate.host)?.nickname,
       })}
-      {hostBackToLobby ? (
-        <View pointerEvents="box-none" style={[styles.runtimeOverlay, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>
-          <PlayroomButton label="Back to lobby" onPress={onBackToLobby} accessibilityLabel="Back to lobby" testID="runtime-back-to-lobby" />
+      {finished ? (
+        <View pointerEvents="box-none" style={[styles.runtimeOverlay, styles.finishedFooter, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>
+          {hostBackToLobby ? (
+            <PlayroomButton label="Back to lobby" onPress={onBackToLobby} accessibilityLabel="Back to lobby" testID="runtime-back-to-lobby" />
+          ) : null}
+          <PlayroomButton label="Leave room" variant="secondary" onPress={onLeave} accessibilityLabel="Leave room" testID="runtime-leave-room" />
         </View>
       ) : null}
       {busy === 'event' || failure ? (
@@ -358,6 +367,9 @@ function phoneFeedback(kind: PhoneFeedback): void {
   else void Haptics.notificationAsync(kind === 'success' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error);
 }
 
+/** Space between the finished screen's two buttons. */
+const FOOTER_GAP = 12;
+
 // Gap between the device's bottom inset and the Host's Back to lobby button.
 const RUNTIME_BACK_TO_LOBBY_OFFSET = 24;
 
@@ -371,6 +383,9 @@ const styles = StyleSheet.create({
   runtimeOverlay: {
     position: 'absolute',
     gap: 4,
+  },
+  finishedFooter: {
+    gap: FOOTER_GAP,
   },
   // Below the top bar, the status itself stays centred in the remaining space.
   status: {

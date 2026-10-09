@@ -69,10 +69,8 @@ APPROVED_ILLUSTRATED_RENDERERS = frozenset(
         *TV_GAME_FLOW_RENDERERS,
     )
 )
-# Game TV art drawn in SVG. The phone app aliases react-native-svg to a stub.
-GAME_TV_SVG_RENDERERS = ("games/bomb-squad/src/svg-art.tsx",)
 TV_SVG_RENDERERS = frozenset(
-    (TV_ROOM_RENDERER, *TV_BOOT_RENDERERS, *GAME_TV_SVG_RENDERERS)
+    (TV_ROOM_RENDERER, *TV_BOOT_RENDERERS)
 )
 TV_QR_DEPENDENCIES = {
     "react-native-qrcode-svg": "^6.3.21",
@@ -355,7 +353,8 @@ BOMB_SQUAD_PALETTE = {
     "night": "#1B1530", "panel": "#2A2147", "panelEdge": "#4A3D78", "cream": "#FFF6E5",
     "muted": "#A99BC6", "hazard": "#FFC83D", "spark": "#FF8A3D", "danger": "#FF5A5F",
     "safe": "#3BB273", "wireRed": "#E5484D", "wireBlue": "#4C7BF3", "wireYellow": "#F6C445",
-    "bodyLight": "#6B4FA3", "rope": "#E8D3B0", "ropeBurnt": "#5A4A3A",
+    "bodyLight": "#6B4FA3", "rope": "#E8D3B0", "ropeBurnt": "#5A4A3A", "metalLight": "#E3D9FF",
+    "metalDark": "#5E5279", "safeLight": "#6FD69C", "safeDark": "#1F7A4A", "white": "#FFFFFF",
 }
 COSMIC_QUIZ_PALETTE = {
     "navy": "#041B39",
@@ -943,15 +942,6 @@ def validate_qr_dependency_scope(root: Path = ROOT) -> None:
                 continue
             for dependency, expected_version in TV_QR_DEPENDENCIES.items():
                 if dependency not in declared:
-                    continue
-                # Bomb Squad borrows the TV's react-native-svg for its TV-only art:
-                # a peer (resolved to the TV app's copy) plus a dev copy for types.
-                if (
-                    dependency == "react-native-svg"
-                    and manifest.resolve() == (root / "games" / "bomb-squad" / "package.json").resolve()
-                    and declared[dependency] in ("*", expected_version)
-                    and field in ("peerDependencies", "devDependencies")
-                ):
                     continue
                 if manifest.resolve() != tv_manifest or field != "dependencies":
                     fail(

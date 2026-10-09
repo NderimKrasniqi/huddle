@@ -22,7 +22,7 @@ export type RoundDeal = {
   readonly clues: Readonly<Record<GamePlayerId, Clue>>;
 };
 
-export type BombPhase = 'brief' | 'debate' | 'reveal' | 'finished';
+export type BombPhase = 'howTo' | 'brief' | 'debate' | 'reveal' | 'finished';
 
 /** How a round ended, once the wire is cut. */
 export type RoundResult = {

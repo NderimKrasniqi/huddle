@@ -58,23 +58,6 @@ module.exports = defineConfig([
     },
   },
   {
-    // A game's TV-only SVG art. The phone app aliases react-native-svg to a stub.
-    files: ['games/bomb-squad/src/svg-art.tsx'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: forbiddenGameImports
-            .filter((name) => name !== 'react-native-svg')
-            .map((name) => ({
-              name,
-              message: 'Game modules own their presentation without platform motion dependencies.',
-            })),
-        },
-      ],
-    },
-  },
-  {
     files: ['apps/tv/src/features/room/room-invitation-screen.tsx'],
     rules: {
       'no-restricted-imports': [

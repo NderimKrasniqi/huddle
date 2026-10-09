@@ -31,3 +31,7 @@ overrides:
 
 patchedDependencies:
   image-size@1.2.1: patches/image-size@1.2.1.patch
+
+# Skia copies its prebuilt native libraries into place on install.
+onlyBuiltDependencies:
+  - "@shopify/react-native-skia"

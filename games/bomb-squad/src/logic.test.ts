@@ -9,8 +9,10 @@ import { WIRES } from './types';
 const players = (count: number): GamePlayer[] =>
   Array.from({ length: count }, (_, index) => ({ playerId: `p${index}`, nickname: `P${index}`, away: false, avatar: 'fox' }));
 
+/** A started game, past the rules screen and into the first brief. */
 function start(count: number, seed = 7): BombState {
-  return logic.createInitialState({ players: players(count), settings: {}, seed });
+  const fresh = logic.createInitialState({ players: players(count), settings: {}, seed });
+  return logic.reduce(fresh, { kind: 'advance', round: 0, phase: 'howTo' });
 }
 
 function toDebate(state: BombState): BombState {
@@ -94,6 +96,13 @@ describe('a round', () => {
   it('lets only the clock move a beat, except the host skipping a reveal', () => {
     const state = start(4);
     expect(logic.reduce(state, { kind: 'advance', playerId: 'p0', round: 0, phase: 'brief' })).toBe(state);
+  });
+
+  it('opens on the rules, which the host may skip and a guest may not', () => {
+    const fresh = logic.createInitialState({ players: players(4), settings: {}, seed: 1 });
+    expect(fresh.phase).toBe('howTo');
+    expect(logic.reduce(fresh, { kind: 'advance', playerId: 'p1', round: 0, phase: 'howTo' })).toBe(fresh);
+    expect(logic.reduce(fresh, { kind: 'advance', playerId: 'p0', fromHost: true, round: 0, phase: 'howTo' }).phase).toBe('brief');
   });
 
   it('runs every round and then finishes', () => {

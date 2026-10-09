@@ -3,7 +3,7 @@ import { HuddleText } from '@huddle/ui/game-kit';
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, View, type TextStyle } from 'react-native';
 
-import { BRIEF_SECONDS, REVEAL_SECONDS } from './logic';
+import { BRIEF_SECONDS, DEFUSE_POINTS, HOW_TO_SECONDS, REVEAL_SECONDS, SABOTAGE_POINTS } from './logic';
 import { clueText, useCountdownSeconds, WIRE_COLOR, wireName } from './presentation';
 import { bomb, FONT } from './theme';
 import { type BombEvent, type BombState, type Wire, WIRES } from './types';
@@ -27,7 +27,7 @@ export function BombSquadPhoneScreen({
   const saboteur = deal?.saboteurs.includes(me) === true;
   const myVote = state.votes[me];
   const result = state.phase === 'reveal' ? state.results[state.round] : undefined;
-  const fallback = state.phase === 'brief' ? BRIEF_SECONDS : state.phase === 'debate' ? state.debateSeconds : REVEAL_SECONDS;
+  const fallback = state.phase === 'howTo' ? HOW_TO_SECONDS : state.phase === 'brief' ? BRIEF_SECONDS : state.phase === 'debate' ? state.debateSeconds : REVEAL_SECONDS;
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, fallback, `${state.round}:${state.phase}`);
   const insets = { top: safeAreaInsets?.top ?? 0, bottom: (safeAreaInsets?.bottom ?? 0) + (hostChromeInsetBottom ?? 0) };
 
@@ -46,6 +46,39 @@ export function BombSquadPhoneScreen({
       <Screen insets={insets}>
         <Text size={28} weight="black">Bomb Squad is on</Text>
         <Text size={18} color={bomb.muted}>{`Bomb ${state.round + 1} of ${state.roundCount}. You're in from the next game. Eyes on the TV!`}</Text>
+      </Screen>
+    );
+  }
+
+  if (state.phase === 'howTo') {
+    return (
+      <Screen insets={insets}>
+        <Text size={16} color={bomb.hazard} tracking={3} weight="bold">HOW TO PLAY</Text>
+        <Text size={34} weight="black">Bomb Squad</Text>
+        <View style={styles.rules}>
+          {[
+            ['1', 'Read', 'Your secret clue appears here.'],
+            ['2', 'Argue', 'Talk it out loud with the room.'],
+            ['3', 'Cut', 'Tap the wire you think is safe.'],
+          ].map(([number, title, line]) => (
+            <View key={number} style={styles.rule}>
+              <View style={styles.ruleNumber}><Text size={18} weight="black" color={bomb.night}>{number!}</Text></View>
+              <View style={styles.ruleText}>
+                <Text size={20} weight="black" align="left">{title!}</Text>
+                <Text size={16} color={bomb.muted} align="left">{line!}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View style={styles.twistCard}>
+          <Text size={18} weight="black" color={bomb.night}>Someone’s clue is a lie.</Text>
+          <Text size={15} weight="bold" color={bomb.night}>{`Defused: squad +${DEFUSE_POINTS}. Boom: saboteurs +${SABOTAGE_POINTS}.`}</Text>
+        </View>
+        {isHost ? (
+          <Button label="Start the first bomb" onPress={() => sendEvent({ kind: 'advance', playerId: me, round: 0, phase: 'howTo' })} />
+        ) : (
+          <Text size={16} color={bomb.muted}>{`First bomb in ${seconds}s. ${hostNickname ?? 'The host'} can start sooner.`}</Text>
+        )}
       </Screen>
     );
   }
@@ -171,15 +204,17 @@ function Text({
   weight = 'regular',
   color = bomb.cream,
   tracking,
+  align = 'center',
 }: {
   readonly children: ReactNode;
   readonly size: number;
   readonly weight?: keyof typeof FONT;
   readonly color?: string;
   readonly tracking?: number;
+  readonly align?: 'center' | 'left';
 }) {
   const style: TextStyle = { fontFamily: FONT[weight], fontSize: size, lineHeight: Math.round(size * 1.25), color, letterSpacing: tracking };
-  return <HuddleText align="center" style={style}>{children}</HuddleText>;
+  return <HuddleText align={align} style={style}>{children}</HuddleText>;
 }
 
 const styles = StyleSheet.create({
@@ -194,5 +229,10 @@ const styles = StyleSheet.create({
   wires: { gap: 12, marginTop: 4 },
   wire: { minHeight: 64, borderRadius: 999, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: 'transparent' },
   wireChosen: { borderColor: bomb.cream },
+  rules: { gap: 12 },
+  rule: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 24, backgroundColor: bomb.panel },
+  ruleNumber: { width: 40, height: 40, borderRadius: 20, backgroundColor: bomb.hazard, alignItems: 'center', justifyContent: 'center' },
+  ruleText: { flex: 1 },
+  twistCard: { padding: 16, borderRadius: 24, backgroundColor: bomb.hazard, gap: 4 },
   button: { minHeight: 56, borderRadius: 999, backgroundColor: bomb.hazard, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });

@@ -1,15 +1,15 @@
-// Expo's default config, plus one alias: the phone app does not ship
-// react-native-svg's native module, so games' TV-only SVG art resolves to a
-// stub here. The phone never renders a game's TV screen.
+// Expo's default config, plus one alias: the phone app does not ship Skia's
+// native module, so games' TV-only Skia art resolves to a stub here. The phone
+// never renders a game's TV screen.
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
-const svgStub = path.resolve(__dirname, 'metro-stubs/react-native-svg.tsx');
+const skiaStub = path.resolve(__dirname, 'metro-stubs/react-native-skia.tsx');
 const resolveDefault = config.resolver.resolveRequest;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'react-native-svg') return { type: 'sourceFile', filePath: svgStub };
+  if (moduleName === '@shopify/react-native-skia') return { type: 'sourceFile', filePath: skiaStub };
   return (resolveDefault ?? context.resolveRequest)(context, moduleName, platform);
 };
 

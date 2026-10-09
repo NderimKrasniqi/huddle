@@ -18,11 +18,11 @@
     "@huddle/ui": "workspace:*",
     "zod": "catalog:"
   },
-  "//peerDependencies": "Screens only, and for the same reason `@huddle/ui` declares them this way: `react-native` resolves to whichever variant the consuming app installed \u2014 react-native-tvos on the TV, stock on the phone. The `./logic` entry point imports none of it, which is what lets the Convex server take the rules without any of this. `react-native-svg` is the TV app's copy; the phone app aliases it to a stub (apps/phone/metro.config.js) because only the TV renders this game's SVG art.",
+  "//peerDependencies": "Screens only, and for the same reason `@huddle/ui` declares them this way: `react-native` resolves to whichever variant the consuming app installed \u2014 react-native-tvos on the TV, stock on the phone. The `./logic` entry point imports none of it, which is what lets the Convex server take the rules without any of this. `@shopify/react-native-skia` is the TV app's copy; the phone app aliases it to a stub (apps/phone/metro.config.js) because only the TV renders this game's Skia art.",
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
-    "react-native-svg": "*"
+    "@shopify/react-native-skia": "*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -30,6 +30,6 @@
     "react": "19.2.3",
     "react-native": "0.86.0",
     "typescript": "catalog:",
-    "react-native-svg": "15.15.4"
+    "@shopify/react-native-skia": "2.6.2"
   }
 }

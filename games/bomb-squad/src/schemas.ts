@@ -12,7 +12,7 @@ const clueSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('nextTo'), wire: wireSchema }),
 ]);
 
-const phaseSchema = z.enum(['brief', 'debate', 'reveal', 'finished']);
+const phaseSchema = z.enum(['howTo', 'brief', 'debate', 'reveal', 'finished']);
 
 export const bombStateSchema = z.strictObject({
   phase: phaseSchema,

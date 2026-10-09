@@ -10,7 +10,10 @@ export { clueHolds, dealRound, dealRounds, saboteurCount } from './clues';
 export { bombEventSchema, bombStateSchema } from './schemas';
 export type * from './types';
 
-export const BRIEF_SECONDS = 6;
+/** The rules, once, before the first bomb; the host can start sooner. */
+export const HOW_TO_SECONDS = 25;
+/** Long enough to read your clue twice. */
+export const BRIEF_SECONDS = 10;
 export const REVEAL_SECONDS = 10;
 export const DEFUSE_POINTS = 100;
 export const SABOTAGE_POINTS = 150;
@@ -91,10 +94,13 @@ function voted(state: BombState, event: Extract<BombEvent, { kind: 'vote' }>): B
 }
 
 function advanced(state: BombState, event: BombAdvance): BombState {
-  // Only the room's clock moves a beat, except the Host may skip the reveal.
-  if (event.playerId !== undefined && !(event.fromHost === true && event.phase === 'reveal')) return state;
+  // Only the room's clock moves a beat, except the Host may skip the rules or a reveal.
+  const hostMayMove = event.fromHost === true && (event.phase === 'reveal' || event.phase === 'howTo');
+  if (event.playerId !== undefined && !hostMayMove) return state;
   if (event.round !== state.round || event.phase !== state.phase) return state;
   switch (state.phase) {
+    case 'howTo':
+      return { ...state, phase: 'brief' };
     case 'brief':
       return { ...state, phase: 'debate' };
     case 'debate':
@@ -111,6 +117,8 @@ function advanced(state: BombState, event: BombAdvance): BombState {
 /** Seconds each beat runs before the room moves on by itself. */
 export function beatSeconds(state: BombState): number | undefined {
   switch (state.phase) {
+    case 'howTo':
+      return HOW_TO_SECONDS;
     case 'brief':
       return BRIEF_SECONDS;
     case 'debate':
@@ -166,7 +174,7 @@ export const bombSquadGameLogic: GameLogic<BombState, BombEvent, GameSettings> =
     const chosen = bombSettings(settings);
     const ids = players.map((player) => player.playerId);
     return {
-      phase: 'brief',
+      phase: 'howTo',
       round: 0,
       rounds: dealRounds(ids, chosen.rounds, seed ?? DEFAULT_SEED),
       roundCount: chosen.rounds,
