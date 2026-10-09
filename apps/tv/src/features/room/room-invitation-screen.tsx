@@ -98,7 +98,7 @@ export function RoomInvitationScreen({
   reduceMotion: reduceMotionOverride,
 }: RoomInvitationScreenProps) {
   const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
+  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride ?? systemReduceMotion);
   const normalizedCode = roomCode.trim().toUpperCase().slice(0, 4);
   const spokenCode = normalizedCode.split('').join(' ');
   const visiblePlayers = players.slice(0, PLAYER_CAPACITY);

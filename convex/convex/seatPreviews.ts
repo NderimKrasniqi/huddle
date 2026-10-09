@@ -14,7 +14,7 @@ import { avatarValidator } from './schema';
  * refreshes it about every 10 seconds, so one missed beat is not enough to
  * drop it, and a phone that put itself away is gone from the TV soon after.
  */
-export const SEAT_PREVIEW_TTL_MS = 20_000;
+const SEAT_PREVIEW_TTL_MS = 20_000;
 
 /** Remove a preview and the expiry check still waiting on it. */
 export async function deleteSeatPreview(ctx: MutationCtx, preview: Doc<'seatPreviews'>): Promise<void> {

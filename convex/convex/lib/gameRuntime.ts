@@ -5,7 +5,7 @@ import type { Doc, Id } from '../_generated/dataModel';
 
 export type StoredGame = NonNullable<Doc<'rooms'>['game']>;
 
-export type DecodedRuntime = {
+type DecodedRuntime = {
   readonly game: GameLogic;
   readonly state: unknown;
 };

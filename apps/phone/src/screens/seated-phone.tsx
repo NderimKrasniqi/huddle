@@ -16,8 +16,6 @@ import { SetupScreen } from './seated/setup-screen';
 import { useSeatedRoom, type BusyAction, type Confirmation } from './use-seated-room';
 
 /** The picker and setup screens, under the names the render tests use. */
-export { PickerScreen as PickerSurface } from './seated/picker-screen';
-export { SetupScreen as SetupSurface } from './seated/setup-screen';
 
 /**
  * A seated phone: routes the room's state to the Playroom screen for it.

@@ -53,7 +53,7 @@ export const roomViewerArgs = {
   tvSessionToken: v.optional(v.string()),
 };
 
-export type RoomViewer = { readonly kind: 'tv' } | { readonly kind: 'player'; readonly playerId: GamePlayerId };
+type RoomViewer = { readonly kind: 'tv' } | { readonly kind: 'player'; readonly playerId: GamePlayerId };
 
 /**
  * Who is looking at `roomId`: one of its seated players, from the Session Token

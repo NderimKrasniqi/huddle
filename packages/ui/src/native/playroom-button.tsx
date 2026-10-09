@@ -1,4 +1,5 @@
 import {
+  playroomButtonEdge,
   playroomColors,
   playroomEasing,
   playroomFonts,
@@ -99,7 +100,7 @@ export function PlayroomButton({
 }
 
 const TONES = {
-  primary: { container: { backgroundColor: playroomColors.orange, borderBottomWidth: 3, borderBottomColor: 'rgba(45, 11, 78, 0.18)' }, text: 'ink' as const },
+  primary: { container: { backgroundColor: playroomColors.orange, borderBottomWidth: 3, borderBottomColor: playroomButtonEdge }, text: 'ink' as const },
   secondary: {
     container: { backgroundColor: playroomColors.surface, borderWidth: 1, borderColor: playroomColors.border },
     text: 'ink' as const,

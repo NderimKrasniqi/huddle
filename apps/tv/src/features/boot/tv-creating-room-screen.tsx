@@ -16,8 +16,6 @@ import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduc
 
 type TvCreatingRoomScreenProps = {
   readonly phase: TvAnimatedBootPhase;
-  /** Override the system preference for deterministic previews and tests. */
-  readonly reduceMotion?: boolean;
 };
 
 /** The splash settles in once, from slightly small and transparent. */
@@ -39,10 +37,8 @@ const COPY_ENTER = new Keyframe({
 /** Display-only startup, room-opening, and reconnecting stage. */
 export function TvCreatingRoomScreen({
   phase,
-  reduceMotion: reduceMotionOverride,
 }: TvCreatingRoomScreenProps) {
-  const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
+  const reduceMotion = resolveTvReducedMotion(useTvSystemReducedMotion());
   const copy = tvBootAnimationCopy(phase);
 
   return (

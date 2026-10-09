@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 
-import type { KeyArtColorName } from './key-art';
 import type { AvatarId } from './avatar';
 
 /**
@@ -169,21 +168,15 @@ export type PlayerRange = {
   readonly max: number;
 };
 
-/** A game's card face: a flat block of color with its Bungee title on it. */
-export type GameKeyArt = {
-  readonly color: KeyArtColorName;
-};
-
 /**
- * What the hub can say about a game without playing it — the key art, title,
- * and summary chips required by the carousel in the active visual handoff.
+ * What the hub can say about a game without playing it: its title and the
+ * summary chips on its carousel card.
  */
 export type GameMetadata = {
   /** Stable across builds: it is what a room stores when a game is picked. */
   readonly id: string;
   /** As the carousel sets it in Bungee. */
   readonly title: string;
-  readonly keyArt: GameKeyArt;
   readonly playerRange: PlayerRange;
   /** How long a game of this runs, for the "~12 min" chip. */
   readonly estimatedMinutes: number;

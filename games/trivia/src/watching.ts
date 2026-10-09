@@ -73,11 +73,6 @@ export type FinalStanding = ScoreRow & {
 };
 
 export type WatchedScreen =
-  /** A pre-playback launch-proof room that must remain inert and safe. */
-  | {
-      readonly kind: 'legacy';
-      readonly questionCount: 5 | 10;
-    }
   /** A short shared runway before the first question is revealed. */
   | {
       readonly kind: 'intro';

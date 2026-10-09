@@ -29,9 +29,6 @@ export function useTvSystemReducedMotion(): boolean | undefined {
 }
 
 /** Resolves the live display policy while keeping unresolved motion static. */
-export function resolveTvReducedMotion(
-  override: boolean | undefined,
-  system: boolean | undefined,
-): boolean {
-  return override ?? system ?? true;
+export function resolveTvReducedMotion(system: boolean | undefined): boolean {
+  return system ?? true;
 }

@@ -5,7 +5,7 @@ import { ConvexError } from 'convex/values';
 import { components } from '../_generated/api';
 import type { MutationCtx } from '../_generated/server';
 
-export const RATE_LIMITS = {
+const RATE_LIMITS = {
   roomOpen: { kind: 'token bucket' as const, rate: 10, period: MINUTE, capacity: 20 },
   joinGlobal: { kind: 'token bucket' as const, rate: 600, period: MINUTE, capacity: 1_200 },
   joinRoom: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 240 },
