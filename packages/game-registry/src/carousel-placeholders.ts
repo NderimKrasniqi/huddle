@@ -33,23 +33,6 @@ export const CAROUSEL_PLACEHOLDERS: readonly GameModule[] = [
     placeholder: true,
     metadata: {
       id: CAROUSEL_PLACEHOLDER_IDS[1],
-      title: 'Quick Poll',
-      keyArt: { color: 'online' },
-      playerRange: { min: 2, max: 10 },
-      estimatedMinutes: 5,
-      category: 'Polls',
-      tagline: 'Fast questions. Instant results.',
-    },
-    settingsSchema: [],
-    screens: {
-      tv: () => null,
-      phone: () => null,
-    },
-  },
-  {
-    placeholder: true,
-    metadata: {
-      id: CAROUSEL_PLACEHOLDER_IDS[2],
       title: 'Hot Take',
       keyArt: { color: 'justJoined' },
       playerRange: { min: 2, max: 10 },

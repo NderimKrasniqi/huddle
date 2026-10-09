@@ -8,7 +8,6 @@
  */
 export const CAROUSEL_PLACEHOLDER_IDS = [
   'doodle-dash',
-  'quick-poll',
   'hot-take',
 ] as const;
 

@@ -9,8 +9,10 @@ import { defineConfig } from 'vitest/config';
 // Every project resolves `react-native` to an import-only stub. Game Modules
 // still expose native screens, but the Node suites never mount them.
 const reactNativeStub = fileURLToPath(new URL('./test/react-native-stub.ts', import.meta.url));
+// Bomb Squad's TV art uses react-native-svg; the suites get the phone app's stub.
+const svgStub = fileURLToPath(new URL('./apps/phone/metro-stubs/react-native-svg.tsx', import.meta.url));
 const stubReactNative = {
-  alias: { 'react-native': reactNativeStub },
+  alias: { 'react-native': reactNativeStub, 'react-native-svg': svgStub },
 };
 
 export default defineConfig({

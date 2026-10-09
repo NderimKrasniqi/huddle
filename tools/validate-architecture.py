@@ -69,8 +69,10 @@ APPROVED_ILLUSTRATED_RENDERERS = frozenset(
         *TV_GAME_FLOW_RENDERERS,
     )
 )
+# Game TV art drawn in SVG. The phone app aliases react-native-svg to a stub.
+GAME_TV_SVG_RENDERERS = ("games/bomb-squad/src/svg-art.tsx",)
 TV_SVG_RENDERERS = frozenset(
-    (TV_ROOM_RENDERER, *TV_BOOT_RENDERERS)
+    (TV_ROOM_RENDERER, *TV_BOOT_RENDERERS, *GAME_TV_SVG_RENDERERS)
 )
 TV_QR_DEPENDENCIES = {
     "react-native-qrcode-svg": "^6.3.21",
@@ -165,6 +167,11 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
         (1200, 318),
         True,
         "7e1b6907c29f8cd52883d0f337db8bce71a7b581ccfd698a68106a573f0529e1",
+    ),
+    "games/bomb-squad.png": (
+        (1200, 750),
+        True,
+        "d8a52f1d10188aa60f6a5ff9652f3fda8b1522878a0a36afdfa27a086809c5ee",
     ),
     "games/doodle-dash.png": (
         (1200, 750),
@@ -343,6 +350,13 @@ TRIVIA_RUNTIME_ASSET_SPECS = {
 }
 # Trivia's own Cosmic Quiz look (games/trivia/src/cosmic.tsx). Only the
 # Trivia package may use these; the platform keeps its own palettes.
+# Bomb Squad's own stage palette (games/bomb-squad/src/theme.ts).
+BOMB_SQUAD_PALETTE = {
+    "night": "#1B1530", "panel": "#2A2147", "panelEdge": "#4A3D78", "cream": "#FFF6E5",
+    "muted": "#A99BC6", "hazard": "#FFC83D", "spark": "#FF8A3D", "danger": "#FF5A5F",
+    "safe": "#3BB273", "wireRed": "#E5484D", "wireBlue": "#4C7BF3", "wireYellow": "#F6C445",
+    "bodyLight": "#6B4FA3", "rope": "#E8D3B0", "ropeBurnt": "#5A4A3A",
+}
 COSMIC_QUIZ_PALETTE = {
     "navy": "#041B39",
     "navyDeep": "#021226",
@@ -930,6 +944,15 @@ def validate_qr_dependency_scope(root: Path = ROOT) -> None:
             for dependency, expected_version in TV_QR_DEPENDENCIES.items():
                 if dependency not in declared:
                     continue
+                # Bomb Squad borrows the TV's react-native-svg for its TV-only art:
+                # a peer (resolved to the TV app's copy) plus a dev copy for types.
+                if (
+                    dependency == "react-native-svg"
+                    and manifest.resolve() == (root / "games" / "bomb-squad" / "package.json").resolve()
+                    and declared[dependency] in ("*", expected_version)
+                    and field in ("peerDependencies", "devDependencies")
+                ):
+                    continue
                 if manifest.resolve() != tv_manifest or field != "dependencies":
                     fail(
                         f"QR/SVG dependency is outside the TV renderer: "
@@ -1250,6 +1273,8 @@ def validate_heartbeat_tokens(root: Path = ROOT) -> None:
             allowed = approved_hexes
             if path.is_relative_to(root / "games" / "trivia"):
                 allowed = approved_hexes | set(COSMIC_QUIZ_PALETTE.values())
+            if path.is_relative_to(root / "games" / "bomb-squad"):
+                allowed = approved_hexes | set(BOMB_SQUAD_PALETTE.values())
             if not literals.issubset(allowed):
                 fail(f"unapproved color literal in Heartbeat source: {relative(path, root)}")
 

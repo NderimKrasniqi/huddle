@@ -59,9 +59,9 @@ describe('the carousel window', () => {
   });
 
   it('reaches every reference-only card and marks them as placeholders', () => {
-    expect(carouselWindow(2)?.focused.metadata.id).toBe('doodle-dash');
-    expect(carouselWindow(2)?.focused.placeholder).toBe(true);
-    expect(carouselWindow(3)?.focused.metadata.id).toBe('quick-poll');
+    expect(carouselWindow(2)?.focused.metadata.id).toBe('bomb-squad');
+    expect(carouselWindow(2)?.focused.placeholder).toBeFalsy();
+    expect(carouselWindow(3)?.focused.metadata.id).toBe('doodle-dash');
     expect(carouselWindow(3)?.focused.placeholder).toBe(true);
     expect(carouselWindow(4)?.focused.metadata.id).toBe('hot-take');
     expect(carouselWindow(4)?.focused.placeholder).toBe(true);
