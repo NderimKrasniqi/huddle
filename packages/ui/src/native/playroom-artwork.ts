@@ -81,6 +81,7 @@ export const PLAYROOM_SETTING_ICONS: Readonly<Record<GameSettingIcon, ImageSourc
 const GAME_ART: Readonly<Record<string, ImageSourcePropType>> = {
   trivia: nativeAsset(() => require('../../assets/playroom/games/trivia.png')),
   voting: nativeAsset(() => require('../../assets/playroom/games/voting.png')),
+  'bomb-squad': nativeAsset(() => require('../../assets/playroom/games/bomb-squad.png')),
   'doodle-dash': nativeAsset(() => require('../../assets/playroom/games/doodle-dash.png')),
   'quick-poll': nativeAsset(() => require('../../assets/playroom/games/quick-poll.png')),
   'hot-take': nativeAsset(() => require('../../assets/playroom/games/hot-take.png')),

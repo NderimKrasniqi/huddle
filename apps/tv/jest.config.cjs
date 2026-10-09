@@ -7,6 +7,8 @@ module.exports = {
   // Shared packages resolve their own Reanimated install under pnpm; point
   // every import at the one published mock so no native initialiser runs.
   moduleNameMapper: {
+    // Skia's native canvas cannot render under Jest; tests draw nothing in its place.
+    '^@shopify/react-native-skia$': '<rootDir>/../phone/metro-stubs/react-native-skia.tsx',
     '^react-native-reanimated$': '<rootDir>/jest.reanimated.cjs',
     '^react-native-worklets$': require.resolve('react-native-worklets/src/mock.ts'),
   },

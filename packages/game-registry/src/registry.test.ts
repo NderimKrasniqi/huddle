@@ -4,6 +4,7 @@ import {
 } from '@huddle/contracts';
 import { ROOM_PLAYER_CAP } from '@huddle/domain';
 import { triviaGameModule } from '@huddle/game-trivia';
+import { bombSquadGameModule } from '@huddle/game-bomb-squad';
 import { votingGameModule } from '@huddle/game-voting';
 import { describe, expect, it } from 'vitest';
 
@@ -33,8 +34,8 @@ function settingsDefaultingOutsideTheirOptions(schema: GameSettingsSchema): stri
  * something a hub screen would otherwise have to check, or get wrong, per game.
  */
 describe('the Registry', () => {
-  it('installs trivia and the voting game, in that order', () => {
-    expect(GAME_REGISTRY).toEqual([triviaGameModule, votingGameModule]);
+  it('installs trivia, voting and bomb squad, in that order', () => {
+    expect(GAME_REGISTRY).toEqual([triviaGameModule, votingGameModule, bombSquadGameModule]);
   });
 
   it('keeps the reference-only cards in the carousel without installing them', () => {
@@ -51,8 +52,8 @@ describe('the Registry', () => {
     expect(CAROUSEL_REGISTRY.map((game) => game.metadata.title)).toEqual([
       'Trivia',
       'Voting',
+      'Bomb Squad',
       'Doodle Dash',
-      'Quick Poll',
       'Hot Take',
     ]);
   });

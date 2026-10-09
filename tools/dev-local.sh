@@ -31,11 +31,19 @@ cp "$env_file" "$backup"
 pids=()
 cleanup() {
   for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
+  # `convex dev` starts the backend as its own process; stop it too, or the
+  # next run finds the port taken and never pushes its functions.
+  lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
   cp "$backup" "$env_file"
   rm -f "$backup"
 }
 trap cleanup EXIT INT TERM
 
+if lsof -tiTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "Port $port is taken by an earlier local backend; stopping it." >&2
+  lsof -tiTCP:"$port" -sTCP:LISTEN | xargs kill 2>/dev/null || true
+  sleep 1
+fi
 (cd "$root/convex" && CONVEX_DEPLOYMENT="local:$name" pnpm exec convex dev) &
 pids+=($!)
 until curl -sf "$url/version" >/dev/null; do sleep 1; done

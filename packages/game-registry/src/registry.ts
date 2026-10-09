@@ -1,5 +1,6 @@
 import type { GameRegistry } from '@huddle/contracts';
 import { triviaGameModule } from '@huddle/game-trivia';
+import { bombSquadGameModule } from '@huddle/game-bomb-squad';
 import { votingGameModule } from '@huddle/game-voting';
 
 /**
@@ -17,4 +18,4 @@ import { votingGameModule } from '@huddle/game-voting';
  * installed by one matching import/entry in each registry seam, with not a line
  * of the hub touched to carry it.
  */
-export const GAME_REGISTRY: GameRegistry = [triviaGameModule, votingGameModule];
+export const GAME_REGISTRY: GameRegistry = [triviaGameModule, votingGameModule, bombSquadGameModule];

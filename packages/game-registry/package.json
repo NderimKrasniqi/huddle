@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@huddle/contracts": "workspace:*",
+    "@huddle/game-bomb-squad": "workspace:*",
     "@huddle/game-trivia": "workspace:*",
     "@huddle/game-voting": "workspace:*"
   },
