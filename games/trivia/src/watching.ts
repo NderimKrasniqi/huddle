@@ -1,7 +1,7 @@
 import type { GamePlayer, GamePlayerId } from '@huddle/domain';
 
-import type { PlayableTriviaState, TriviaState } from './types';
-import { playableState, QUESTION_SECONDS } from './state';
+import type { TriviaState } from './types';
+import { QUESTION_SECONDS } from './state';
 
 /**
  * The television as data: what the room is looking at, given the state the room
@@ -25,7 +25,7 @@ export type WatchedOption = {
 };
 
 /** How one player did on the question just revealed. */
-export type PlayerVerdict = {
+type PlayerVerdict = {
   readonly playerId: GamePlayerId;
   readonly nickname: string;
   /**
@@ -38,7 +38,7 @@ export type PlayerVerdict = {
 };
 
 /** One row of the running scoreboard, in the standings' own order. */
-export type ScoreRow = {
+type ScoreRow = {
   readonly playerId: GamePlayerId;
   readonly nickname: string;
   readonly avatar: GamePlayer['avatar'] | undefined;
@@ -138,7 +138,7 @@ function rosterIndex(players: readonly GamePlayer[]): Map<GamePlayerId, GamePlay
 }
 
 function scoreboardOf(
-  state: PlayableTriviaState,
+  state: TriviaState,
   players: readonly GamePlayer[],
 ): readonly ScoreRow[] {
   const roster = rosterIndex(players);
@@ -170,7 +170,7 @@ function scoreboardOf(
  * ranks they used up is skipped: 1, 1, 3.
  */
 function finalStandings(
-  state: PlayableTriviaState,
+  state: TriviaState,
   players: readonly GamePlayer[],
 ): readonly FinalStanding[] {
   let rank = 0;
@@ -221,7 +221,7 @@ function optionsOf(
 }
 
 function verdictsOf(
-  state: PlayableTriviaState,
+  state: TriviaState,
   players: readonly GamePlayer[],
 ): readonly PlayerVerdict[] {
   const roster = rosterIndex(players);
@@ -249,14 +249,7 @@ export function watchedScreen(
   players: readonly GamePlayer[],
   clockRemainingMs?: number,
 ): WatchedScreen {
-  const current = playableState(state);
-
-  if (current === undefined) {
-    if (state.phase !== 'entered') {
-      return { kind: 'legacy', questionCount: 10 };
-    }
-    return { kind: 'legacy', questionCount: state.resolvedSettings.questions };
-  }
+  const current = state;
 
   if (current.phase === 'intro') {
     return {

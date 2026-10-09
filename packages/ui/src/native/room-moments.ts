@@ -1,5 +1,5 @@
 /** Session-local presentation: never a replacement for room authority. */
-export type RoomMoments = {
+type RoomMoments = {
   readonly seenIds?: readonly string[];
   readonly welcomeIds: readonly string[];
   readonly welcomeUntil: number;

@@ -11,14 +11,7 @@ const triviaQuestionSchema = z.strictObject({
   category: z.string().optional(),
 });
 
-const legacyTriviaStateSchema = z.strictObject({
-  phase: z.literal('entered'),
-  resolvedSettings: z.strictObject({
-    questions: z.union([z.literal(5), z.literal(10)]),
-  }),
-});
-
-const playableTriviaStateSchema = z.strictObject({
+export const triviaStateSchema = z.strictObject({
   questions: z.array(triviaQuestionSchema).min(1),
   questionIndex: z.number().int().nonnegative(),
   phase: z.enum(['intro', 'question', 'reveal', 'finished']),
@@ -37,11 +30,6 @@ const playableTriviaStateSchema = z.strictObject({
   scoring: z.enum(['flat', 'speed']).optional(),
 });
 
-/** Strict v2 decoder: old launch-proof rooms and new playable rooms coexist. */
-export const triviaStateSchema = z.union([
-  legacyTriviaStateSchema,
-  playableTriviaStateSchema,
-]);
 
 const triviaAnswerEventSchema = z.strictObject({
   kind: z.literal('answer'),

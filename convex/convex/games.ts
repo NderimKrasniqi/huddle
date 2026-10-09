@@ -662,65 +662,6 @@ export const endGame = mutation({
   },
 });
 
-/**
- * Replay a finished game with the current roster and immutable locked settings.
- * No state, question index, answers, or standings are carried into the new run.
- */
-export const replayGame = mutation({
-  args: { sessionToken: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await limitHostCommand(ctx, args.sessionToken);
-    const { room } = await requireRoomHost(ctx, args.sessionToken);
-    if (room.tvAway === true) throw new ConvexError({ kind: 'tvUnavailable' });
-    const running = room.game;
-    if (running === undefined) throw new ConvexError({ kind: 'replayNotFinished' });
-    const game = gameLogicById(running.gameId);
-    if (game === undefined) {
-      throw new ConvexError<GameLifecycleRejection>({ kind: 'gameNotInstalled', gameId: running.gameId });
-    }
-    const players = await gamePlayersInRoom(ctx, room._id);
-    if (
-      players.length < game.metadata.playerRange.min ||
-      players.length > game.metadata.playerRange.max
-    ) {
-      throw new ConvexError({ kind: 'replayNotAllowed' });
-    }
-    let state: unknown;
-    try {
-      const decoded = game.decodeState(running.state);
-      if (game.isFinished !== undefined && !game.isFinished(decoded)) {
-        throw new Error('not finished');
-      }
-      if (game.isFinished === undefined) throw new Error('no finished predicate');
-      const settings = settingsFrom(game.settingsSchema, running.settings);
-      state = game.decodeState(game.createInitialState({ players, settings, seed: freshSeed() }));
-      if (state === undefined) throw new Error('initial state decoder returned undefined');
-      const clock = await windGameClock(
-        ctx,
-        room,
-        { gameId: game.metadata.id, stateVersion: game.stateVersion, state },
-        game,
-        state,
-      );
-      if (clock === undefined) throw new Error('clock unavailable');
-      await ctx.db.patch(room._id, {
-        game: {
-          gameId: game.metadata.id,
-          stateVersion: game.stateVersion,
-          state,
-          settings,
-          mode: running.mode ?? 'standard',
-          ...clock,
-        },
-        setup: undefined,
-      });
-    } catch {
-      throw new ConvexError({ kind: 'replayNotFinished' });
-    }
-    return null;
-  },
-});
 
 /** Resume after confirmed player loss when the current Host chooses to continue. */
 export const continueAfterDisconnect = mutation({

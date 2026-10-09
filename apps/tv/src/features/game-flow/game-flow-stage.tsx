@@ -1,4 +1,4 @@
-import { CAROUSEL_REGISTRY, carouselWindow, gameModuleById } from '@huddle/game-registry';
+import { carouselWindow, gameModuleById } from '@huddle/game-registry';
 import { playroomColors, playroomTv } from '@huddle/design-tokens';
 import {
   PlayroomHeading,
@@ -22,7 +22,6 @@ import {
   TvSelectedGameArtScreen,
 } from './game-art-reveal-screen';
 import {
-  type TvGameCarouselCard,
   type TvGamePlayer,
 } from './game-flow-model';
 import { TvGameSetupScreen } from './game-setup-screen';
@@ -62,16 +61,6 @@ export function TvGameFlowStage({
 }: TvGameFlowStageProps) {
   const systemReduceMotion = useTvSystemReducedMotion();
   const reduceMotion = resolveTvReducedMotion(reduceMotionOverride, systemReduceMotion);
-  const cards = useMemo<TvGameCarouselCard[]>(
-    () =>
-      CAROUSEL_REGISTRY.map((game) => ({
-        id: game.metadata.id,
-        title: game.metadata.title,
-        subtitle: game.metadata.tagline,
-        available: game.placeholder !== true,
-      })),
-    [],
-  );
   const hostName = roster.find((seat) => seat.host)?.nickname;
   const selectedIndex = carouselWindow(browsingAt ?? 0)?.index ?? 0;
   const players = useMemo(() => roster.map((seat) => tvPlayer(seat, [])), [roster]);
@@ -81,7 +70,6 @@ export function TvGameFlowStage({
       <TvGameCarouselScreen
         hostName={hostName}
         selectedIndex={selectedIndex}
-        cards={cards}
         players={players}
         reduceMotion={reduceMotion}
       />

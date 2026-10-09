@@ -82,7 +82,7 @@ export function cosmicEaseOut(progress: number): number {
 }
 
 /** A, B, C and D always wear the same colour on both screens. */
-export const ANSWER_TONES = [cosmic.turquoise, cosmic.butter, cosmic.coral, cosmic.periwinkle] as const;
+const ANSWER_TONES = [cosmic.turquoise, cosmic.butter, cosmic.coral, cosmic.periwinkle] as const;
 
 export function answerTone(optionIndex: number): string {
   return ANSWER_TONES[optionIndex % ANSWER_TONES.length] ?? cosmic.turquoise;
@@ -92,7 +92,7 @@ export function answerLetter(optionIndex: number): string {
   return String.fromCharCode(65 + optionIndex);
 }
 
-export const cosmicFont = {
+const cosmicFont = {
   regular: 'Nunito_400Regular',
   bold: 'Nunito_700Bold',
   extraBold: 'Nunito_800ExtraBold',

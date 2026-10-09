@@ -124,7 +124,5 @@ icons come from the individually rendered set; props, status illustrations,
 brand art, and the remaining setting icons are sliced from the asset sheets.
 Portraits ship without circles: the pastel circle behind each one, and the grey
 `#DDD9DF` circle for an away player, are drawn natively from the design tokens.
-Doodle Dash, Quick Poll, and Hot Take art is supplied already muted for Coming
-soon. Voting Rounds reuses the question-mark count icon, and the people icon
-serves both Voting voter labels and the ready count. The asset pack's Trivia
+The people icon serves the ready count. The asset pack's Trivia
 folder belongs to the Trivia module's own theme, not to the platform.

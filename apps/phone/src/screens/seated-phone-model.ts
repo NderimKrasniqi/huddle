@@ -1,6 +1,6 @@
 import { readiness, type GameSettingsMode, type GameSetupStage } from '@huddle/domain';
 
-export type SetupReadinessInput = {
+type SetupReadinessInput = {
   readonly stage: GameSetupStage;
   readonly playerRange: { readonly min: number; readonly max: number };
   readonly roster: readonly { readonly playerId: string; readonly away: boolean }[];
@@ -8,7 +8,7 @@ export type SetupReadinessInput = {
   readonly playerId: string;
 };
 
-export type SetupReadiness = {
+type SetupReadiness = {
   readonly allPresent: boolean;
   readonly allReady: boolean;
   readonly canStart: boolean;
@@ -39,13 +39,12 @@ export function setupReadiness({
   };
 }
 
-export type PickerControlInput = {
+type PickerControlInput = {
   readonly youAreHost: boolean;
-  readonly focusedPlaceholder: boolean;
   readonly busy: boolean;
 };
 
-export type PickerControlState = {
+type PickerControlState = {
   /** A card tap only moves the shared browse index. */
   readonly cardAction: 'browse' | null;
   /** Selecting the focused installed card is a separate action. */
@@ -56,19 +55,18 @@ export type PickerControlState = {
 /** Capabilities for the shared picker, including the guest's passive view. */
 export function pickerControlState({
   youAreHost,
-  focusedPlaceholder,
   busy,
 }: PickerControlInput): PickerControlState {
   const interactive = youAreHost && !busy;
 
   return {
     cardAction: interactive ? 'browse' : null,
-    selectEnabled: interactive && !focusedPlaceholder,
+    selectEnabled: interactive,
     guestWaiting: !youAreHost,
   };
 }
 
-export type PickerVisibilityInput = {
+type PickerVisibilityInput = {
   readonly youAreHost: boolean;
   /** Local optimism while the Host's first browse mutation is settling. */
   readonly pickerOpen: boolean;

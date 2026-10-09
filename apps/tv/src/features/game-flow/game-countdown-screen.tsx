@@ -4,6 +4,7 @@ import { PlayroomAvatar, PlayroomHeading, PlayroomText, PlayroomTvStage } from '
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
+import { gameTitleFor } from './game-flow-model';
 
 import type { TvGameSetupScreenProps } from './game-setup-screen';
 import { TvPlayroomFrame } from './playroom-frame';
@@ -29,7 +30,7 @@ export function TvCountdownScreen({
   countdownEndsAt,
   reduceMotion = false,
 }: TvGameSetupScreenProps & { readonly countdownEndsAt: number }) {
-  const title = gameTitle?.trim() || (gameId === 'trivia' ? 'Trivia' : gameId === 'voting' ? 'Voting' : 'Game');
+  const title = gameTitle?.trim() || gameTitleFor(gameId);
   const seconds = useSecondsLeft(countdownEndsAt);
 
   return (

@@ -5,16 +5,16 @@ import {
   RESERVED_CATEGORY as EVERY_CATEGORY,
 } from './content/categories';
 
-export const SCORING_MODES = ['flat', 'speed'] as const;
+const SCORING_MODES = ['flat', 'speed'] as const;
 export type ScoringMode = (typeof SCORING_MODES)[number];
 
-export const QUESTION_COUNTS = [5, 10, 15, 20] as const;
-export type QuestionCount = (typeof QUESTION_COUNTS)[number];
+const QUESTION_COUNTS = [5, 10, 15, 20] as const;
+type QuestionCount = (typeof QUESTION_COUNTS)[number];
 
 export const DIFFICULTIES = ['easy', 'medium', 'hard', 'mixed'] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 
-export const QUESTION_SECONDS_OPTIONS = [10, 15, 20, 30] as const;
+const QUESTION_SECONDS_OPTIONS = [10, 15, 20, 30] as const;
 export type QuestionSeconds = (typeof QUESTION_SECONDS_OPTIONS)[number];
 
 const SCORING_KEY = 'scoring';
@@ -86,7 +86,7 @@ export const TRIVIA_SETTINGS_SCHEMA: GameSettingsSchema = [
   },
 ];
 
-export type TriviaSettings = {
+type TriviaSettings = {
   readonly scoring: ScoringMode;
   readonly questions: QuestionCount;
   readonly difficulty: Difficulty;

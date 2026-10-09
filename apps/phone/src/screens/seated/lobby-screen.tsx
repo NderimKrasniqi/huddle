@@ -19,7 +19,7 @@ import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import { RoomFaces } from './room-faces';
 
-export type LobbyScreenProps = {
+type LobbyScreenProps = {
   readonly session: PlayerSession;
   readonly returned?: boolean;
   readonly welcoming?: boolean;
@@ -178,7 +178,7 @@ function GuestLobby({ session, roster, welcoming }: LobbyScreenProps) {
   );
 }
 
-export type ManagePlayerScreenProps = {
+type ManagePlayerScreenProps = {
   readonly player: RosterSeat;
   readonly you: { readonly nickname: string; readonly avatarId: RosterSeat['avatar'] };
   readonly busy: BusyAction;

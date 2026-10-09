@@ -171,30 +171,10 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
         True,
         "d8a52f1d10188aa60f6a5ff9652f3fda8b1522878a0a36afdfa27a086809c5ee",
     ),
-    "games/doodle-dash.png": (
-        (1200, 750),
-        True,
-        "221e8da8a03342ad3a13f24fa63f548e89ddfd16df8a436a4a3a62db22603dcc",
-    ),
-    "games/hot-take.png": (
-        (1200, 750),
-        True,
-        "745a3d3a8bf0188b7293b8aa7acf2ef845ac949d0cbdfb9cb6fd940a30daff26",
-    ),
-    "games/quick-poll.png": (
-        (1200, 750),
-        True,
-        "21ce004a14f09adbfdaf9a5a6308f2432b320d6ac9422f63171f413bb62a3941",
-    ),
     "games/trivia.png": (
         (1200, 750),
         True,
         "8a24aaae1285848cbd3141d3e3c0d6eb1d109ad3802c4ddceb3cf8647a951698",
-    ),
-    "games/voting.png": (
-        (1200, 750),
-        True,
-        "2437ac86427b2309116a80de7072bed030c8526698f808a36fc15a574b3cb417",
     ),
     "props/ball-cream.png": (
         (512, 512),
@@ -368,31 +348,12 @@ COSMIC_QUIZ_PALETTE = {
     "correct": "#1E7A55",
     "missed": "#6B7891",
 }
-# Voting's own artwork.
-VOTING_RUNTIME_ASSET_SPECS = {
-    "clouds.png": (
-        (935, 1683),
-        False,
-        "56392752938dddf3325e10f5545d7f66abe0d2a0897ffec6c6b88f7b30cdcae4",
-    ),
-    "room.png": (
-        (863, 980),
-        False,
-        "ac2f4e2034aa16a28b6f4c0beac94fdd4930fb891068cc1458db85f6918da24b",
-    ),
-    "world.png": (
-        (1672, 941),
-        False,
-        "2f9148e77527cf5745e46d543ec7087e9842f2c431d637b7f55923973346daab",
-    ),
-}
 # Each runtime artwork folder and the exact files it may hold. Runtime
 # validation never depends on a design manifest or source-master tree, so a
 # stale or incomplete drop fails on its own.
 RUNTIME_ASSET_BUNDLES = (
     ("Playroom runtime", Path("packages/ui/assets/playroom"), PLAYROOM_RUNTIME_ASSET_SPECS),
     ("Trivia runtime", Path("games/trivia/assets"), TRIVIA_RUNTIME_ASSET_SPECS),
-    ("Voting runtime", Path("games/voting/assets"), VOTING_RUNTIME_ASSET_SPECS),
 )
 
 # Keep guards for files retired from runtime and design locations. They are
@@ -519,7 +480,7 @@ def tv_presentation_sources(root: Path = ROOT) -> list[Path]:
     """Return authored TV and game-TV renderers that must remain passive."""
 
     sources = source_files(root / "apps" / "tv" / "src") if (root / "apps" / "tv" / "src").is_dir() else []
-    for game in ("trivia", "voting"):
+    for game in ("trivia", "bomb-squad"):
         path = root / "games" / game / "src" / "tv-screen.tsx"
         if path.is_file():
             sources.append(path)
@@ -1680,7 +1641,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
         [
             root / "packages" / "ui" / "package.json",
             root / "packages" / "game-registry" / "package.json",
-            *(root / "games" / name / "package.json" for name in ("trivia", "voting")),
+            *(root / "games" / name / "package.json" for name in ("trivia", "bomb-squad")),
         ]
     )
     banned_dependencies = {
@@ -1708,7 +1669,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
             fail(f"{app} must pin @expo-google-fonts/nunito@0.4.2")
         if payload.get("dependencies", {}).get("react-native-reanimated") != "4.5.1":
             fail(f"{app} must pin react-native-reanimated@4.5.1")
-    for name in ("trivia", "voting"):
+    for name in ("trivia", "bomb-squad"):
         payload = json.loads((root / "games" / name / "package.json").read_text(encoding="utf-8"))
         for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
             if "react-native-reanimated" in payload.get(field, {}):

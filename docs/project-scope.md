@@ -28,70 +28,20 @@ deep-purple ink, orange actions, Nunito, and clay avatars, props, and game art.
 Checked-in runtime artwork is implementation material, not source-master design
 material. Each game module keeps its own look once play begins.
 
-The catalog has exactly five ordered cards:
+The shelf holds the installed games, in order:
 
-1. Trivia — playable.
-2. Voting — playable.
-3. Doodle Dash — Coming soon, presentation-only.
-4. Quick Poll — Coming soon, presentation-only.
-5. Hot Take — Coming soon, presentation-only.
+1. Trivia.
+2. Bomb Squad.
 
-Only Trivia and Voting can be selected, configured, started, or returned to.
-The other three cards are synchronized across Phone and TV but have no server
-authority or game screens.
-
-## Rooms, joining, and identity
-
-- The TV creates or restores one durable room and presents its authoritative
-  four-character code, native QR code, and live ten-seat roster.
-- The Phone root route restores a valid session or shows the room-code entry,
-  four boxes that match the four code tiles on the TV. A complete code checks `joinAvailability`; missing and full rooms stay
-  inline and cannot advance.
-- `/scan` is a modal camera route. It requests permission, accepts only a valid
-  Huddle QR payload, and replaces to `/join/[code]`. Malformed, duplicate,
-  denied, and unavailable-camera states keep manual entry available.
-- `/join/[code]` is the dedicated **Pick your look** identity route. It loads
-  the remembered GuestProfileV1, disables claimed avatars, validates the
-  display name, performs authoritative `joinRoom`, persists the profile and
-  session credential, updates the session provider, and replaces to `/`.
-- Joining requires a display name and one of the ten stable avatar IDs. A room
-  holds at most ten seats. Availability is advisory; Convex remains the
-  authority for races and rejection messages.
-- A phone session credential is the only authority for an existing seat.
-  `guestId` is continuity metadata, not authentication.
-
-## Host, presence, and recovery
-
-The first seated player is Host; the TV is never Host. Host-only actions are
-selecting a game, editing and locking setup, starting/ending, transferring
-Host, removing players, and returning the room to the lobby.
-
-- Transfer Host targets another present player and preserves everyone else's
-  Ready state.
-- Remove-player and transfer actions use a Phone confirmation surface and
-  retain the existing authoritative rejection messages.
-- Away and Ready are separate roster states. Away players retain Ready but
-  block a new start until the selected game's presence/range gate is valid.
-- A leaving or removed seat loses its current membership credential; it may
-  join again as a new seat while the room remains available.
-- A running game pauses when the TV or a player disconnects. The Host can wait,
-  continue when the rules permit, or go Back to lobby.
-- Seat loss, room expiry, unavailable game, paused game, and device failure
-  each have a branded recovery/status surface. No client invents authority.
-
-## Platform setup and handoff
-
-The Host browses the synchronized five-card catalog from the Phone. The TV
-mirrors the registry index, card art, and Coming soon status without controls.
-For Trivia or Voting, the Host chooses Quick, Standard, or Custom. The module
+The Host browses the shelf from the Phone; the TV mirrors the registry index
+and card art without controls. The Host chooses Quick, Standard, or Custom. The module
 declares the schema and presets; the platform renders the controls, validation,
 busy state, and locked state without inventing game settings.
 
 Trivia settings are Questions (5/10/15/20), Difficulty
 (Easy/Medium/Hard/Mixed), Time per question (10/15/20/30 seconds), Category
-(All plus the curated categories), and Scoring (Flat/Speed). Voting settings
-are Rounds (3/5/7), Time to vote (15/30/45 seconds or No timer), Results
-(Reveal together/Live tally), and Voter labels (Hidden/Shown after reveal).
+(All plus the curated categories), and Scoring (Flat/Speed). Bomb Squad
+settings are Bombs (3/5/7) and Time to argue (30/45/60 seconds).
 
 Ready is individual on every Phone: each player raises a hand, and the TV
 lifts that player's avatar and fills one segment of the ready bar. Locking
@@ -128,25 +78,25 @@ prompt and normalized verdicts only at reveal; Phones receive no correctness or
 other-player answer mapping before reveal. The Host can finish with Back to
 lobby.
 
-### Voting
+### Bomb Squad
 
-Voting is a non-scored opinion loop: intro → private Phone choice → locked
-waiting or live aggregate tally → TV reveal → next round → room-vibe recap.
-There is no winner, score, rank, or leaderboard. Voter labels, when enabled,
-appear only after reveal and are grouped by choice. The finished TV recap
-describes strongest agreement, closest call, and wildcard; the Phone receives
-no private mapping or recap data. The Host can finish with Back to lobby.
+A hidden-role game for 3–10 players: one wire on the bomb is safe, and one or
+two saboteurs (two from 7 players) hold false clues. Each game opens with a
+How to play screen, then each bomb runs brief → debate → reveal. Every phone
+holds one private clue; the room argues out loud and votes on a wire. The
+most-voted wire is cut, and a tie blows up. Defused pays honest players +100;
+a blast pays each saboteur +150 unless they voted for the safe wire. The TV
+never sees a clue, role or vote before the reveal. The Host can finish with
+Back to lobby, and everyone can leave from the final screen.
 
 ## Supported platforms and non-goals
 
 - Supported: iOS Phone, Android Phone, and Android TV.
 - Experimental: tvOS compile/simulator evidence only.
 - Out of scope: web clients, accounts, store submission, production release
-  tooling, Invite Friend, sound/settings that are not backed by authority, and
-  playable Doodle Dash, Quick Poll, or Hot Take.
+  tooling, Invite Friend, sound/settings that are not backed by authority.
 - Existing Convex schema, room lifecycle, session tokens, stable avatar IDs,
-  and module client/server separation remain compatible. Legacy persisted
-  entered-state records are decoded safely and do not get silently reinterpreted.
+  and module client/server separation remain compatible.
 
 ## Remaining acceptance work
 

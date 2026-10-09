@@ -32,21 +32,6 @@ export async function requirePlayerSession(
   return { player, room };
 }
 
-/** Require that a token owns a seat in the requested room. */
-export async function requirePlayerInRoom(
-  ctx: MutationCtx,
-  sessionToken: string,
-  roomId: Id<'rooms'>,
-): Promise<{ player: Doc<'players'>; room: Doc<'rooms'> }> {
-  const held = await requirePlayerSession(ctx, sessionToken);
-  const room = held.player.roomId === roomId ? held.room : null;
-
-  if (room === null) {
-    throw new ConvexError<GameLifecycleRejection>({ kind: 'notInRoom' });
-  }
-
-  return { player: held.player, room };
-}
 
 /** Require that a token belongs to the current Host. */
 export async function requireRoomHost(

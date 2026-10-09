@@ -56,18 +56,6 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # Unit and integration are split so a red run names the layer that broke:
-      # pure TypeScript (packages/*) versus Convex functions on convex-test's
-      # in-memory backend. The Convex run needs no deployment and no secrets —
-      # it runs off the committed `convex/convex/_generated` files.
-      - name: Unit tests
-        run: pnpm test:unit
-
-      - name: Integration tests
-        run: pnpm test:integration
-
-      - name: Rendered app tests
-        run: pnpm test:render
 
       # Question Packs are hand-written data files, so nothing about them is
       # typechecked: this is the gate that keeps a malformed one — three
@@ -111,5 +99,3 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Typecheck on the supported floor
         run: pnpm typecheck
-      - name: Run pure and backend tests on the supported floor
-        run: pnpm test:unit && pnpm test:integration

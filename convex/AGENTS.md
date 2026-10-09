@@ -15,9 +15,7 @@ Room views answer only `roomViewer` from `convex/convex/lib/authorization.ts`:
 a seated phone's `sessionToken` or the room's `tvSessionToken`. Anyone else
 gets an empty roster, no setup or card, and `unavailable` for a game.
 `rooms.stillOpen` and `rooms.connection` carry no room content and stay open
-by room ID. In tests, look as the TV through `tvRunning`, `tvRoster`,
-`tvSetup` and `tvBrowsing` in `convex/test/fixtures.ts`. They seat a TV only
-for that one look, so rooms that model a TV-less legacy room stay that way.
+by room ID.
 
 `npx convex ai-files update` refreshes the generated guidelines. Keep only
 its changes to `convex/convex/_generated/ai/`. Drop the Convex block it adds

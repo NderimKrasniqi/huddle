@@ -21,8 +21,8 @@ import {
   useReducedMotion,
   type MascotPose,
 } from './cosmic';
-import { playableState, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
-import type { PlayableTriviaState, TriviaEvent, TriviaState } from './types';
+import { QUESTION_SECONDS, REVEAL_SECONDS } from './state';
+import type { TriviaEvent, TriviaState } from './types';
 
 /**
  * Trivia's private controller: the answer pad.
@@ -50,16 +50,16 @@ export function TriviaPhoneScreen({
   // device inset, so every surface's footer stays clear of it.
   const insets = { ...device, bottom: device.bottom + finiteInset(hostChromeInsetBottom) };
   const chromeTop = finiteInset(hostChromeInsetTop);
-  const current = playableState(state);
+  const current = state;
   const seconds = useCountdownSeconds(
-    current?.phase === 'question' || current?.phase === 'reveal' ? clockRemainingMs : undefined,
-    current?.phase === 'question' ? current.questionSeconds ?? QUESTION_SECONDS : current?.phase === 'reveal' ? REVEAL_SECONDS : 0,
-    current === undefined ? 'legacy' : `${current.questionIndex}:${current.phase}`,
+    current.phase === 'question' || current.phase === 'reveal' ? clockRemainingMs : undefined,
+    current.phase === 'question' ? current.questionSeconds ?? QUESTION_SECONDS : current.phase === 'reveal' ? REVEAL_SECONDS : 0,
+    `${current.questionIndex}:${current.phase}`,
   );
   const frame = { insets, chromeTop };
   // One tap of feedback when this phone's own result lands, matching the badge.
-  const ownVerdict = current?.phase === 'reveal' ? revealVerdict(current, player.playerId) : undefined;
-  const verdictKey = ownVerdict === undefined ? undefined : `${current?.questionIndex}:${ownVerdict}`;
+  const ownVerdict = current.phase === 'reveal' ? revealVerdict(current, player.playerId) : undefined;
+  const verdictKey = ownVerdict === undefined ? undefined : `${current.questionIndex}:${ownVerdict}`;
   useEffect(() => {
     if (verdictKey === undefined) return;
     feedback?.(verdictKey.endsWith(':right') ? 'success' : 'error');
@@ -67,15 +67,6 @@ export function TriviaPhoneScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verdictKey]);
 
-  if (current === undefined) {
-    return (
-      <Surface {...frame} testID="trivia-phone-legacy">
-        <Logo width={190} on="light" />
-        <CosmicText weight="black" size={28} align="center" style={styles.heading}>Room needs an update</CosmicText>
-        <CosmicText size={16} color={cosmic.muted} align="center">Ask the host to return to the room and start Trivia again.</CosmicText>
-      </Surface>
-    );
-  }
 
   const count = current.questions.length;
 
@@ -234,7 +225,7 @@ function verdictLine(verdict: RevealVerdict, last: boolean): string {
 }
 
 /** This phone's own outcome, once the room has seen the reveal. */
-function revealVerdict(state: PlayableTriviaState, playerId: string): RevealVerdict | undefined {
+function revealVerdict(state: TriviaState, playerId: string): RevealVerdict | undefined {
   const right = state.revealVerdicts?.[playerId];
   if (right === undefined) return undefined;
   if (right) return 'right';
@@ -256,7 +247,7 @@ function RevealSurface({
   readonly hostNickname?: string;
   readonly insets: PhoneSafeAreaInsets;
   readonly chromeTop: number;
-  readonly state: PlayableTriviaState;
+  readonly state: TriviaState;
   /** This phone's own outcome, when the room has revealed it. */
   readonly verdict: RevealVerdict | undefined;
   readonly progress: string;
@@ -490,7 +481,7 @@ function Surface({
  * place and use up the ones below (1, 1, 3). Standings are already shared
  * with every phone, so nothing new leaves the server.
  */
-function finishingPlace(state: PlayableTriviaState, playerId: string) {
+function finishingPlace(state: TriviaState, playerId: string) {
   const own = state.standings.find((standing) => standing.playerId === playerId);
   if (!own) return undefined;
   const ahead = state.standings.filter((standing) => standing.score > own.score).length;

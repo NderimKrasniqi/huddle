@@ -36,7 +36,7 @@ export type SessionTokenStore = {
 };
 
 /** Asking the room which seat a token holds — `players.session`, bound to a client. */
-export type SessionLookup = (sessionToken: string) => Promise<PlayerSession | null>;
+type SessionLookup = (sessionToken: string) => Promise<PlayerSession | null>;
 
 /**
  * The state transition applied when a persisted-token lookup reports. The
@@ -245,7 +245,7 @@ export async function rememberSession(
 }
 
 /** What the Join route is showing while restoration and deep links settle. */
-export type JoinScreenState =
+type JoinScreenState =
   | { readonly kind: 'restoring' }
   | { readonly kind: 'joining' }
   | { readonly kind: 'handoff'; readonly session: PlayerSession }

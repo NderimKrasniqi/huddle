@@ -32,9 +32,7 @@ export type GameLifecycleRejection =
 export type GameSetupRejection =
   | { readonly kind: 'setupNotFound' }
   | { readonly kind: 'setupAlreadyRunning' }
-  | { readonly kind: 'setupLocked' }
-  | { readonly kind: 'replayNotFinished' }
-  | { readonly kind: 'replayNotAllowed' };
+  | { readonly kind: 'setupLocked' };
 
 export type RateLimitOperation =
   | 'roomOpen'

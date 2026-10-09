@@ -1,7 +1,7 @@
 import { useRoomMoments } from '@huddle/ui/native';
 import { api } from '@huddle/convex';
 import type { GameEvent, GameModule, GameSettings, GameSettingsMode } from '@huddle/domain';
-import { CAROUSEL_REGISTRY, runningGameScreen } from '@huddle/game-registry';
+import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
 import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -145,7 +145,7 @@ export function useSeatedRoom({
   });
   const installedOrSelectedModule = setupDraft === null || setupDraft === undefined
     ? undefined
-    : CAROUSEL_REGISTRY.find((module) => module.metadata.id === setupDraft.gameId);
+    : GAME_REGISTRY.find((module) => module.metadata.id === setupDraft.gameId);
   // Once browsing has begun it is shared room state. Keep the Host on the
   // picker after a remount as well as while the local browse mutation settles;
   // the Host's explicit Back-to-room action clears that shared index.
@@ -270,7 +270,7 @@ export function useSeatedRoom({
   }
 
   function chooseGame(module: GameModule) {
-    if (!standing.youAreHost || module.placeholder || token === undefined) return;
+    if (!standing.youAreHost || token === undefined) return;
     void runAction('select', () => selectGame({ sessionToken: token, gameId: module.metadata.id, mode: 'standard' }));
   }
 
@@ -407,4 +407,3 @@ export function useSeatedRoom({
   };
 }
 
-export type SeatedRoom = ReturnType<typeof useSeatedRoom>;

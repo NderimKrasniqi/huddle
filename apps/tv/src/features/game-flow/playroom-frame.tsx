@@ -13,7 +13,7 @@ export function TvPlayroomFrame({ reduceMotion: _reduceMotion }: { readonly redu
   return <View pointerEvents="none" accessible={false} style={styles.halo} />;
 }
 
-export type TvRosterRowProps = {
+type TvRosterRowProps = {
   readonly players: readonly TvGamePlayer[];
   readonly size?: number;
   /** Show names under the avatars. */

@@ -2,7 +2,7 @@
 /* global __dirname, Buffer */
 
 /**
- * Verify an Expo export does not carry server-only Trivia or Voting content.
+ * Verify an Expo export does not carry server-only Trivia content.
  * Run after an export, for example:
  *
  *   pnpm verify:bundle-seam -- /private/tmp/huddle-phone-export
@@ -26,22 +26,11 @@ if (exportDirectory === undefined) {
 
 const packPath = path.join(root, 'games/trivia/src/packs/huddle-classics.json');
 const pack = JSON.parse(fs.readFileSync(packPath, 'utf8'));
-const votingPromptPath = path.join(root, 'games/voting/src/prompts.ts');
-const votingPromptSource = fs.readFileSync(votingPromptPath, 'utf8');
-const votingPromptMarkers = [...votingPromptSource.matchAll(/\{\s*text:\s*'([^']+)'/g)].map(
-  (match) => match[1],
-);
-if (votingPromptMarkers.length < 7) {
-  console.error(`Could not derive enough Voting prompt markers from ${votingPromptPath}`);
-  process.exit(2);
-}
-
 const markers = [
   pack.id,
   pack.title,
   JSON.stringify(pack),
   ...pack.questions.map((question) => question.text),
-  ...votingPromptMarkers,
 ];
 
 function filesUnder(directory) {
@@ -71,9 +60,9 @@ for (const file of filesUnder(directory)) {
 }
 
 if (matches.length > 0) {
-  console.error('Server-only Trivia or Voting content found in the client export:');
+  console.error('Server-only Trivia content found in the client export:');
   for (const match of matches) console.error(`- ${match}`);
   process.exit(1);
 }
 
-console.log(`Client bundle seam passed: no server-only Trivia or Voting content found in ${directory}`);
+console.log(`Client bundle seam passed: no server-only Trivia content found in ${directory}`);

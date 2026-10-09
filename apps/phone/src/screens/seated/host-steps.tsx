@@ -3,7 +3,7 @@ import { PlayroomText } from '@huddle/ui/native';
 import { StyleSheet, View } from 'react-native';
 
 const STEPS = ['Room', 'Game', 'Setup', 'Ready'] as const;
-export type HostStep = (typeof STEPS)[number];
+type HostStep = (typeof STEPS)[number];
 
 /**
  * Where the host is on the way to a game, shown above their main action on
