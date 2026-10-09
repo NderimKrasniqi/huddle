@@ -1,10 +1,10 @@
-import type { PhoneGameScreenProps } from '@huddle/domain';
-import { HuddleText } from '@huddle/ui/game-kit';
+import type { GamePlayer, PhoneGameScreenProps } from '@huddle/domain';
+import { AvatarPortrait, HuddleText } from '@huddle/ui/game-kit';
 import { useEffect, type ReactNode } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, View, type TextStyle } from 'react-native';
 
-import { BRIEF_SECONDS, DEFUSE_POINTS, HOW_TO_SECONDS, REVEAL_SECONDS, SABOTAGE_POINTS } from './logic';
-import { clueText, useCountdownSeconds, WIRE_COLOR, wireName } from './presentation';
+import { CATCH_POINTS, DEFUSE_POINTS, SABOTAGE_POINTS } from './logic';
+import { clueText, phaseSeconds, useCountdownSeconds, WIRE_COLOR, wireName } from './presentation';
 import { bomb, FONT } from './theme';
 import { type BombEvent, type BombState, type Wire, WIRES } from './types';
 
@@ -19,6 +19,7 @@ export function BombSquadPhoneScreen({
   isHost = false,
   feedback,
   hostNickname,
+  players = [],
 }: PhoneGameScreenProps<BombState, BombEvent>) {
   const me = player.playerId;
   const playing = state.standings.some((standing) => standing.playerId === me);
@@ -27,8 +28,7 @@ export function BombSquadPhoneScreen({
   const saboteur = deal?.saboteurs.includes(me) === true;
   const myVote = state.votes[me];
   const result = state.phase === 'reveal' ? state.results[state.round] : undefined;
-  const fallback = state.phase === 'howTo' ? HOW_TO_SECONDS : state.phase === 'brief' ? BRIEF_SECONDS : state.phase === 'debate' ? state.debateSeconds : REVEAL_SECONDS;
-  const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, fallback, `${state.round}:${state.phase}`);
+  const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, phaseSeconds(state), `${state.round}:${state.phase}`);
   const insets = { top: safeAreaInsets?.top ?? 0, bottom: (safeAreaInsets?.bottom ?? 0) + (hostChromeInsetBottom ?? 0) };
 
   // One tap of feedback when this phone's own round result lands.
@@ -60,6 +60,7 @@ export function BombSquadPhoneScreen({
             ['1', 'Read', 'Your secret clue appears here.'],
             ['2', 'Argue', 'Talk it out loud with the room.'],
             ['3', 'Cut', 'Tap the wire you think is safe.'],
+            ['4', 'Accuse', 'Then name the player who lied.'],
           ].map(([number, title, line]) => (
             <View key={number} style={styles.rule}>
               <View style={styles.ruleNumber}><Text size={18} weight="black" color={bomb.night}>{number!}</Text></View>
@@ -72,12 +73,25 @@ export function BombSquadPhoneScreen({
         </View>
         <View style={styles.twistCard}>
           <Text size={18} weight="black" color={bomb.night}>Someone’s clue is a lie.</Text>
-          <Text size={15} weight="bold" color={bomb.night}>{`Defused: squad +${DEFUSE_POINTS}. Boom: saboteurs +${SABOTAGE_POINTS}.`}</Text>
+          <Text size={15} weight="bold" color={bomb.night}>{`Defused: squad +${DEFUSE_POINTS}. Boom: saboteurs +${SABOTAGE_POINTS}. Catch the liar: +${CATCH_POINTS}.`}</Text>
         </View>
-        {isHost ? (
-          <Button label="Start the first bomb" onPress={() => sendEvent({ kind: 'advance', playerId: me, round: 0, phase: 'howTo' })} />
+        {(state.gotIt ?? []).includes(me) ? (
+          <Text size={18} weight="bold" color={bomb.safe}>
+            {`Got it! Waiting for ${Math.max(0, state.standings.length - (state.gotIt?.length ?? 0))} more…`}
+          </Text>
         ) : (
-          <Text size={16} color={bomb.muted}>{`First bomb in ${seconds}s. ${hostNickname ?? 'The host'} can start sooner.`}</Text>
+          <Button
+            label="Got it"
+            onPress={() => {
+              feedback?.('select');
+              sendEvent({ kind: 'gotIt', playerId: me });
+            }}
+          />
+        )}
+        {isHost ? (
+          <Button label="Start now" variant="secondary" onPress={() => sendEvent({ kind: 'advance', playerId: me, round: 0, phase: 'howTo' })} />
+        ) : (
+          <Text size={16} color={bomb.muted}>{`Starts when everyone taps Got it, or in ${seconds}s.`}</Text>
         )}
       </Screen>
     );
@@ -99,13 +113,71 @@ export function BombSquadPhoneScreen({
     );
   }
 
-  if (state.phase === 'reveal' && result !== undefined) {
-    const won = (gain ?? 0) > 0;
+  const cutResult = state.results[state.round];
+  if ((state.phase === 'cut' || state.phase === 'accuse') && cutResult !== undefined) {
+    const others = players.filter((candidate) => candidate.playerId !== me && state.standings.some((standing) => standing.playerId === candidate.playerId));
+    const suspect = state.accusations[me];
     return (
       <Screen insets={insets}>
-        <Text size={16} color={bomb.muted} tracking={3}>{`BOMB ${state.round + 1} OF ${state.roundCount}`}</Text>
-        <Text size={48} weight="black" color={result.defused ? bomb.safe : bomb.danger}>{result.defused ? 'Defused!' : 'Boom!'}</Text>
-        <Text size={22} weight="bold">{won ? `+${gain} for you` : saboteur ? 'They saw through you.' : 'Nothing this time.'}</Text>
+        <View style={styles.header}>
+          <Text size={16} color={bomb.muted} tracking={3}>{`BOMB ${state.round + 1} OF ${state.roundCount}`}</Text>
+          {state.phase === 'accuse' ? (
+            <View style={[styles.clock, seconds <= 5 ? styles.clockHot : null]}>
+              <Text size={22} weight="black" color={seconds <= 5 ? bomb.night : bomb.cream}>{`${seconds}s`}</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text size={40} weight="black" color={cutResult.defused ? bomb.safe : bomb.danger}>{cutResult.defused ? 'Defused!' : 'Boom!'}</Text>
+        <Text size={16} color={bomb.muted}>
+          {[
+            cutResult.cut === null ? 'Nobody cut a wire.' : cutResult.tied ? `A tie: the bomb picked ${wireName(cutResult.cut)}.` : `The room cut ${wireName(cutResult.cut)}.`,
+            myVote ? `You voted ${wireName(myVote)}.` : 'You did not vote.',
+          ].join(' ')}
+        </Text>
+        {state.phase === 'cut' ? (
+          <Text size={20} weight="bold">Look at the TV: who voted for what?</Text>
+        ) : (
+          <>
+            <Text size={22} weight="black">{saboteur ? 'Blend in. Who do you blame?' : 'Who lied?'}</Text>
+            <Text size={15} color={bomb.muted}>{saboteur ? 'Most of the room missing you is worth points.' : `Name a saboteur: +${CATCH_POINTS}.`}</Text>
+            <View style={styles.suspects}>
+              {others.map((candidate) => (
+                <SuspectButton
+                  key={candidate.playerId}
+                  name={candidate.nickname}
+                  avatar={candidate.avatar}
+                  chosen={suspect === candidate.playerId}
+                  onPress={() => {
+                    feedback?.('select');
+                    sendEvent({ kind: 'accuse', playerId: me, round: state.round, suspect: candidate.playerId });
+                  }}
+                />
+              ))}
+            </View>
+          </>
+        )}
+        {isHost && state.phase === 'cut' ? (
+          <Button label="Start accusing" onPress={() => sendEvent({ kind: 'advance', playerId: me, round: state.round, phase: 'cut' })} />
+        ) : null}
+      </Screen>
+    );
+  }
+
+  if (state.phase === 'reveal' && result !== undefined) {
+    const won = (gain ?? 0) > 0;
+    const named = players.find((candidate) => candidate.playerId === state.accusations[me]);
+    const liars = players.filter((candidate) => deal?.saboteurs.includes(candidate.playerId)).map((candidate) => candidate.nickname);
+    return (
+      <Screen insets={insets}>
+        <Text size={16} color={bomb.muted} tracking={3}>{liars.length === 1 ? 'THE SABOTEUR WAS' : 'THE SABOTEURS WERE'}</Text>
+        <Text size={40} weight="black" color={bomb.danger}>{saboteur ? 'You!' : liars.join(' & ')}</Text>
+        <Text size={22} weight="bold" color={won ? bomb.hazard : bomb.cream}>{won ? `+${gain} for you` : 'Nothing this time.'}</Text>
+        <Text size={16} color={bomb.muted}>
+          {[
+            myVote ? `You voted ${wireName(myVote)}.` : 'You did not vote.',
+            named ? `You named ${named.nickname}.` : 'You named nobody.',
+          ].join(' ')}
+        </Text>
         <Text size={16} color={bomb.muted}>
           {`${state.round + 1 >= state.roundCount ? 'Final scores' : 'Next bomb'} in ${seconds}s. ${hostNickname ?? 'The host'} can move on sooner.`}
         </Text>
@@ -181,10 +253,35 @@ function WireButton({ wire, chosen, onPress }: { readonly wire: Wire; readonly c
   );
 }
 
-function Button({ label, onPress }: { readonly label: string; readonly onPress: () => void }) {
+function SuspectButton({ name, avatar, chosen, onPress }: { readonly name: string; readonly avatar: GamePlayer['avatar']; readonly chosen: boolean; readonly onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} testID="bomb-next" style={({ pressed }) => [styles.button, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
-      <Text size={20} weight="black" color={bomb.night}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Name ${name}`}
+      accessibilityState={{ selected: chosen }}
+      style={({ pressed }) => [styles.suspect, chosen ? styles.suspectChosen : null, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}
+    >
+      <AvatarPortrait avatarId={avatar} displayName={name} size={44} />
+      <View style={styles.ruleText}>
+        <Text size={20} weight="black" align="left" color={chosen ? bomb.night : bomb.cream}>{name}</Text>
+      </View>
+      {chosen ? <Text size={16} weight="black" color={bomb.night}>NAMED</Text> : null}
+    </Pressable>
+  );
+}
+
+function Button({ label, onPress, variant = 'primary' }: { readonly label: string; readonly onPress: () => void; readonly variant?: 'primary' | 'secondary' }) {
+  const secondary = variant === 'secondary';
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={secondary ? 'bomb-next-secondary' : 'bomb-next'}
+      style={({ pressed }) => [styles.button, secondary ? styles.buttonSecondary : null, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}
+    >
+      <Text size={20} weight="black" color={secondary ? bomb.cream : bomb.night}>{label}</Text>
     </Pressable>
   );
 }
@@ -234,5 +331,9 @@ const styles = StyleSheet.create({
   ruleNumber: { width: 40, height: 40, borderRadius: 20, backgroundColor: bomb.hazard, alignItems: 'center', justifyContent: 'center' },
   ruleText: { flex: 1 },
   twistCard: { padding: 16, borderRadius: 24, backgroundColor: bomb.hazard, gap: 4 },
+  buttonSecondary: { backgroundColor: 'transparent', borderWidth: 3, borderColor: bomb.panelEdge },
+  suspects: { gap: 10 },
+  suspect: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, borderRadius: 999, backgroundColor: bomb.panel, borderWidth: 3, borderColor: bomb.panelEdge },
+  suspectChosen: { backgroundColor: bomb.hazard, borderColor: bomb.cream },
   button: { minHeight: 56, borderRadius: 999, backgroundColor: bomb.hazard, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });

@@ -12,7 +12,7 @@ const clueSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('nextTo'), wire: wireSchema }),
 ]);
 
-const phaseSchema = z.enum(['howTo', 'brief', 'debate', 'reveal', 'finished']);
+const phaseSchema = z.enum(['howTo', 'brief', 'debate', 'cut', 'accuse', 'reveal', 'finished']);
 
 export const bombStateSchema = z.strictObject({
   phase: phaseSchema,
@@ -22,15 +22,19 @@ export const bombStateSchema = z.strictObject({
       safe: wireSchema.optional(),
       saboteurs: z.array(playerIdSchema),
       clues: z.record(playerIdSchema, clueSchema),
+      tieOrder: z.array(wireSchema).length(WIRES.length).optional(),
     }),
   ),
   roundCount: z.number().int().min(1).max(10),
   votes: z.record(playerIdSchema, wireSchema),
+  accusations: z.record(playerIdSchema, playerIdSchema),
+  gotIt: z.array(playerIdSchema).optional(),
   debateSeconds: z.number().int().min(10).max(120),
   standings: z.array(z.strictObject({ playerId: playerIdSchema, score: z.number().finite() })),
   results: z.array(
     z.strictObject({
       cut: wireSchema.nullable(),
+      tied: z.boolean().optional(),
       defused: z.boolean(),
       gains: z.record(playerIdSchema, z.number().finite()),
     }),
@@ -47,5 +51,7 @@ const eventBase = {
 
 export const bombEventSchema = z.discriminatedUnion('kind', [
   z.strictObject({ ...eventBase, kind: z.literal('vote'), round: z.number().int().nonnegative(), wire: wireSchema }),
+  z.strictObject({ ...eventBase, kind: z.literal('gotIt') }),
+  z.strictObject({ ...eventBase, kind: z.literal('accuse'), round: z.number().int().nonnegative(), suspect: playerIdSchema }),
   z.strictObject({ ...eventBase, kind: z.literal('advance'), round: z.number().int().nonnegative(), phase: phaseSchema }),
 ]);

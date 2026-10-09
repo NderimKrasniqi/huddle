@@ -370,6 +370,11 @@ export type PhoneGameScreenProps<State, Event extends GameEvent> = {
   /** The Host's nickname, so a guest's screen can say who decides. Display only. */
   readonly hostNickname?: string;
   /**
+   * Everyone seated in the room, so a screen can let a player pick another
+   * player (a vote on who lied). Display only; absent for legacy callers.
+   */
+  readonly players?: readonly GamePlayer[];
+  /**
    * Touch feedback the Phone host can give (a haptic tap), for a game to call
    * at the moment it confirms something: `select` when an answer locks in,
    * `success` / `error` for the player's own result. Optional and fire-and-

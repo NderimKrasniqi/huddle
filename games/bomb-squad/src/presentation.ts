@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
 
 import { bomb } from './theme';
-import type { Clue, Wire } from './types';
+import { ACCUSE_SECONDS, BRIEF_SECONDS, CUT_SECONDS, HOW_TO_SECONDS, REVEAL_SECONDS } from './logic';
+import type { BombState, Clue, Wire } from './types';
 
 export const WIRE_COLOR: Readonly<Record<Wire, string>> = {
   red: bomb.wireRed,
@@ -61,4 +62,22 @@ export function useCountdownSeconds(clockRemainingMs: number | undefined, fallba
     return () => clearInterval(timer);
   }, [beat, startingMs]);
   return seconds;
+}
+
+/** Fallback seconds for each beat, before the room's clock arrives. */
+export function phaseSeconds(state: BombState): number {
+  switch (state.phase) {
+    case 'howTo':
+      return HOW_TO_SECONDS;
+    case 'brief':
+      return BRIEF_SECONDS;
+    case 'debate':
+      return state.debateSeconds;
+    case 'cut':
+      return CUT_SECONDS;
+    case 'accuse':
+      return ACCUSE_SECONDS;
+    default:
+      return REVEAL_SECONDS;
+  }
 }
