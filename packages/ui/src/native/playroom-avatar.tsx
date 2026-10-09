@@ -31,7 +31,7 @@ const PORTRAIT_TOP = -0.2;
  * Art that fills more of its square than the rest (the dinosaur's spikes and
  * neck run to the edges) is drawn smaller, so every face reads the same size.
  */
-const PORTRAIT_FIT: Partial<Record<AvatarId, number>> = { puppy: 0.96 };
+const PORTRAIT_FIT: Partial<Record<AvatarId, number>> = { puppy: 0.96, 'green-alien': 0.9 };
 
 export type PlayroomAvatarProps = {
   readonly avatarId: AvatarId;
