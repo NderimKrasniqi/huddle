@@ -237,6 +237,7 @@ function PhoneRuntimeMount({
         isHost: youAreHost,
         feedback: phoneFeedback,
         hostNickname: roster.find((candidate) => candidate.host)?.nickname,
+        players: roster.map((candidate) => ({ playerId: candidate.playerId, nickname: candidate.nickname, away: candidate.away, avatar: candidate.avatar })),
       })}
       {finished ? (
         <View pointerEvents="box-none" style={[styles.runtimeOverlay, styles.finishedFooter, { bottom: insets.bottom + RUNTIME_BACK_TO_LOBBY_OFFSET, left: insets.left + 24, right: insets.right + 24 }]}>
@@ -351,7 +352,7 @@ function ConfirmationSheet({
             accessibilityLabel={confirmation.confirmLabel}
             testID="confirmation-confirm"
           />
-          <PlayroomButton label="Cancel" variant="secondary" onPress={onCancel} disabled={busy !== null} accessibilityLabel="Cancel" testID="confirmation-cancel" />
+          <PlayroomButton label="Cancel" variant="secondary" onPress={onCancel} disabled={busy === confirmation.action} accessibilityLabel="Cancel" testID="confirmation-cancel" />
     </PlayroomSheet>
   );
 }

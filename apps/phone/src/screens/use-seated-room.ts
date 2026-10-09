@@ -3,7 +3,8 @@ import { api } from '@huddle/convex';
 import type { GameEvent, GameModule, GameSettings, GameSettingsMode } from '@huddle/domain';
 import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
 import { useMutation, useQuery } from 'convex/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   hostControlFailureMessage,
@@ -79,6 +80,9 @@ export function useSeatedRoom({
   const [failure, setFailure] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [confirmation, setConfirmation] = useState<Confirmation>();
+  // The sheet is a window-level modal: it would stay on top of any screen
+  // pushed over this one (a join link, say), so it closes when this one blurs.
+  useFocusEffect(useCallback(() => () => setConfirmation(undefined), []));
   const [managedPlayer, setManagedPlayer] = useState<RosterSeat>();
   const busyRef = useRef<BusyAction>(null);
   const seatLossReported = useRef(false);

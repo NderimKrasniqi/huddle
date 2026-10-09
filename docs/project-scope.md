@@ -82,11 +82,16 @@ lobby.
 
 A hidden-role game for 3–10 players: one wire on the bomb is safe, and one or
 two saboteurs (two from 7 players) hold false clues. Each game opens with a
-How to play screen, then each bomb runs brief → debate → reveal. Every phone
-holds one private clue; the room argues out loud and votes on a wire. The
-most-voted wire is cut, and a tie blows up. Defused pays honest players +100;
-a blast pays each saboteur +150 unless they voted for the safe wire. The TV
-never sees a clue, role or vote before the reveal. The Host can finish with
+How to play screen (an animated demo on the TV) that starts once every phone
+taps Got it, the Host starts, or 45 seconds pass; then each bomb runs brief → debate → cut → accuse →
+reveal. Every phone holds one private clue; the room argues out loud and votes
+on a wire. The most-voted wire is cut; a tie cuts one of the tied wires in an
+order drawn from the game's seed. At the cut the TV shows the result and every
+vote, then each player names who they think lied. Defused pays honest players
++100; a blast pays each saboteur +150 unless they voted for the safe wire.
+Naming a saboteur pays an honest player +50, and a saboteur most of the room
+missed scores +50. The TV never sees a clue or role before the reveal, nor a
+vote before the cut. The Host can finish with
 Back to lobby, and everyone can leave from the final screen.
 
 ## Supported platforms and non-goals

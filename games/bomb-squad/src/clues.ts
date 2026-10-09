@@ -89,7 +89,7 @@ export function dealRound(players: readonly GamePlayerId[], random: () => number
       told += 1;
     }
   }
-  return { safe, saboteurs, clues };
+  return { safe, saboteurs, clues, tieOrder: shuffled(WIRES, random) };
 }
 
 /** Every round of a game, dealt once at the start from the server's seed. */

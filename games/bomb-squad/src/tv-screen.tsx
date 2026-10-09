@@ -3,11 +3,12 @@ import { AvatarPortrait, HuddleText } from '@huddle/ui/game-kit';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Easing, StyleSheet, View, useWindowDimensions, type TextStyle } from 'react-native';
 
-import { BRIEF_SECONDS, DEFUSE_POINTS, HOW_TO_SECONDS, REVEAL_SECONDS, SABOTAGE_POINTS } from './logic';
-import { useCountdownSeconds, useReducedMotion, WIRE_COLOR, wireName } from './presentation';
+import { CATCH_POINTS } from './logic';
+import { phaseSeconds, useCountdownSeconds, useReducedMotion, WIRE_COLOR, wireName } from './presentation';
+import { HowToDemo, useDemoBeat } from './how-to-demo';
 import { HazardStripes, SkiaBomb, SkiaDefused, SkiaExplosion } from './skia-art';
 import { bomb, FONT } from './theme';
-import type { BombState } from './types';
+import { type BombState, type Wire, WIRES } from './types';
 
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
@@ -17,7 +18,7 @@ export function BombSquadTvScreen({ state, players, clockRemainingMs, hostNickna
   const viewport = useWindowDimensions();
   const scale = Math.min(viewport.width / STAGE_WIDTH, viewport.height / STAGE_HEIGHT) || 1;
   const reduceMotion = useReducedMotion();
-  const fallback = state.phase === 'howTo' ? HOW_TO_SECONDS : state.phase === 'brief' ? BRIEF_SECONDS : state.phase === 'debate' ? state.debateSeconds : REVEAL_SECONDS;
+  const fallback = phaseSeconds(state);
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, fallback, `${state.round}:${state.phase}`);
   const label = `BOMB ${Math.min(state.round + 1, state.roundCount)} OF ${state.roundCount}`;
 
@@ -28,9 +29,11 @@ export function BombSquadTvScreen({ state, players, clockRemainingMs, hostNickna
         <View style={styles.stripesBottom}><HazardStripes width={STAGE_WIDTH} height={28} reduceMotion={reduceMotion} /></View>
         {state.phase === 'debate' && seconds <= 10 ? <DangerPulse reduceMotion={reduceMotion} /> : null}
         <Text size={30} color={bomb.muted} tracking={6} style={styles.label}>{state.phase === 'finished' ? 'FINAL SCORES' : state.phase === 'howTo' ? ' ' : label}</Text>
-        {state.phase === 'howTo' ? <HowTo state={state} seconds={seconds} hostNickname={hostNickname} reduceMotion={reduceMotion} /> : null}
+        {state.phase === 'howTo' ? <HowTo state={state} players={players} seconds={seconds} hostNickname={hostNickname} reduceMotion={reduceMotion} /> : null}
         {state.phase === 'brief' ? <Brief seconds={seconds} reduceMotion={reduceMotion} /> : null}
         {state.phase === 'debate' ? <Debate state={state} players={players} seconds={seconds} reduceMotion={reduceMotion} /> : null}
+        {state.phase === 'cut' ? <Cut state={state} players={players} reduceMotion={reduceMotion} /> : null}
+        {state.phase === 'accuse' ? <Accuse state={state} players={players} seconds={seconds} /> : null}
         {state.phase === 'reveal' ? <Reveal state={state} players={players} seconds={seconds} hostNickname={hostNickname} reduceMotion={reduceMotion} /> : null}
         {state.phase === 'finished' ? <Finished state={state} players={players} /> : null}
       </View>
@@ -38,74 +41,97 @@ export function BombSquadTvScreen({ state, players, clockRemainingMs, hostNickna
   );
 }
 
+function playingPlayers(state: BombState, players: readonly GamePlayer[]): GamePlayer[] {
+  return players.filter((player) => state.standings.some((standing) => standing.playerId === player.playerId));
+}
+
 const HOW_TO_STEPS = [
   { title: 'Read', line: 'Your phone shows a secret clue about the safe wire.' },
   { title: 'Argue', line: 'Talk it out loud. Share your clue, or bend it.' },
   { title: 'Cut', line: 'Vote on your phone. The most-cut wire gets cut.' },
+  { title: 'Accuse', line: 'Then name the liar. Catch them for points.' },
 ] as const;
 
-/** The rules, once, before the first bomb: three steps and the twist. */
+/**
+ * The rules, once, before the first bomb. With motion, an animated demo plays
+ * the four steps with a caption for each; with reduced motion, the four steps
+ * stand as cards. Starts when everyone taps "Got it" on their phone.
+ */
 function HowTo({
   state,
+  players,
   seconds,
   hostNickname,
   reduceMotion,
 }: {
   readonly state: BombState;
+  readonly players: readonly GamePlayer[];
   readonly seconds: number;
   readonly hostNickname?: string;
   readonly reduceMotion: boolean;
 }) {
+  const beat = useDemoBeat(reduceMotion);
   const saboteurs = state.standings.length >= 7 ? 'Two of you are saboteurs' : 'One of you is a saboteur';
+  const playing = playingPlayers(state, players);
+  const ready = state.gotIt ?? [];
+  const step = HOW_TO_STEPS[beat] ?? HOW_TO_STEPS[0];
   return (
     <View
       style={styles.howTo}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`How to play Bomb Squad. ${HOW_TO_STEPS.map((step) => `${step.title}: ${step.line}`).join(' ')} ${saboteurs}, with a false clue. Defused: honest players score ${DEFUSE_POINTS}. Boom: saboteurs score ${SABOTAGE_POINTS}. First bomb in ${seconds} seconds.`}
+      accessibilityLabel={`How to play Bomb Squad. ${HOW_TO_STEPS.map((item) => `${item.title}: ${item.line}`).join(' ')} ${saboteurs}, with a false clue. ${ready.length} of ${playing.length} are ready. Tap Got it on your phone.`}
     >
-      <View style={styles.howToHead}>
-        <SkiaBomb size={170} fuse={1} urgency={0} reduceMotion={reduceMotion} />
-        <View style={styles.howToTitle}>
-          <Text size={30} color={bomb.hazard} tracking={6} weight="bold">HOW TO PLAY</Text>
-          <Text size={88} weight="black">Bomb Squad</Text>
-        </View>
+      <View style={styles.howToTitle}>
+        <Text size={30} color={bomb.hazard} tracking={6} weight="bold">HOW TO PLAY</Text>
+        <Text size={72} weight="black">Bomb Squad</Text>
       </View>
-      <View style={styles.steps}>
-        {HOW_TO_STEPS.map((step, index) => (
-          <Rise key={step.title} delay={300 + index * 450} reduceMotion={reduceMotion}>
-            <View style={styles.step}>
+      {reduceMotion ? (
+        <View style={styles.steps}>
+          {HOW_TO_STEPS.map((item, index) => (
+            <View key={item.title} style={styles.step}>
               <View style={styles.stepNumber}>
                 <Text size={44} weight="black" color={bomb.night}>{String(index + 1)}</Text>
               </View>
-              <Text size={52} weight="black">{step.title}</Text>
-              <Text size={30} color={bomb.muted}>{step.line}</Text>
+              <Text size={52} weight="black">{item.title}</Text>
+              <Text size={30} color={bomb.muted}>{item.line}</Text>
             </View>
-          </Rise>
-        ))}
-      </View>
-      <Rise delay={1800} reduceMotion={reduceMotion}>
-        <View style={styles.twist}>
-          <Text size={38} weight="black" color={bomb.night}>{`${saboteurs}. Their clue is a lie.`}</Text>
-          <Text size={28} weight="bold" color={bomb.night}>
-            {`Defused: the squad scores +${DEFUSE_POINTS}.  Boom: saboteurs score +${SABOTAGE_POINTS}.  A tie blows up.`}
-          </Text>
+          ))}
         </View>
-      </Rise>
-      <Text size={30} color={bomb.muted}>{`First bomb in ${seconds}s · ${hostNickname ?? 'The host'} can start sooner`}</Text>
+      ) : (
+        <>
+          <HowToDemo beat={beat} />
+          <View style={styles.caption}>
+            <View style={styles.stepNumber}>
+              <Text size={44} weight="black" color={bomb.night}>{String(beat + 1)}</Text>
+            </View>
+            <View>
+              <Text size={52} weight="black" style={styles.captionText}>{step.title}</Text>
+              <Text size={32} color={bomb.muted} style={styles.captionText}>{step.line}</Text>
+            </View>
+          </View>
+        </>
+      )}
+      <View style={styles.twist}>
+        <Text size={36} weight="black" color={bomb.night}>{`${saboteurs}. Their clue is a lie.`}</Text>
+      </View>
+      <View style={styles.readyRow}>
+        {playing.map((player) => (
+          <View key={player.playerId}>
+            <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={64} disabled={!ready.includes(player.playerId)} />
+            {ready.includes(player.playerId) ? (
+              <View style={styles.tick}>
+                <Text size={24} weight="black" color={bomb.night}>✓</Text>
+              </View>
+            ) : null}
+          </View>
+        ))}
+        <Text size={30} color={bomb.muted} style={styles.readyText}>
+          {`${ready.length} of ${playing.length} ready · tap Got it on your phone · ${hostNickname ?? 'The host'} can start now · ${seconds}s`}
+        </Text>
+      </View>
     </View>
   );
-}
-
-/** Slides up and fades in after `delay`; still under reduced motion. */
-function Rise({ children, delay, reduceMotion }: { readonly children: ReactNode; readonly delay: number; readonly reduceMotion: boolean }) {
-  const [t] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
-  useEffect(() => {
-    if (reduceMotion) return;
-    Animated.timing(t, { toValue: 1, duration: 420, delay, easing: Easing.bezier(0.23, 1, 0.32, 1), useNativeDriver: true }).start();
-  }, [delay, reduceMotion, t]);
-  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
-  return <Animated.View style={{ opacity: t, transform: [{ translateY }] }}>{children}</Animated.View>;
 }
 
 function Brief({ seconds, reduceMotion }: { readonly seconds: number; readonly reduceMotion: boolean }) {
@@ -146,6 +172,80 @@ function Debate({ state, players, seconds, reduceMotion }: { readonly state: Bom
   );
 }
 
+/** The wire is cut: the blast or the defuse, and who voted for which wire. Nobody is unmasked yet. */
+function Cut({ state, players, reduceMotion }: { readonly state: BombState; readonly players: readonly GamePlayer[]; readonly reduceMotion: boolean }) {
+  const result = state.results[state.round];
+  if (result === undefined) return null;
+  const headline = result.defused ? 'DEFUSED!' : 'BOOM!';
+  const cutLine =
+    result.cut === null ? 'Nobody cut a wire.' : result.tied ? `A tie. The bomb picked ${wireName(result.cut)}.` : `You cut ${wireName(result.cut)}.`;
+  return (
+    <View style={styles.center} accessible accessibilityRole="text" accessibilityLabel={`${headline} ${cutLine} ${voteSummary(state, players)}`}>
+      <View style={styles.revealArt}>
+        {result.defused ? <SkiaDefused size={250} reduceMotion={reduceMotion} /> : <SkiaExplosion size={300} reduceMotion={reduceMotion} />}
+      </View>
+      <Pop reduceMotion={reduceMotion}>
+        <Text size={120} weight="black" color={result.defused ? bomb.safe : bomb.danger}>{headline}</Text>
+      </Pop>
+      <Text size={48} weight="bold">{cutLine}</Text>
+      <VoteBoard state={state} players={players} cut={result.cut} />
+    </View>
+  );
+}
+
+function voteSummary(state: BombState, players: readonly GamePlayer[]): string {
+  return WIRES.map((wire) => {
+    const names = players.filter((player) => state.votes[player.playerId] === wire).map((player) => player.nickname);
+    return names.length === 0 ? '' : `${wireName(wire)}: ${names.join(', ')}.`;
+  })
+    .filter(Boolean)
+    .join(' ');
+}
+
+/** Four columns, one per wire, with the faces of everyone who voted for it. */
+function VoteBoard({ state, players, cut }: { readonly state: BombState; readonly players: readonly GamePlayer[]; readonly cut: Wire | null }) {
+  const voters = playingPlayers(state, players);
+  return (
+    <View style={styles.voteBoard}>
+      {WIRES.map((wire) => {
+        const faces = voters.filter((player) => state.votes[player.playerId] === wire);
+        return (
+          <View key={wire} style={[styles.voteColumn, cut === wire ? { borderColor: WIRE_COLOR[wire] } : null]}>
+            <View style={[styles.voteWire, { backgroundColor: WIRE_COLOR[wire] }]} />
+            <Text size={32} weight="black" color={WIRE_COLOR[wire]}>{wireName(wire)}</Text>
+            <View style={styles.voteFaces}>
+              {faces.length === 0 ? <Text size={28} color={bomb.muted}>–</Text> : null}
+              {faces.map((player) => (
+                <AvatarPortrait key={player.playerId} avatarId={player.avatar} displayName={player.nickname} size={64} />
+              ))}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function Accuse({ state, players, seconds }: { readonly state: BombState; readonly players: readonly GamePlayer[]; readonly seconds: number }) {
+  const playing = playingPlayers(state, players);
+  const accused = state.votedCount ?? 0;
+  const saboteurs = state.standings.length >= 7 ? 'a saboteur' : 'the saboteur';
+  return (
+    <View style={styles.center} accessible accessibilityRole="text" accessibilityLabel={`Who lied? Name ${saboteurs} on your phone. ${seconds} seconds left. ${accused} of ${playing.length} have named someone.`}>
+      <Text size={40} color={bomb.hazard} weight="bold" tracking={4}>WHO LIED?</Text>
+      <View style={styles.accuseHead}>
+        <Text size={88} weight="black">{`Name ${saboteurs}.`}</Text>
+        <View style={[styles.timer, seconds <= 5 ? styles.timerHot : null]}>
+          <Text size={80} weight="black" color={seconds <= 5 ? bomb.night : bomb.cream}>{String(seconds)}</Text>
+        </View>
+      </View>
+      <Text size={32} color={bomb.muted}>Who voted for what? The liar wanted the wrong wire.</Text>
+      <VoteBoard state={state} players={players} cut={state.results[state.round]?.cut ?? null} />
+      <Text size={40} weight="bold">{`${accused} of ${playing.length} have named someone`}</Text>
+    </View>
+  );
+}
+
 function Reveal({
   state,
   players,
@@ -164,41 +264,38 @@ function Reveal({
   if (result === undefined || deal === undefined) return null;
   const saboteurs = players.filter((player) => deal.saboteurs.includes(player.playerId));
   const last = state.round + 1 >= state.roundCount;
-  const headline = result.defused ? 'DEFUSED!' : 'BOOM!';
-  const cutLine = result.cut === null ? 'Nobody agreed in time.' : `You cut ${wireName(result.cut)}.`;
+  const catchers = playingPlayers(state, players).filter((player) => {
+    const suspect = state.accusations[player.playerId];
+    return !deal.saboteurs.includes(player.playerId) && suspect !== undefined && deal.saboteurs.includes(suspect);
+  });
+  const caughtLine = catchers.length === 0 ? 'Nobody named them.' : `Caught by ${catchers.map((player) => player.nickname).join(', ')}: +${CATCH_POINTS} each.`;
   return (
     <View
       style={styles.center}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`${headline} ${cutLine} The safe wire was ${deal.safe ?? 'hidden'}. Saboteurs: ${saboteurs.map((player) => player.nickname).join(', ')}.`}
+      accessibilityLabel={`${saboteurs.length === 1 ? 'The saboteur was' : 'The saboteurs were'} ${saboteurs.map((player) => player.nickname).join(' and ')}. The safe wire was ${deal.safe ?? 'hidden'}. ${caughtLine}`}
     >
-      <View style={styles.revealArt}>
-        {result.defused ? <SkiaDefused size={250} reduceMotion={reduceMotion} /> : <SkiaExplosion size={300} reduceMotion={reduceMotion} />}
-      </View>
+      <Text size={40} color={bomb.muted} tracking={4}>{saboteurs.length === 1 ? 'THE SABOTEUR WAS' : 'THE SABOTEURS WERE'}</Text>
       <Pop reduceMotion={reduceMotion}>
-        <Text size={120} weight="black" color={result.defused ? bomb.safe : bomb.danger}>{headline}</Text>
-      </Pop>
-      <Text size={48} weight="bold">
-        {cutLine}
-        {deal.safe === undefined ? '' : ` The safe wire was `}
-        {deal.safe === undefined ? null : <Text size={48} weight="black" color={WIRE_COLOR[deal.safe]}>{wireName(deal.safe)}</Text>}
-        {deal.safe === undefined ? '' : '.'}
-      </Text>
-      <View style={styles.saboteurs}>
-        <Text size={36} color={bomb.muted} tracking={4}>{saboteurs.length === 1 ? 'THE SABOTEUR' : 'THE SABOTEURS'}</Text>
         <View style={styles.saboteurRow}>
           {saboteurs.map((player) => (
             <View key={player.playerId} style={styles.saboteur}>
-              <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={112} />
-              <Text size={40} weight="bold" numberOfLines={1}>{player.nickname}</Text>
-              <Text size={32} color={(result.gains[player.playerId] ?? 0) > 0 ? bomb.hazard : bomb.muted}>
-                {(result.gains[player.playerId] ?? 0) > 0 ? `+${result.gains[player.playerId]}` : '+0'}
+              <AvatarPortrait avatarId={player.avatar} displayName={player.nickname} size={180} />
+              <Text size={56} weight="black" color={bomb.danger} numberOfLines={1}>{player.nickname}</Text>
+              <Text size={36} weight="bold" color={(result.gains[player.playerId] ?? 0) > 0 ? bomb.hazard : bomb.muted}>
+                {`+${result.gains[player.playerId] ?? 0}`}
               </Text>
             </View>
           ))}
         </View>
-      </View>
+      </Pop>
+      <Text size={44} weight="bold">
+        {deal.safe === undefined ? '' : 'The safe wire was '}
+        {deal.safe === undefined ? null : <Text size={44} weight="black" color={WIRE_COLOR[deal.safe]}>{wireName(deal.safe)}</Text>}
+        {deal.safe === undefined ? '' : '.'}
+      </Text>
+      <Text size={40} weight="bold" color={catchers.length === 0 ? bomb.muted : bomb.safe}>{caughtLine}</Text>
       <Text size={32} color={bomb.muted}>
         {`${last ? 'Final scores' : 'Next bomb'} in ${seconds}s · ${hostNickname ?? 'The host'} can move on sooner`}
       </Text>
@@ -289,11 +386,15 @@ const styles = StyleSheet.create({
   viewport: { flex: 1, backgroundColor: bomb.night, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   stage: { width: STAGE_WIDTH, height: STAGE_HEIGHT, paddingHorizontal: 96, paddingTop: 54, paddingBottom: 72 },
   label: { marginTop: 8 },
-  howTo: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 28 },
-  howToHead: { flexDirection: 'row', alignItems: 'center', gap: 24 },
+  howTo: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
+  caption: { flexDirection: 'row', alignItems: 'center', gap: 24, minWidth: 900 },
+  captionText: { textAlign: 'left' },
+  readyRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  readyText: { marginLeft: 12 },
+  tick: { position: 'absolute', right: -6, bottom: -6, width: 34, height: 34, borderRadius: 17, backgroundColor: bomb.safe, alignItems: 'center', justifyContent: 'center' },
   howToTitle: { alignItems: 'flex-start' },
   steps: { flexDirection: 'row', gap: 32 },
-  step: { width: 480, minHeight: 260, alignItems: 'center', gap: 10, padding: 28, borderRadius: 40, backgroundColor: bomb.panel, borderWidth: 4, borderColor: bomb.panelEdge },
+  step: { width: 400, minHeight: 260, alignItems: 'center', gap: 10, padding: 28, borderRadius: 40, backgroundColor: bomb.panel, borderWidth: 4, borderColor: bomb.panelEdge },
   stepNumber: { width: 72, height: 72, borderRadius: 36, backgroundColor: bomb.hazard, alignItems: 'center', justifyContent: 'center' },
   twist: { alignItems: 'center', gap: 8, paddingHorizontal: 48, paddingVertical: 20, borderRadius: 40, backgroundColor: bomb.hazard },
   stripesTop: { position: 'absolute', left: 0, top: 0 },
@@ -311,6 +412,11 @@ const styles = StyleSheet.create({
   saboteurs: { alignItems: 'center', gap: 16, marginTop: 16 },
   saboteurRow: { flexDirection: 'row', gap: 64 },
   saboteur: { alignItems: 'center', gap: 8, maxWidth: 320 },
+  accuseHead: { flexDirection: 'row', alignItems: 'center', gap: 40 },
+  voteBoard: { flexDirection: 'row', gap: 24, marginTop: 16 },
+  voteColumn: { width: 360, minHeight: 220, alignItems: 'center', gap: 10, padding: 20, borderRadius: 32, backgroundColor: bomb.panel, borderWidth: 4, borderColor: bomb.panelEdge },
+  voteWire: { width: 160, height: 16, borderRadius: 8 },
+  voteFaces: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   board: { width: 1100, gap: 12, marginTop: 16 },
   boardRow: { flexDirection: 'row', alignItems: 'center', gap: 24, paddingHorizontal: 28, paddingVertical: 8, borderRadius: 999, backgroundColor: bomb.panel },
   boardWinner: { borderWidth: 4, borderColor: bomb.hazard },

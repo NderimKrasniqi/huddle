@@ -20,15 +20,24 @@ export type RoundDeal = {
   readonly safe?: Wire;
   readonly saboteurs: readonly GamePlayerId[];
   readonly clues: Readonly<Record<GamePlayerId, Clue>>;
+  /** The four wires in a seeded order: a tied vote cuts the tied wire that comes first. */
+  readonly tieOrder?: readonly Wire[];
 };
 
-type BombPhase = 'howTo' | 'brief' | 'debate' | 'reveal' | 'finished';
+/**
+ * One round runs brief → debate → cut (the wire and the votes) → accuse (who
+ * lied?) → reveal (the saboteurs and the points).
+ */
+type BombPhase = 'howTo' | 'brief' | 'debate' | 'cut' | 'accuse' | 'reveal' | 'finished';
 
 /** How a round ended, once the wire is cut. */
 export type RoundResult = {
-  /** The wire the room cut, or null when votes tied or nobody voted. */
+  /** The wire the room cut, or null when nobody voted. */
   readonly cut: Wire | null;
+  /** Whether the top votes tied, so the bomb's own order picked the wire. */
+  readonly tied?: boolean;
   readonly defused: boolean;
+  /** Each player's points for the round; empty until the reveal, so it cannot give a saboteur away. */
   readonly gains: Readonly<Record<GamePlayerId, number>>;
 };
 
@@ -47,13 +56,19 @@ export type BombState = {
   /** How many rounds the game has; a redacted copy drops the rounds still to come. */
   readonly roundCount: number;
   readonly votes: Readonly<Record<GamePlayerId, Wire>>;
+  /** Players who tapped "Got it" on the rules; the first bomb starts once everyone here has. */
+  readonly gotIt?: readonly GamePlayerId[];
+  /** Who each player named as the saboteur this round; private until the reveal. */
+  readonly accusations: Readonly<Record<GamePlayerId, GamePlayerId>>;
   readonly debateSeconds: number;
   readonly standings: readonly BombStanding[];
   readonly results: readonly RoundResult[];
-  /** TV-safe live count of votes cast; never which wire. */
+  /** TV-safe live count of wire votes (debate) or accusations (accuse); never whose. */
   readonly votedCount?: number;
 };
 
 type BombVote = GameEvent & { readonly kind: 'vote'; readonly round: number; readonly wire: Wire };
 export type BombAdvance = GameEvent & { readonly kind: 'advance'; readonly round: number; readonly phase: BombPhase };
-export type BombEvent = BombVote | BombAdvance;
+type BombAccuse = GameEvent & { readonly kind: 'accuse'; readonly round: number; readonly suspect: GamePlayerId };
+type BombGotIt = GameEvent & { readonly kind: 'gotIt' };
+export type BombEvent = BombVote | BombAccuse | BombGotIt | BombAdvance;
