@@ -65,7 +65,7 @@ export function AvatarPortrait({
         // target in either case.
         focusable={false}
         accessible={false}
-        style={[styles.image, { width: size * 1.3, height: size * 1.3, left: -size * 0.15, top: -size * 0.2 }, imageStyle]}
+        style={[styles.image, portraitBox(size, avatarId), imageStyle]}
       />
     </View>
   );
@@ -94,6 +94,15 @@ export function AvatarPortrait({
       {image}
     </Pressable>
   );
+}
+
+/** Art that fills more of its square than the rest is drawn smaller; see PlayroomAvatar. */
+const PORTRAIT_FIT: Partial<Record<string, number>> = { puppy: 0.96, 'green-alien': 0.9 };
+
+function portraitBox(size: number, avatarId: string): ImageStyle {
+  const drawn = size * 1.3 * (PORTRAIT_FIT[avatarId] ?? 1);
+  const shift = size * 1.3 - drawn;
+  return { width: drawn, height: drawn, left: -size * 0.15 + shift / 2, top: -size * 0.2 + shift };
 }
 
 const styles = {

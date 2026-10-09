@@ -31,7 +31,8 @@
     "validate:ui-stack": "python3 tools/validate-architecture.py",
     "validate:rate-limits": "vitest run --project convex convex/convex/lib/rateLimits.test.ts convex/convex/rooms.test.ts",
     "validate:guest-profile": "vitest run --project apps apps/phone/src/features/join/identity.test.ts && vitest run --project convex convex/convex/players.test.ts",
-    "dev:local": "tools/dev-local.sh"
+    "dev:local": "tools/dev-local.sh",
+    "tv:emulator": "tools/tv-emulator.sh"
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "7.29.7",

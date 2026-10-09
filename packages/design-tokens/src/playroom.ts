@@ -36,8 +36,8 @@ export const playroomScrim = 'rgba(45, 11, 78, 0.35)';
 
 /** The five lounge covers belong to platform presentation, not game themes. */
 export const playroomCoverColors: Readonly<Record<string, string>> = {
-  trivia: '#DED2FF', voting: '#F9D9C1', 'doodle-dash': '#D8E8EC',
-  'quick-poll': '#F4E4BB', 'hot-take': '#F3D4D8',
+  trivia: '#DED2FF', voting: '#F6C7A4', 'doodle-dash': '#C3D7F0',
+  'quick-poll': '#F2D58E', 'hot-take': '#F2B9C2',
 };
 
 export type PlayroomColor = keyof typeof playroomColors;
