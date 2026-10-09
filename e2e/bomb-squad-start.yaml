@@ -1,0 +1,45 @@
+appId: tv.huddle.controller
+---
+- runFlow:
+    when:
+      visible: Join a room
+    commands:
+      - tapOn: Join a room
+- openLink: huddle://join/${CODE}
+- runFlow:
+    when:
+      visible:
+        id: identity-confirm-handoff
+    commands:
+      - tapOn:
+          id: identity-confirm-handoff
+- extendedWaitUntil:
+    visible:
+      id: identity-join
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: identity-name-hint
+    commands:
+      - tapOn:
+          id: identity-display-name
+      - inputText: Mil
+- tapOn:
+    id: identity-join
+- extendedWaitUntil:
+    visible:
+      id: toggle-game-ready
+    timeout: 60000
+- assertVisible: Bomb Squad
+- tapOn:
+    id: toggle-game-ready
+- extendedWaitUntil:
+    visible: HOW TO PLAY
+    timeout: 30000
+- tapOn: Got it
+- extendedWaitUntil:
+    visible: Check your phone.*|.*BOMB 1 OF.*
+    timeout: 30000
+- assertVisible:
+    id: bomb-phone-screen

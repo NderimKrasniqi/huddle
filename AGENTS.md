@@ -26,7 +26,7 @@ source as the fallback; do not guess about version-sensitive behavior.
 ## Verification
 
 There are no unit, render or integration tests; the project keeps end-to-end
-tests only (none exist yet). Do not add other kinds of tests. Use the smallest
+tests only, as Maestro flows in `e2e/`. Do not add other kinds of tests. Use the smallest
 check that gives confidence, and preserve unrelated dirty-worktree changes.
 
 - Typed code: `pnpm typecheck` and `pnpm lint`.
@@ -37,6 +37,9 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
 - Dependency or production-security changes: `pnpm verify:dependency-security`
   or `pnpm audit:prod`.
 - Behaviour: play it on the simulators against `pnpm dev:local`.
+- End-to-end: `pnpm e2e:bomb-squad` with `pnpm dev:local` running and the
+  phone app open on a booted iPhone simulator. It seeds a room with a fake TV
+  and three bots, then drives the phone from join to the first bomb.
 
 Record the commands run and whether a failure is introduced, pre-existing, or
 blocked by the environment.

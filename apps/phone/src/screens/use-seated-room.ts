@@ -71,8 +71,8 @@ export function useSeatedRoom({
     api.players.session,
     token === undefined ? 'skip' : { sessionToken: token },
   );
-  const browsingAt = useQuery(api.games.browsing, asSeat);
-  const setupDraft = useQuery(api.games.setup, asSeat);
+  const browsingAt = useQuery(api.gameSetup.browsing, asSeat);
+  const setupDraft = useQuery(api.gameSetup.setup, asSeat);
   const standing = lobbyStanding(roster, session.playerId);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
@@ -89,15 +89,15 @@ export function useSeatedRoom({
   const leaveRoom = useMutation(api.players.leaveRoom);
   const transferHost = useMutation(api.players.transferHost);
   const removePlayer = useMutation(api.players.removePlayer);
-  const browseGame = useMutation(api.games.browseGame);
-  const selectGame = useMutation(api.games.selectGame);
-  const configureGame = useMutation(api.games.configureGame);
-  const finalizeGameSetup = useMutation(api.games.finalizeGameSetup);
-  const reopenGameSetup = useMutation(api.games.reopenGameSetup);
-  const cancelGameSetup = useMutation(api.games.cancelGameSetup);
-  const setGameReady = useMutation(api.games.setGameReady);
-  const startCountdown = useMutation(api.games.startCountdown);
-  const stopCountdown = useMutation(api.games.stopCountdown);
+  const browseGame = useMutation(api.gameSetup.browseGame);
+  const selectGame = useMutation(api.gameSetup.selectGame);
+  const configureGame = useMutation(api.gameSetup.configureGame);
+  const finalizeGameSetup = useMutation(api.gameSetup.finalizeGameSetup);
+  const reopenGameSetup = useMutation(api.gameSetup.reopenGameSetup);
+  const cancelGameSetup = useMutation(api.gameSetup.cancelGameSetup);
+  const setGameReady = useMutation(api.gameSetup.setGameReady);
+  const startCountdown = useMutation(api.gameSetup.startCountdown);
+  const stopCountdown = useMutation(api.gameSetup.stopCountdown);
   const endGame = useMutation(api.games.endGame);
   const continueAfterDisconnect = useMutation(api.games.continueAfterDisconnect);
   const sendEvent = useMutation(api.games.sendEvent);

@@ -37,8 +37,8 @@ export function TvSessionController({
 
   const running = useQuery(api.games.running, asTv);
   const runtime = runningGameScreen(running);
-  const browsingAt = useQuery(api.games.browsing, asTv);
-  const setup = useQuery(api.games.setup, asTv);
+  const browsingAt = useQuery(api.gameSetup.browsing, asTv);
+  const setup = useQuery(api.gameSetup.setup, asTv);
   const hasBrowsing = browsingAt !== undefined && browsingAt !== null;
   const surface = tvSurface({
     runtime: runtime.kind,
