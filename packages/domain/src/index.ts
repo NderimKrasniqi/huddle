@@ -9,7 +9,6 @@ export {
   type SettingSummary,
 } from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
-export { type Arrivals, isGreeting, JUST_JOINED_MS, noteArrivals } from './just-joined';
 export { NICKNAME_MAX_LENGTH } from './nickname';
 export {
   COUNTDOWN_MS,
@@ -29,7 +28,7 @@ export {
   type RoomPhase,
   type RoomSetup,
 } from './room-phase';
-export { ROOM_EXPIRY_MS, UNJOINED_ROOM_EXPIRY_MS } from './room-expiry';
+export { ROOM_EXPIRY_MS } from './room-expiry';
 export {
   generateRoomCode,
   normalizeRoomCode,

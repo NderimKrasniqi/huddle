@@ -9,4 +9,3 @@ export const radii = {
   round: 9999,
 } as const;
 
-export type RadiusToken = keyof typeof radii;

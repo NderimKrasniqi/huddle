@@ -25,9 +25,6 @@ const COLORS = [
   playroomColors.border,
 ] as const;
 
-/** Nominal test window; production handoff waits for the spring callback. */
-export const TV_RESTORE_CHECK_DURATION_MS = 320;
-
 /** Display-only restoring spinner that resolves into a green check. */
 export function TvRestoreIndicator({
   stage,

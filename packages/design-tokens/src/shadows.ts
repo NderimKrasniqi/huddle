@@ -44,4 +44,3 @@ export const shadows = {
   },
 } as const satisfies Record<string, ShadowRecipe>;
 
-export type ShadowToken = keyof typeof shadows;

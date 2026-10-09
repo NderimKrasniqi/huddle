@@ -35,9 +35,6 @@ importers:
 
   .:
     devDependencies:
-      '@babel/plugin-transform-react-jsx':
-        specifier: 7.29.7
-        version: 7.29.7(@babel/core@7.29.7)
       '@huddle/contracts':
         specifier: workspace:*
         version: link:packages/contracts
@@ -7353,7 +7350,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.86.0': {}
 

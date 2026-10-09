@@ -74,11 +74,3 @@ export function rosterRowControls(seat: RosterSeat): readonly RosterRowControl[]
   ];
 }
 
-/**
- * Whether a row is one the Host can manage at all — the gate on making the row
- * open its controls. It is exactly the rows that offer a control, which is every
- * row but the Host's own.
- */
-export function rosterRowIsManageable(seat: RosterSeat): boolean {
-  return rosterRowControls(seat).length > 0;
-}

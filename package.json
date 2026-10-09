@@ -28,7 +28,6 @@
     "tv:emulator": "tools/tv-emulator.sh"
   },
   "devDependencies": {
-    "@babel/plugin-transform-react-jsx": "7.29.7",
     "@types/node": "catalog:",
     "@huddle/contracts": "workspace:*",
     "@huddle/domain": "workspace:*",

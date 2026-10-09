@@ -8,7 +8,6 @@ export {
   type TvRestoringRoomStage,
 } from './tv-restoring-room-screen';
 export {
-  TV_RESTORE_CHECK_DURATION_MS,
   TvRestoreIndicator,
   type TvRestoreIndicatorProps,
   type TvRestoreIndicatorStage,

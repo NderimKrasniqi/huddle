@@ -5,4 +5,3 @@ export {
   rejectionMessage,
   type PhoneGameRejection,
 } from './lifecycle-rejection';
-export { backToLobbyLabel, LEAVE_ROOM, leaveConsequence } from './lifecycle-controls';

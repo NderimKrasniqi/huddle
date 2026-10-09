@@ -1,1 +1,0 @@
-export { backToLobbyLabel } from '../../models';

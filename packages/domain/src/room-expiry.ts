@@ -17,11 +17,3 @@
  */
 export const ROOM_EXPIRY_MS = 600_000;
 
-/**
- * The retired pre-TV-session lifetime for a room nobody joined.
- *
- * Kept as an exported compatibility constant because package exports are stable
- * across this refactor. Production room lifetime now belongs to the durable TV
- * heartbeat in `rooms.openRoom`; no scheduler reads this value.
- */
-export const UNJOINED_ROOM_EXPIRY_MS = 7_200_000;

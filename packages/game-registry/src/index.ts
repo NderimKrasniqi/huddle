@@ -9,7 +9,6 @@ export {
   type CarouselWindow,
   carouselWindow,
   nextIndex,
-  previousIndex,
 } from './carousel';
 export { GAME_REGISTRY } from './registry';
 // What a client draws for the room's running game — the client-side half of
