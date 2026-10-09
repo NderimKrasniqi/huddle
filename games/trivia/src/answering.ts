@@ -1,7 +1,6 @@
 import type { GamePlayerId } from '@huddle/domain';
 
-import type { PlayableTriviaState, TriviaState } from './types';
-import { playableState } from './state';
+import type { TriviaState } from './types';
 
 /**
  * The Answer Screen as data: what one phone is looking at, given the state the
@@ -18,7 +17,7 @@ import { playableState } from './state';
  */
 
 /** What one of the four buttons is doing. */
-export type AnswerOptionState =
+type AnswerOptionState =
   /** Pressable: this player has not answered yet. */
   | 'open'
   /** The option this player locked in. */
@@ -35,7 +34,7 @@ export type AnswerOption = {
 };
 
 /** What the phone draws while a game of trivia runs. */
-export type AnswerScreen =
+type AnswerScreen =
   /** A question is up and this player is in the game that is asking it. */
   | {
       readonly kind: 'question';
@@ -70,7 +69,7 @@ const EYES_UP = {
 } as const;
 
 /** Whether this player is in the game, rather than merely in the room. */
-function isPlaying(state: PlayableTriviaState, playerId: GamePlayerId): boolean {
+function isPlaying(state: TriviaState, playerId: GamePlayerId): boolean {
   return state.standings.some((standing) => standing.playerId === playerId);
 }
 
@@ -84,13 +83,7 @@ function optionState(chosen: number | undefined, optionIndex: number): AnswerOpt
 
 /** What the phone holding `playerId` draws for the game as it stands. */
 export function answerScreen(state: TriviaState, playerId: GamePlayerId): AnswerScreen {
-  const current = playableState(state);
-
-  // Legacy launch-proof rooms remain readable, but have no playable question
-  // to expose. Keep them on a safe branded eyes-up surface.
-  if (current === undefined) {
-    return { kind: 'eyesUp', line: 'This Trivia room needs an updated game.' };
-  }
+  const current = state;
 
   if (current.phase === 'intro') {
     return { kind: 'eyesUp', line: 'Get ready — eyes up on the TV.' };

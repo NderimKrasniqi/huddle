@@ -77,7 +77,7 @@ export function noteArrivals<PlayerId>(
 }
 
 /** Whether this screen watched the player take the seat it is drawing. */
-export function isArrival<PlayerId>(seen: Arrivals<PlayerId>, playerId: PlayerId): boolean {
+function isArrival<PlayerId>(seen: Arrivals<PlayerId>, playerId: PlayerId): boolean {
   return seen.arrived.has(playerId);
 }
 

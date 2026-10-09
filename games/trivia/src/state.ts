@@ -1,6 +1,6 @@
 import type { GamePlayerId } from '@huddle/domain';
 
-import type { PlayableTriviaState, TriviaState } from './types';
+import type { TriviaState } from './types';
 
 export const INTRO_SECONDS = 3;
 
@@ -53,7 +53,7 @@ export const REVEAL_SECONDS = 30;
  * thing however it is being timed, and the hub can tell whether a state it has
  * just written started a new one (`GameDeadline`).
  */
-export function beatOf(state: PlayableTriviaState): string {
+export function beatOf(state: TriviaState): string {
   return `${state.questionIndex}:${state.phase}`;
 }
 
@@ -79,7 +79,7 @@ export function beatOf(state: PlayableTriviaState): string {
  * and neither can arrive at a different number from the same room.
  */
 export function playersCounted(
-  state: PlayableTriviaState,
+  state: TriviaState,
   awayPlayerIds: readonly GamePlayerId[] | undefined,
 ): number {
   const away = new Set(awayPlayerIds);
@@ -91,12 +91,8 @@ export function playersCounted(
 }
 
 /** How many of the current question's answers are in: the chip's numerator. */
-export function answersIn(state: PlayableTriviaState): number {
+export function answersIn(state: TriviaState): number {
   return state.standings.filter((standing) => Object.hasOwn(state.answers, standing.playerId))
     .length;
 }
 
-/** Narrow a v2 room state before selectors or deadlines read playable fields. */
-export function playableState(state: TriviaState): PlayableTriviaState | undefined {
-  return state.phase === 'entered' ? undefined : state;
-}

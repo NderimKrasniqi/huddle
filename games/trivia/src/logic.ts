@@ -17,7 +17,6 @@ import {
 } from './state';
 import { triviaEventSchema, triviaStateSchema } from './schemas';
 import type {
-  PlayableTriviaState,
   TriviaAdvance,
   TriviaEvent,
   TriviaStanding,
@@ -34,29 +33,22 @@ export {
 } from './state';
 export { triviaEventSchema, triviaStateSchema } from './schemas';
 export type {
-  LegacyTriviaState,
-  PlayableTriviaState,
-  TriviaAdvance,
+    TriviaAdvance,
   TriviaEvent,
   TriviaPhase,
   TriviaStanding,
   TriviaState,
 } from './types';
 
-export const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
-export const SPEED_BONUS_PER_CORRECT_ANSWER = 100;
-
-/** A legacy launch-proof room must remain readable but cannot be advanced. */
-function playable(state: TriviaState): PlayableTriviaState | undefined {
-  return state.phase === 'entered' ? undefined : state;
-}
+const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
+const SPEED_BONUS_PER_CORRECT_ANSWER = 100;
 
 /** Highest score first, retaining the original order for ties. */
 function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStanding[] {
   return [...standings].sort((first, second) => second.score - first.score);
 }
 
-function isPlaying(state: PlayableTriviaState, playerId: GamePlayerId): boolean {
+function isPlaying(state: TriviaState, playerId: GamePlayerId): boolean {
   return state.standings.some((standing) => standing.playerId === playerId);
 }
 
@@ -66,7 +58,7 @@ function secondsLeftOn(msRemaining: number | undefined, questionSeconds: number)
 }
 
 /** Price a correct answer using the timer selected for this game. */
-function scoreForCorrectAnswer(state: PlayableTriviaState, secondsRemaining: number): number {
+function scoreForCorrectAnswer(state: TriviaState, secondsRemaining: number): number {
   if (state.scoring !== 'speed') return FLAT_SCORE_PER_CORRECT_ANSWER;
 
   const questionSeconds = state.questionSeconds ?? QUESTION_SECONDS;
@@ -77,7 +69,7 @@ function scoreForCorrectAnswer(state: PlayableTriviaState, secondsRemaining: num
 }
 
 /** Move the current question into its shared reveal and update the standings. */
-function revealed(state: PlayableTriviaState): PlayableTriviaState {
+function revealed(state: TriviaState): TriviaState {
   const question = state.questions[state.questionIndex];
   if (question === undefined) return state;
 
@@ -95,9 +87,9 @@ function revealed(state: PlayableTriviaState): PlayableTriviaState {
 
 /** Apply a first answer only while its question is still live. */
 function answerTaken(
-  state: PlayableTriviaState,
+  state: TriviaState,
   event: Extract<TriviaEvent, { kind: 'answer' }>,
-): PlayableTriviaState {
+): TriviaState {
   const question = state.questions[state.questionIndex];
   if (
     state.phase !== 'question' ||
@@ -130,9 +122,9 @@ function answerTaken(
 
 /** Apply a server-owned deadline event to the beat it names. */
 function advanced(
-  state: PlayableTriviaState,
+  state: TriviaState,
   event: Extract<TriviaEvent, { kind: 'advance' }>,
-): PlayableTriviaState {
+): TriviaState {
   // Phones cannot advance a beat, with one exception: the Host may end the
   // break after a reveal early. `fromHost` is the hub's, never the phone's.
   if (event.playerId !== undefined && !(event.fromHost === true && event.phase === 'reveal')) return state;
@@ -154,7 +146,7 @@ function advanced(
   }
 }
 
-export const HIDDEN_CORRECT_INDEX = -2;
+const HIDDEN_CORRECT_INDEX = -2;
 
 const WITHHELD_QUESTION: TriviaQuestion = {
   text: '',
@@ -163,7 +155,7 @@ const WITHHELD_QUESTION: TriviaQuestion = {
 };
 
 /** Keep only the question the room has reached; hide its answer until reveal. */
-function questionsAsAsked(state: PlayableTriviaState): readonly TriviaQuestion[] {
+function questionsAsAsked(state: TriviaState): readonly TriviaQuestion[] {
   if (state.phase !== 'question') return state.questions.map(() => WITHHELD_QUESTION);
 
   return state.questions.map((question, index) => {
@@ -180,7 +172,7 @@ function questionsAsAsked(state: PlayableTriviaState): readonly TriviaQuestion[]
  * retain the deck.
  */
 function questionsForViewer(
-  state: PlayableTriviaState,
+  state: TriviaState,
   viewer: GamePlayerId | undefined,
 ): readonly TriviaQuestion[] {
   if (state.phase === 'question') return questionsAsAsked(state);
@@ -199,7 +191,7 @@ function questionsForViewer(
  * Nothing new: the TV can already subtract one reveal's standings from the
  * next. It just arrives in time to be drawn.
  */
-function revealGainsFor(state: PlayableTriviaState): Readonly<Record<GamePlayerId, number>> {
+function revealGainsFor(state: TriviaState): Readonly<Record<GamePlayerId, number>> {
   const question = state.questions[state.questionIndex];
   if (question === undefined) return {};
 
@@ -223,7 +215,7 @@ function forViewer(
 }
 
 /** Whether each seated player answered the question just revealed at all. */
-function revealAnsweredFor(state: PlayableTriviaState): Readonly<Record<GamePlayerId, boolean>> {
+function revealAnsweredFor(state: TriviaState): Readonly<Record<GamePlayerId, boolean>> {
   return Object.fromEntries(
     state.standings.map(({ playerId }) => [playerId, state.answers?.[playerId] !== undefined]),
   );
@@ -231,7 +223,7 @@ function revealAnsweredFor(state: PlayableTriviaState): Readonly<Record<GamePlay
 
 /** Normalize the just-revealed outcome for the shared TV projection. */
 function revealVerdictsFor(
-  state: PlayableTriviaState,
+  state: TriviaState,
 ): Readonly<Record<GamePlayerId, boolean>> {
   const question = state.questions[state.questionIndex];
   if (question === undefined) return {};
@@ -245,12 +237,11 @@ function revealVerdictsFor(
 }
 
 /** Project one state for TV or a single phone without leaking private answers. */
-export function redactTriviaStateFor(
+function redactTriviaStateFor(
   state: TriviaState,
   viewer: GamePlayerId | undefined,
 ): TriviaState {
-  const current = playable(state);
-  if (current === undefined) return state;
+  const current = state;
 
   const ownAnswer = viewer === undefined ? undefined : current.answers?.[viewer];
   const answers = current.phase === 'question' && viewer !== undefined && ownAnswer !== undefined
@@ -305,23 +296,20 @@ export const triviaGameLogic: GameLogic<TriviaState, TriviaEvent, GameSettings> 
     };
   },
   reduce: (state, event) => {
-    const current = playable(state);
-    if (current === undefined) return state;
-
     switch (event.kind) {
       case 'answer':
-        return answerTaken(current, event);
+        return answerTaken(state, event);
       case 'advance':
-        return advanced(current, event);
+        return advanced(state, event);
     }
   },
   deadline: (state) => introTimer(state) ?? questionTimer(state) ?? revealTimer(state),
   redactStateFor: redactTriviaStateFor,
-  isFinished: (state) => state.phase !== 'entered' && state.phase === 'finished',
+  isFinished: (state) => state.phase === 'finished',
 };
 
-export function introTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
-  if (state.phase === 'entered' || state.phase !== 'intro') return undefined;
+function introTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
+  if (state.phase !== 'intro') return undefined;
 
   return {
     beat: beatOf(state),
@@ -331,7 +319,7 @@ export function introTimer(state: TriviaState): GameDeadline<TriviaAdvance> | un
 }
 
 export function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
-  if (state.phase === 'entered' || state.phase !== 'question') return undefined;
+  if (state.phase !== 'question') return undefined;
 
   return {
     beat: beatOf(state),
@@ -340,8 +328,8 @@ export function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> |
   };
 }
 
-export function revealTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
-  if (state.phase === 'entered' || state.phase !== 'reveal') return undefined;
+function revealTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
+  if (state.phase !== 'reveal') return undefined;
 
   return {
     beat: beatOf(state),

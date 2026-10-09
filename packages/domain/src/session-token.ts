@@ -15,7 +15,7 @@ import type { RandomSource } from './room-code';
  * lower-case letters and digits — safe in a URL, a header or a storage key —
  * and made long rather than short.
  */
-export const SESSION_TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const SESSION_TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
 /**
  * Characters per Session Token. Twenty-four over a 36-character alphabet spans
@@ -31,7 +31,7 @@ export const SESSION_TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
  * length suggests. Length past the seed buys separation between tokens, which
  * is what the no-loop insert relies on; it does not buy unguessability.
  */
-export const SESSION_TOKEN_LENGTH = 24;
+const SESSION_TOKEN_LENGTH = 24;
 
 /**
  * One random Session Token.

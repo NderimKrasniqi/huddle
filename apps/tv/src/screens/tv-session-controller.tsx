@@ -74,7 +74,7 @@ export function TvSessionController({
 }
 
 /** Renders the resolved TV surface without owning subscriptions or lifecycle. */
-export function TvSessionPresentation({
+function TvSessionPresentation({
   surface,
   runtime,
   runtimeScreen,

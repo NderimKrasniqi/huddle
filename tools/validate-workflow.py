@@ -280,19 +280,6 @@ def main() -> int:
     validate_markdown(root)
 
     run([sys.executable, str(root / "tools" / "validate-architecture.py")], root)
-    run(
-        [
-            sys.executable,
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            str(root / "tools" / "tests"),
-            "-p",
-            "test_*.py",
-        ],
-        root,
-    )
     print("Workflow validation passed.")
     return 0
 

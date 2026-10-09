@@ -1,7 +1,7 @@
 import { type GameSettings, type GameSettingsSchema, settingsFrom } from '@huddle/domain';
 
-export const ROUND_COUNTS = [3, 5, 7] as const;
-export const DEBATE_SECONDS_OPTIONS = [30, 45, 60] as const;
+const ROUND_COUNTS = [3, 5, 7] as const;
+const DEBATE_SECONDS_OPTIONS = [30, 45, 60] as const;
 
 const ROUNDS_KEY = 'rounds';
 const DEBATE_KEY = 'debateSeconds';
@@ -27,7 +27,7 @@ export const BOMB_SETTINGS_SCHEMA: GameSettingsSchema = [
   },
 ];
 
-export type BombSettings = { readonly rounds: number; readonly debateSeconds: number };
+type BombSettings = { readonly rounds: number; readonly debateSeconds: number };
 
 export function bombSettings(chosen: GameSettings | undefined): BombSettings {
   const settled = settingsFrom(BOMB_SETTINGS_SCHEMA, chosen);

@@ -74,11 +74,8 @@ positive focus, and D-pad handlers so the TV remains a passive stage.
 | Convex | `^1.42.3` | rooms, seats, presence, setup, readiness, runtime |
 | `@convex-dev/rate-limiter` | `^0.4.2` | server-owned party-safe limits |
 | Zod | `^4.4.3` | wire and module decoding |
-| `convex-test` | `^0.0.54` | in-memory Convex integration tests |
 
-The game registry exposes five ordered catalog entries. Trivia and Voting are
-installed modules with complete loops; Doodle Dash, Quick Poll, and Hot Take
-are display-only Coming soon entries. Each playable module owns its settings,
+The game registry lists the installed games: Trivia and Bomb Squad. Each module owns its settings,
 server rules, state/deadlines, redaction, Phone controller, TV presentation,
 and Back-to-lobby boundary. Convex remains the authority; the only schema
 addition is the optional countdown state on setup.
@@ -119,16 +116,13 @@ Fast correctness and boundary checks:
 pnpm typecheck
 pnpm lint
 pnpm validate:architecture
-pnpm validate:game-contracts
-pnpm validate:routes
-pnpm validate:ui-stack
+pnpm validate:workflow
+pnpm validate:packs
 pnpm verify:bundle-seam -- <fresh-export-directory>
-pnpm test:render
 ```
 
-Convex and content checks remain available through `pnpm test:integration`,
-`pnpm validate:rate-limits`, `pnpm validate:guest-profile`, and
-`pnpm validate:packs`. Use `git diff --check` before handoff.
+The project keeps end-to-end tests only; there are no unit, render or
+integration suites. Use `git diff --check` before handoff.
 
 For bundle proof, export Phone and TV into fresh directories and run the seam
 scanner. For device proof, use the repository's scoped simulator runner:

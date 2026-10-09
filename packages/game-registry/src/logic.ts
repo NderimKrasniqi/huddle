@@ -1,17 +1,14 @@
 import type { GameLogic, GameLogicRegistry } from '@huddle/contracts';
 import { triviaGameLogic } from '@huddle/game-trivia/logic';
 import { bombSquadGameLogic } from '@huddle/game-bomb-squad/logic';
-import { votingGameLogic } from '@huddle/game-voting/logic';
 
 import { clampBrowsingIndex } from './browsing';
-import { CAROUSEL_PLACEHOLDER_COUNT } from './carousel-catalog';
 
 /**
  * The installed games as the server holds them: rules only, no screens.
  *
  * Same installed games as `./registry` and in the same order — `registry.test.ts`
- * is what holds the two lists to each other. The client carousel may append
- * reference-only cards, but this list remains playable games only. It is a
+ * is what holds the two lists to each other. It is a
  * separate entry point rather than a filter over the other list because the
  * point is what is *not* imported: the
  * Convex mutations that seed and reduce a game's state reach for this one, and
@@ -19,7 +16,7 @@ import { CAROUSEL_PLACEHOLDER_COUNT } from './carousel-catalog';
  * Each game's `/logic` entry point is taken here, so the two `/logic` exports
  * are all the server ever pulls in.
  */
-export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, votingGameLogic, bombSquadGameLogic];
+export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, bombSquadGameLogic];
 
 /**
  * The installed game answering to `gameId`, or `undefined` if none does.
@@ -33,16 +30,12 @@ export function gameLogicById(gameId: string): GameLogic | undefined {
 }
 
 /**
- * The carousel index, clamped for the server.
- *
- * The client carousel includes the three reference-only positions declared in
- * `./carousel-catalog`; keeping their count in this server-safe file means the
- * room never stores a position the two sides would reinterpret differently.
+ * The carousel index, clamped for the server to the installed games.
  *
  * It goes through `./browsing` and emphatically not through `./carousel`:
  * re-exporting it from there put `GAME_REGISTRY` and every screen it holds into
  * the Convex bundle, which is the one thing this entry point exists to prevent.
  */
 export function browsingIndex(stored: number | undefined | null): number {
-  return clampBrowsingIndex(stored, GAME_LOGIC_REGISTRY.length + CAROUSEL_PLACEHOLDER_COUNT);
+  return clampBrowsingIndex(stored, GAME_LOGIC_REGISTRY.length);
 }

@@ -22,7 +22,7 @@ export type RoundDeal = {
   readonly clues: Readonly<Record<GamePlayerId, Clue>>;
 };
 
-export type BombPhase = 'howTo' | 'brief' | 'debate' | 'reveal' | 'finished';
+type BombPhase = 'howTo' | 'brief' | 'debate' | 'reveal' | 'finished';
 
 /** How a round ended, once the wire is cut. */
 export type RoundResult = {
@@ -32,7 +32,7 @@ export type RoundResult = {
   readonly gains: Readonly<Record<GamePlayerId, number>>;
 };
 
-export type BombStanding = { readonly playerId: GamePlayerId; readonly score: number };
+type BombStanding = { readonly playerId: GamePlayerId; readonly score: number };
 
 export type BombState = {
   readonly phase: BombPhase;
@@ -54,6 +54,6 @@ export type BombState = {
   readonly votedCount?: number;
 };
 
-export type BombVote = GameEvent & { readonly kind: 'vote'; readonly round: number; readonly wire: Wire };
+type BombVote = GameEvent & { readonly kind: 'vote'; readonly round: number; readonly wire: Wire };
 export type BombAdvance = GameEvent & { readonly kind: 'advance'; readonly round: number; readonly phase: BombPhase };
 export type BombEvent = BombVote | BombAdvance;

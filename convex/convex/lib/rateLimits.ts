@@ -12,7 +12,6 @@ export const RATE_LIMITS = {
   joinGuest: { kind: 'token bucket' as const, rate: 60, period: MINUTE, capacity: 120 },
   memberCommand: { kind: 'token bucket' as const, rate: 180, period: MINUTE, capacity: 360 },
   hostCommand: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 240 },
-  tvCommand: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 240 },
   gameEvent: { kind: 'token bucket' as const, rate: 30, period: SECOND, capacity: 60 },
   seatPreviewRoom: { kind: 'token bucket' as const, rate: 600, period: MINUTE, capacity: 300 },
   seatPreviewKey: { kind: 'token bucket' as const, rate: 120, period: MINUTE, capacity: 60 },
@@ -50,9 +49,6 @@ export async function limitHostCommand(ctx: MutationCtx, credential: string): Pr
   await consume(ctx, 'hostCommand', credential, 'hostCommand');
 }
 
-export async function limitTvCommand(ctx: MutationCtx, credential: string): Promise<void> {
-  await consume(ctx, 'tvCommand', credential, 'tvCommand');
-}
 
 export async function limitGameEvent(ctx: MutationCtx, credential: string): Promise<void> {
   await consume(ctx, 'gameEvent', credential, 'gameEvent');

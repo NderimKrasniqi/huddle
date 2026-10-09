@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
-import { tvHostCopy } from './game-flow-model';
+import { tvHostCopy, gameTitleFor } from './game-flow-model';
 import { TvPlayroomFrame } from './playroom-frame';
 
 export const TV_GAME_ART_REVEAL_DURATION_MS = 900;
@@ -33,7 +33,7 @@ export function TvSelectedGameArtScreen({
   reduceMotion = false,
   onComplete,
 }: TvSelectedGameArtScreenProps) {
-  const title = gameTitle?.trim() || titleForGame(gameId);
+  const title = gameTitle?.trim() || gameTitleFor(gameId);
   const art = playroomGameArt(gameId);
   const copy = tvHostCopy(hostName, 'is choosing settings on the phone.');
   const completeRef = useRef(onComplete);
@@ -83,12 +83,6 @@ export function TvSelectedGameArtScreen({
       </PlayroomTvStage>
     </View>
   );
-}
-
-function titleForGame(gameId: string): string {
-  if (gameId === 'trivia') return 'Trivia';
-  if (gameId === 'voting') return 'Voting';
-  return 'Game';
 }
 
 const styles = StyleSheet.create({

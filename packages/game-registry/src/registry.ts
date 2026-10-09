@@ -1,21 +1,13 @@
 import type { GameRegistry } from '@huddle/contracts';
 import { triviaGameModule } from '@huddle/game-trivia';
 import { bombSquadGameModule } from '@huddle/game-bomb-squad';
-import { votingGameModule } from '@huddle/game-voting';
 
 /**
- * The installed games, in the order the hub offers them.
- *
- * This is the client-side registration seam. The TV's carousel and the Host's
- * picker read a game out of it and render it through the client contract. The
- * server intentionally has a separate `GAME_LOGIC_REGISTRY` in `logic.ts` so
- * Convex never pulls React Native screens or client art into its bundle. The
- * parity and bundle-seam tests keep these two lists aligned without collapsing
- * their ownership.
- *
- * Voting joining Trivia here is that promise kept: a whole second game — a
- * different loop, a different player range, private votes and no scoring — is
- * installed by one matching import/entry in each registry seam, with not a line
- * of the hub touched to carry it.
+ * The installed games, in the order the hub offers them: the client-side
+ * registration seam. The TV's shelf and the Host's picker read a game out of
+ * it and render it through the client contract. The server has a separate
+ * `GAME_LOGIC_REGISTRY` in `logic.ts`, so Convex never pulls React Native
+ * screens or client art into its bundle; `registry.test.ts` keeps the two
+ * lists aligned. Adding a game is one import and one entry in each.
  */
-export const GAME_REGISTRY: GameRegistry = [triviaGameModule, votingGameModule, bombSquadGameModule];
+export const GAME_REGISTRY: GameRegistry = [triviaGameModule, bombSquadGameModule];

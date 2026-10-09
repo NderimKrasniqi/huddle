@@ -20,6 +20,7 @@ import {
   type TvGamePlayer,
   type TvSetupSetting,
   type TvSetupSettings,
+  gameTitleFor,
 } from './game-flow-model';
 import { TvReadyCheckScreen } from './game-ready-screen';
 import { TvPlayroomFrame, TvRosterRow } from './playroom-frame';
@@ -66,7 +67,7 @@ function SetupBoard({
   players = [],
   reduceMotion = false,
 }: TvGameSetupScreenProps) {
-  const title = gameTitle?.trim() || titleForGame(gameId);
+  const title = gameTitle?.trim() || gameTitleFor(gameId);
   const setupSettings = visibleTvSetupSettings(gameId, settings, settingsSchema);
   const host = players.find((player) => player.isHost);
   const others = players.filter((player) => !player.isHost);
@@ -151,12 +152,6 @@ function SettingRow({ setting, reduceMotion }: { readonly setting: TvSetupSettin
       <PlayroomText style={styles.rowValue}>{setting.value}</PlayroomText>
     </View>
   );
-}
-
-function titleForGame(gameId: string): string {
-  if (gameId === 'trivia') return 'Trivia';
-  if (gameId === 'voting') return 'Voting';
-  return 'Game';
 }
 
 const styles = StyleSheet.create({

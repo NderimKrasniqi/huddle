@@ -25,49 +25,21 @@ source as the fallback; do not guess about version-sensitive behavior.
 
 ## Verification
 
-Use the smallest verification set that gives confidence. Validation is not a
-quota: do not create a new test or run every available command just because a
-file changed. Preserve unrelated dirty-worktree changes and distinguish failures
-introduced by the current change from failures that were already present.
+There are no unit, render or integration tests; the project keeps end-to-end
+tests only (none exist yet). Do not add other kinds of tests. Use the smallest
+check that gives confidence, and preserve unrelated dirty-worktree changes.
 
-1. When an existing focused test covers the changed behavior, run it first. For
-   example:
-
-   ```bash
-   pnpm exec vitest run <affected-test-file>
-   ```
-
-2. Otherwise choose the single most relevant specialized validation, typecheck,
-   build, inspection, or smoke test for the changed area. Examples include:
-
-   - workflow changes: `pnpm validate:workflow`
-   - architecture or boundary changes: `pnpm validate:architecture`, and when
-     applicable `pnpm validate:routes`, `pnpm validate:native-identity`,
-     `pnpm validate:boundaries`, or `pnpm validate:ui-stack`
-   - game content or contracts: `pnpm validate:packs` or
-     `pnpm validate:game-contracts`
-   - rate limits or guest identity: `pnpm validate:rate-limits` or
-     `pnpm validate:guest-profile`
-   - client/server bundle boundaries: `pnpm verify:bundle-seam`
-
-   For typed code, use `pnpm typecheck` when it is the highest-signal check.
-   Use `pnpm lint`, `pnpm test:unit`, or `pnpm test:integration` only when the
-   changed area or failure mode makes that command relevant.
-
-3. Add or update regression coverage only for a reproducible bug, meaningful
-   logic or contract change, security-sensitive behavior, or important state
-   transition. Copy, styling, documentation, configuration, simple wiring, and
-   behavior-preserving refactors normally do not justify new tests.
-
-4. Broaden to multiple checks or full `pnpm test` only for cross-cutting,
-   high-risk, release-level work, or when the narrower check does not cover the
-   affected paths. Use
-   `pnpm verify:dependency-security` or `pnpm audit:prod` when dependency or
-   production-security changes warrant them.
+- Typed code: `pnpm typecheck` and `pnpm lint`.
+- Architecture or boundary changes: `pnpm validate:architecture`.
+- Docs and scripts: `pnpm validate:workflow`.
+- Trivia question content: `pnpm validate:packs`.
+- Client/server bundle boundaries: `pnpm verify:bundle-seam` on a fresh export.
+- Dependency or production-security changes: `pnpm verify:dependency-security`
+  or `pnpm audit:prod`.
+- Behaviour: play it on the simulators against `pnpm dev:local`.
 
 Record the commands run and whether a failure is introduced, pre-existing, or
-blocked by the environment. Do not “fix” an unrelated failure by rewriting
-unrelated code.
+blocked by the environment.
 
 ## Working notes
 
@@ -92,10 +64,9 @@ unrelated code.
   `CosmicText`) rather than a bare `Text`. They cap how far type follows the
   system text size (`fontScaleCap`), so display headings do not split
   mid-word at the largest accessibility sizes.
-- Trivia and Voting keep `playerRange.min: 1` so a single device can test the
-  whole flow.
-- Check visual changes on the iPhone simulator and the Android TV emulator,
-  not only in render tests. Cover a guest phone, ten players, long names,
+- Trivia keeps `playerRange.min: 1` so a single device can test the whole flow;
+  Bomb Squad needs 3 players (use the bot scripts or more simulators).
+- Check visual changes on the iPhone simulator and the Android TV emulator. Cover a guest phone, ten players, long names,
   reduced motion and the largest text size when the change touches them.
 
 ## GitHub publishing from Codex

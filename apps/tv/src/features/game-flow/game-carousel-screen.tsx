@@ -89,21 +89,20 @@ function GameCard({
   readonly selected: boolean;
   readonly reduceMotion: boolean;
 }) {
-  const available = card.available !== false;
   return (
     <Animated.View
       // A new key when selection moves replays the settle on the new card only.
       key={selected ? 'selected' : 'side'}
       entering={selected && !reduceMotion ? SELECT : undefined}
-      style={[styles.card, !available ? styles.soon : null, selected ? styles.selected : null]}
+      style={[styles.card, selected ? styles.selected : null]}
       pointerEvents="none"
       focusable={false}
       accessible
-      accessibilityLabel={`${card.title}${available ? '' : ', coming soon'}${selected ? ', selected' : ''}`}
+      accessibilityLabel={`${card.title}${selected ? ', selected' : ''}`}
       testID={`tv-game-card-${card.id}`}
     >
       <PlayroomGameCover gameId={card.id} height={selected ? 280 : 235} style={styles.cover} />
-      <PlayroomText color={available ? 'ink' : 'muted'} numberOfLines={1} style={selected ? styles.titleSelected : styles.title}>
+      <PlayroomText numberOfLines={1} style={selected ? styles.titleSelected : styles.title}>
         {card.title}
       </PlayroomText>
       {card.subtitle !== undefined ? (
@@ -112,8 +111,8 @@ function GameCard({
         </PlayroomText>
       ) : null}
       {/* A white pill on the lavender selection or a grey coming-soon card, lavender on a white card. */}
-      <PlayroomPill tone={selected || !available ? 'surface' : 'lavender'} textStyle={playroomTv.type.caption} style={styles.pill}>
-        {available ? 'Available' : 'Coming soon'}
+      <PlayroomPill tone={selected ? 'surface' : 'lavender'} textStyle={playroomTv.type.caption} style={styles.pill}>
+        Available
       </PlayroomPill>
     </Animated.View>
   );
@@ -164,9 +163,6 @@ const styles = StyleSheet.create({
     width: 820,
     backgroundColor: playroomColors.lavender,
     borderColor: playroomColors.ink,
-  },
-  soon: {
-    backgroundColor: playroomColors.disabled,
   },
   art: {
     width: '100%',

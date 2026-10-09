@@ -67,7 +67,7 @@ export type RoomInvitationPlayer = {
 };
 
 /** Someone on the join form: the avatar and name they are picking. */
-export type RoomInvitationArrival = {
+type RoomInvitationArrival = {
   readonly id: string;
   readonly name: string;
   readonly avatarId: AvatarId;

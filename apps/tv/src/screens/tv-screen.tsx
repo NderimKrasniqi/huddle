@@ -8,7 +8,7 @@ import {
 import { useRoomOpening } from '../platform/room-session/native';
 import { TvSessionController } from './tv-session-controller';
 
-export function shouldRestoreTvRoom(room: OpenRoom): boolean {
+function shouldRestoreTvRoom(room: OpenRoom): boolean {
   return room.restored && !room.hasRunningGame;
 }
 

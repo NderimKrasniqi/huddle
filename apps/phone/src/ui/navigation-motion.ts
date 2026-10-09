@@ -1,4 +1,4 @@
-export type PhoneStackAnimation = 'none' | 'fade' | 'slide_from_bottom';
+type PhoneStackAnimation = 'none' | 'fade' | 'slide_from_bottom';
 
 /**
  * Navigation stays static until the system preference has resolved. This

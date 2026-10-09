@@ -73,7 +73,7 @@ export function settingsToStart(
 }
 
 /** One value the Host may pick, and whether it is the one standing. */
-export type SettingOptionControl = {
+type SettingOptionControl = {
   readonly value: string;
   readonly label: string;
   readonly chosen: boolean;

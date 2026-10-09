@@ -34,10 +34,9 @@ export const playroomColors = {
 /** Ink at 35%: the dim behind a sheet or modal. */
 export const playroomScrim = 'rgba(45, 11, 78, 0.35)';
 
-/** The five lounge covers belong to platform presentation, not game themes. */
+/** Shelf cover colours belong to platform presentation, not game themes. */
 export const playroomCoverColors: Readonly<Record<string, string>> = {
-  trivia: '#DED2FF', voting: '#F6C7A4', 'bomb-squad': '#CFEBDC', 'doodle-dash': '#C3D7F0',
-  'quick-poll': '#F2D58E', 'hot-take': '#F2B9C2',
+  trivia: '#DED2FF', 'bomb-squad': '#CFEBDC',
 };
 
 export type PlayroomColor = keyof typeof playroomColors;

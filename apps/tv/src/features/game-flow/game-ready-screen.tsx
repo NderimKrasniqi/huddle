@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { tvHostCopy, tvReadiness, type TvGamePlayer } from './game-flow-model';
+import { tvHostCopy, tvReadiness, type TvGamePlayer, gameTitleFor } from './game-flow-model';
 import type { TvGameSetupScreenProps } from './game-setup-screen';
 import { TvPlayroomFrame } from './playroom-frame';
 
@@ -28,7 +28,7 @@ export function TvReadyCheckScreen({
   stage = 'ready',
   reduceMotion = false,
 }: TvGameSetupScreenProps) {
-  const title = gameTitle?.trim() || (gameId === 'trivia' ? 'Trivia' : gameId === 'voting' ? 'Voting' : 'Game');
+  const title = gameTitle?.trim() || gameTitleFor(gameId);
   const { readyCount, playerCount, allReady, minPlayers } = tvReadiness({ gameId, stage, players, readyPlayerIds, playerRange });
   const isReady = (player: TvGamePlayer) => player.away !== true && readyPlayerIds.includes(player.id);
   const waiting = players.filter((player) => !isReady(player)).map((player) => player.name);

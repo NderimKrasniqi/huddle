@@ -1,5 +1,10 @@
 # Huddle implementation plan
 
+> **Current state:** the installed games are Trivia and Bomb Squad. Voting and
+> the Coming soon cards were removed, and the project keeps end-to-end tests
+> only. The sections below are the historical log and mention them as they
+> were at the time.
+
 ## Execution state
 
 **Current phase:** Playroom redesign, Cosmic Quiz Trivia, the visual polish

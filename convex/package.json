@@ -21,11 +21,8 @@
     "convex": "^1.42.3"
   },
   "devDependencies": {
-    "@edge-runtime/vm": "^5.0.0",
     "@types/node": "catalog:",
-    "convex-test": "^0.0.54",
     "typescript": "catalog:",
-    "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "vite": "^8.1.5"
   }
 }

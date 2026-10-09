@@ -1,4 +1,5 @@
 import type { GameModule, GamePlayer } from '@huddle/domain';
+import { gameModuleById } from '@huddle/game-registry';
 import { playroomColors, playroomTv } from '@huddle/design-tokens';
 import {
   PlayroomAvatar,
@@ -50,7 +51,7 @@ export function TvRuntimeStatus({
   const paused = kind === 'paused';
   const waitingForPlayers = paused && reason === 'playerDisconnected';
   const normalizedCode = roomCode.trim().toUpperCase().slice(0, 4);
-  const gameTitle = titleForGame(gameId);
+  const gameTitle = gameModuleById(gameId)?.metadata.title ?? 'Game';
   const missing = players.filter((player) => player.away);
   const host = players.find((player) => player.host);
   const message = paused
@@ -113,10 +114,6 @@ export function TvRuntimeStatus({
 
 function StatusBoundary({ children }: { readonly children: ReactNode }) {
   return <>{children}</>;
-}
-
-function titleForGame(gameId: string): string {
-  return gameId.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const styles = StyleSheet.create({

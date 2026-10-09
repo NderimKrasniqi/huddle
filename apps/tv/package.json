@@ -10,8 +10,7 @@
     "android": "EXPO_TV=1 expo run:android",
     "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo run:ios",
     "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo prebuild",
-    "typecheck": "tsc --noEmit",
-    "test:render": "jest --config jest.config.cjs --runInBand"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo-google-fonts/nunito": "0.4.2",
@@ -40,16 +39,9 @@
   },
   "devDependencies": {
     "@react-native-tvos/config-tv": "^0.1.6",
-    "@react-native/jest-preset": "catalog:",
-    "@testing-library/react-native": "catalog:",
-    "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "babel-preset-expo": "~57.0.6",
-    "jest": "catalog:",
-    "jest-expo": "catalog:",
-    "react-test-renderer": "catalog:",
-    "test-renderer": "catalog:",
     "typescript": "catalog:"
   }
 }

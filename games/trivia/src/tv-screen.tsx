@@ -69,7 +69,7 @@ export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname 
   const reduceMotion = useReducedMotion();
   const [skyShown, showStage] = useSkyFirst();
   const phase = state.phase;
-  const beat = phase === 'entered' || !('questionIndex' in state) ? 'legacy' : `${state.questionIndex}:${phase}`;
+  const beat = `${state.questionIndex}:${phase}`;
   const seconds = useCountdownSeconds(
     phase === 'intro' || phase === 'question' || phase === 'reveal' ? clockRemainingMs : undefined,
     phase === 'intro'
@@ -96,7 +96,6 @@ export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname 
           <View style={styles.logo} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <Logo width={330} on="dark" />
           </View>
-          {screen.kind === 'legacy' ? <LegacyStage questionCount={screen.questionCount} /> : null}
           {screen.kind === 'intro' ? (
             <IntroStage key="intro" screen={screen} players={players} seconds={seconds} reduceMotion={reduceMotion} />
           ) : null}
@@ -113,21 +112,6 @@ export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname 
   );
 }
 
-function LegacyStage({ questionCount }: { readonly questionCount: 5 | 10 }) {
-  return (
-    <View
-      style={styles.centered}
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={`Trivia needs an update. This room was set up for ${questionCount} questions with an older version. Return to the room to start a new round.`}
-    >
-      <CosmicText weight="black" size={88} color={cosmic.cream} align="center">Room needs an update</CosmicText>
-      <CosmicText size={40} color={cosmic.cream} align="center" style={{ marginTop: 24, maxWidth: 1200 }}>
-        This room was set up for {questionCount} questions with an older version. Return to the room to start a new round.
-      </CosmicText>
-    </View>
-  );
-}
 
 function IntroStage({
   screen,

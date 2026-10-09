@@ -23,7 +23,7 @@ export type { IdentityStore, PlayerIdentity } from '../../models';
  */
 const NOTHING_REMEMBERED: PlayerIdentity = { nickname: null, avatar: null };
 
-export type GuestIdFactory = () => string;
+type GuestIdFactory = () => string;
 
 /**
  * The remembered identity as its two fields, or nothing-remembered for anything
@@ -38,7 +38,7 @@ export type GuestIdFactory = () => string;
  * `nicknameEntry` the field uses, so a stored value cannot outrun the rule the
  * keyboard is held to; an avatar is kept only if it still names one.
  */
-export function parseIdentity(raw: string | null): PlayerIdentity {
+function parseIdentity(raw: string | null): PlayerIdentity {
   if (raw === null) {
     return NOTHING_REMEMBERED;
   }

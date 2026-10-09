@@ -10,12 +10,7 @@ export type TriviaStanding = {
   readonly score: number;
 };
 
-export type LegacyTriviaState = {
-  readonly phase: 'entered';
-  readonly resolvedSettings: { readonly questions: 5 | 10 };
-};
-
-export type PlayableTriviaState = {
+export type TriviaState = {
   readonly questions: readonly TriviaQuestion[];
   readonly questionIndex: number;
   readonly questionSeconds?: QuestionSeconds;
@@ -46,9 +41,6 @@ export type PlayableTriviaState = {
   readonly scoring?: ScoringMode;
 };
 
-/** v2 keeps the original launch-proof state readable beside playable Trivia. */
-export type TriviaState = LegacyTriviaState | PlayableTriviaState;
-
 export type TriviaEvent =
   | {
       readonly kind: 'answer';
@@ -71,6 +63,3 @@ export type TriviaEvent =
 
 export type TriviaAdvance = Extract<TriviaEvent, { kind: 'advance' }>;
 
-export function isPlayableTriviaState(state: TriviaState): state is PlayableTriviaState {
-  return state.phase !== 'entered';
-}

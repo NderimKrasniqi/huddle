@@ -5,7 +5,7 @@ import { type Clue, type RoundDeal, type Wire, WIRES } from './types';
 const WARM: readonly Wire[] = ['red', 'yellow'];
 
 /** How many different true clues one round hands out. */
-export const DISTINCT_TRUTHS = 2;
+const DISTINCT_TRUTHS = 2;
 const LEFT: readonly Wire[] = ['red', 'blue'];
 
 /**
@@ -13,7 +13,7 @@ const LEFT: readonly Wire[] = ['red', 'blue'];
  * each has two neighbours, so the clue narrows the answer to two wires. "Next
  * to red" would name blue outright and end the round on one phone.
  */
-export const ALL_CLUES: readonly Clue[] = [
+const ALL_CLUES: readonly Clue[] = [
   ...WIRES.map((wire) => ({ kind: 'not', wire }) as const),
   { kind: 'tone', tone: 'warm' },
   { kind: 'tone', tone: 'cool' },

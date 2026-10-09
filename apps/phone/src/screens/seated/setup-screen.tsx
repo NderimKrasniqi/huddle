@@ -34,7 +34,7 @@ import type { BusyAction } from '../use-seated-room';
 import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 
-export type SetupScreenProps = {
+type SetupScreenProps = {
   readonly module: GameModule;
   readonly setup: {
     readonly gameId: string;

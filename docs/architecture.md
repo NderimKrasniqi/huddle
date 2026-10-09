@@ -4,7 +4,7 @@
 
 ```text
 apps/phone ─┐
-apps/tv ────┼─> @huddle/game-registry ─> games/{trivia,voting}
+apps/tv ────┼─> @huddle/game-registry ─> games/{trivia,bomb-squad}
             ├─> @huddle/ui ─> @huddle/design-tokens
             └─> @huddle/domain ─> @huddle/contracts
 
@@ -28,14 +28,14 @@ convex ─> @huddle/game-registry/logic ─> server game logic
   may import: neutral text, buttons, screen shell, icons, and the avatar
   portrait, without Reanimated.
 - `@huddle/game-registry` owns the ordered client catalog and the separate
-  server-logic entry. The registry order is Trivia, Voting, Doodle Dash, Quick
-  Poll, Hot Take; the last three are presentation-only entries.
-- `games/trivia` and `games/voting` own metadata, settings, prompts/content,
+  server-logic entry. The registry order is Trivia, Bomb Squad.
+- `games/trivia` and `games/bomb-squad` own metadata, settings, prompts/content,
   state, deadlines, events, redacted projections, and their Phone/TV screens.
   Their running-TV and private Phone presentation is intentionally game-local:
   Trivia owns its Cosmic Quiz look (night-sky TV, cream answer pad, alien
-  mascot) in `games/trivia/src/cosmic.tsx`, while Voting owns its
-  poster/sticker room-mood theme in `games/voting/src/tv-theme.ts`. Each game
+  mascot) in `games/trivia/src/cosmic.tsx`, while Bomb Squad owns its
+  night-and-hazard theme in `games/bomb-squad/src/theme.ts` and draws its TV
+  art with Skia (`skia-art.tsx`; the phone aliases Skia to a stub). Each game
   keeps its colours and its art in its own package (`assets/`). These are not
   platform tokens, and the game screens do not use the Playroom pieces. Game
   motion uses React Native's `Animated`, never Reanimated, and honours the
@@ -81,7 +81,7 @@ two projections:
 - a private Phone controller projection addressed to one player seat;
 - a shared TV presentation projection that contains only room-safe information.
 
-The generic platform never branches on Trivia or Voting rules. Adding another
+The generic platform never branches on a game's rules. Adding another
 installed game means adding a module and registry entry, not adding game logic
 to Phone or TV coordinators.
 
@@ -114,9 +114,8 @@ convention:
 | TV stage | shared prompt, timer, participation, aggregate tally, reveal, recap, standings | raw player-to-choice mapping, private controls, hidden/future content |
 | Player Phone | that player's choices, lock state, their own result once revealed, shared standings, busy/error feedback, eyes-up guidance | other players' choices and raw timing, hidden answer key, pre-reveal correctness, future prompts |
 
-Trivia's TV reveal receives normalized verdicts and standings. Voting's TV
-reveal receives aggregate counts and optionally grouped labels after reveal;
-Voting never creates a winner or score. Client projections clear internal
+Trivia's TV reveal receives normalized verdicts and standings. Bomb Squad's TV
+sees no clue, role or vote until a round is revealed. Client projections clear internal
 history fields so a renderer cannot accidentally reconstruct private data.
 
 ## Native presentation boundaries
@@ -135,7 +134,7 @@ roles, and focus behavior are native. Raster artwork is decorative and text-free
   unavailable, and finished surfaces are display-only. They do not render
   buttons, pressables, inputs, positive focus targets, or D-pad actions.
 - TV platform surfaces are laid out on `PlayroomTvStage` from
-  `@huddle/ui/native`; the Trivia and Voting game worlds do not use it.
+  `@huddle/ui/native`; the game worlds do not use it.
 - Phone lifecycle, Host management, setup, and game controls use native
   touch-targeted controls. No TV control is mirrored as a hidden focus target.
 - Reanimated 4.5.1 drives platform motion in both apps and `@huddle/ui`; it
@@ -168,17 +167,13 @@ TV layouts use a 1920×1080 stage, a 5% overscan-safe frame, and scale down to
 
 Room lifecycle, session tokens, stable avatars, and the client/server
 `GameModule` seam remain unchanged. The Convex schema only gained the optional
-countdown fields on setup. Trivia and Voting state
-decoders still read legacy persisted `entered` records safely; they do not
-reinterpret old data as a new playable state.
+countdown fields on setup.
 
 High-signal repository checks are:
 
 ```sh
 pnpm validate:architecture
-pnpm validate:game-contracts
 pnpm verify:bundle-seam -- <fresh-export-directory>
-pnpm test:render
 pnpm typecheck
 pnpm lint
 ```

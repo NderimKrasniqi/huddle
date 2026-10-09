@@ -1,7 +1,7 @@
 import type { AvatarId, GameModule } from '@huddle/domain';
 import { playroomColors, playroomPhone, playroomRadii } from '@huddle/design-tokens';
-import { CAROUSEL_REGISTRY, carouselWindow } from '@huddle/game-registry';
-import { PlayroomAvatar, PlayroomButton, PlayroomHeading, PlayroomPill, PlayroomPressable, PlayroomText, PlayroomGameCover } from '@huddle/ui/native';
+import { GAME_REGISTRY, carouselWindow } from '@huddle/game-registry';
+import { PlayroomAvatar, PlayroomButton, PlayroomHeading, PlayroomPressable, PlayroomText, PlayroomGameCover } from '@huddle/ui/native';
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
@@ -12,7 +12,7 @@ import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import { RoomFaces } from './room-faces';
 
-export type PickerScreenProps = {
+type PickerScreenProps = {
   readonly browsingAt: number;
   readonly youAreHost: boolean;
   readonly hostNickname?: string;
@@ -49,18 +49,17 @@ export function PickerScreen({
   const window = carouselWindow(browsingAt);
   const index = window?.index ?? 0;
   const focused = window?.focused;
-  const controls = pickerControlState({ youAreHost, focusedPlaceholder: focused?.placeholder === true, busy: busy !== null });
+  const controls = pickerControlState({ youAreHost, busy: busy !== null });
   if (focused === undefined) return null;
-  const soon = focused.placeholder === true;
 
   return (
     <PhoneFrame
       avatarId={you?.avatarId}
       testID="phone-game-picker"
-      footer={youAreHost ? <><HostSteps current="Game" /><PlayroomButton label={soon ? 'Coming soon' : `Set up ${focused.metadata.title}`}
+      footer={youAreHost ? <><HostSteps current="Game" /><PlayroomButton label={`Set up ${focused.metadata.title}`}
         onPress={() => onChoose(focused)} busy={busy === 'select'} disabled={!controls.selectEnabled}
-        accessibilityLabel={soon ? `${focused.metadata.title}, coming soon` : `Set up ${focused.metadata.title}`}
-        testID={soon ? 'picker-coming-soon' : 'picker-select'} /></> : <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" />}
+        accessibilityLabel={`Set up ${focused.metadata.title}`}
+        testID="picker-select" /></> : <PlayroomButton label="Leave room" variant="link" onPress={onLeave} accessibilityLabel="Leave room" testID="picker-leave" />}
     >
       <PhoneTopBar
         back={youAreHost ? { label: 'Room', onPress: onBackToRoom, testID: 'picker-back-top' } : undefined}
@@ -83,21 +82,18 @@ export function PickerScreen({
           onPress={() => onBrowse(index)}
           disabled={controls.cardAction === null}
           accessibilityRole={youAreHost ? 'button' : 'image'}
-          accessibilityLabel={`${focused.metadata.title}${soon ? ', coming soon' : ''}`}
+          accessibilityLabel={focused.metadata.title}
           testID={`phone-game-card-${focused.metadata.id}`}
         >
           <PhoneCard style={styles.featured}>
             {/* Guests also see the room below, so their cover is a little smaller. */}
             <PlayroomGameCover gameId={focused.metadata.id} height={youAreHost ? 180 : 140} style={styles.cover} />
-            <PlayroomText color={soon ? 'muted' : 'ink'} style={playroomPhone.type.hero}>
+            <PlayroomText style={playroomPhone.type.hero}>
               {focused.metadata.title}
             </PlayroomText>
             <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
               {focused.metadata.tagline ?? focused.metadata.category}
             </PlayroomText>
-            {soon ? (
-              <PlayroomPill tone="disabled" textStyle={playroomPhone.type.caption}>Coming soon</PlayroomPill>
-            ) : null}
           </PhoneCard>
         </PlayroomPressable>
       )}
@@ -141,15 +137,14 @@ function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly
       }}
       onMomentumScrollEnd={(event) => {
         moving.current = false;
-        const next = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / (SHELF_CARD + SHELF_GAP)), 0), CAROUSEL_REGISTRY.length - 1);
+        const next = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / (SHELF_CARD + SHELF_GAP)), 0), GAME_REGISTRY.length - 1);
         // While a previous move is still landing, put the shelf back where the room is.
         if (busy) settle(index);
         else if (next !== index) onBrowse(next);
       }}
       testID="phone-game-shelf"
     >
-      {CAROUSEL_REGISTRY.map((module, position) => {
-        const soon = module.placeholder === true;
+      {GAME_REGISTRY.map((module, position) => {
         const focused = position === index;
         return (
           <PlayroomPressable
@@ -157,24 +152,23 @@ function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly
             onPress={() => (position === index ? undefined : onBrowse(position))}
             disabled={busy}
             accessibilityRole="button"
-            accessibilityLabel={`${module.metadata.title}${soon ? ', coming soon' : ''}${focused ? ', selected' : ''}`}
+            accessibilityLabel={`${module.metadata.title}${focused ? ', selected' : ''}`}
             accessibilityState={{ selected: focused }}
             testID={`phone-game-card-${module.metadata.id}`}
           >
-            <PhoneCard style={[styles.shelfCard, focused ? styles.featured : null, soon ? styles.shelfSoon : null]}>
+            <PhoneCard style={[styles.shelfCard, focused ? styles.featured : null]}>
               <PlayroomGameCover gameId={module.metadata.id} height={200} style={styles.cover} />
-              <PlayroomText color={soon ? 'muted' : 'ink'} style={playroomPhone.type.title}>{module.metadata.title}</PlayroomText>
+              <PlayroomText style={playroomPhone.type.title}>{module.metadata.title}</PlayroomText>
               <PlayroomText color="muted" numberOfLines={2} style={[playroomPhone.type.caption, styles.center]}>
                 {module.metadata.tagline ?? module.metadata.category}
               </PlayroomText>
-              {soon ? <PlayroomPill tone="disabled" textStyle={playroomPhone.type.caption}>Coming soon</PlayroomPill> : null}
             </PhoneCard>
           </PlayroomPressable>
         );
       })}
     </ScrollView>
     <View style={styles.dots} accessibilityElementsHidden>
-      {CAROUSEL_REGISTRY.map((module, position) => (
+      {GAME_REGISTRY.map((module, position) => (
         <View key={module.metadata.id} style={[styles.dot, position === index ? styles.dotOn : null]} />
       ))}
     </View>
@@ -188,7 +182,6 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: playroomColors.border },
   dotOn: { width: 22, backgroundColor: playroomColors.ink },
-  shelfSoon: { opacity: 0.6 },
   cover: { width: '100%' },
   flex: {
     flex: 1,

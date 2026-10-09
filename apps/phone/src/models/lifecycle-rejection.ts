@@ -23,8 +23,6 @@ const REJECTION_KINDS: Readonly<Record<PhoneGameRejection['kind'], true>> = {
   setupNotFound: true,
   tooManyPlayers: true,
   tvUnavailable: true,
-  replayNotAllowed: true,
-  replayNotFinished: true,
   setupLocked: true,
   setupNotReady: true,
   playersNotReady: true,
@@ -69,10 +67,6 @@ export function rejectionMessage(rejection: PhoneGameRejection): string {
       return 'Choose a game before configuring it.';
     case 'setupAlreadyRunning':
       return 'This room is already playing.';
-    case 'replayNotFinished':
-      return 'Replay is available after the game finishes.';
-    case 'replayNotAllowed':
-      return 'The current roster cannot replay this game.';
     case 'tvUnavailable':
       return 'The TV is reconnecting. Wait for it to return, then try again.';
     case 'setupLocked':

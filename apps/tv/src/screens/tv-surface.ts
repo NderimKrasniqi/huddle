@@ -1,6 +1,6 @@
 export type TvSurface = 'game' | 'runtime-status' | 'setup' | 'carousel' | 'room';
 
-export type TvSurfaceInput = {
+type TvSurfaceInput = {
   readonly runtime: 'game' | 'finished' | 'paused' | 'unavailable' | 'lobby';
   readonly hasBrowsing: boolean;
   readonly hasSetup?: boolean;

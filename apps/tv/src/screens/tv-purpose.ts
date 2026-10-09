@@ -1,6 +1,6 @@
 import type { TvSurface } from './tv-surface';
 
-export type TvPurpose =
+type TvPurpose =
   | 'Starting Huddle'
   | 'Creating a room'
   | 'Reconnecting to room'
@@ -13,14 +13,14 @@ export type TvPurpose =
   | 'Game unavailable'
   | 'Game finished'
   | 'Trivia game'
-  | 'Voting game';
+  | 'Bomb Squad game';
 
-export function tvGamePurpose(gameId: string): TvPurpose {
+function tvGamePurpose(gameId: string): TvPurpose {
   switch (gameId) {
     case 'trivia':
       return 'Trivia game';
-    case 'voting':
-      return 'Voting game';
+    case 'bomb-squad':
+      return 'Bomb Squad game';
     default:
       return 'Game unavailable';
   }

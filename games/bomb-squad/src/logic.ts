@@ -21,7 +21,7 @@ export const SABOTAGE_POINTS = 150;
 /** Without a server seed (tests, legacy callers) the game still deals, just the same way each time. */
 const DEFAULT_SEED = 0x5eed;
 
-export function bombBeat(state: BombState): string {
+function bombBeat(state: BombState): string {
   return `${state.round}:${state.phase}`;
 }
 
@@ -34,7 +34,7 @@ function isPlaying(state: BombState, playerId: GamePlayerId): boolean {
  * The wire the room cut: the one with the most votes. A tie, or no votes at
  * all, means nobody agreed in time, and the bomb goes off.
  */
-export function wireCut(votes: Readonly<Record<GamePlayerId, Wire>>): Wire | null {
+function wireCut(votes: Readonly<Record<GamePlayerId, Wire>>): Wire | null {
   const tally = new Map<Wire, number>();
   for (const wire of Object.values(votes)) tally.set(wire, (tally.get(wire) ?? 0) + 1);
   let best: Wire | null = null;
@@ -57,7 +57,7 @@ export function wireCut(votes: Readonly<Record<GamePlayerId, Wire>>): Wire | nul
  * pays every saboteur, except one who voted for the safe wire, so a saboteur
  * cannot win by quietly agreeing with the room.
  */
-export function roundResult(deal: RoundDeal, votes: Readonly<Record<GamePlayerId, Wire>>, players: readonly GamePlayerId[]): RoundResult {
+function roundResult(deal: RoundDeal, votes: Readonly<Record<GamePlayerId, Wire>>, players: readonly GamePlayerId[]): RoundResult {
   const cut = wireCut(votes);
   const defused = cut !== null && cut === deal.safe;
   const gains: Record<GamePlayerId, number> = {};
@@ -115,7 +115,7 @@ function advanced(state: BombState, event: BombAdvance): BombState {
 }
 
 /** Seconds each beat runs before the room moves on by itself. */
-export function beatSeconds(state: BombState): number | undefined {
+function beatSeconds(state: BombState): number | undefined {
   switch (state.phase) {
     case 'howTo':
       return HOW_TO_SECONDS;
