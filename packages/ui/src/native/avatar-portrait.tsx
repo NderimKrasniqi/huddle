@@ -97,7 +97,7 @@ export function AvatarPortrait({
 }
 
 /** Art that fills more of its square than the rest is drawn smaller; see PlayroomAvatar. */
-const PORTRAIT_FIT: Partial<Record<string, number>> = { puppy: 0.84 };
+const PORTRAIT_FIT: Partial<Record<string, number>> = { puppy: 0.96 };
 
 function portraitBox(size: number, avatarId: string): ImageStyle {
   const drawn = size * 1.3 * (PORTRAIT_FIT[avatarId] ?? 1);
