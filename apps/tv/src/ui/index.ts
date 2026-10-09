@@ -1,5 +1,2 @@
 /** Public TV utility seam for display-only motion preferences. */
-export {
-  resolveTvReducedMotion,
-  useTvSystemReducedMotion,
-} from './reduced-motion';
+export { useTvReducedMotion } from './reduced-motion';

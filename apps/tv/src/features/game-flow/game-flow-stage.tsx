@@ -12,10 +12,6 @@ import { StyleSheet, View } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { RosterSeat } from '../../models';
-import {
-  resolveTvReducedMotion,
-  useTvSystemReducedMotion,
-} from '../../ui/reduced-motion';
 import { TvGameCarouselScreen } from './game-carousel-screen';
 import {
   TV_GAME_ART_REVEAL_DURATION_MS,
@@ -25,6 +21,7 @@ import {
   type TvGamePlayer,
 } from './game-flow-model';
 import { TvGameSetupScreen } from './game-setup-screen';
+import { useTvReducedMotion } from '../../ui';
 
 /** The Convex setup projection consumed by the display-only flow. */
 export type TvGameSetupProjection = {
@@ -59,8 +56,7 @@ export function TvGameFlowStage({
   roomCode,
   reduceMotion: reduceMotionOverride,
 }: TvGameFlowStageProps) {
-  const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride ?? systemReduceMotion);
+  const reduceMotion = useTvReducedMotion(reduceMotionOverride);
   const hostName = roster.find((seat) => seat.host)?.nickname;
   const selectedIndex = carouselWindow(browsingAt ?? 0)?.index ?? 0;
   const players = useMemo(() => roster.map((seat) => tvPlayer(seat, [])), [roster]);

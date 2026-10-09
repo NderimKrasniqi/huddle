@@ -1,5 +1,5 @@
 import type { TvGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait } from '@huddle/ui/game-kit';
+import { AvatarPortrait, useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 
@@ -25,8 +25,6 @@ import {
   Pill,
   timerLabel,
   Twinkle,
-  useCountdownSeconds,
-  useReducedMotion,
 } from './cosmic';
 import { INTRO_SECONDS, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 import type { TriviaState } from './types';
@@ -66,7 +64,7 @@ type Players = TvGameScreenProps<TriviaState>['players'];
 export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<TriviaState>) {
   const viewport = useWindowDimensions();
   const scale = safeScale(viewport.width, viewport.height);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSystemReducedMotion();
   const [skyShown, showStage] = useSkyFirst();
   const phase = state.phase;
   const beat = `${state.questionIndex}:${phase}`;

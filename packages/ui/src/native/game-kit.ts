@@ -9,4 +9,5 @@ export { fontScaleCap } from './font-scale';
 export { HuddleButton, type HuddleButtonProps, type HuddleButtonVariant } from './huddle-button';
 export { HuddleIcon, type HuddleIconName } from './huddle-icon';
 export { HuddleText, type HuddleTextProps } from './huddle-text';
+export { useCountdownSeconds, useSystemReducedMotion } from './motion-preference';
 export { ScreenShell, type ScreenShellProps } from './screen-shell';

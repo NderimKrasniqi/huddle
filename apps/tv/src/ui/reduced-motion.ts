@@ -1,34 +1,10 @@
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { useSystemReducedMotion } from '@huddle/ui/native';
 
 /**
- * Reads the TV's system motion preference without making the first frame
- * animate. `undefined` is deliberate while the native query resolves.
+ * The TV's motion setting for display: a parent's override, else the device's
+ * setting, and still until the device has answered.
  */
-export function useTvSystemReducedMotion(): boolean | undefined {
-  const [enabled, setEnabled] = useState<boolean | undefined>(undefined);
-
-  useEffect(() => {
-    let mounted = true;
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((value) => {
-        if (mounted) setEnabled(value);
-      })
-      .catch(() => {
-        if (mounted) setEnabled(true);
-      });
-
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setEnabled);
-    return () => {
-      mounted = false;
-      subscription?.remove();
-    };
-  }, []);
-
-  return enabled;
-}
-
-/** Resolves the live display policy while keeping unresolved motion static. */
-export function resolveTvReducedMotion(system: boolean | undefined): boolean {
-  return system ?? true;
+export function useTvReducedMotion(override?: boolean): boolean {
+  const system = useSystemReducedMotion();
+  return override ?? system ?? true;
 }

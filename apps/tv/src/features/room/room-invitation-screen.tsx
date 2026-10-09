@@ -26,8 +26,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useTvReducedMotion } from '../../ui';
 
-import { resolveTvReducedMotion, useTvSystemReducedMotion } from '../../ui/reduced-motion';
 
 /** The room's seat count comes from the room rules, not from the avatar set. */
 const PLAYER_CAPACITY = ROOM_PLAYER_CAP;
@@ -97,8 +97,7 @@ export function RoomInvitationScreen({
   welcomeIds = [],
   reduceMotion: reduceMotionOverride,
 }: RoomInvitationScreenProps) {
-  const systemReduceMotion = useTvSystemReducedMotion();
-  const reduceMotion = resolveTvReducedMotion(reduceMotionOverride ?? systemReduceMotion);
+  const reduceMotion = useTvReducedMotion(reduceMotionOverride);
   const normalizedCode = roomCode.trim().toUpperCase().slice(0, 4);
   const spokenCode = normalizedCode.split('').join(' ');
   const visiblePlayers = players.slice(0, PLAYER_CAPACITY);

@@ -1,6 +1,3 @@
-import { useEffect, useState } from 'react';
-import { AccessibilityInfo } from 'react-native';
-
 import { bomb } from './theme';
 import { ACCUSE_SECONDS, BRIEF_SECONDS, CUT_SECONDS, HOW_TO_SECONDS, REVEAL_SECONDS } from './logic';
 import type { BombState, Clue, Wire } from './types';
@@ -28,40 +25,6 @@ export function clueText(clue: Clue): string {
     case 'nextTo':
       return `It's right next to ${clue.wire}.`;
   }
-}
-
-/** Whether the device asks for less motion; true until it answers, to be safe. */
-export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(true);
-  useEffect(() => {
-    let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((value) => live && setReduced(value));
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => {
-      live = false;
-      subscription.remove();
-    };
-  }, []);
-  return reduced;
-}
-
-/** A local display of the room's clock; the room still decides when time is up. */
-export function useCountdownSeconds(clockRemainingMs: number | undefined, fallbackSeconds: number, beat: string): number {
-  const startingMs = Math.max(0, Number.isFinite(clockRemainingMs) ? clockRemainingMs! : fallbackSeconds * 1000);
-  const initial = Math.max(0, Math.ceil(startingMs / 1000));
-  const [display, setDisplay] = useState({ beat, startingMs, seconds: initial });
-  const seconds = display.beat === beat && display.startingMs === startingMs ? display.seconds : initial;
-  useEffect(() => {
-    if (startingMs <= 0) return;
-    const startedAt = Date.now();
-    const timer = setInterval(() => {
-      const remaining = startingMs - (Date.now() - startedAt);
-      setDisplay({ beat, startingMs, seconds: Math.max(0, Math.ceil(remaining / 1000)) });
-      if (remaining <= 0) clearInterval(timer);
-    }, 250);
-    return () => clearInterval(timer);
-  }, [beat, startingMs]);
-  return seconds;
 }
 
 /** Fallback seconds for each beat, before the room's clock arrives. */

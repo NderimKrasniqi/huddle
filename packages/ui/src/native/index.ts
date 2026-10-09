@@ -5,6 +5,7 @@ export {
   type HuddleButtonVariant,
 } from './huddle-button';
 export { fontScaleCap } from './font-scale';
+export { useCountdownSeconds, useSystemReducedMotion } from './motion-preference';
 export { HuddleText, type HuddleTextProps } from './huddle-text';
 export { ScreenShell, type ScreenShellProps } from './screen-shell';
 export {

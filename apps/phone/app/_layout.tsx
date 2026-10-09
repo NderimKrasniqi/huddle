@@ -9,11 +9,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { StatusSurface } from '@huddle/ui/native';
+import { StatusSurface, useSystemReducedMotion } from '@huddle/ui/native';
 import { convexClient } from '../src/platform/convex/native';
 import { PhoneSessionProvider } from '../src/platform/session';
 import { phoneNavigationAnimations } from '../src/ui/navigation-motion';
-import { usePhoneReducedMotion } from '../src/ui/reduced-motion';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -25,7 +24,7 @@ export default function PhoneLayout() {
     Nunito_900Black,
   });
   const [frameReady, setFrameReady] = useState(false);
-  const reduceMotion = usePhoneReducedMotion();
+  const reduceMotion = useSystemReducedMotion();
 
   const ready = (fontsLoaded || fontError !== null) && frameReady;
   const navigationAnimations = phoneNavigationAnimations(reduceMotion);

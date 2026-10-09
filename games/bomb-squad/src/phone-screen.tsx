@@ -1,11 +1,12 @@
 import type { GamePlayer, PhoneGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait, HuddleText } from '@huddle/ui/game-kit';
+import { AvatarPortrait, useCountdownSeconds } from '@huddle/ui/game-kit';
 import { useEffect, type ReactNode } from 'react';
-import { Pressable, ScrollView, StatusBar, StyleSheet, View, type TextStyle } from 'react-native';
+import { Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { CATCH_POINTS, DEFUSE_POINTS, SABOTAGE_POINTS } from './logic';
-import { clueText, phaseSeconds, useCountdownSeconds, WIRE_COLOR, wireName } from './presentation';
-import { bomb, FONT } from './theme';
+import { clueText, phaseSeconds, WIRE_COLOR, wireName } from './presentation';
+import { bomb } from './theme';
+import { BombText } from './text';
 import { type BombEvent, type BombState, type Wire, WIRES } from './types';
 
 /** The phone: your secret, and your vote. Nothing here is shown on the TV. */
@@ -44,8 +45,8 @@ export function BombSquadPhoneScreen({
   if (!playing) {
     return (
       <Screen insets={insets}>
-        <Text size={28} weight="black">Bomb Squad is on</Text>
-        <Text size={18} color={bomb.muted}>{`Bomb ${state.round + 1} of ${state.roundCount}. You're in from the next game. Eyes on the TV!`}</Text>
+        <BombText size={28} weight="black">Bomb Squad is on</BombText>
+        <BombText size={18} color={bomb.muted}>{`Bomb ${state.round + 1} of ${state.roundCount}. You're in from the next game. Eyes on the TV!`}</BombText>
       </Screen>
     );
   }
@@ -53,8 +54,8 @@ export function BombSquadPhoneScreen({
   if (state.phase === 'howTo') {
     return (
       <Screen insets={insets}>
-        <Text size={16} color={bomb.hazard} tracking={3} weight="bold">HOW TO PLAY</Text>
-        <Text size={34} weight="black">Bomb Squad</Text>
+        <BombText size={16} color={bomb.hazard} tracking={3} weight="bold">HOW TO PLAY</BombText>
+        <BombText size={34} weight="black">Bomb Squad</BombText>
         <View style={styles.rules}>
           {[
             ['1', 'Read', 'Your secret clue appears here.'],
@@ -63,22 +64,22 @@ export function BombSquadPhoneScreen({
             ['4', 'Accuse', 'Then name the player who lied.'],
           ].map(([number, title, line]) => (
             <View key={number} style={styles.rule}>
-              <View style={styles.ruleNumber}><Text size={18} weight="black" color={bomb.night}>{number!}</Text></View>
+              <View style={styles.ruleNumber}><BombText size={18} weight="black" color={bomb.night}>{number!}</BombText></View>
               <View style={styles.ruleText}>
-                <Text size={20} weight="black" align="left">{title!}</Text>
-                <Text size={16} color={bomb.muted} align="left">{line!}</Text>
+                <BombText size={20} weight="black" align="left">{title!}</BombText>
+                <BombText size={16} color={bomb.muted} align="left">{line!}</BombText>
               </View>
             </View>
           ))}
         </View>
         <View style={styles.twistCard}>
-          <Text size={18} weight="black" color={bomb.night}>Someone’s clue is a lie.</Text>
-          <Text size={15} weight="bold" color={bomb.night}>{`Defused: squad +${DEFUSE_POINTS}. Boom: saboteurs +${SABOTAGE_POINTS}. Catch the liar: +${CATCH_POINTS}.`}</Text>
+          <BombText size={18} weight="black" color={bomb.night}>Someone’s clue is a lie.</BombText>
+          <BombText size={15} weight="bold" color={bomb.night}>{`Defused: squad +${DEFUSE_POINTS}. Boom: saboteurs +${SABOTAGE_POINTS}. Catch the liar: +${CATCH_POINTS}.`}</BombText>
         </View>
         {(state.gotIt ?? []).includes(me) ? (
-          <Text size={18} weight="bold" color={bomb.safe}>
+          <BombText size={18} weight="bold" color={bomb.safe}>
             {`Got it! Waiting for ${Math.max(0, state.standings.length - (state.gotIt?.length ?? 0))} more…`}
-          </Text>
+          </BombText>
         ) : (
           <Button
             label="Got it"
@@ -91,7 +92,7 @@ export function BombSquadPhoneScreen({
         {isHost ? (
           <Button label="Start now" variant="secondary" onPress={() => sendEvent({ kind: 'advance', playerId: me, round: 0, phase: 'howTo' })} />
         ) : (
-          <Text size={16} color={bomb.muted}>{`Starts when everyone taps Got it, or in ${seconds}s.`}</Text>
+          <BombText size={16} color={bomb.muted}>{`Starts when everyone taps Got it, or in ${seconds}s.`}</BombText>
         )}
       </Screen>
     );
@@ -103,12 +104,12 @@ export function BombSquadPhoneScreen({
     const rank = ranked.findIndex((standing) => standing.score === mine?.score) + 1;
     return (
       <Screen insets={insets}>
-        <Text size={16} color={bomb.muted} tracking={3}>GAME OVER</Text>
-        <Text size={44} weight="black">{rank === 1 ? 'You won!' : `#${rank} of ${ranked.length}`}</Text>
-        <Text size={22} weight="bold" color={bomb.hazard}>{`${mine?.score ?? 0} points`}</Text>
-        <Text size={16} color={bomb.muted}>
+        <BombText size={16} color={bomb.muted} tracking={3}>GAME OVER</BombText>
+        <BombText size={44} weight="black">{rank === 1 ? 'You won!' : `#${rank} of ${ranked.length}`}</BombText>
+        <BombText size={22} weight="bold" color={bomb.hazard}>{`${mine?.score ?? 0} points`}</BombText>
+        <BombText size={16} color={bomb.muted}>
           {isHost ? 'Final scores are on the TV. Bring everyone back when you’re ready.' : `Final scores are on the TV. ${hostNickname ?? 'The host'} chooses what’s next.`}
-        </Text>
+        </BombText>
       </Screen>
     );
   }
@@ -120,26 +121,26 @@ export function BombSquadPhoneScreen({
     return (
       <Screen insets={insets}>
         <View style={styles.header}>
-          <Text size={16} color={bomb.muted} tracking={3}>{`BOMB ${state.round + 1} OF ${state.roundCount}`}</Text>
+          <BombText size={16} color={bomb.muted} tracking={3}>{`BOMB ${state.round + 1} OF ${state.roundCount}`}</BombText>
           {state.phase === 'accuse' ? (
             <View style={[styles.clock, seconds <= 5 ? styles.clockHot : null]}>
-              <Text size={22} weight="black" color={seconds <= 5 ? bomb.night : bomb.cream}>{`${seconds}s`}</Text>
+              <BombText size={22} weight="black" color={seconds <= 5 ? bomb.night : bomb.cream}>{`${seconds}s`}</BombText>
             </View>
           ) : null}
         </View>
-        <Text size={40} weight="black" color={cutResult.defused ? bomb.safe : bomb.danger}>{cutResult.defused ? 'Defused!' : 'Boom!'}</Text>
-        <Text size={16} color={bomb.muted}>
+        <BombText size={40} weight="black" color={cutResult.defused ? bomb.safe : bomb.danger}>{cutResult.defused ? 'Defused!' : 'Boom!'}</BombText>
+        <BombText size={16} color={bomb.muted}>
           {[
             cutResult.cut === null ? 'Nobody cut a wire.' : cutResult.tied ? `A tie: the bomb picked ${wireName(cutResult.cut)}.` : `The room cut ${wireName(cutResult.cut)}.`,
             myVote ? `You voted ${wireName(myVote)}.` : 'You did not vote.',
           ].join(' ')}
-        </Text>
+        </BombText>
         {state.phase === 'cut' ? (
-          <Text size={20} weight="bold">Look at the TV: who voted for what?</Text>
+          <BombText size={20} weight="bold">Look at the TV: who voted for what?</BombText>
         ) : (
           <>
-            <Text size={22} weight="black">{saboteur ? 'Blend in. Who do you blame?' : 'Who lied?'}</Text>
-            <Text size={15} color={bomb.muted}>{saboteur ? 'Most of the room missing you is worth points.' : `Name a saboteur: +${CATCH_POINTS}.`}</Text>
+            <BombText size={22} weight="black">{saboteur ? 'Blend in. Who do you blame?' : 'Who lied?'}</BombText>
+            <BombText size={15} color={bomb.muted}>{saboteur ? 'Most of the room missing you is worth points.' : `Name a saboteur: +${CATCH_POINTS}.`}</BombText>
             <View style={styles.suspects}>
               {others.map((candidate) => (
                 <SuspectButton
@@ -169,18 +170,18 @@ export function BombSquadPhoneScreen({
     const liars = players.filter((candidate) => deal?.saboteurs.includes(candidate.playerId)).map((candidate) => candidate.nickname);
     return (
       <Screen insets={insets}>
-        <Text size={16} color={bomb.muted} tracking={3}>{liars.length === 1 ? 'THE SABOTEUR WAS' : 'THE SABOTEURS WERE'}</Text>
-        <Text size={40} weight="black" color={bomb.danger}>{saboteur ? 'You!' : liars.join(' & ')}</Text>
-        <Text size={22} weight="bold" color={won ? bomb.hazard : bomb.cream}>{won ? `+${gain} for you` : 'Nothing this time.'}</Text>
-        <Text size={16} color={bomb.muted}>
+        <BombText size={16} color={bomb.muted} tracking={3}>{liars.length === 1 ? 'THE SABOTEUR WAS' : 'THE SABOTEURS WERE'}</BombText>
+        <BombText size={40} weight="black" color={bomb.danger}>{saboteur ? 'You!' : liars.join(' & ')}</BombText>
+        <BombText size={22} weight="bold" color={won ? bomb.hazard : bomb.cream}>{won ? `+${gain} for you` : 'Nothing this time.'}</BombText>
+        <BombText size={16} color={bomb.muted}>
           {[
             myVote ? `You voted ${wireName(myVote)}.` : 'You did not vote.',
             named ? `You named ${named.nickname}.` : 'You named nobody.',
           ].join(' ')}
-        </Text>
-        <Text size={16} color={bomb.muted}>
+        </BombText>
+        <BombText size={16} color={bomb.muted}>
           {`${state.round + 1 >= state.roundCount ? 'Final scores' : 'Next bomb'} in ${seconds}s. ${hostNickname ?? 'The host'} can move on sooner.`}
-        </Text>
+        </BombText>
         {isHost ? (
           <Button
             label={state.round + 1 >= state.roundCount ? 'Show final scores' : 'Next bomb'}
@@ -194,27 +195,27 @@ export function BombSquadPhoneScreen({
   return (
     <Screen insets={insets}>
       <View style={styles.header}>
-        <Text size={16} color={bomb.muted} tracking={3}>{`BOMB ${state.round + 1} OF ${state.roundCount}`}</Text>
+        <BombText size={16} color={bomb.muted} tracking={3}>{`BOMB ${state.round + 1} OF ${state.roundCount}`}</BombText>
         <View style={[styles.clock, seconds <= 10 && state.phase === 'debate' ? styles.clockHot : null]}>
-          <Text size={22} weight="black" color={seconds <= 10 && state.phase === 'debate' ? bomb.night : bomb.cream}>{`${seconds}s`}</Text>
+          <BombText size={22} weight="black" color={seconds <= 10 && state.phase === 'debate' ? bomb.night : bomb.cream}>{`${seconds}s`}</BombText>
         </View>
       </View>
       <View style={[styles.role, saboteur ? styles.roleSaboteur : styles.roleDefuser]} accessible accessibilityLabel={`${saboteur ? 'You are a saboteur' : 'You are on the bomb squad'}. Your clue: ${clue ? clueText(clue) : 'none'}`}>
-        <Text size={14} tracking={3} color={bomb.night} weight="black">{saboteur ? 'SABOTEUR' : 'BOMB SQUAD'}</Text>
-        <Text size={26} weight="black" color={bomb.night}>{clue ? clueText(clue) : 'No clue this round.'}</Text>
+        <BombText size={14} tracking={3} color={bomb.night} weight="black">{saboteur ? 'SABOTEUR' : 'BOMB SQUAD'}</BombText>
+        <BombText size={26} weight="black" color={bomb.night}>{clue ? clueText(clue) : 'No clue this round.'}</BombText>
         {saboteur && deal?.safe !== undefined ? (
-          <Text size={16} weight="bold" color={bomb.night}>
+          <BombText size={16} weight="bold" color={bomb.night}>
             {`Secret: the safe wire is ${wireName(deal.safe)}. Get them to cut another.${deal.saboteurs.length > 1 ? ' You have a partner.' : ''}`}
-          </Text>
+          </BombText>
         ) : (
-          <Text size={16} color={bomb.night}>Your clue is true. Someone else’s isn’t.</Text>
+          <BombText size={16} color={bomb.night}>Your clue is true. Someone else’s isn’t.</BombText>
         )}
       </View>
       {state.phase === 'brief' ? (
-        <Text size={18} color={bomb.muted}>Read it, then argue it out loud. Cutting opens in a moment.</Text>
+        <BombText size={18} color={bomb.muted}>Read it, then argue it out loud. Cutting opens in a moment.</BombText>
       ) : (
         <>
-          <Text size={18} weight="bold">{myVote ? `You'd cut ${wireName(myVote)}. Change it until time runs out.` : 'Which wire do you cut?'}</Text>
+          <BombText size={18} weight="bold">{myVote ? `You'd cut ${wireName(myVote)}. Change it until time runs out.` : 'Which wire do you cut?'}</BombText>
           <View style={styles.wires}>
             {WIRES.map((wire) => (
               <WireButton
@@ -248,7 +249,7 @@ function WireButton({ wire, chosen, onPress }: { readonly wire: Wire; readonly c
         chosen ? styles.wireChosen : null,
       ]}
     >
-      <Text size={24} weight="black" color={bomb.night}>{chosen ? `✂ ${wireName(wire)}` : wireName(wire)}</Text>
+      <BombText size={24} weight="black" color={bomb.night}>{chosen ? `✂ ${wireName(wire)}` : wireName(wire)}</BombText>
     </Pressable>
   );
 }
@@ -264,9 +265,9 @@ function SuspectButton({ name, avatar, chosen, onPress }: { readonly name: strin
     >
       <AvatarPortrait avatarId={avatar} displayName={name} size={44} />
       <View style={styles.ruleText}>
-        <Text size={20} weight="black" align="left" color={chosen ? bomb.night : bomb.cream}>{name}</Text>
+        <BombText size={20} weight="black" align="left" color={chosen ? bomb.night : bomb.cream}>{name}</BombText>
       </View>
-      {chosen ? <Text size={16} weight="black" color={bomb.night}>NAMED</Text> : null}
+      {chosen ? <BombText size={16} weight="black" color={bomb.night}>NAMED</BombText> : null}
     </Pressable>
   );
 }
@@ -281,7 +282,7 @@ function Button({ label, onPress, variant = 'primary' }: { readonly label: strin
       testID={secondary ? 'bomb-next-secondary' : 'bomb-next'}
       style={({ pressed }) => [styles.button, secondary ? styles.buttonSecondary : null, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}
     >
-      <Text size={20} weight="black" color={secondary ? bomb.cream : bomb.night}>{label}</Text>
+      <BombText size={20} weight="black" color={secondary ? bomb.cream : bomb.night}>{label}</BombText>
     </Pressable>
   );
 }
@@ -295,24 +296,6 @@ function Screen({ children, insets }: { readonly children: ReactNode; readonly i
   );
 }
 
-function Text({
-  children,
-  size,
-  weight = 'regular',
-  color = bomb.cream,
-  tracking,
-  align = 'center',
-}: {
-  readonly children: ReactNode;
-  readonly size: number;
-  readonly weight?: keyof typeof FONT;
-  readonly color?: string;
-  readonly tracking?: number;
-  readonly align?: 'center' | 'left';
-}) {
-  const style: TextStyle = { fontFamily: FONT[weight], fontSize: size, lineHeight: Math.round(size * 1.25), color, letterSpacing: tracking };
-  return <HuddleText align={align} style={style}>{children}</HuddleText>;
-}
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: bomb.night },
