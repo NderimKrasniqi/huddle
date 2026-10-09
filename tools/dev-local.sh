@@ -6,7 +6,13 @@
 # emulator reaches it through `adb reverse`. Real devices cannot reach it: they
 # keep the cloud dev deployment in apps/*/.env, which this script leaves alone.
 # Ctrl-C stops the backend and both Metro servers.
+#
+# Pass --clear after switching between this and the cloud backend: the backend
+# URL is built into the bundle, and a cached bundle would keep the old one.
 set -euo pipefail
+
+clear_flag=""
+if [ "${1:-}" = "--clear" ]; then clear_flag="--clear"; fi
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 config="$root/convex/.convex/local/default/config.json"
@@ -37,11 +43,9 @@ until curl -sf "$url/version" >/dev/null; do sleep 1; done
 adb="$(command -v adb || echo "${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb")"
 if [ -x "$adb" ]; then "$adb" reverse "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; fi
 
-# EXPO_PUBLIC_* values are inlined at bundle time; --clear keeps a bundle built
-# against the cloud URL from being served from cache.
-(cd "$root/apps/tv" && EXPO_PUBLIC_CONVEX_URL="$url" npx expo start --port 8081 --dev-client --clear) &
+(cd "$root/apps/tv" && EXPO_PUBLIC_CONVEX_URL="$url" npx expo start --port 8081 --dev-client $clear_flag) &
 pids+=($!)
-(cd "$root/apps/phone" && EXPO_PUBLIC_CONVEX_URL="$url" npx expo start --port 8082 --dev-client --clear) &
+(cd "$root/apps/phone" && EXPO_PUBLIC_CONVEX_URL="$url" npx expo start --port 8082 --dev-client $clear_flag) &
 pids+=($!)
 
 echo "Huddle is using the local backend at $url. Press Ctrl-C to stop."
