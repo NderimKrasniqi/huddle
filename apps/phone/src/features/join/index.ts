@@ -5,7 +5,6 @@ export {
   codeEntry,
   isCodeComplete,
   nicknameEntry,
-  shouldMoveToNickname,
 } from './join-entry';
 export { joinFailureMessage } from './join-rejection';
 export {

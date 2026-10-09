@@ -46,16 +46,6 @@ function chosenFor(
   return choice?.gameId === gameId ? choice.settings : undefined;
 }
 
-/** The Host picking `value` for `key` on the card they are browsing. */
-export function settingChosen(
-  gameId: string,
-  choice: SettingsChoice | undefined,
-  key: string,
-  value: string,
-): SettingsChoice {
-  return { gameId, settings: { ...chosenFor(gameId, choice), [key]: value } };
-}
-
 /**
  * The settings the room would start on right now: what the Host chose, settled
  * against the declaring game's schema.

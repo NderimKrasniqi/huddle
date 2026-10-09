@@ -67,12 +67,6 @@ export function carouselWindow(index: number): CarouselWindow | undefined {
   };
 }
 
-/** Where the Host's "previous" button goes, or `undefined` if it cannot. */
-export function previousIndex(index: number): number | undefined {
-  const at = browsingIndex(index);
-  return at > 0 ? at - 1 : undefined;
-}
-
 /** Where the Host's "next" button goes, or `undefined` if it cannot. */
 export function nextIndex(index: number): number | undefined {
   const at = browsingIndex(index);

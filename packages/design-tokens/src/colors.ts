@@ -32,5 +32,3 @@ export const semanticColors = {
   border: brandColors.espresso,
 } as const;
 
-export type BrandColor = keyof typeof brandColors;
-export type SemanticColor = keyof typeof semanticColors;

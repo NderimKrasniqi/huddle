@@ -1,1 +1,1 @@
-export { decodeJoinQr, shouldHandleScan, type ScanPayloadResult } from './scan-payload';
+export { decodeJoinQr, type ScanPayloadResult } from './scan-payload';

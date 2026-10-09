@@ -18,6 +18,3 @@ export function decodeJoinQr(payload: string): ScanPayloadResult {
   return { kind: 'join', code };
 }
 
-export function shouldHandleScan(locked: boolean): boolean {
-  return !locked;
-}

@@ -17,4 +17,3 @@ export const spacing = {
   '5xl': 64,
 } as const;
 
-export type SpacingToken = keyof typeof spacing;
