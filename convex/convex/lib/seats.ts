@@ -110,7 +110,9 @@ export async function handOverRoom(
   // which is a number this very call was prompted by: the point is that a host
   // cannot succeed themselves, and that should not rest on arithmetic.
   const others = seated.filter((player) => player._id !== departing._id);
-  const beating = others.find((player) => silenceOf(player) < AWAY_AFTER_MS);
+  const beating = others
+    .filter((player) => silenceOf(player) < AWAY_AFTER_MS)
+    .reduce<(typeof others)[number] | undefined>((best, player) => (best === undefined || silenceOf(player) < silenceOf(best) ? player : best), undefined);
   // A leaver's room must come away with *a* host. `beating` is still preferred
   // — a phone the room is hearing from can act on the handover now — but when
   // there is none, the longest-connected remaining seat takes it anyway rather

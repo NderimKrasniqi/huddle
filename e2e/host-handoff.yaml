@@ -27,4 +27,5 @@ appId: tv.huddle.controller
     visible:
       id: host-toast
     timeout: 60000
+- assertNotVisible: .* is now the host
 - assertVisible: You’re the host now
