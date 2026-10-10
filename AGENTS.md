@@ -41,6 +41,8 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
   phone app open on a booted iPhone simulator. It seeds a room with a fake TV
   and three bots, then drives the phone from join to the first bomb.
   `pnpm e2e:phone-starts` checks the phone gets past its start-up screen.
+  `pnpm e2e:crowded-room` seats nine long-named bots that go quiet and
+  checks the phone names them in a short list.
   Both flows target the booted iPhone simulator, or `DEVICE`.
 
 Record the commands run and whether a failure is introduced, pre-existing, or

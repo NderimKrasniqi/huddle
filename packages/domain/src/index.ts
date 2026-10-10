@@ -9,7 +9,7 @@ export {
   type SettingSummary,
 } from './game-settings';
 export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
-export { NICKNAME_MAX_LENGTH } from './nickname';
+export { nameList, NICKNAME_MAX_LENGTH } from './nickname';
 export {
   COUNTDOWN_MS,
   readiness,

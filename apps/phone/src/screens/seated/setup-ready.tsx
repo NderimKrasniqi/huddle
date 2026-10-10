@@ -1,7 +1,4 @@
-import {
-  COUNTDOWN_MS,
-  settingSummaryText,
-} from '@huddle/domain';
+import { COUNTDOWN_MS, nameList, settingSummaryText } from '@huddle/domain';
 import { playroomAvatarCircles, playroomColors, playroomMotion, playroomPhone } from '@huddle/design-tokens';
 import {
   PLAYROOM_ARTWORK,
@@ -48,7 +45,7 @@ export function ReadyScreen({
   const countInRange = roster.length >= module.metadata.playerRange.min && roster.length <= module.metadata.playerRange.max;
   const status =
     awayCount > 0
-      ? `Reconnecting: ${roster.filter((seat) => seat.away).map((seat) => seat.nickname).join(', ')}.`
+      ? `Reconnecting: ${nameList(roster.filter((seat) => seat.away).map((seat) => seat.nickname))}.`
       : !countInRange
         ? `Need ${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players to start.`
         : allReady
@@ -128,7 +125,7 @@ export function ReadyScreen({
         <View style={styles.waiting} accessible accessibilityLabel={`Players: ${roster.map((seat) => `${seat.nickname}, ${seat.away ? 'reconnecting' : setup.readyPlayerIds.includes(seat.playerId) ? 'ready' : 'waiting'}`).join('; ')}`}>
           {roster.map((seat) => <View key={seat.playerId} style={[styles.readyPerson, !seat.away && setup.readyPlayerIds.includes(seat.playerId) ? styles.readyPersonUp : null]}>
             <PlayroomAvatar avatarId={seat.avatar} size={36} away={seat.away} />
-            <PlayroomText color={seat.away ? 'muted' : setup.readyPlayerIds.includes(seat.playerId) ? 'success' : 'ink'} style={playroomPhone.type.caption}>{seat.nickname}</PlayroomText>
+            <PlayroomText color={seat.away ? 'muted' : setup.readyPlayerIds.includes(seat.playerId) ? 'success' : 'ink'} numberOfLines={1} style={[playroomPhone.type.caption, styles.readyName]}>{seat.nickname}</PlayroomText>
           </View>)}
         </View>
       ) : null}

@@ -1,4 +1,4 @@
-import type { GameModule, GamePlayer } from '@huddle/domain';
+import { nameList, type GameModule, type GamePlayer } from '@huddle/domain';
 import { gameModuleById } from '@huddle/game-registry';
 import { playroomColors, playroomTv } from '@huddle/design-tokens';
 import {
@@ -56,9 +56,7 @@ export function TvRuntimeStatus({
   const host = players.find((player) => player.host);
   const message = paused
     ? waitingForPlayers
-      ? missing.length === 1
-        ? `${missing[0]?.nickname} lost connection. The game continues when they’re back.`
-        : `${missing.length} players lost connection. The game continues when they’re back.`
+      ? `${nameList(missing.map((player) => player.nickname))} lost connection. The game continues when ${missing.length === 1 ? 'they’re' : 'everyone’s'} back.`
       : 'The TV connection is recovering. Your room is still safe.'
     : 'This game can’t be played right now.';
   const title = paused

@@ -6,7 +6,10 @@ const RING = 220;
 export const setupStyles = StyleSheet.create({
   thumbSpacer: { flexGrow: 1, minHeight: 8 },
   thumbSpacerBelow: { flexGrow: 0.4 },
-  readyPerson: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4,
+  readyName: {
+    flexShrink: 1,
+  },
+  readyPerson: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 20, backgroundColor: playroomColors.surface },
   // A raised hand reads at a glance: the chip turns the success colour.
   readyPersonUp: { backgroundColor: playroomColors.successSurface },
