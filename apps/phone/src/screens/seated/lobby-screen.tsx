@@ -199,7 +199,7 @@ export function ManagePlayerScreen({ player, you, busy, onBack, onTransfer, onRe
       <PhoneTopBar back={{ label: 'Manage player', onPress: onBack }} you={you} />
       <View style={styles.managed} testID="managed-player">
         <PlayroomAvatar avatarId={player.avatar} size={176} away={player.away} />
-        <PlayroomText style={playroomPhone.type.hero}>{player.nickname}</PlayroomText>
+        <PlayroomText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={playroomPhone.type.hero}>{player.nickname}</PlayroomText>
         <View style={styles.presence}>
           <View style={[styles.dot, { backgroundColor: player.away ? playroomColors.border : playroomColors.success }]} />
           <PlayroomText style={playroomPhone.type.label}>{player.away ? 'Away' : 'Connected'}</PlayroomText>

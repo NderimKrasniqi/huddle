@@ -1,4 +1,4 @@
-import type { GameEvent, GameModule, GamePlayer, PhoneFeedback } from '@huddle/domain';
+import { nameList, type GameEvent, type GameModule, type GamePlayer, type PhoneFeedback } from '@huddle/domain';
 import { playroomPhone } from '@huddle/design-tokens';
 import type { RunningGameScreen } from '@huddle/game-registry';
 import { PlayroomButton, PlayroomHeading, PlayroomSheet, PlayroomStatusImage, PlayroomText } from '@huddle/ui/native';
@@ -83,7 +83,7 @@ export function SeatedPhone({
             screen.kind === 'unavailable'
               ? `This game could not be restored on this phone. ${hostSeat?.nickname ?? 'The host'} can return the room to the lobby.`
               : disconnected
-                ? `${missing.length === 1 ? `${missing[0]}’s phone` : missing.length > 1 ? `${missing.length} phones` : 'A phone'} went quiet. The game resumes when everyone is back.`
+                ? `${missing.length > 0 ? nameList(missing) : 'A phone'} went quiet. The game resumes when everyone is back.`
                 : 'The TV is reconnecting. Keep Huddle open on the phones.'
           }
           youAreHost={standing.youAreHost}
