@@ -1,0 +1,38 @@
+appId: tv.huddle.controller
+---
+- runFlow:
+    when:
+      visible: Join a room
+    commands:
+      - tapOn: Join a room
+- openLink: huddle://join/${CODE}
+- runFlow:
+    when:
+      visible:
+        id: identity-confirm-handoff
+    commands:
+      - tapOn:
+          id: identity-confirm-handoff
+- extendedWaitUntil:
+    visible:
+      id: identity-join
+    timeout: 20000
+- tapOn:
+    id: identity-join
+- extendedWaitUntil:
+    visible:
+      id: toggle-game-ready
+    timeout: 60000
+- assertVisible: Trivia.*
+- tapOn:
+    id: toggle-game-ready
+- extendedWaitUntil:
+    visible:
+      id: trivia-answer-0
+    timeout: 60000
+- tapOn:
+    id: trivia-answer-0
+- extendedWaitUntil:
+    visible:
+      id: trivia-phone-waiting-after-answer|trivia-phone-reveal
+    timeout: 30000
