@@ -76,16 +76,6 @@ TV_QR_DEPENDENCIES = {
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-svg": "15.15.4",
 }
-HEARTBEAT_PALETTE = {
-    "cream": "#F9F1E6",
-    "espresso": "#2B1F17",
-    "coral": "#FF6F61",
-    "butter": "#FFD766",
-    "mint": "#7FD2B6",
-    "sky": "#7CC6FF",
-    "lilac": "#C8B6FF",
-    "dustyRose": "#E6A3B1",
-}
 # The Playroom palette from the Huddle-Platform design system (docs/design/playroom/README.md).
 PLAYROOM_PALETTE = {
     "canvas": "#F9F1E6",
@@ -469,7 +459,7 @@ def validate_presentation_renderer_scope(
 
 TV_CONTROL_REFERENCE = re.compile(
     r"\b(?:Pressable|TextInput|TouchableOpacity|TouchableWithoutFeedback|"
-    r"TouchableHighlight|Button|HuddleButton|CameraView|TVEventHandler)\b|"
+    r"TouchableHighlight|Button|CameraView|TVEventHandler)\b|"
     r"\b(?:onPress|onLongPress|onFocus|onBlur|hasTVPreferredFocus)\s*[:=]|"
     r"\bfocusable\s*=\s*(?:\{\s*)?true\b|"
     r"accessibilityRole\s*=\s*['\"]button['\"]"
@@ -1161,44 +1151,9 @@ def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
             )
 
 
-def validate_heartbeat_tokens(root: Path = ROOT) -> None:
-    """Require the exact Heartbeat palette and token-based screen colors."""
+def validate_design_tokens(root: Path = ROOT) -> None:
+    """Require the exact Playroom palette and token-based screen colors."""
 
-    colors_path = root / "packages" / "design-tokens" / "src" / "colors.ts"
-    if not colors_path.is_file():
-        fail(f"Heartbeat color token source missing: {relative(colors_path, root)}")
-    source = colors_path.read_text(encoding="utf-8")
-    match = re.search(r"export const brandColors = \{(?P<body>.*?)\}\s+as const;", source, re.DOTALL)
-    if match is None:
-        fail("Heartbeat brand color token map is missing")
-    actual = dict(re.findall(r"^\s*([A-Za-z][A-Za-z0-9]*):\s*['\"](#[0-9A-Fa-f]{6})['\"]", match.group("body"), re.MULTILINE))
-    if actual != HEARTBEAT_PALETTE:
-        fail(f"Heartbeat palette differs from the approved board: {actual}")
-
-    semantic_match = re.search(r"export const semanticColors = \{(?P<body>.*?)\}\s+as const;", source, re.DOTALL)
-    if semantic_match is None:
-        fail("Heartbeat semantic color roles are missing")
-    semantic = dict(re.findall(r"^\s*([A-Za-z][A-Za-z0-9]*):\s*brandColors\.([A-Za-z][A-Za-z0-9]*)", semantic_match.group("body"), re.MULTILINE))
-    expected_semantic = {
-        "background": "cream",
-        "surface": "cream",
-        "surfaceRaised": "cream",
-        "text": "espresso",
-        "textOnBrand": "espresso",
-        "primary": "coral",
-        "primaryText": "espresso",
-        "secondary": "butter",
-        "success": "mint",
-        "info": "sky",
-        "accent": "lilac",
-        "highlight": "dustyRose",
-        "border": "espresso",
-    }
-    if semantic != expected_semantic:
-        fail(f"Heartbeat semantic roles differ from the approved system: {semantic}")
-
-    # Screen source may use only approved board colors. The legacy neutral map
-    # is retained for persisted compatibility but is not a runtime surface.
     playroom_path = root / "packages" / "design-tokens" / "src" / "playroom.ts"
     if not playroom_path.is_file():
         fail(f"Playroom color token source missing: {relative(playroom_path, root)}")
@@ -1214,10 +1169,10 @@ def validate_heartbeat_tokens(root: Path = ROOT) -> None:
         fail(f"Playroom palette differs from the approved design: {playroom}")
 
     hex_literal = re.compile(r"#[0-9A-Fa-f]{6}")
-    approved_hexes = set(HEARTBEAT_PALETTE.values()) | set(PLAYROOM_PALETTE.values())
+    approved_hexes = set(PLAYROOM_PALETTE.values())
     for base in (root / "apps", root / "games", root / "packages" / "ui"):
         for path in source_files(base):
-            if path in (colors_path, playroom_path) or ".test." in path.name:
+            if path == playroom_path or ".test." in path.name:
                 continue
             clean = COMMENTS.sub("", path.read_text(encoding="utf-8"))
             literals = {value.upper() for value in hex_literal.findall(clean)}
@@ -1227,7 +1182,7 @@ def validate_heartbeat_tokens(root: Path = ROOT) -> None:
             if path.is_relative_to(root / "games" / "bomb-squad"):
                 allowed = approved_hexes | set(BOMB_SQUAD_PALETTE.values())
             if not literals.issubset(allowed):
-                fail(f"unapproved color literal in Heartbeat source: {relative(path, root)}")
+                fail(f"unapproved color literal in screen source: {relative(path, root)}")
 
 
 def validate_native_assets(root: Path = ROOT) -> None:
@@ -1633,7 +1588,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
                 fail(f"game modules must not import Reanimated: {relative(source, root)}")
             validate_presentation_renderer_scope(source, clean, root)
 
-    validate_heartbeat_tokens(root)
+    validate_design_tokens(root)
     validate_tv_display_only(root)
 
     manifests = [root / "apps" / app / "package.json" for app in APP_NAMES]

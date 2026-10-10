@@ -26,7 +26,8 @@
     "validate:ui-stack": "python3 tools/validate-architecture.py",
     "dev:local": "tools/dev-local.sh",
     "tv:emulator": "tools/tv-emulator.sh",
-    "e2e:bomb-squad": "tools/e2e-bomb-squad.sh"
+    "e2e:bomb-squad": "tools/e2e-bomb-squad.sh",
+    "e2e:phone-starts": "tools/e2e-flow.sh e2e/phone-starts.yaml"
   },
   "devDependencies": {
     "@types/node": "catalog:",

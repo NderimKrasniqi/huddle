@@ -1,21 +1,11 @@
 export { AvatarPortrait, type AvatarPortraitProps } from './avatar-portrait';
-export {
-  HuddleButton,
-  type HuddleButtonProps,
-  type HuddleButtonVariant,
-} from './huddle-button';
 export { fontScaleCap } from './font-scale';
 export { useCountdownSeconds, useSystemReducedMotion } from './motion-preference';
-export { HuddleText, type HuddleTextProps } from './huddle-text';
-export { ScreenShell, type ScreenShellProps } from './screen-shell';
 export {
   StatusSurface,
-  type StatusSurfaceAction,
   type StatusSurfaceProps,
   type StatusSurfaceVariant,
 } from './status-surface';
-
-export { HuddleIcon, type HuddleIconName } from './huddle-icon';
 
 export {
   PLAYROOM_ARTWORK,

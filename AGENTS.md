@@ -40,6 +40,8 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
 - End-to-end: `pnpm e2e:bomb-squad` with `pnpm dev:local` running and the
   phone app open on a booted iPhone simulator. It seeds a room with a fake TV
   and three bots, then drives the phone from join to the first bomb.
+  `pnpm e2e:phone-starts` checks the phone gets past its start-up screen.
+  Both flows target the booted iPhone simulator, or `DEVICE`.
 
 Record the commands run and whether a failure is introduced, pre-existing, or
 blocked by the environment.
@@ -63,7 +65,7 @@ blocked by the environment.
 - Runtime artwork is pinned by file name, size, alpha and SHA-256 in
   `tools/validate-architecture.py`. Replacing an image means updating its
   spec. PNG and JPEG are both read; use JPEG for opaque, photo-like backdrops.
-- Use the shared text components (`PlayroomText`, `HuddleText`, Trivia's
+- Use the shared text components (`PlayroomText`, `GameText`, Trivia's
   `CosmicText`) rather than a bare `Text`. They cap how far type follows the
   system text size (`fontScaleCap`), so display headings do not split
   mid-word at the largest accessibility sizes.

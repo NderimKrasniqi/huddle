@@ -1,4 +1,9 @@
-import { fontFamilies } from './typography';
+const fontFamilies = {
+  regular: 'Nunito_400Regular',
+  bold: 'Nunito_700Bold',
+  extraBold: 'Nunito_800ExtraBold',
+  black: 'Nunito_900Black',
+} as const;
 
 /**
  * Playroom, the Huddle platform design system
