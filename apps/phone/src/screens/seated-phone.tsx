@@ -11,11 +11,10 @@ import type { PlayerSession } from '../platform/session';
 import { PhoneLoadingScreen } from '../ui/native';
 import { LobbyScreen, ManagePlayerScreen } from './seated/lobby-screen';
 import { PhoneFrame, PhoneNotice, PhoneTopBar, type PhoneTopBarProps } from './seated/phone-frame';
+import { HostToast, useHostToast } from './seated/host-toast';
 import { PickerScreen } from './seated/picker-screen';
 import { SetupScreen } from './seated/setup-screen';
 import { useSeatedRoom, type BusyAction, type Confirmation } from './use-seated-room';
-
-/** The picker and setup screens, under the names the render tests use. */
 
 /**
  * A seated phone: routes the room's state to the Playroom screen for it.
@@ -46,10 +45,17 @@ export function SeatedPhone({
     success,
     confirmation,
     managedPlayer,
+    reduceMotion,
   } = room;
+  const hostToast = useHostToast(roster, session.playerId);
   const me = roster.find((seat) => seat.playerId === session.playerId);
   const you = { nickname: me?.nickname ?? session.nickname, avatarId: me?.avatar ?? session.avatar, roomCode: session.code };
-  const sheet = <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} onCancel={room.dismissConfirmation} />;
+  const sheet = (
+    <>
+      <HostToast toast={hostToast} reduceMotion={reduceMotion !== false} />
+      <ConfirmationSheet confirmation={confirmation} busy={busy} failure={failure} onCancel={room.dismissConfirmation} />
+    </>
+  );
 
   if (screen.kind === 'game' || screen.kind === 'finished') {
     return (

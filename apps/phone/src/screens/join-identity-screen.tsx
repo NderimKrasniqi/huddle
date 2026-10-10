@@ -18,6 +18,7 @@ import {
   PlayroomWordmark,
   PlayroomPressable,
 } from '@huddle/ui/native';
+import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from 'convex/react';
@@ -281,6 +282,7 @@ export default function JoinIdentityScreen() {
       // stale-session cleanup already in flight can then see the newer
       // revision and repair this token instead of deleting it.
       completeJoin(session);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await rememberSession(phoneSessionTokenStore, session.sessionToken);
       const nextProfile: GuestProfileV1 = {
         version: 1,

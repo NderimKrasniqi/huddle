@@ -1,0 +1,30 @@
+appId: tv.huddle.controller
+---
+- runFlow:
+    when:
+      visible: Join a room
+    commands:
+      - tapOn: Join a room
+- openLink: huddle://join/${CODE}
+- runFlow:
+    when:
+      visible:
+        id: identity-confirm-handoff
+    commands:
+      - tapOn:
+          id: identity-confirm-handoff
+- extendedWaitUntil:
+    visible:
+      id: identity-join
+    timeout: 20000
+- tapOn:
+    id: identity-join
+- extendedWaitUntil:
+    visible:
+      id: toggle-game-ready
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: host-toast
+    timeout: 60000
+- assertVisible: You’re the host now

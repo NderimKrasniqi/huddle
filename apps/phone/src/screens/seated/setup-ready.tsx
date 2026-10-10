@@ -50,7 +50,7 @@ export function ReadyScreen({
         ? `Need ${module.metadata.playerRange.min}–${module.metadata.playerRange.max} players to start.`
         : allReady
           ? `Everyone is ready. ${roster.find((seat) => seat.host)?.nickname ?? 'The host'} can start.`
-          : `Waiting for ${roster.filter((seat) => !setup.readyPlayerIds.includes(seat.playerId)).map((seat) => seat.nickname).join(', ')}.`;
+          : `Waiting for ${nameList(roster.filter((seat) => !setup.readyPlayerIds.includes(seat.playerId)).map((seat) => seat.nickname))}.`;
 
   function raise() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
