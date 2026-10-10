@@ -1,4 +1,4 @@
-import { playroomAvatarCircles, semanticColors, shadows, spacing } from '@huddle/design-tokens';
+import { playroomAvatarCircles, playroomColors, playroomShadows } from '@huddle/design-tokens';
 import type { AvatarId } from '@huddle/contracts';
 import type { ComponentType, ComponentProps } from 'react';
 import {
@@ -71,7 +71,7 @@ export function AvatarPortrait({
   );
   const frameStyle = [
     styles.frame,
-    { width: size + spacing.sm, height: size + spacing.sm, borderRadius: (size + spacing.sm) / 2 },
+    { width: size + 8, height: size + 8, borderRadius: (size + 8) / 2 },
     selected ? styles.selected : null,
     disabled ? styles.disabled : null,
     style,
@@ -109,7 +109,7 @@ const styles = {
   frame: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: semanticColors.surface,
+    backgroundColor: playroomColors.surface,
     borderColor: 'transparent',
     borderWidth: 2,
   } satisfies ViewStyle,
@@ -121,8 +121,8 @@ const styles = {
     backgroundColor: 'transparent',
   } satisfies ImageStyle,
   selected: {
-    borderColor: semanticColors.primary,
-    ...shadows.card,
+    borderColor: playroomColors.orange,
+    ...playroomShadows.card,
   } satisfies ViewStyle,
   disabled: {
     opacity: 0.38,

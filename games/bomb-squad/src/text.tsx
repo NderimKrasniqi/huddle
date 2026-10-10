@@ -1,4 +1,4 @@
-import { HuddleText } from '@huddle/ui/game-kit';
+import { GameText } from '@huddle/ui/game-kit';
 import type { ReactNode } from 'react';
 import type { TextStyle } from 'react-native';
 
@@ -28,12 +28,12 @@ export function BombText({
   readonly style?: TextStyle;
 }) {
   return (
-    <HuddleText
+    <GameText
       numberOfLines={numberOfLines}
       align={align}
       style={[{ fontFamily: FONT[weight], fontSize: size, lineHeight: Math.round(size * leading), color, letterSpacing: tracking }, style]}
     >
       {children}
-    </HuddleText>
+    </GameText>
   );
 }

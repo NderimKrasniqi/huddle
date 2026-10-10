@@ -9,7 +9,7 @@
  * Paths are built from SVG strings, which the phone's Skia stub supports.
  */
 import { BlurMask, Canvas, Circle, Group, LinearGradient, Path, RadialGradient, RoundedRect, Shadow, Skia, vec } from '@shopify/react-native-skia';
-import { HuddleText } from '@huddle/ui/game-kit';
+import { GameText } from '@huddle/ui/game-kit';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
@@ -166,7 +166,7 @@ function Bubble({ wire, tone }: { readonly wire: Wire; readonly tone: 'calm' | '
 function Stamp() {
   return (
     <View style={styles.stampBox}>
-      <HuddleText style={styles.stampText}>LIE</HuddleText>
+      <GameText style={styles.stampText}>LIE</GameText>
     </View>
   );
 }
@@ -296,7 +296,7 @@ function Accusation({ beat, t }: { readonly beat: number; readonly t: Animated.V
         </Animated.View>
       ))}
       <Animated.View style={[styles.points, { left: liarX - 60, opacity: points, transform: [{ translateY: pointsLift }] }]}>
-        <HuddleText style={styles.pointsText}>+50</HuddleText>
+        <GameText style={styles.pointsText}>+50</GameText>
       </Animated.View>
     </>
   );

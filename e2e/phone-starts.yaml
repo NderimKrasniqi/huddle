@@ -1,0 +1,17 @@
+appId: tv.huddle.controller
+---
+- launchApp
+- openLink: huddle://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8082
+- runFlow:
+    when:
+      visible: Join a room
+    commands:
+      - tapOn: Join a room
+- extendedWaitUntil:
+    notVisible: Starting Huddle…
+    timeout: 30000
+- assertNotVisible: Huddle couldn't start
+- extendedWaitUntil:
+    visible:
+      id: phone-frame-scroll
+    timeout: 30000
