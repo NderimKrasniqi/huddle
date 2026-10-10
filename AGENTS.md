@@ -42,7 +42,8 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
   and three bots, then drives the phone from join to the first bomb.
   `pnpm e2e:phone-starts` checks the phone gets past its start-up screen.
   `pnpm e2e:crowded-room` seats nine long-named bots that go quiet and
-  checks the phone names them in a short list.
+  checks the phone names them in a short list. `pnpm e2e:host-handoff`
+  uses the same seed and checks the host-change toast.
   Both flows target the booted iPhone simulator, or `DEVICE`.
 
 Record the commands run and whether a failure is introduced, pre-existing, or

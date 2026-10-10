@@ -28,7 +28,8 @@
     "tv:emulator": "tools/tv-emulator.sh",
     "e2e:bomb-squad": "tools/e2e-bomb-squad.sh",
     "e2e:phone-starts": "tools/e2e-flow.sh e2e/phone-starts.yaml",
-    "e2e:crowded-room": "tools/e2e-seeded.sh e2e/seed-crowded-room.mjs e2e/crowded-room.yaml"
+    "e2e:crowded-room": "tools/e2e-seeded.sh e2e/seed-crowded-room.mjs e2e/crowded-room.yaml",
+    "e2e:host-handoff": "tools/e2e-seeded.sh e2e/seed-crowded-room.mjs e2e/host-handoff.yaml"
   },
   "devDependencies": {
     "@types/node": "catalog:",
