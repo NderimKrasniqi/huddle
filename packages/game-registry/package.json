@@ -17,7 +17,8 @@
   "dependencies": {
     "@huddle/contracts": "workspace:*",
     "@huddle/game-bomb-squad": "workspace:*",
-    "@huddle/game-trivia": "workspace:*"
+    "@huddle/game-trivia": "workspace:*",
+    "@huddle/game-sumo-bumpers": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -161,6 +161,11 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
         True,
         "d8a52f1d10188aa60f6a5ff9652f3fda8b1522878a0a36afdfa27a086809c5ee",
     ),
+    "games/sumo-bumpers.png": (
+        (1200, 750),
+        True,
+        "f310ddd42690b1b4405e3f52add53586fd53a98466f31a5085ae55dc285f9e44",
+    ),
     "games/trivia.png": (
         (1200, 750),
         True,
@@ -326,6 +331,11 @@ BOMB_SQUAD_PALETTE = {
     "bodyLight": "#6B4FA3", "rope": "#E8D3B0", "ropeBurnt": "#5A4A3A", "metalLight": "#E3D9FF",
     "metalDark": "#5E5279", "safeLight": "#6FD69C", "safeDark": "#1F7A4A", "white": "#FFFFFF",
 }
+SUMO_BUMPERS_PALETTE = {
+    "sea": "#0E2A47", "seaDeep": "#071A2E", "wave": "#1D4E7A", "ice": "#EAF6FF", "iceShade": "#B9DDF5",
+    "rim": "#FFFFFF", "hazard": "#FF6B4A", "ink": "#10233A", "cream": "#FFF8EE", "muted": "#9DB7D1",
+    "gold": "#FFC93C", "ghost": "#C9B8FF", "you": "#3DDC97", "panel": "#163A5E", "panelEdge": "#2B5C8A",
+}
 COSMIC_QUIZ_PALETTE = {
     "navy": "#041B39",
     "navyDeep": "#021226",
@@ -470,7 +480,7 @@ def tv_presentation_sources(root: Path = ROOT) -> list[Path]:
     """Return authored TV and game-TV renderers that must remain passive."""
 
     sources = source_files(root / "apps" / "tv" / "src") if (root / "apps" / "tv" / "src").is_dir() else []
-    for game in ("trivia", "bomb-squad"):
+    for game in ("trivia", "bomb-squad", "sumo-bumpers"):
         path = root / "games" / game / "src" / "tv-screen.tsx"
         if path.is_file():
             sources.append(path)
@@ -669,6 +679,8 @@ def package_kind(path: Path, root: Path) -> str:
         return "registry"
     if rel[:2] == ("packages", "ui"):
         return "ui"
+    if rel[:2] == ("packages", "physics"):
+        return "physics"
     if rel[0] == "games":
         return "game"
     return "package"
@@ -709,13 +721,14 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
         "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "convex"},
         "convex": {"contracts", "domain", "registry"},
         "registry": {"contracts", "domain", "game"},
-        "game": {"contracts", "domain", "tokens", "ui"},
+        "game": {"contracts", "domain", "tokens", "ui", "physics"},
+        "physics": set(),
         "ui": {"contracts", "tokens"},
         "domain": {"contracts"},
         "contracts": set(),
         "tokens": set(),
         "package": set(),
-        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "package"},
+        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "physics", "package"},
     }
     for manifest, payload in payloads.items():
         source_kind = package_kind(manifest, root)
@@ -1181,6 +1194,8 @@ def validate_design_tokens(root: Path = ROOT) -> None:
                 allowed = approved_hexes | set(COSMIC_QUIZ_PALETTE.values())
             if path.is_relative_to(root / "games" / "bomb-squad"):
                 allowed = approved_hexes | set(BOMB_SQUAD_PALETTE.values())
+            if path.is_relative_to(root / "games" / "sumo-bumpers"):
+                allowed = approved_hexes | set(SUMO_BUMPERS_PALETTE.values())
             if not literals.issubset(allowed):
                 fail(f"unapproved color literal in screen source: {relative(path, root)}")
 
@@ -1596,7 +1611,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
         [
             root / "packages" / "ui" / "package.json",
             root / "packages" / "game-registry" / "package.json",
-            *(root / "games" / name / "package.json" for name in ("trivia", "bomb-squad")),
+            *(root / "games" / name / "package.json" for name in ("trivia", "bomb-squad", "sumo-bumpers")),
         ]
     )
     banned_dependencies = {
@@ -1624,7 +1639,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
             fail(f"{app} must pin @expo-google-fonts/nunito@0.4.2")
         if payload.get("dependencies", {}).get("react-native-reanimated") != "4.5.1":
             fail(f"{app} must pin react-native-reanimated@4.5.1")
-    for name in ("trivia", "bomb-squad"):
+    for name in ("trivia", "bomb-squad", "sumo-bumpers"):
         payload = json.loads((root / "games" / name / "package.json").read_text(encoding="utf-8"))
         for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
             if "react-native-reanimated" in payload.get(field, {}):

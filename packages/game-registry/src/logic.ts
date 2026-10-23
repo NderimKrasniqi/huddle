@@ -1,6 +1,7 @@
 import type { GameLogic, GameLogicRegistry } from '@huddle/contracts';
 import { triviaGameLogic } from '@huddle/game-trivia/logic';
 import { bombSquadGameLogic } from '@huddle/game-bomb-squad/logic';
+import { sumoBumpersGameLogic } from '@huddle/game-sumo-bumpers/logic';
 
 import { clampBrowsingIndex } from './browsing';
 
@@ -16,7 +17,7 @@ import { clampBrowsingIndex } from './browsing';
  * Each game's `/logic` entry point is taken here, so the two `/logic` exports
  * are all the server ever pulls in.
  */
-export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, bombSquadGameLogic];
+export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, bombSquadGameLogic, sumoBumpersGameLogic];
 
 /**
  * The installed game answering to `gameId`, or `undefined` if none does.

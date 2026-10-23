@@ -80,6 +80,7 @@ export const PLAYROOM_SETTING_ICONS: Readonly<Record<GameSettingIcon, ImageSourc
 const GAME_ART: Readonly<Record<string, ImageSourcePropType>> = {
   trivia: nativeAsset(() => require('../../assets/playroom/games/trivia.png')),
   'bomb-squad': nativeAsset(() => require('../../assets/playroom/games/bomb-squad.png')),
+  'sumo-bumpers': nativeAsset(() => require('../../assets/playroom/games/sumo-bumpers.png')),
 };
 
 /** Catalog art for a registry game id, or undefined for a game without any. */
