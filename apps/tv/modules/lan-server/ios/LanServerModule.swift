@@ -1,10 +1,17 @@
 import ExpoModulesCore
 import Network
 
+/** Largest text frame the TV accepts; matches the Room Protocol's limit. */
+private let maxFrameBytes = 256 * 1024
+
 /**
- * TASK-03 spike: a WebSocket server inside the TV app on Apple TV, built on
- * Network.framework. Same API as the Android module: text frames go to
- * JavaScript as events, and JavaScript answers through `send`.
+ * The TV's LAN WebSocket server on Apple TV (ADR-02), on Network.framework.
+ *
+ * Same API as the Android module: each phone connection gets a small integer
+ * id, text frames reach JavaScript as `onMessage` events, and JavaScript
+ * answers with `send`. Binary frames are refused by closing the connection.
+ * tvOS suspends a backgrounded app within seconds, so the shell stops and
+ * restarts this server around background and foreground.
  */
 public class LanServerModule: Module {
   private let queue = DispatchQueue(label: "tv.huddle.lanserver")
@@ -17,8 +24,15 @@ public class LanServerModule: Module {
 
     Events("onOpen", "onMessage", "onClose", "onError")
 
+    /** Listens on `port`, or on any free port when that one is taken; resolves the port in use. */
     AsyncFunction("start") { (port: Int, promise: Promise) in
-      self.queue.async { self.start(port: port, promise: promise) }
+      self.queue.async {
+        if let running = self.listener, let current = running.port {
+          promise.resolve(Int(current.rawValue))
+          return
+        }
+        self.listen(port: port, fallBack: true, promise: promise)
+      }
     }
 
     Function("send") { (id: Int, data: String) in
@@ -41,15 +55,20 @@ public class LanServerModule: Module {
       }
     }
 
-    // TASK-04 spike: announce the room over Bonjour as `Huddle-<code>`.
-    AsyncFunction("advertise") { (code: String, _port: Int, promise: Promise) in
+    /** IPv4 addresses, home-network ranges first, so a QR code can carry the likeliest one. */
+    Function("addresses") { () -> [String] in
+      LanServerModule.ipv4Addresses()
+    }
+
+    /** Announces the room as `Huddle-<code>` (`_huddle._tcp`) with code, port and hosts in TXT. */
+    AsyncFunction("advertise") { (code: String, port: Int, promise: Promise) in
       self.queue.async {
         guard let listener = self.listener else {
           promise.reject("E_NOT_LISTENING", "Start the server before advertising")
           return
         }
         let hosts = LanServerModule.ipv4Addresses().joined(separator: ",")
-        let txt = NWTXTRecord(["code": code, "port": "\(_port)", "hosts": hosts])
+        let txt = NWTXTRecord(["code": code, "port": "\(port)", "hosts": hosts])
         listener.service = NWListener.Service(name: "Huddle-\(code)", type: "_huddle._tcp", domain: nil, txtRecord: txt)
         promise.resolve("Huddle-\(code)")
       }
@@ -59,59 +78,57 @@ public class LanServerModule: Module {
       self.queue.async { self.listener?.service = nil }
     }
 
-    Function("addresses") { () -> [String] in
-      LanServerModule.ipv4Addresses()
-    }
-
     OnDestroy {
       self.queue.sync { self.stopAll() }
     }
   }
 
-  private func start(port: Int, promise: Promise) {
-    if listener != nil {
-      promise.resolve(port)
-      return
-    }
+  private func listen(port: Int, fallBack: Bool, promise: Promise) {
     let parameters = NWParameters.tcp
     let webSocket = NWProtocolWebSocket.Options()
     webSocket.autoReplyPing = true
+    webSocket.maximumMessageSize = maxFrameBytes
     parameters.defaultProtocolStack.applicationProtocols.insert(webSocket, at: 0)
     parameters.allowLocalEndpointReuse = true
     if let tcp = parameters.defaultProtocolStack.transportProtocol as? NWProtocolTCP.Options {
       tcp.noDelay = true
     }
-    guard let nwPort = NWEndpoint.Port(rawValue: UInt16(clamping: port)) else {
-      promise.reject("E_PORT", "Invalid port \(port)")
-      return
-    }
+    let requested = port == 0 ? NWEndpoint.Port.any : NWEndpoint.Port(rawValue: UInt16(clamping: port)) ?? .any
+    let created: NWListener
     do {
-      let created = try NWListener(using: parameters, on: nwPort)
-      var settled = false
-      created.stateUpdateHandler = { [weak self] state in
-        switch state {
-        case .ready:
-          if !settled { settled = true; promise.resolve(port) }
-        case .failed(let error):
-          if !settled { settled = true; promise.reject("E_LISTEN", error.localizedDescription) }
-          self?.sendEvent("onError", ["message": error.localizedDescription])
-        default:
-          break
-        }
-      }
-      created.serviceRegistrationUpdateHandler = { [weak self] change in
-        if case .add(let endpoint) = change {
-          self?.sendEvent("onError", ["message": "advertised \(endpoint)"])
-        }
-      }
-      created.newConnectionHandler = { [weak self] connection in
-        self?.accept(connection)
-      }
-      listener = created
-      created.start(queue: queue)
+      created = try NWListener(using: parameters, on: requested)
     } catch {
       promise.reject("E_LISTEN", error.localizedDescription)
+      return
     }
+    var settled = false
+    created.stateUpdateHandler = { [weak self] state in
+      guard let self else { return }
+      switch state {
+      case .ready:
+        if !settled {
+          settled = true
+          promise.resolve(Int(created.port?.rawValue ?? 0))
+        }
+      case .failed(let error):
+        created.cancel()
+        if self.listener === created { self.listener = nil }
+        if !settled {
+          settled = true
+          // The port is taken: listen anywhere instead.
+          if fallBack && port != 0 { self.listen(port: 0, fallBack: false, promise: promise) } else { promise.reject("E_LISTEN", error.localizedDescription) }
+          return
+        }
+        self.sendEvent("onError", ["message": error.localizedDescription])
+      default:
+        break
+      }
+    }
+    created.newConnectionHandler = { [weak self] connection in
+      self?.accept(connection)
+    }
+    listener = created
+    created.start(queue: queue)
   }
 
   private func accept(_ connection: NWConnection) {
@@ -144,12 +161,16 @@ public class LanServerModule: Module {
         return
       }
       let metadata = context?.protocolMetadata(definition: NWProtocolWebSocket.definition) as? NWProtocolWebSocket.Metadata
-      if metadata?.opcode == .close {
+      switch metadata?.opcode {
+      case .close?, .binary?:
         connection.cancel()
         return
-      }
-      if metadata?.opcode == .text, let data, let text = String(data: data, encoding: .utf8) {
-        self.sendEvent("onMessage", ["id": id, "data": text])
+      case .text?:
+        if let data, let text = String(data: data, encoding: .utf8) {
+          self.sendEvent("onMessage", ["id": id, "data": text])
+        }
+      default:
+        break
       }
       self.receive(id: id, connection: connection)
     }
@@ -161,12 +182,14 @@ public class LanServerModule: Module {
   }
 
   private func stopAll() {
+    listener?.service = nil
     listener?.cancel()
     listener = nil
     for connection in connections.values { connection.cancel() }
     connections.removeAll()
   }
 
+  /** Non-loopback IPv4 addresses, private home-network ranges first and VPN-style ranges last. */
   private static func ipv4Addresses() -> [String] {
     var result: [String] = []
     var pointer: UnsafeMutablePointer<ifaddrs>?
@@ -181,6 +204,14 @@ public class LanServerModule: Module {
         result.append(String(cString: host))
       }
     }
-    return result
+    return result.sorted { rank($0) < rank($1) }
+  }
+
+  private static func rank(_ address: String) -> Int {
+    if address.hasPrefix("192.168.") { return 0 }
+    if address.hasPrefix("10.") { return 1 }
+    let parts = address.split(separator: ".").compactMap { Int($0) }
+    if parts.count == 4, parts[0] == 172, (16...31).contains(parts[1]) { return 2 }
+    return 3
   }
 }

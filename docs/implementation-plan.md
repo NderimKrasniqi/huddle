@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-10 are done; results are in the validation
-ledger. Next: TASK-11, the real Android TV LAN module.
+scope changes (TASK-01). TASK-02 to TASK-11 are done; results are in the validation
+ledger. Next: TASK-12, the room host inside the TV app.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -131,7 +131,7 @@ These are new user-visible behaviors, now recorded in
 
 ### Phase 3 — Android TV hosts the room
 
-- [ ] TASK-11 Build the Android TV LAN module
+- [x] TASK-11 Build the Android TV LAN module
   Done when: a local Expo module in `apps/tv` exposes start, stop, send, close
   and connection events, reports the LAN address, and advertises the mDNS
   service, using the library from TASK-02.
@@ -456,6 +456,28 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-11 LAN server module
+
+`apps/tv/modules/lan-server` is now the real module, with the same API on both
+TVs: `start(port)` resolves the port in use and falls back to any free port
+when the requested one is taken (and rejects instead of hanging when it cannot
+listen), `send`, `close`, `stop`, connection events, `addresses()` ordered
+home-network ranges first and VPN-style ranges last, and
+`advertise(code, port)` / `stopAdvertising()`. Frames are capped at the
+protocol's 256 KB and binary frames close the connection. Android uses
+Java-WebSocket 1.6.0 (`Draft_6455` with the frame cap) and `NsdManager`;
+Apple TV uses Network.framework. The typed seam is
+`apps/tv/src/platform/lan-server` (`LAN_PORT`, `LanServer`). The spike screens
+stay as a diagnostic until TASK-12 wires the room host.
+
+Both sides compile. On the Apple TV simulator, with the headless TV holding
+port 7777, the module fell back to port 65006 and advertised it
+(`port=65006`, hosts home-network first); the iPhone found it by code in 31 ms
+and connected (back-to-back median 9.3 ms, p95 12.3 ms). Not run on Android
+TV: the emulator had shut down. The Kotlin server core ran in TASK-02; the new
+fallback, frame cap and advertising run on Android in TASK-12 and TASK-15.
+`pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture` pass.
 
 ### TASK-04 local discovery spike
 
