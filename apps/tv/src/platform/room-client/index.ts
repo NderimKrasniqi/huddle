@@ -1,5 +1,5 @@
 import type { ViewValue } from '@huddle/contracts/protocol';
-import type { RunningGameResponse } from '@huddle/domain';
+import type { LanJoin, RunningGameResponse } from '@huddle/domain';
 
 /**
  * How the TV reaches its room, whatever holds it. Today the Convex
@@ -56,4 +56,6 @@ export type TvRoomClient = {
   readonly useView: <Name extends TvViewName>(name: Name, viewer: TvViewer | undefined) => TvViews[Name] | undefined;
   /** `false` once the room the TV shows has ended. */
   readonly useStillOpen: (roomId: string) => boolean | undefined;
+  /** Where phones reach this TV when it hosts the room; `undefined` for a remote room service. */
+  readonly useLanJoin: () => LanJoin | undefined;
 };

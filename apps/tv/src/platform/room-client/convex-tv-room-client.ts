@@ -31,5 +31,6 @@ export function convexTvRoomClient(convex: ConvexReactClient | undefined): TvRoo
       return useQuery(view, viewer === undefined ? 'skip' : { roomId: viewer.roomId, tvSessionToken: viewer.tvSessionToken }) as TvViews[Name] | undefined;
     },
     useStillOpen: (roomId) => useQuery(api.rooms.stillOpen, { roomId: roomId as never }),
+    useLanJoin: () => undefined,
   };
 }

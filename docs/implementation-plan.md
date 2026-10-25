@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-11 are done; results are in the validation
-ledger. Next: TASK-12, the room host inside the TV app.
+scope changes (TASK-01). TASK-02 to TASK-12 are done; results are in the validation
+ledger. Next: TASK-13, the phone's LAN client.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -135,7 +135,7 @@ These are new user-visible behaviors, now recorded in
   Done when: a local Expo module in `apps/tv` exposes start, stop, send, close
   and connection events, reports the LAN address, and advertises the mDNS
   service, using the library from TASK-02.
-- [ ] TASK-12 Run the room host inside the TV app
+- [x] TASK-12 Run the room host inside the TV app
   Done when: the TV shell starts the room host with the LAN transport, the TV
   screens read the shared view in-process, the QR code carries address, code
   and TV instance ID, and a restarted TV app restores its room from the
@@ -456,6 +456,31 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-12 room host in the TV app
+
+`apps/tv/src/platform/room-client/lan-tv-room-client.ts` is a second
+`TvRoomClient`: it runs `RoomHost` with React Native timers, expo-crypto
+randomness and a debounced snapshot file (`expo-file-system`, now a direct TV
+dependency), connects the LAN server's connections to the host, advertises
+the room, and turns the host's TV views into the screens' views (the
+countdown's end on the TV's clock; objects kept when only a clock moved). On
+background it marks the TV away and stops the server; on foreground it
+restarts, advertises and clears the away mark. `EXPO_PUBLIC_ROOM_BACKEND=lan`
+selects it at bundle time; Convex stays the default, because phones still
+talk to Convex until TASK-13. The QR link now carries the TV's addresses,
+port and instance id, and the phone's scan parser accepts that form.
+
+On the Apple TV simulator with a `lan` bundle: the TV opened room ETKY on
+port 7777 and advertised it; three protocol bots joined (roster and host
+crown on screen), started Bomb Squad and reached "Bomb 1 of 5"; after the TV
+app was quit and started again it restored ETKY with the game, and the first
+bot resumed its seat by token while the TV showed the game paused for the two
+bots that had gone quiet. After Home and back the app listened on 7777 again
+and still advertised ETKY; that the server stopped while backgrounded could
+not be confirmed from outside, because the suspended process kept its socket.
+Not run on Android TV (emulator down). `pnpm typecheck`, `pnpm lint` and
+`pnpm validate:architecture` pass.
 
 ### TASK-11 LAN server module
 

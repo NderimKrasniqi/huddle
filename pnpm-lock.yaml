@@ -180,6 +180,9 @@ importers:
       '@huddle/game-registry':
         specifier: workspace:*
         version: link:../../packages/game-registry
+      '@huddle/room-host':
+        specifier: workspace:*
+        version: link:../../packages/room-host
       '@huddle/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -198,6 +201,9 @@ importers:
       expo-crypto:
         specifier: ~57.0.1
         version: 57.0.1(expo@57.0.12)
+      expo-file-system:
+        specifier: ~57.0.2
+        version: 57.0.2(expo@57.0.12)(react-native-tvos@0.86.0-2)
       expo-linking:
         specifier: ~57.0.5
         version: 57.0.5(expo@57.0.12)(react-native-tvos@0.86.0-2)(react@19.2.3)
@@ -7251,9 +7257,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.86.0': {}
 

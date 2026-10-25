@@ -204,7 +204,9 @@ Phone app ── transport ─┤ Shell (per platform)                          
 Relay (Rust, later) ── forwards opaque frames between phones and one TV by room code
 ```
 
-- **Room host.** `@huddle/room-host` (built, not yet wired into the TV app)
+- **Room host.** `@huddle/room-host` (runs inside the TV app when it is
+  bundled with `EXPO_PUBLIC_ROOM_BACKEND=lan`; Convex stays the default until
+  TASK-15)
   takes over the rules that `convex/convex` holds today: seats, the Host pointer,
   presence and away, setup, readiness, the countdown, the game runtime,
   deadlines, rate limits and per-viewer redaction. It depends only on
@@ -235,8 +237,10 @@ Relay (Rust, later) ── forwards opaque frames between phones and one TV by r
   so on both TVs the shell calls `setTvAway(true)` when the app leaves the
   foreground, restarts the listener when it returns, and phones reconnect with
   `resumeSession`.
-- **Discovery.** The TV's QR code carries the TV's LAN address, the room code
-  and the TV instance ID. A typed room code is resolved on the local network by
+- **Discovery.** The TV's QR code carries the room code, the TV's IPv4
+  addresses, its port and the TV instance ID
+  (`huddle://join/CODE?hosts=…&port=…&tv=…`, built and parsed by
+  `roomJoinLink` and `parseRoomJoinLink` in `@huddle/domain`). A typed room code is resolved on the local network by
   mDNS (Android `NsdManager`, Apple Bonjour). Later, the relay also resolves a
   typed code.
 - **Phone.** The phone keeps one room client behind an interface. It uses React

@@ -1,6 +1,6 @@
 import { useRoomMoments } from '@huddle/ui/native';
 import { runningGameScreen, type RunningGameScreen } from '@huddle/game-registry';
-import { gamePlayersFrom } from '@huddle/domain';
+import { gamePlayersFrom, type LanJoin } from '@huddle/domain';
 import { useEffect, useMemo } from 'react';
 
 import { TvGameFlowStage, TvPlatformStatusScreen, type TvGameSetupProjection } from '../features/game-flow/native';
@@ -52,6 +52,7 @@ export function TvSessionController({
   });
   // Arrivals change on every keystroke of a join form; only the room screen draws them.
   const arrivals = tvRoomClient.useView('arrivals', surface === 'room' ? asTv : undefined);
+  const lan = tvRoomClient.useLanJoin();
 
   const playerIds = useMemo(() => roster?.map((player) => String(player.playerId)), [roster]);
   const moments = useRoomMoments({ playerIds, runtime: runtime.kind,
@@ -72,6 +73,7 @@ export function TvSessionController({
       arrivals={arrivals ?? []}
       browsingAt={browsingAt}
       setup={setup}
+      lan={lan}
     />
   );
 }
@@ -90,7 +92,9 @@ function TvSessionPresentation({
   reduceMotion,
   returned,
   welcomeIds,
+  lan,
 }: {
+  readonly lan?: LanJoin;
   readonly returned?: boolean;
   readonly welcomeIds?: readonly string[];
   readonly surface: TvSurface;
@@ -146,7 +150,7 @@ function TvSessionPresentation({
   }
 
   if (surface === 'room') {
-    return <RoomStage roomCode={roomCode} roster={roster} arrivals={arrivals} returned={returned} welcomeIds={welcomeIds} />;
+    return <RoomStage roomCode={roomCode} roster={roster} arrivals={arrivals} returned={returned} welcomeIds={welcomeIds} lan={lan} />;
   }
 
   if (surface === 'carousel' || surface === 'setup') {

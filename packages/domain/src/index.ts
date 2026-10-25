@@ -8,7 +8,7 @@ export {
   settingSummaryText,
   type SettingSummary,
 } from './game-settings';
-export { JOIN_LINK_SCHEME, roomJoinLink } from './join-link';
+export { JOIN_LINK_SCHEME, type LanJoin, parseRoomJoinLink, roomJoinLink } from './join-link';
 export { nameList, NICKNAME_MAX_LENGTH } from './nickname';
 export {
   COUNTDOWN_MS,
