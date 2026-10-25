@@ -46,7 +46,10 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
   bots that go quiet and checks the phone names them in a short list.
   `pnpm e2e:host-handoff` uses the same seed and checks the host-change toast.
   `pnpm e2e:trivia` joins a Trivia room and answers the first question.
-  `pnpm e2e:sumo` plays a Sumo Bumpers round. Port 7777 must be free (an Apple
+  `pnpm e2e:sumo` plays a Sumo Bumpers round. To run a flow through the
+  relay, start it (`relay/`, port 8787), run Metro with
+  `EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787`, and prefix the flow with
+  `HEADLESS_TV_RELAY=ws://127.0.0.1:8787 HEADLESS_TV_LAN=0`. Port 7777 must be free (an Apple
   TV simulator running the TV app also listens there). The flows target the
   booted iPhone simulator, or `DEVICE`.
 

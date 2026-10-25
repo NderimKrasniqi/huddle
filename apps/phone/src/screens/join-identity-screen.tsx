@@ -19,8 +19,8 @@ import {
 } from '@huddle/ui/native';
 import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -77,7 +77,7 @@ function IdentityStateSurface({ title, message, testID, action, loading = false 
 export default function JoinIdentityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ code?: string | string[]; hosts?: string; port?: string; tv?: string }>();
+  const params = useLocalSearchParams<{ code?: string | string[]; hosts?: string; port?: string; tv?: string; relay?: string }>();
   const code = normalizedCode(Array.isArray(params.code) ? params.code[0] ?? '' : params.code ?? '');
   const {
     session,
@@ -92,8 +92,8 @@ export default function JoinIdentityScreen() {
   const problem = room.useConnectionProblem();
   // A QR from a TV that hosts its own room says where that TV listens.
   const linkedLan = useMemo(
-    () => lanFromJoinParams(code, { hosts: params.hosts, port: params.port, tv: params.tv }),
-    [code, params.hosts, params.port, params.tv],
+    () => lanFromJoinParams(code, { hosts: params.hosts, port: params.port, tv: params.tv, relay: params.relay }),
+    [code, params.hosts, params.port, params.tv, params.relay],
   );
   useMemo(() => {
     if (linkedLan !== undefined) room.rememberTv?.(code, linkedLan);
@@ -131,16 +131,21 @@ export default function JoinIdentityScreen() {
 
   // A link to a room that does not exist has nothing to join, so it goes back
   // to room-code entry with the code filled in and its inline "no room" error.
+  // Only the visible join screen may navigate. Each join link pushes a screen,
+  // and the earlier ones stay mounted underneath; when the phone leaves its
+  // seat they would all wake up and send it home for their own ended rooms.
   const linkedRoomMissing = routeState.kind === 'joining' && availability === null;
-  useEffect(() => {
-    if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
-  }, [code, linkedRoomMissing, router]);
+  useFocusEffect(
+    useCallback(() => {
+      if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
+    }, [code, linkedRoomMissing, router]),
+  );
 
-  useEffect(() => {
-    if (shouldReturnToSeat) {
-      router.replace('/');
-    }
-  }, [router, shouldReturnToSeat]);
+  useFocusEffect(
+    useCallback(() => {
+      if (shouldReturnToSeat) router.replace('/');
+    }, [router, shouldReturnToSeat]),
+  );
 
   // A returning guest whose usual avatar is already in the room gets the first
   // free one instead of an error they did nothing to cause.

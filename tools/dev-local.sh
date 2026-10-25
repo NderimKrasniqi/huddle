@@ -7,6 +7,10 @@
 # room on the emulator through `adb forward tcp:7777 tcp:7777`.
 # Ctrl-C stops both Metro servers.
 #
+# Set EXPO_PUBLIC_HUDDLE_RELAY_URL (for example ws://127.0.0.1:8787) to host
+# and join through the relay too; the Android TV emulator then also needs
+# `adb reverse tcp:8787 tcp:8787`.
+#
 # Pass --clear after changing environment variables: Metro inlines them at
 # bundle time, and a cached bundle would keep the old values.
 set -euo pipefail

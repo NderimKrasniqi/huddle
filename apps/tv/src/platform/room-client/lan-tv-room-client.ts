@@ -1,5 +1,14 @@
 import type { LanJoin } from '@huddle/domain';
-import { type HostConnection, type HostPorts, type HostSnapshot, RoomHost, type TvViews as HostViews } from '@huddle/room-host';
+import {
+  type HostConnection,
+  type HostPorts,
+  type HostSnapshot,
+  hostThroughRelay,
+  type RelayHost,
+  type RelaySocket,
+  RoomHost,
+  type TvViews as HostViews,
+} from '@huddle/room-host';
 import * as Crypto from 'expo-crypto';
 import { File, Paths } from 'expo-file-system';
 import { useSyncExternalStore } from 'react';
@@ -11,6 +20,12 @@ import type { OpenRoom, TvRoomClient, TvSetupView, TvViewName, TvViews } from '.
 /** Saving waits this long after the last change, so a burst of taps is one write. */
 const SAVE_DEBOUNCE_MS = 300;
 const SNAPSHOT_FILE = 'huddle-room-snapshot.json';
+const RELAY_SECRET_FILE = 'huddle-relay-secret.txt';
+/**
+ * The relay's base URL (ADR-03), such as `wss://relay.huddle.tv`. Unset, the
+ * TV hosts on the LAN only. Metro inlines it at bundle time.
+ */
+const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL;
 
 type Store = {
   readonly roomId: string;
@@ -39,6 +54,12 @@ export function lanTvRoomClient(): TvRoomClient {
   const listeners = new Set<() => void>();
   const connections = new Map<number, HostConnection>();
   let appState: AppStateStatus = AppState.currentState;
+
+  let relay: RelayHost | undefined;
+  /** The relay URL while the relay holds this room's code. */
+  let relayJoin: string | undefined;
+  /** The code the LAN server announces, while it runs. */
+  let advertisedCode: string | undefined;
 
   const snapshotFile = new File(Paths.document, SNAPSHOT_FILE);
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -82,7 +103,76 @@ export function lanTvRoomClient(): TvRoomClient {
     }
   }
 
+  /** The secret that lets this TV reclaim its code on the relay after a restart. */
+  function relaySecret(): string {
+    const file = new File(Paths.document, RELAY_SECRET_FILE);
+    try {
+      if (file.exists) {
+        const saved = file.textSync().trim();
+        if (saved.length >= 16) return saved;
+      }
+    } catch {
+      // A new secret only means the relay holds the old code a while longer.
+    }
+    const bytes = new Uint8Array(24);
+    Crypto.getRandomValues(bytes);
+    const secret = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    try {
+      if (!file.exists) file.create();
+      file.write(secret);
+    } catch (error) {
+      console.warn('Huddle TV could not save its relay secret', String(error));
+    }
+    return secret;
+  }
+
+  function setLan(next: LanJoin | undefined): void {
+    lan = next;
+    if (store !== undefined) store = { ...store, lan };
+    for (const listener of listeners) listener();
+  }
+
+  function withRelay(base: LanJoin | undefined): LanJoin | undefined {
+    if (base === undefined || relayJoin === undefined) return base;
+    return { ...base, relay: relayJoin };
+  }
+
+  function startRelay(running: RoomHost): void {
+    if (RELAY_URL === undefined || RELAY_URL === '' || relay !== undefined) return;
+    const url = RELAY_URL;
+    relay = hostThroughRelay(running, {
+      url,
+      secret: relaySecret(),
+      // React Native's WebSocket has these members; its handler types name DOM events.
+      open: (address) => new WebSocket(address) as unknown as RelaySocket,
+      ports,
+      onState: (state) => {
+        relayJoin = state === 'registered' ? url : undefined;
+        const base = lan === undefined ? undefined : { hosts: lan.hosts, port: lan.port, tvInstanceId: lan.tvInstanceId };
+        setLan(withRelay(base));
+      },
+    });
+  }
+
+  function stopRelay(): void {
+    relay?.stop();
+    relay = undefined;
+    relayJoin = undefined;
+  }
+
+  function advertise(code: string): void {
+    advertisedCode = code;
+    lanServer.advertise(code, port).catch((error: unknown) => {
+      console.warn('Huddle TV could not advertise its room', String(error));
+    });
+  }
+
   function publish(views: HostViews): void {
+    // A fresh room has a new code; announce that one instead.
+    if (advertisedCode !== undefined && advertisedCode !== views.code) {
+      lanServer.stopAdvertising();
+      advertise(views.code);
+    }
     const previous = store?.roomId === views.roomId ? store.views : undefined;
     store = {
       roomId: views.roomId,
@@ -101,15 +191,14 @@ export function lanTvRoomClient(): TvRoomClient {
   async function startServer(running: RoomHost): Promise<void> {
     port = await lanServer.start(port);
     const info = running.info();
-    lan = { hosts: lanServer.addresses(), port, tvInstanceId: info.tvInstanceId };
-    if (store !== undefined) store = { ...store, lan };
-    for (const listener of listeners) listener();
-    await lanServer.advertise(info.code, port).catch((error: unknown) => {
-      console.warn('Huddle TV could not advertise its room', String(error));
-    });
+    setLan(withRelay({ hosts: lanServer.addresses(), port, tvInstanceId: info.tvInstanceId }));
+    startRelay(running);
+    advertise(info.code);
   }
 
   async function stopServer(): Promise<void> {
+    stopRelay();
+    advertisedCode = undefined;
     lanServer.stopAdvertising();
     for (const connection of connections.values()) connection.disconnect();
     connections.clear();

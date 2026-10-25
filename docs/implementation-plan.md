@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-20 are done; results are in the validation
-ledger. Next: the relay transport and fallback (TASK-21).
+scope changes (TASK-01). TASK-02 to TASK-21 are done; results are in the validation
+ledger. Next: load-check and package the relay (TASK-22).
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -187,7 +187,7 @@ These are new user-visible behaviors, now recorded in
   by code, frames pass through unread, and connection, room, size and rate
   limits plus idle expiry apply; `cargo fmt --check`, `cargo clippy -- -D
   warnings` and `cargo deny check` pass.
-- [ ] TASK-21 Add the relay transport and fallback
+- [x] TASK-21 Add the relay transport and fallback
   Done when: the TV shell can host through the relay with a plain JavaScript
   WebSocket, the QR code also carries the relay URL, the phone falls back to
   the relay when the LAN address fails, and a typed code resolves through the
@@ -456,6 +456,43 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-21 relay transport and fallback
+
+`@huddle/room-host` exports `hostThroughRelay`: one outgoing WebSocket (the
+caller passes the factory, so React Native, Node and a browser all work)
+registers the room's code with a secret, and each phone the relay opens
+becomes a room-host connection like a LAN one. It reconnects with backoff,
+registers again when the room's code changes, and on `codeTaken` swaps an
+empty room for a fresh code (`RoomHost.replaceEmptyRoom`); a room with
+players keeps its code and stays LAN-only. The TV app hosts through the relay
+when `EXPO_PUBLIC_HUDDLE_RELAY_URL` is set, keeps its secret in
+`huddle-relay-secret.txt`, stops the relay with the LAN server in the
+background, and now re-advertises on the LAN when the room's code changes.
+The join link carries `relay=` while the relay holds the code. The phone
+tries the TV's addresses, then the relay; a typed code that Bonjour does not
+find (or Local Network access refused) is looked up on the relay, and a
+relay 4404 there means "no room". The headless TV takes `HEADLESS_TV_RELAY`
+and `HEADLESS_TV_LAN=0`.
+
+Fixed on the way, already present before: every join link pushed a join
+screen, and the hidden earlier ones sent the phone home when it left its
+seat ("Leave and join" ended on the home screen). Only the focused join
+screen navigates now. The e2e flows wait for the join or leave-room screen
+before acting, because a relay lookup takes a few seconds.
+
+Evidence, against the relay release build, `pnpm dev:local` with
+`EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787` and the iPhone 17
+simulator: all six flows pass relay-only (`HEADLESS_TV_LAN=0`) and on the LAN,
+run back to back in mixed order (trivia, bomb-squad, sumo, crowded-room,
+host-handoff, phone-starts); a join link with an unreachable LAN address and
+the relay URL joined through the relay and reached the game; the Apple TV
+app registered its room on the relay and showed three bots that joined only
+through it. `pnpm typecheck`, `pnpm lint`, `pnpm validate:architecture`,
+`pnpm validate:workflow` and `git diff --check` pass. Not covered: the
+Android TV emulator through the relay (it would need `adb reverse tcp:8787
+tcp:8787`), `wss://`, and physical devices. Hidden join screens still poll
+availability every three seconds until the stack is replaced.
 
 ### TASK-20 relay built
 

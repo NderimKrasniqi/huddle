@@ -94,6 +94,7 @@ The room runs on the TV (ADR-01 to ADR-04 in
 | `lan-discovery` Expo module | local | phone discovery of a typed code (Bonjour, `NsdManager`) |
 | `ws` | `8.21.1` | headless TV for the end-to-end flows |
 | Rust (stable, edition 2024) | `1.99.1` | `relay/huddle-relay`, the relay service (ADR-03) |
+| `EXPO_PUBLIC_HUDDLE_RELAY_URL` | env | relay base URL for both apps; unset means LAN only |
 | tokio / axum / tracing | `1.54` / `0.8` / `0.1` | relay runtime, WebSocket routes and logs |
 | cargo-deny | `0.20.2` | relay advisories, licenses and sources |
 
@@ -122,7 +123,9 @@ There is no backend: the TV app hosts the room. The iPhone and Apple TV
 simulators share this Mac's network; the Android TV emulator reaches Metro
 through `adb reverse`, and phones reach a room on it through
 `adb forward tcp:7777 tcp:7777`. `pnpm headless-tv` runs a room on this Mac
-without a TV app.
+without a TV app. To use the relay, run it (`cargo run --release` in
+`relay/`, listening on 8787) and start Metro with
+`EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787 pnpm dev:local --clear`.
 
 ## Verification commands
 

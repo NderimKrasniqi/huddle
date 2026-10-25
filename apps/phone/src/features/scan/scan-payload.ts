@@ -27,9 +27,14 @@ export function roomJoinPath(code: string, lan: LanJoin | undefined): `/join/${s
 /** The hosting TV's address from the join route's parameters, if they carry one. */
 export function lanFromJoinParams(
   code: string,
-  params: { readonly hosts?: string | string[]; readonly port?: string | string[]; readonly tv?: string | string[] },
+  params: {
+    readonly hosts?: string | string[];
+    readonly port?: string | string[];
+    readonly tv?: string | string[];
+    readonly relay?: string | string[];
+  },
 ): LanJoin | undefined {
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? '';
-  const query = `hosts=${encodeURIComponent(first(params.hosts)).replace(/%2C/giu, ',')}&port=${first(params.port)}&tv=${encodeURIComponent(first(params.tv))}`;
+  const query = `hosts=${encodeURIComponent(first(params.hosts)).replace(/%2C/giu, ',')}&port=${first(params.port)}&tv=${encodeURIComponent(first(params.tv))}&relay=${encodeURIComponent(first(params.relay))}`;
   return parseRoomJoinLink(`huddle://join/${code}?${query}`)?.lan;
 }

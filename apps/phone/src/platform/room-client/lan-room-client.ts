@@ -25,11 +25,24 @@ const RECONNECT_DELAYS_MS = [500, 1_000, 2_000, 4_000, 5_000];
 const AVAILABILITY_REFRESH_MS = 3_000;
 /** Where the phone keeps the TV address that goes with its Session Token. */
 const SEAT_RECORD_KEY = 'huddle.lan.seat.v1';
+/**
+ * The relay's base URL (ADR-03), such as `wss://relay.huddle.tv`. Unset, a
+ * typed code is looked up on the local network only. Metro inlines it at
+ * bundle time.
+ */
+const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL || undefined;
+/** The relay's close code for a room it does not hold. */
+const RELAY_NO_ROOM = 4404;
 
 type Endpoint = {
   readonly hosts: readonly string[];
   readonly port: number;
   readonly tvInstanceId?: string;
+  /** The relay to try after the addresses, with the code it knows the room by. */
+  readonly relay?: string;
+  readonly code?: string;
+  /** Local discovery was refused, so a room missing on the relay may still be on this network. */
+  readonly lanDenied?: boolean;
 };
 
 type SeatRecord = Endpoint & {
@@ -50,6 +63,14 @@ export class LocalNetworkDenied extends Error {
   constructor() {
     super('Local Network access is off for Huddle');
     this.name = 'LocalNetworkDenied';
+  }
+}
+
+/** The relay holds no room with this code. */
+export class RoomMissing extends Error {
+  constructor() {
+    super('The relay holds no room with this code');
+    this.name = 'RoomMissing';
   }
 }
 
@@ -92,12 +113,20 @@ class TvLink {
     return this.endpoint.port;
   }
 
-  /** Connects to the first address that answers and completes the handshake. */
+  get relay(): string | undefined {
+    return this.endpoint.relay;
+  }
+
+  /**
+   * Connects to the first address that answers and completes the handshake;
+   * the relay comes last, for a phone that cannot reach the TV directly.
+   */
   async open(): Promise<void> {
     let lastError: Error = new TvUnreachable();
     for (const host of this.endpoint.hosts) {
       try {
-        await this.openAt(host);
+        const address = host.includes(':') ? `[${host}]` : host;
+        await this.openAt(`ws://${address}:${this.endpoint.port}`);
         // Try the address that worked first next time.
         this.endpoint = { ...this.endpoint, hosts: [host, ...this.endpoint.hosts.filter((other) => other !== host)] };
         return;
@@ -106,13 +135,27 @@ class TvLink {
         if (error instanceof IncompatibleTv) throw error;
       }
     }
+    const { relay, code } = this.endpoint;
+    const room = code ?? this.roomCode;
+    if (relay !== undefined && room !== undefined) {
+      try {
+        await this.openAt(`${relay.replace(/\/+$/u, '')}/v1/join/${encodeURIComponent(room)}`);
+        return;
+      } catch (error) {
+        if (error instanceof IncompatibleTv) throw error;
+        // With no address to try, a missing room is the answer, not a fault.
+        if (error instanceof RoomMissing && this.endpoint.hosts.length === 0) {
+          throw this.endpoint.lanDenied === true ? new LocalNetworkDenied() : error;
+        }
+      }
+    }
+    if (this.endpoint.lanDenied === true) throw new LocalNetworkDenied();
     throw lastError;
   }
 
-  private openAt(host: string): Promise<void> {
+  private openAt(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const address = host.includes(':') ? `[${host}]` : host;
-      const socket = new WebSocket(`ws://${address}:${this.endpoint.port}`);
+      const socket = new WebSocket(url);
       let settled = false;
       const fail = (error: Error) => {
         if (settled) return;
@@ -124,8 +167,8 @@ class TvLink {
       const timer = setTimeout(() => fail(new TvUnreachable()), CONNECT_TIMEOUT_MS);
       socket.onopen = () => socket.send(encodeMessage({ type: 'hello', protocol: PROTOCOL_VERSION }));
       socket.onerror = () => fail(new TvUnreachable());
-      socket.onclose = () => {
-        if (!settled) fail(new TvUnreachable());
+      socket.onclose = (event) => {
+        if (!settled) fail(event.code === RELAY_NO_ROOM ? new RoomMissing() : new TvUnreachable());
         else if (this.socket === socket) this.dropped();
       };
       socket.onmessage = (event) => {
@@ -248,7 +291,7 @@ function setupView(value: unknown): SetupView | null {
 }
 
 function endpointKey(endpoint: Endpoint): string {
-  return endpoint.tvInstanceId ?? `${endpoint.hosts.join(',')}:${endpoint.port}`;
+  return endpoint.tvInstanceId ?? `${endpoint.hosts.join(',')}:${endpoint.port}|${endpoint.relay ?? ''}/${endpoint.code ?? ''}`;
 }
 
 /**
@@ -306,12 +349,19 @@ export function lanRoomClient(): RoomClient {
     if (code.length !== ROOM_CODE_LENGTH) return undefined;
     const known = knownByCode.get(code);
     if (known !== undefined) return known;
+    let denied = false;
     const found = await lanDiscovery.find(code, DISCOVERY_TIMEOUT_MS).catch((error: unknown) => {
-      if ((error as { code?: string }).code === 'E_LOCAL_NETWORK_DENIED') throw new LocalNetworkDenied();
-      throw error;
+      if ((error as { code?: string }).code !== 'E_LOCAL_NETWORK_DENIED') throw error;
+      if (RELAY_URL === undefined) throw new LocalNetworkDenied();
+      denied = true;
+      return null;
     });
-    if (found === null || found.hosts.length === 0) return undefined;
-    const endpoint = { hosts: found.hosts, port: found.port };
+    if (found === null || found.hosts.length === 0) {
+      // Not on this network: ask the relay, without remembering the answer,
+      // so the next look tries the network again.
+      return RELAY_URL === undefined ? undefined : { hosts: [], port: 0, relay: RELAY_URL, code, ...(denied ? { lanDenied: true } : {}) };
+    }
+    const endpoint = { hosts: found.hosts, port: found.port, code, ...(RELAY_URL === undefined ? {} : { relay: RELAY_URL }) };
     knownByCode.set(code, endpoint);
     return endpoint;
   }
@@ -353,7 +403,8 @@ export function lanRoomClient(): RoomClient {
       pending = (async () => {
         const record = await readRecord();
         if (record === undefined || record.sessionToken !== sessionToken) return undefined;
-        const link = await linkFor(record);
+        // A seat saved before the relay was set still gets it as a fallback.
+        const link = await linkFor(record.relay === undefined && RELAY_URL !== undefined ? { ...record, relay: RELAY_URL } : record);
         const session = await link.request('resumeSession', { sessionToken });
         if (session === null) return undefined;
         link.seatToken = sessionToken;
@@ -386,7 +437,14 @@ export function lanRoomClient(): RoomClient {
 
   return {
     rememberTv: (code, lan) => {
-      knownByCode.set(normalizeRoomCode(code), { hosts: lan.hosts, port: lan.port, tvInstanceId: lan.tvInstanceId });
+      const normalized = normalizeRoomCode(code);
+      knownByCode.set(normalized, {
+        hosts: lan.hosts,
+        port: lan.port,
+        tvInstanceId: lan.tvInstanceId,
+        code: normalized,
+        ...(lan.relay === undefined ? {} : { relay: lan.relay }),
+      });
     },
 
     useView: <Name extends RoomViewName>(name: Name, seat: SeatCredential | undefined) => {
@@ -411,7 +469,8 @@ export function lanRoomClient(): RoomClient {
                 : ((await (await linkFor(endpoint)).request('joinAvailability', { code })) as JoinAvailability);
             });
             if (live) setAnswer({ code, value });
-          } catch {
+          } catch (error) {
+            if (error instanceof RoomMissing && live) setAnswer({ code, value: null });
             // A problem reaching the TV shows its own screen; the form waits.
           }
         };
@@ -446,7 +505,10 @@ export function lanRoomClient(): RoomClient {
     joinRoom: async (args) => {
       const endpoint = await reaching(() => endpointForCode(args.code));
       if (endpoint === undefined) throw new RoomRefusal({ kind: 'roomNotFound', code: normalizeRoomCode(args.code) });
-      const link = await reaching(() => linkFor(endpoint));
+      const link = await reaching(() => linkFor(endpoint)).catch((error: unknown) => {
+        if (error instanceof RoomMissing) throw new RoomRefusal({ kind: 'roomNotFound', code: normalizeRoomCode(args.code) });
+        throw error;
+      });
       const seat = (await link.request('joinRoom', args)) as Awaited<ReturnType<RoomClient['joinRoom']>>;
       link.seatToken = seat.sessionToken;
       seatLinks.set(seat.sessionToken, link);
@@ -457,6 +519,7 @@ export function lanRoomClient(): RoomClient {
         hosts: link.hosts,
         port: link.port,
         ...(link.tvInstanceId === undefined ? {} : { tvInstanceId: link.tvInstanceId }),
+        ...(link.relay === undefined ? {} : { relay: link.relay }),
       });
       return seat;
     },

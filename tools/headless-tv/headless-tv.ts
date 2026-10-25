@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
-import { randomInt } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-import { type HostPorts, RoomHost } from '@huddle/room-host';
+import { type HostPorts, hostThroughRelay, type RelayHost, type RelaySocket, RoomHost } from '@huddle/room-host';
 import { WebSocketServer } from 'ws';
 
 /**
@@ -13,8 +13,17 @@ import { WebSocketServer } from 'ws';
  * The iPhone simulator reaches it at `ws://127.0.0.1:<port>`. It speaks the
  * same Room Protocol as the TV app's LAN server, so a phone cannot tell them
  * apart.
+ *
+ * `HEADLESS_TV_RELAY` (such as `ws://127.0.0.1:8787`) also hosts the room
+ * through the relay, as the TV app does. `HEADLESS_TV_LAN=0` turns the LAN
+ * server and its announcement off, so phones and bots can only come through
+ * the relay, like a web TV.
  */
 export const DEFAULT_PORT = Number(process.env.HEADLESS_TV_PORT ?? 7777);
+const RELAY_URL = process.env.HEADLESS_TV_RELAY || undefined;
+const LAN = process.env.HEADLESS_TV_LAN !== '0';
+/** How long the headless TV waits for the relay to take its code. */
+const RELAY_REGISTER_MS = 10_000;
 
 export type HeadlessTv = {
   readonly host: RoomHost;
@@ -35,6 +44,20 @@ const nodePorts: HostPorts = {
 
 export async function startHeadlessTv(port: number = DEFAULT_PORT): Promise<HeadlessTv> {
   const host = new RoomHost(nodePorts);
+  if (!LAN && RELAY_URL === undefined) throw new Error('HEADLESS_TV_LAN=0 needs HEADLESS_TV_RELAY');
+  const relay = RELAY_URL === undefined ? undefined : await registerOnRelay(host, RELAY_URL);
+  if (!LAN) {
+    const code = host.info().code;
+    return {
+      host,
+      code,
+      url: `${RELAY_URL}/v1/join/${code}`,
+      close: async () => {
+        relay?.stop();
+        host.dispose();
+      },
+    };
+  }
   const server = new WebSocketServer({ port, maxPayload: 256 * 1024 });
   server.on('connection', (socket) => {
     const connection = host.connect(
@@ -76,10 +99,37 @@ export async function startHeadlessTv(port: number = DEFAULT_PORT): Promise<Head
     url: `ws://127.0.0.1:${port}`,
     close: async () => {
       advertiser?.kill();
+      relay?.stop();
       host.dispose();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };
+}
+
+/** Hosts the room through the relay and waits until the relay holds its code. */
+function registerOnRelay(host: RoomHost, url: string): Promise<RelayHost> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      relay.stop();
+      reject(new Error(`The relay at ${url} did not take the room within ${RELAY_REGISTER_MS} ms`));
+    }, RELAY_REGISTER_MS);
+    const relay: RelayHost = hostThroughRelay(host, {
+      url,
+      secret: randomBytes(24).toString('hex'),
+      open: (address) => new WebSocket(address) as unknown as RelaySocket,
+      ports: nodePorts,
+      onState: (state, code) => {
+        if (state === 'registered') {
+          clearTimeout(timeout);
+          console.log(`Relay ${url} holds room ${code}`);
+          resolve(relay);
+        } else if (state === 'refused') {
+          clearTimeout(timeout);
+          reject(new Error(`The relay at ${url} refused room ${code}`));
+        }
+      },
+    });
+  });
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

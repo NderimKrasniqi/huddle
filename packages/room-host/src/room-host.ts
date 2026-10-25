@@ -179,6 +179,21 @@ export class RoomHost {
     this.change(() => (away ? this.markTvAway() : this.restoreTv()));
   }
 
+  /**
+   * Swaps a room nobody has joined for a fresh one with a new code, for a
+   * relay that has the old code taken. Returns false, changing nothing, once a
+   * player holds a seat. The TV's screens see a new room id and reopen it.
+   */
+  replaceEmptyRoom(): boolean {
+    if (this.disposed || this.room.seats.length > 0) return false;
+    this.change(() => {
+      for (const connection of this.connections.values()) connection.close();
+      this.connections.clear();
+      this.room = this.freshRoom();
+    });
+    return true;
+  }
+
   snapshot(): HostSnapshot {
     return { version: SNAPSHOT_VERSION, tvInstanceId: this.tvInstanceId, savedAt: this.ports.now(), room: copy(this.room) };
   }

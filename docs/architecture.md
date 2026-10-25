@@ -19,8 +19,8 @@ Phone app ── Room Protocol over WebSocket ──┐
                      │   → @huddle/game-registry/logic → each game's rules     │
                      │ TV screens: read the host's shared views in-process     │
                      └─────────────────────────────────────────────────────────┘
-Built, not yet wired in: relay/ (Rust) forwards frames between phones and a
-TV that cannot accept connections, such as a web TV (ADR-03, ADR-04).
+Optional: relay/ (Rust) forwards frames between phones and a TV they cannot
+reach directly, or a TV that cannot listen, such as a web TV (ADR-03, ADR-04).
 ```
 
 ### Workspace and dependency direction
@@ -95,17 +95,32 @@ TV. `start` falls back to a free port when 7777 is taken. The shell marks the
 TV away and stops the server when the app leaves the foreground (Apple TV
 suspends it within seconds), and restarts and re-advertises it on return.
 
+### Relay transport
+
+`hostThroughRelay` in `@huddle/room-host` hosts the room through the relay
+over one outgoing WebSocket; the shell passes the socket factory, so the same
+code runs in the TV app, the headless TV and a future web shell. The TV
+registers its code with a secret it keeps (the same secret reclaims the code
+after a restart), and each phone the relay opens is a room-host connection
+like a LAN one. Codes are minted on the TV, so the relay may have one taken:
+an empty room then takes a fresh code; a room with players stays LAN-only.
+The TV app turns the relay on with `EXPO_PUBLIC_HUDDLE_RELAY_URL` and stops it
+with the LAN server in the background.
+
 ### Discovery and the phone client
 
 The TV advertises `Huddle-<code>` as `_huddle._tcp` with TXT entries `code`,
 `port` and `hosts` (IPv4, home-network ranges first). Its QR code carries the
-same: `huddle://join/CODE?hosts=…&port=…&tv=…`, built and parsed by
+same, plus the relay URL while the relay holds the code:
+`huddle://join/CODE?hosts=…&port=…&tv=…&relay=…`, built and parsed by
 `roomJoinLink` and `parseRoomJoinLink` in `@huddle/domain`. A typed code is
 resolved by `apps/phone/modules/lan-discovery` (Bonjour on iOS, `NsdManager`
 on Android) from the TXT addresses; a resolved Bonjour endpoint is not used,
-because it is often IPv6 link-local.
+because it is often IPv6 link-local. A code Bonjour does not find, or any code
+when Local Network access is off, is looked up on the relay
+(`EXPO_PUBLIC_HUDDLE_RELAY_URL`); the relay's 4404 means no such room.
 
-The phone's LAN room client tries the TV's addresses in order, keeps one link
+The phone's room client tries the TV's addresses in order, then the relay, keeps one link
 per TV, and files a seated link under the TV instance id so a new TV at the
 same address gets a fresh link. A seated link reconnects with backoff and
 resumes by token; the TV's address is saved with the Session Token, so a
