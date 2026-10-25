@@ -10,6 +10,7 @@
     "android": "EXPO_TV=1 expo run:android",
     "ios": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo run:ios",
     "prebuild": "EXPO_TV=1 LC_ALL=en_US.UTF-8 REACT_NATIVE_NODE_MODULES_DIR=\"$PWD/node_modules\" expo prebuild",
+    "export:web": "expo export --platform web",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -29,12 +30,14 @@
     "expo-secure-store": "~57.0.1",
     "expo-splash-screen": "~57.0.5",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "npm:react-native-tvos@~0.86.0-2",
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.4",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {

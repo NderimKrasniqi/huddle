@@ -37,6 +37,9 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
   `huddle-relay-load` against a relay started with
   `HUDDLE_RELAY_MAX_PER_IP=20000` (see `relay/huddle-relay-load/src/main.rs`);
   the image builds with `docker build -t huddle-relay relay/`.
+- Web TV smoke test: `EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787 pnpm
+  --filter @huddle/tv export:web -- --output-dir <dir>`, serve `<dir>`, open
+  it at 1920×1080, then run a flow with `TV_URL=ws://127.0.0.1:8787/v1/join/<code>`.
 - Dependency or production-security changes: `pnpm verify:dependency-security`
   or `pnpm audit:prod`.
 - Behaviour: play it on the simulators against `pnpm dev:local`.

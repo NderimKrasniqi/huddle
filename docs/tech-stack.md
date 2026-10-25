@@ -11,6 +11,7 @@ runtime boundaries belong in [`architecture.md`](./architecture.md).
 | Android Phone | Expo SDK 57 / React Native | Supported | physical QR, reconnect, and game traversal |
 | Android TV | Expo SDK 57 / `react-native-tvos` | Supported | physical remote/focus traversal |
 | tvOS | Expo / `react-native-tvos` | Supported (owner decision, TASK-17) | physical Apple TV traversal |
+| Web TV (Chromium) | Expo web export / `react-native-web` | Smoke-tested (TASK-23), not shipped | Skia via CanvasKit, a Tizen or webOS shell |
 
 Web, accounts, store submission, production release tooling, and a TV
 controller are not supported clients or features.
@@ -94,6 +95,7 @@ The room runs on the TV (ADR-01 to ADR-04 in
 | `lan-discovery` Expo module | local | phone discovery of a typed code (Bonjour, `NsdManager`) |
 | `ws` | `8.21.1` | headless TV for the end-to-end flows |
 | Rust (stable, edition 2024) | `1.99.1` | `relay/huddle-relay`, the relay service (ADR-03) |
+| React DOM / React Native Web | `19.2.3` / `^0.21.4` | the web TV export (`apps/tv`, TASK-23) |
 | `EXPO_PUBLIC_HUDDLE_RELAY_URL` | env | relay base URL for both apps; unset means LAN only |
 | tokio / axum / tracing | `1.54` / `0.8` / `0.1` | relay runtime, WebSocket routes and logs |
 | cargo-deny | `0.20.2` | relay advisories, licenses and sources |

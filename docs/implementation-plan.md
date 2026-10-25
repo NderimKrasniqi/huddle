@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-22 are done; results are in the validation
-ledger. Next: smoke-test a web TV build (TASK-23).
+scope changes (TASK-01). TASK-02 to TASK-23 are done; results are in the validation
+ledger. The local-first plan is complete; the release gates below remain.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -199,7 +199,7 @@ These are new user-visible behaviors, now recorded in
 
 ### Phase 7 — Web TV readiness (Samsung and LG not shipped)
 
-- [ ] TASK-23 Smoke-test a web TV build
+- [x] TASK-23 Smoke-test a web TV build
   Done when: an Expo web export of the TV app runs at 1920×1080 in Chromium
   through the relay, plays Trivia with a phone, and the ledger lists what
   fails (Skia, storage, fonts) for a later Tizen and webOS shell.
@@ -456,6 +456,48 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-23 web TV smoke test
+
+`apps/tv` now has `react-dom` 19.2.3 and `react-native-web` ^0.21.4, and
+`pnpm --filter @huddle/tv export:web` builds a web export (2.8 MB of
+JavaScript). Metro's `.web.ts` files replace the three native pieces in the
+TV platform layer: `web-tv-room-client.ts` runs the room host in the page and
+hosts only through the relay, with the snapshot and relay secret in
+`localStorage`; `tv-session-native.web.ts` keeps the TV token in
+`localStorage` and draws UUIDs from Web Crypto; `lan-server/native.web.ts`
+is a stub, because a browser cannot listen. The shared view helpers moved to
+`room-client/views.ts`. The architecture validator now accepts the `.web`
+suffix, only inside `apps/tv/src/platform`.
+
+Result, with the export served on `127.0.0.1:8090`, the built-in Chromium
+browser at 1920×1080, the relay on 8787 and the iPhone 17 simulator: the
+web TV opened room EGBQ and registered it on the relay; `TV_URL=ws://127.0.0.1:8787/v1/join/EGBQ
+pnpm e2e:trivia` seated a bot Host and the phone through the relay, started
+Trivia and answered the first question, and the TV drew the Cosmic Quiz
+question with "1 of 2 answered". Reloading the page restored the running
+game from `localStorage` and the relay gave the same secret its code back.
+`pnpm typecheck`, `pnpm lint`, `pnpm validate:architecture`,
+`pnpm validate:workflow` and `pnpm verify:dependency-security` pass, and a
+native Android TV export still carries the real Skia.
+
+What fails or is missing for a Tizen or webOS shell:
+
+- **Skia:** game modules call Skia while loading, and Skia on the web needs
+  CanvasKit (a WebAssembly file of several MB) loaded first. The web build
+  aliases Skia to a stub (`apps/tv/metro-stubs`, web only), so Bomb Squad
+  and Sumo Bumpers lose their TV art; neither was played on the web.
+- **Storage:** no Keychain or file system. `localStorage` works, including
+  the reload restore, but is not secure, is small, and a TV may clear it.
+- **Fonts:** none; Nunito 400/700/800/900 load on the web.
+- **Networking:** relay only (no LAN server, no Bonjour), so a web TV needs
+  the internet and `EXPO_PUBLIC_HUDDLE_RELAY_URL` at build time.
+- **Web Crypto:** `crypto.randomUUID` needs a secure context (HTTPS, a
+  packaged app or localhost); a page on a plain-HTTP LAN address would fail.
+- **Lifecycle:** the web client does not mark the TV away when hidden.
+- **Not checked:** a real Tizen or webOS browser, remote or focus input,
+  10-foot performance, and the "Game paused" avatar, which drew as an empty
+  circle after the bot left (not compared with native).
 
 ### TASK-22 relay load-checked and packaged
 

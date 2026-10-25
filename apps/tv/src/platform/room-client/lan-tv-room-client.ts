@@ -15,7 +15,8 @@ import { useSyncExternalStore } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { LAN_PORT, lanServer } from '../lan-server/native';
-import type { OpenRoom, TvRoomClient, TvSetupView, TvViewName, TvViews } from './index';
+import type { OpenRoom, TvRoomClient, TvViewName, TvViews } from './index';
+import { setupView, stable } from './views';
 
 /** Saving waits this long after the last change, so a burst of taps is one write. */
 const SAVE_DEBOUNCE_MS = 300;
@@ -265,26 +266,4 @@ export function lanTvRoomClient(): TvRoomClient {
     useStillOpen: (roomId) => useSyncExternalStore(subscribe, () => (store === undefined ? undefined : store.roomId === roomId)),
     useLanJoin: () => useSyncExternalStore(subscribe, () => store?.lan ?? lan),
   };
-}
-
-/** The host's setup view with the countdown's end on this TV's clock. */
-function setupView(setup: HostViews['setup']): TvSetupView | null {
-  if (setup === null) return null;
-  const { countdownRemainingMs, ...rest } = setup;
-  return countdownRemainingMs === undefined ? rest : { ...rest, countdownEndsAt: Date.now() + countdownRemainingMs };
-}
-
-/**
- * The previous object when nothing but a clock moved, so screens and their
- * animations do not restart on every once-a-second sweep.
- */
-function stable<T>(previous: T | undefined, next: T): T {
-  if (previous === undefined) return next;
-  return JSON.stringify(withoutClocks(previous)) === JSON.stringify(withoutClocks(next)) ? previous : next;
-}
-
-function withoutClocks(value: unknown): unknown {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return value;
-  const { clockRemainingMs: _clock, countdownEndsAt: _countdown, ...rest } = value as Record<string, unknown>;
-  return rest;
 }

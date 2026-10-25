@@ -168,8 +168,12 @@ another game is a module and a registry entry.
 ## Portability rules for web TVs
 
 Samsung (Tizen) and LG (webOS) run TV apps as web apps that cannot accept
-incoming connections, so they will need the relay and a web build of the TV
-app. Every change keeps these rules; the validator enforces the first three:
+incoming connections, so they need the relay and a web build of the TV app.
+The web build exists as a smoke test (TASK-23): `.web.ts` files in
+`apps/tv/src/platform` swap the LAN server, file snapshot and Keychain for
+relay-only hosting and `localStorage`, and Skia is stubbed on the web until a
+shell loads CanvasKit. Every change keeps these rules; the validator enforces
+the first three:
 
 - The room host and shared TV code (everything in `apps/tv/src` outside
   `platform`, and each game's TV screen) import no native-only module.

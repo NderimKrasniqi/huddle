@@ -30,8 +30,10 @@ ROUTE_EXPORT = re.compile(
     re.MULTILINE,
 )
 COMMENTS = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+# `.web` is Metro's platform suffix: the web TV build (TASK-23) picks
+# `name.web.ts` over `name.ts`. Only the TV platform layer may use it.
 KEBAB_FILE = re.compile(
-    r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.(?:render\.)?test)?\.(?:ts|tsx)$"
+    r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.web)?(?:\.(?:render\.)?test)?\.(?:ts|tsx)$"
 )
 KEBAB_DIR = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 RENDERER_IMPORT = re.compile(
@@ -569,6 +571,8 @@ def validate_filename_conventions(app: Path, root: Path = ROOT) -> None:
     for path in source_files(src):
         if path.name.startswith("_") or not KEBAB_FILE.fullmatch(path.name):
             fail(f"authored filename must be kebab-case: {relative(path, root)}")
+        if ".web." in path.name and not path.is_relative_to(root / "apps" / "tv" / "src" / "platform"):
+            fail(f"a .web file belongs in the TV platform layer: {relative(path, root)}")
 
 
 def validate_entrypoint_content(app: Path, root: Path = ROOT) -> None:
