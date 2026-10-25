@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-13 are done; results are in the validation
-ledger. Next: TASK-14, the new phone states.
+scope changes (TASK-01). TASK-02 to TASK-14 are done; results are in the validation
+ledger. Next: TASK-15, the end-to-end flows on the LAN host.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -145,7 +145,7 @@ These are new user-visible behaviors, now recorded in
   Native's WebSocket with reconnect and backoff, stores the session token per
   TV instance, resolves typed codes by mDNS, and plays a full Trivia game
   against the emulator.
-- [ ] TASK-14 Add the approved new states
+- [x] TASK-14 Add the approved new states
   Done when: the phone shows the Local Network denial, "Can't reach the TV" and
   "Update Huddle" states from TASK-01, with the shared text components and the
   largest text size checked.
@@ -456,6 +456,27 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-14 connection states
+
+The phone's room client now reports a `ConnectionProblem`
+(`localNetworkDenied`, `unreachable` or `incompatible`), set when reaching the
+TV fails and cleared by the next success; the Convex client reports none.
+`apps/phone/src/screens/connection-problem-screen.tsx` shows the approved
+states with the shared Playroom pieces: "Huddle needs Local Network access"
+and "Can't reach the TV" offer Open Settings and Try again, and "Update
+Huddle" offers OK. The room-code screen and the join screen show it in place
+of their form. The iOS discovery module reports a Local Network denial when
+the Bonjour browser fails with `kDNSServiceErr_PolicyDenied`.
+
+On the iPhone simulator with the LAN bundle: a join link to an address
+nothing answers at showed "Can't reach the TV"; a fake TV answering the
+handshake with `incompatible` showed "Update Huddle"; at the largest
+accessibility text size the heading wrapped between words, both buttons
+stayed visible, and the body scrolled under the footer. The phone app with
+the Swift change builds. Not covered: the Local Network denial itself (the
+simulator never denies it) and an Android phone. `pnpm typecheck`,
+`pnpm lint` and `pnpm validate:architecture` pass.
 
 ### TASK-13 phone LAN client
 

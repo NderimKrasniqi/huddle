@@ -111,6 +111,8 @@ Back to lobby, and everyone can leave from the final screen.
 The owner approved these behaviors with ADR-01 to ADR-04 in
 [`architecture.md`](architecture.md#architecture-decisions). They apply once
 the TV hosts the room; until then rooms run on Convex as described above.
+The phone screens for items 2, 3 and 5 exist and appear when the apps are
+bundled with `EXPO_PUBLIC_ROOM_BACKEND=lan`.
 
 1. A phone joins only on the same Wi-Fi network as the TV, until the relay
    ships.

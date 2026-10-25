@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { lanDiscovery } from '../lan-discovery/native';
-import type { JoinAvailability, PlayerSession, RoomClient, RoomViewName, RoomViews, SeatCredential, SetupView } from './index';
+import type { ConnectionProblem, JoinAvailability, PlayerSession, RoomClient, RoomViewName, RoomViews, SeatCredential, SetupView } from './index';
 
 /** How long one address gets to answer before the next one is tried. */
 const CONNECT_TIMEOUT_MS = 2_000;
@@ -42,6 +42,14 @@ export class IncompatibleTv extends Error {
   constructor(readonly tvProtocol: number) {
     super(`The TV speaks protocol ${tvProtocol}; this phone speaks ${PROTOCOL_VERSION}`);
     this.name = 'IncompatibleTv';
+  }
+}
+
+/** Local Network access is off for Huddle, so the phone cannot look for the TV. */
+export class LocalNetworkDenied extends Error {
+  constructor() {
+    super('Local Network access is off for Huddle');
+    this.name = 'LocalNetworkDenied';
   }
 }
 
@@ -250,6 +258,33 @@ export function lanRoomClient(): RoomClient {
   const seatLinks = new Map<string, TvLink>();
   const attaching = new Map<string, Promise<TvLink | undefined>>();
   let previewLink: TvLink | undefined;
+  let problem: ConnectionProblem | undefined;
+  const problemListeners = new Set<() => void>();
+
+  function setProblem(next: ConnectionProblem | undefined): void {
+    if (problem === next) return;
+    problem = next;
+    for (const listener of problemListeners) listener();
+  }
+
+  /** Records what went wrong reaching the TV, then hands the error on. */
+  function noted(error: unknown): unknown {
+    if (error instanceof LocalNetworkDenied) setProblem('localNetworkDenied');
+    else if (error instanceof IncompatibleTv) setProblem('incompatible');
+    else if (error instanceof TvUnreachable) setProblem('unreachable');
+    return error;
+  }
+
+  /** Runs a step that reaches the TV, clearing the problem when it succeeds. */
+  async function reaching<T>(step: () => Promise<T>): Promise<T> {
+    try {
+      const value = await step();
+      setProblem(undefined);
+      return value;
+    } catch (error) {
+      throw noted(error);
+    }
+  }
 
   async function linkFor(endpoint: Endpoint): Promise<TvLink> {
     const key = endpointKey(endpoint);
@@ -267,7 +302,10 @@ export function lanRoomClient(): RoomClient {
     if (code.length !== ROOM_CODE_LENGTH) return undefined;
     const known = knownByCode.get(code);
     if (known !== undefined) return known;
-    const found = await lanDiscovery.find(code, DISCOVERY_TIMEOUT_MS);
+    const found = await lanDiscovery.find(code, DISCOVERY_TIMEOUT_MS).catch((error: unknown) => {
+      if ((error as { code?: string }).code === 'E_LOCAL_NETWORK_DENIED') throw new LocalNetworkDenied();
+      throw error;
+    });
     if (found === null || found.hosts.length === 0) return undefined;
     const endpoint = { hosts: found.hosts, port: found.port };
     knownByCode.set(code, endpoint);
@@ -351,13 +389,15 @@ export function lanRoomClient(): RoomClient {
         let live = true;
         const ask = async () => {
           try {
-            const endpoint = await endpointForCode(code);
-            const value = endpoint === undefined
-              ? null
-              : ((await (await linkFor(endpoint)).request('joinAvailability', { code })) as JoinAvailability);
+            const value = await reaching(async () => {
+              const endpoint = await endpointForCode(code);
+              return endpoint === undefined
+                ? null
+                : ((await (await linkFor(endpoint)).request('joinAvailability', { code })) as JoinAvailability);
+            });
             if (live) setAnswer({ code, value });
           } catch {
-            if (live) setAnswer({ code, value: null });
+            // A problem reaching the TV shows its own screen; the form waits.
           }
         };
         void ask();
@@ -382,9 +422,9 @@ export function lanRoomClient(): RoomClient {
     },
 
     joinRoom: async (args) => {
-      const endpoint = await endpointForCode(args.code);
+      const endpoint = await reaching(() => endpointForCode(args.code));
       if (endpoint === undefined) throw new RoomRefusal({ kind: 'roomNotFound', code: normalizeRoomCode(args.code) });
-      const link = await linkFor(endpoint);
+      const link = await reaching(() => linkFor(endpoint));
       const seat = (await link.request('joinRoom', args)) as Awaited<ReturnType<RoomClient['joinRoom']>>;
       link.seatToken = seat.sessionToken;
       seatLinks.set(seat.sessionToken, link);
@@ -401,7 +441,7 @@ export function lanRoomClient(): RoomClient {
     lookupSession: async (sessionToken): Promise<PlayerSession | null> => {
       const record = await readRecord();
       if (record === undefined || record.sessionToken !== sessionToken) return null;
-      const link = await seatLink(sessionToken);
+      const link = await reaching(() => seatLink(sessionToken));
       return link === undefined ? null : ((link.view('session') as PlayerSession | null | undefined) ?? null);
     },
 
@@ -419,5 +459,16 @@ export function lanRoomClient(): RoomClient {
     heartbeat: async (sessionToken) => {
       seatLinks.get(sessionToken)?.ping();
     },
+
+    useConnectionProblem: () =>
+      useSyncExternalStore(
+        (listener) => {
+          problemListeners.add(listener);
+          return () => problemListeners.delete(listener);
+        },
+        () => problem,
+      ),
+
+    retryConnection: () => setProblem(undefined),
   };
 }

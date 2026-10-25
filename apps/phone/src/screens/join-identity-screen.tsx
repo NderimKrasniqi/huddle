@@ -34,6 +34,7 @@ import { useRoomClient } from '../platform/room-client/native';
 import { phoneSessionTokenStore } from '../platform/session/native';
 import { joinScreenState, rememberSession, usePhoneSession } from '../platform/session';
 import { phoneIdentityStore } from '../platform/storage/native';
+import { ConnectionProblemScreen } from './connection-problem-screen';
 import { PhoneFrame, PhoneNotice, PhoneTopBar } from './seated/phone-frame';
 
 function normalizedCode(value: string): string {
@@ -88,6 +89,7 @@ export default function JoinIdentityScreen() {
     leave,
   } = usePhoneSession();
   const room = useRoomClient();
+  const problem = room.useConnectionProblem();
   // A QR from a TV that hosts its own room says where that TV listens.
   const linkedLan = useMemo(
     () => lanFromJoinParams(code, { hosts: params.hosts, port: params.port, tv: params.tv }),
@@ -165,6 +167,11 @@ export default function JoinIdentityScreen() {
   const avatarLabels = useMemo(() => {
     return Object.fromEntries(AVATAR_IDS.map((id, index) => [id, `Avatar ${index + 1}`])) as Record<AvatarId, string>;
   }, []);
+
+  // A TV this phone cannot reach gets its own explanation instead of the form.
+  if (problem !== undefined && (routeState.kind === 'joining' || routeState.kind === 'handoff')) {
+    return <ConnectionProblemScreen problem={problem} onRetry={room.retryConnection} />;
+  }
 
   if (code.length !== ROOM_CODE_LENGTH) {
     return (

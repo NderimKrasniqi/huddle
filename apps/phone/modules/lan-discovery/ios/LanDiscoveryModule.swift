@@ -36,10 +36,23 @@ public class LanDiscoveryModule: Module {
 
     browser.stateUpdateHandler = { state in
       browserState = "\(state)"
-      if case .failed(let error) = state, !settled {
-        settled = true
-        browser.cancel()
-        promise.reject("E_BROWSE", "\(error)")
+      switch state {
+      case .waiting(let error), .failed(let error):
+        guard !settled else { return }
+        // The player turned off Local Network access for Huddle.
+        if case .dns(let code) = error, code == DNSServiceErrorType(kDNSServiceErr_PolicyDenied) {
+          settled = true
+          browser.cancel()
+          promise.reject("E_LOCAL_NETWORK_DENIED", "Local Network access is off for Huddle")
+          return
+        }
+        if case .failed = state {
+          settled = true
+          browser.cancel()
+          promise.reject("E_BROWSE", "\(error)")
+        }
+      default:
+        break
       }
     }
     browser.browseResultsChangedHandler = { results, _ in

@@ -5,6 +5,8 @@ import { StyleSheet } from 'react-native';
 
 import { SeatedPhone } from './seated-phone';
 import { RoomCodeEntry } from '../features/join/room-code-entry';
+import { useRoomClient } from '../platform/room-client/native';
+import { ConnectionProblemScreen } from './connection-problem-screen';
 import { usePhoneSession } from '../platform/session';
 import { PhoneLoadingScreen } from '../ui/native';
 import { PhoneFrame } from './seated/phone-frame';
@@ -12,6 +14,8 @@ import { PhoneFrame } from './seated/phone-frame';
 /** Root Phone coordinator: restore first, then seated room or manual entry. */
 export default function PhoneScreen() {
   const { session: current, restoringToken, notice, reportSeatLost, leave, clearNotice } = usePhoneSession();
+  const room = useRoomClient();
+  const problem = room.useConnectionProblem();
   // A seated phone stays mounted through a momentary "unknown" while the
   // session re-resolves: swapping to the loading screen would remount the
   // room and drop whatever the player had open, such as a confirmation sheet.
@@ -36,6 +40,10 @@ export default function PhoneScreen() {
 
   if (notice !== undefined) {
     return <SeatLostRecoverySurface reason={notice} onJoinAnotherRoom={clearNotice} />;
+  }
+
+  if (problem !== undefined) {
+    return <ConnectionProblemScreen problem={problem} onRetry={room.retryConnection} />;
   }
 
   return <RoomCodeEntry />;

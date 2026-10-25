@@ -42,6 +42,13 @@ export type RoomViews = {
 
 export type RoomViewName = keyof RoomViews;
 
+/**
+ * Why the phone cannot reach a TV that hosts its room: Local Network access is
+ * off, the network keeps devices apart (or the TV is gone), or the phone and
+ * the TV speak different protocol versions.
+ */
+export type ConnectionProblem = 'localNetworkDenied' | 'unreachable' | 'incompatible';
+
 /** Commands a seat sends; the seat itself comes from the credential. */
 export type SeatCommandName = Exclude<
   CommandName,
@@ -64,4 +71,8 @@ export type RoomClient = {
   readonly heartbeat: (sessionToken: string) => Promise<void>;
   /** Where the TV for `code` listens, from its QR code; a remote room service ignores it. */
   readonly rememberTv?: (code: string, lan: LanJoin) => void;
+  /** The latest problem reaching the TV, cleared by the next success; a remote room service has none. */
+  readonly useConnectionProblem: () => ConnectionProblem | undefined;
+  /** Forgets the problem so the screens ask again. */
+  readonly retryConnection: () => void;
 };

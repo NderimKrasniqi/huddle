@@ -82,5 +82,7 @@ export function convexRoomClient(convex: ConvexReactClient): RoomClient {
     heartbeat: async (sessionToken) => {
       await translated(convex.mutation(api.players.heartbeat, { sessionToken }));
     },
+    useConnectionProblem: () => undefined,
+    retryConnection: () => {},
   };
 }
