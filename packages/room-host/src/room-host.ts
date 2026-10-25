@@ -236,6 +236,7 @@ export class RoomHost {
       room.game = { ...rest, pausedRemainingMs: Math.max(0, deadlineAt - snapshot.savedAt) };
     }
     this.room = room;
+    this.forgiveTvOutage();
     if (room.game !== undefined && room.game.playerPaused !== true && room.game.pausedRemainingMs !== undefined) {
       room.game = this.resumePausedGameClock(room.game);
     }
@@ -276,9 +277,21 @@ export class RoomHost {
     if (!this.room.tvAway) return;
     this.room.tvAway = false;
     this.room.tvAwaySince = undefined;
+    this.forgiveTvOutage();
     const running = this.room.game;
     if (running === undefined || running.playerPaused === true) return;
     this.room.game = this.resumePausedGameClock(running);
+  }
+
+  /**
+   * Phones could not reach a TV that was down or in the background, so that
+   * silence is not theirs: every seat still present gets a fresh beat and the
+   * usual window to come back. Without it the first sweep marks them all away
+   * and the Host moves to whichever phone reconnects first.
+   */
+  private forgiveTvOutage(): void {
+    const now = this.ports.now();
+    for (const seat of this.room.seats) if (!seat.away) seat.lastSeenAt = now;
   }
 
   // ------------------------------------------------------------ presence
@@ -303,6 +316,8 @@ export class RoomHost {
       return;
     }
     this.room.previews = this.room.previews.filter((preview) => now - preview.updatedAt < SEAT_PREVIEW_TTL_MS);
+    // While the TV is away no phone can reach it; that silence is not theirs.
+    if (this.room.tvAway) return;
     for (const seat of this.room.seats) {
       if (!seat.away && now - seat.lastSeenAt >= AWAY_AFTER_MS) this.markAway(seat);
     }
@@ -468,6 +483,11 @@ export class RoomHost {
   private run<Name extends CommandName>(connection: Connection, name: Name, args: CommandArgs<Name>): CommandResult<Name> {
     if (!ANONYMOUS_COMMANDS.has(name) && this.seatById(connection.playerId) === undefined) {
       throw new Refusal({ kind: 'notJoined' });
+    }
+    // A connection holds one seat. A second join would rebind it and leave the
+    // first seat behind as an orphan that blocks Start; a correct phone never sends one.
+    if (name === 'joinRoom' && this.seatById(connection.playerId) !== undefined) {
+      throw new Refusal({ kind: 'badMessage' });
     }
     const handler = this.commands[name] as (connection: Connection, args: CommandArgs<Name>) => CommandResult<Name>;
     return handler(connection, args);
@@ -957,7 +977,8 @@ export class RoomHost {
     try {
       decodedEvent = game.decodeEvent({
         ...event,
-        ...(running.deadlineAt === undefined ? {} : { msRemaining: running.deadlineAt - now }),
+        // Always the host's value, so a phone cannot send its own when no deadline is pending.
+        msRemaining: running.deadlineAt === undefined ? undefined : running.deadlineAt - now,
         awayPlayerIds: this.room.seats.filter((seat) => seat.away).map((seat) => seat.playerId),
         fromHost: event.playerId !== undefined && event.playerId === this.room.hostPlayerId,
       });

@@ -209,8 +209,8 @@ These are new user-visible behaviors, now recorded in
 - Every e2e flow passes on the LAN host and, after Phase 6, through the relay.
 - The physical party check runs on a real Android TV with mixed phones,
   including a guest network that blocks traffic between devices.
-- Independent review of the room host port against the Convex rules before
-  TASK-18.
+- [x] Independent review of the room host port against the Convex rules
+  (done after TASK-23; see the ledger).
 
 ## Playroom redesign
 
@@ -456,6 +456,31 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### Room host review against the Convex rules
+
+An independent reviewer compared `packages/room-host` with the Convex code as
+it was before TASK-18, area by area (joining, Host, presence, setup,
+countdown, runtime, redaction, rate limits, authorization). All rate-limit
+numbers, join checks, Host succession, readiness, countdown, runtime and
+redaction rules matched. Fixed:
+
+- A TV restart or a return from the background marked every seat away, which
+  paused the game and moved the Host to the first phone back. The sweep no
+  longer marks seats away while the TV is away, and every present seat gets
+  a fresh beat when the TV returns or restores a snapshot.
+- A phone could send its own `msRemaining` when no deadline was pending; the
+  host now always sets it.
+- A second `joinRoom` on a seated connection made an orphan seat that blocked
+  Start; it is refused with `badMessage`.
+
+Checked with a fake-clock script against `RoomHost` (TV back after 30 s and a
+restart 20 s later leave nobody away; 13 s of real silence still does), all
+six e2e flows, `pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture`.
+Left open: the 32-connection cap has no idle timeout for unseated
+connections; refused commands spend rate-limit tokens; out-of-range frames
+close the socket instead of returning a rejection; the room code reaches any
+connection in `welcome`; every ping triggers a full view flush and save.
 
 ### TASK-23 web TV smoke test
 
