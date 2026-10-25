@@ -97,6 +97,8 @@ The room runs on the TV (ADR-01 to ADR-04 in
 | `EXPO_PUBLIC_HUDDLE_RELAY_URL` | env | relay base URL for both apps; unset means LAN only |
 | tokio / axum / tracing | `1.54` / `0.8` / `0.1` | relay runtime, WebSocket routes and logs |
 | cargo-deny | `0.20.2` | relay advisories, licenses and sources |
+| tokio-tungstenite | `0.29` | `relay/huddle-relay-load`, the relay load check |
+| Docker image | `rust:1.99.1-slim-trixie` → `debian:trixie-slim` | `relay/Dockerfile`, the relay container |
 
 ## Asset and motion pipeline
 

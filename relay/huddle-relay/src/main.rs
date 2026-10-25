@@ -11,7 +11,9 @@
 //!   and registration timeouts (see `limits`).
 //!
 //! `HUDDLE_RELAY_ADDR` sets the listen address (default `0.0.0.0:8787`);
-//! `RUST_LOG` sets the log filter. Logs carry codes, ids and counts, never frames.
+//! `HUDDLE_RELAY_MAX_PER_IP` the connections one IP address may hold (default
+//! 64; raise it behind a proxy that hides client addresses, or for a load
+//! check from one machine); `RUST_LOG` sets the log filter. Logs carry codes, ids and counts, never frames.
 
 mod limits;
 mod rooms;
@@ -35,10 +37,14 @@ use tokio::time::timeout;
 use tracing::{info, warn};
 
 use crate::limits::{
-    HOST_RATE, IDLE_TIMEOUT, LINGER, MAX_HOST_FRAME, MAX_PHONE_FRAME, OUTBOX, PHONE_RATE,
-    PING_INTERVAL, REGISTER_TIMEOUT, TokenBucket, close,
+    HOST_RATE, IDLE_TIMEOUT, LINGER, MAX_CONNECTIONS_PER_IP, MAX_HOST_FRAME, MAX_PHONE_FRAME,
+    OUTBOX, PHONE_RATE, PING_INTERVAL, REGISTER_TIMEOUT, TokenBucket, close,
 };
 use crate::rooms::{Relay, close_frame};
+
+/// Read buffer per WebSocket. The default (128 KiB) cost 1.5 GB for 11,000
+/// mostly idle connections; frames larger than this still arrive, in pieces.
+const SOCKET_BUFFER: usize = 4 * 1024;
 use crate::wire::{FromHost, ToHost};
 
 #[tokio::main]
@@ -49,7 +55,11 @@ async fn main() -> std::io::Result<()> {
         )
         .init();
 
-    let relay = Arc::new(Relay::default());
+    let max_per_ip = std::env::var("HUDDLE_RELAY_MAX_PER_IP")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(MAX_CONNECTIONS_PER_IP);
+    let relay = Arc::new(Relay::new(max_per_ip));
     spawn_sweeper(relay.clone());
 
     let app = Router::new()
@@ -60,7 +70,7 @@ async fn main() -> std::io::Result<()> {
 
     let addr = std::env::var("HUDDLE_RELAY_ADDR").unwrap_or_else(|_| "0.0.0.0:8787".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    info!(%addr, "Huddle relay listening");
+    info!(%addr, max_per_ip, "Huddle relay listening");
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
@@ -96,6 +106,8 @@ async fn host_upgrade(
         return StatusCode::TOO_MANY_REQUESTS.into_response();
     }
     ws.max_message_size(MAX_HOST_FRAME)
+        .read_buffer_size(SOCKET_BUFFER)
+        .write_buffer_size(0)
         .on_upgrade(move |socket| async move {
             host_connection(socket, &relay).await;
             relay.release_ip(ip);
@@ -114,6 +126,8 @@ async fn join_upgrade(
     }
     let code = code.to_ascii_uppercase();
     ws.max_message_size(MAX_PHONE_FRAME)
+        .read_buffer_size(SOCKET_BUFFER)
+        .write_buffer_size(0)
         .on_upgrade(move |socket| async move {
             phone_connection(socket, &relay, &code).await;
             relay.release_ip(ip);

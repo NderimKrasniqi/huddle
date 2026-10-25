@@ -248,8 +248,9 @@ Apple TV), the relay transport and its load check, and the web TV smoke test.
 - **Why:** A small, long-running server holding many idle connections, with
   no rules to share with TypeScript.
 - **Consequences:** A Cargo workspace with `cargo fmt --check`, `cargo clippy`
-  and `cargo deny`, an end-to-end check through the relay, one container
-  image, and no unit tests.
+  and `cargo deny`, end-to-end flows through the relay, a load binary, one
+  container image (`relay/Dockerfile`), and no unit tests. One 1-CPU, 512 MB
+  instance held 1,000 rooms of ten phones (TASK-22).
 - **Rejected alternatives:** Rust in the room host or for physics, or a hosted
   realtime service (a vendor again).
 

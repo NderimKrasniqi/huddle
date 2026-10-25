@@ -11,8 +11,7 @@ use axum::extract::ws::{CloseFrame, Message};
 use tokio::sync::mpsc::Sender;
 
 use crate::limits::{
-    CODE_LENGTH, HOST_GRACE, MAX_CONNECTIONS_PER_IP, MAX_PHONES_PER_ROOM, MAX_ROOMS, SECRET_LENGTH,
-    close,
+    CODE_LENGTH, HOST_GRACE, MAX_PHONES_PER_ROOM, MAX_ROOMS, SECRET_LENGTH, close,
 };
 
 struct Host {
@@ -34,10 +33,10 @@ struct Inner {
     per_ip: HashMap<IpAddr, u32>,
 }
 
-#[derive(Default)]
 pub struct Relay {
     inner: Mutex<Inner>,
     next_id: AtomicU64,
+    max_per_ip: u32,
 }
 
 /// A close frame with a relay close code.
@@ -53,6 +52,15 @@ fn valid_code(code: &str) -> bool {
 }
 
 impl Relay {
+    /// A relay that lets each IP address hold `max_per_ip` connections.
+    pub fn new(max_per_ip: u32) -> Self {
+        Self {
+            inner: Mutex::default(),
+            next_id: AtomicU64::default(),
+            max_per_ip,
+        }
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
         // A panic while holding the lock leaves plain maps behind; keep serving.
         self.inner
@@ -67,7 +75,7 @@ impl Relay {
     pub fn acquire_ip(&self, ip: IpAddr) -> bool {
         let mut inner = self.lock();
         let count = inner.per_ip.entry(ip).or_insert(0);
-        if *count >= MAX_CONNECTIONS_PER_IP {
+        if *count >= self.max_per_ip {
             return false;
         }
         *count += 1;

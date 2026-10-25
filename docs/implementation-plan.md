@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-21 are done; results are in the validation
-ledger. Next: load-check and package the relay (TASK-22).
+scope changes (TASK-01). TASK-02 to TASK-22 are done; results are in the validation
+ledger. Next: smoke-test a web TV build (TASK-23).
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -192,7 +192,7 @@ These are new user-visible behaviors, now recorded in
   WebSocket, the QR code also carries the relay URL, the phone falls back to
   the relay when the LAN address fails, and a typed code resolves through the
   relay when mDNS finds nothing.
-- [ ] TASK-22 Load-check and package the relay
+- [x] TASK-22 Load-check and package the relay
   Done when: a Rust load binary in the same workspace holds 1,000 simulated
   rooms of ten phones on one small instance with the ledger recording memory
   and p95 forward time, and the relay ships as one container image.
@@ -456,6 +456,39 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-22 relay load-checked and packaged
+
+`relay/huddle-relay-load` is a load binary in the relay workspace: each room
+is a TV that registers a code and answers every phone frame with a 1 KB
+view, and ten phones that each send a 160-byte frame a second. Frames carry
+their send time, so it reports phone → TV and TV → phone forward times. The
+relay now reads `HUDDLE_RELAY_MAX_PER_IP` (default 64), because a load check
+from one machine, or a proxy that hides client addresses, shows one address.
+
+The first run held the load but used 1.5 GB: each WebSocket kept axum's
+default 128 KiB read buffer. The relay now uses a 4 KiB read buffer and no
+write buffer per socket; frames larger than that still arrive.
+
+Results for 1,000 rooms × 10 phones at 1 frame a second (11,000 connections,
+about 10,000 frames a second each way, 20 s ramp and 60 s steady), zero
+failures and every frame answered in both runs:
+
+| Run | Peak memory | CPU | phone → TV p50 / p95 / p99 | TV → phone p50 / p95 / p99 |
+| --- | ---: | ---: | --- | --- |
+| Native release build, this Mac (i9-9880H) | 165 MB RSS | ~85% of one core | 0.40 / 1.97 / 4.28 ms | 0.20 / 1.22 / 3.92 ms |
+| Container, `--cpus 1 --memory 512m` | 186 MiB | 65–83% of one CPU | 0.53 / 5.77 / 40.69 ms | 0.62 / 16.88 / 41.75 ms |
+
+In the container run the load binary ran in a second container on the same
+Docker Desktop VM, so its own scheduling is in the numbers. Idle memory is
+under 2 MB.
+
+`relay/Dockerfile` builds the relay image (123 MB: `rust:1.99.1-slim-trixie`
+to build, `debian:trixie-slim` to run, both pinned by digest, a non-root
+user, port 8787) and a `load` target with the load binary. `pnpm
+relay:check` passes; `cargo deny` still warns only about two `syn` versions.
+Not covered: a real cloud instance, `wss://` termination, and a load with
+bursty game traffic (Sumo inputs).
 
 ### TASK-21 relay transport and fallback
 

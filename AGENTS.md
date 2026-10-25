@@ -33,7 +33,10 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
 - Trivia question content: `pnpm validate:packs`.
 - Client/server bundle boundaries: `pnpm verify:bundle-seam` on a fresh export.
 - Relay (`relay/`): `pnpm relay:check` (fmt, clippy, deny). Rust comes from
-  rustup; put `~/.cargo/bin` on `PATH`.
+  rustup; put `~/.cargo/bin` on `PATH`. For a load change, run
+  `huddle-relay-load` against a relay started with
+  `HUDDLE_RELAY_MAX_PER_IP=20000` (see `relay/huddle-relay-load/src/main.rs`);
+  the image builds with `docker build -t huddle-relay relay/`.
 - Dependency or production-security changes: `pnpm verify:dependency-security`
   or `pnpm audit:prod`.
 - Behaviour: play it on the simulators against `pnpm dev:local`.
