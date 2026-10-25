@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-16 are done; results are in the validation
-ledger. Next: TASK-17 (all three games on Apple TV) and TASK-18 (retire Convex).
+scope changes (TASK-01). TASK-02 to TASK-17 are done; results are in the validation
+ledger. Next: TASK-18, retiring Convex.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -159,7 +159,7 @@ These are new user-visible behaviors, now recorded in
 - [x] TASK-16 Build the Apple TV LAN module
   Done when: the Swift implementation from TASK-03 sits behind the same module
   API with Bonjour advertising, and the TV app builds for tvOS.
-- [ ] TASK-17 Play on Apple TV
+- [x] TASK-17 Play on Apple TV
   Done when: all three games play to the finish on the Apple TV simulator with
   an iPhone simulator and bots, and `tech-stack.md` moves tvOS out of
   experimental if the owner agrees.
@@ -456,6 +456,25 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-17 Apple TV play-through
+
+On the Apple TV 4K (at 1080p) simulator, tvOS 26.5, with the TV app bundled
+for `lan` and a fresh room (VQQV), nine protocol bots and the iPhone
+simulator played all three games to the finish in one room. The phone joined
+through the TV's own advertised addresses
+(`huddle://join/VQQV?hosts=192.168.1.207,100.82.48.124&port=7777&tv=…`), the
+real QR path, and pressed Ready before each game in one long Maestro flow,
+which passed. Trivia (Quick) finished in 110 s, Bomb Squad (3 bombs, 30 s to
+argue) in 261 s through every phase, and Sumo Bumpers (1 match, 8 s to aim)
+in 157 s. Screenshots showed "Room full · 10 / 10" with ten avatars and a
+ten-row final scoreboard without clipping. A stale `Huddle-FEJP` Bonjour entry
+from the Android run stayed in the Mac's cache but could not be resolved, and
+the phone matched by code, so it did not interfere.
+
+The owner moved tvOS from experimental to supported on this evidence
+(`tech-stack.md`, `project-scope.md`); the physical Apple TV check is still
+open.
 
 ### TASK-16 Apple TV LAN module
 

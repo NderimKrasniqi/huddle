@@ -96,8 +96,9 @@ Back to lobby, and everyone can leave from the final screen.
 
 ## Supported platforms and non-goals
 
-- Supported: iOS Phone, Android Phone, and Android TV.
-- Experimental: tvOS compile/simulator evidence only.
+- Supported: iOS Phone, Android Phone, Android TV, and Apple TV (tvOS). Apple
+  TV is supported by owner decision on simulator evidence; a physical Apple TV
+  check is still open.
 - Out of scope: web clients, accounts, store submission, production release
   tooling, Invite Friend, sound/settings that are not backed by authority.
 - Room lifecycle, session tokens, stable avatar IDs, and the game module seam

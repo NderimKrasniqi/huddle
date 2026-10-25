@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Huddle TV app.",
-  "//scripts": "Apple prebuilds point react-native-svg at this app's pnpm react-native symlink. Without the override its podspec follows the react-native-tvos alias to a sibling node_modules path that does not exist. tvOS remains experimental; Android TV is the required runtime proof.",
+  "//scripts": "Apple prebuilds point react-native-svg at this app's pnpm react-native symlink. Without the override its podspec follows the react-native-tvos alias to a sibling node_modules path that does not exist. Android TV and Apple TV (tvOS) are both supported TV runtimes.",
   "main": "expo-router/entry",
   "scripts": {
     "start": "EXPO_TV=1 expo start",

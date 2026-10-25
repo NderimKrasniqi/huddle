@@ -10,7 +10,7 @@ runtime boundaries belong in [`architecture.md`](./architecture.md).
 | iOS Phone | Expo SDK 57 / React Native | Supported | physical Phone party traversal |
 | Android Phone | Expo SDK 57 / React Native | Supported | physical QR, reconnect, and game traversal |
 | Android TV | Expo SDK 57 / `react-native-tvos` | Supported | physical remote/focus traversal |
-| tvOS | Expo / `react-native-tvos` | Experimental | compile/simulator evidence only |
+| tvOS | Expo / `react-native-tvos` | Supported (owner decision, TASK-17) | physical Apple TV traversal |
 
 Web, accounts, store submission, production release tooling, and a TV
 controller are not supported clients or features.
