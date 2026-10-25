@@ -10,6 +10,8 @@ expo-env.d.ts
 # Native build output (generated via prebuild)
 apps/*/ios/
 apps/*/android/
+apps/*/modules/*/android/build/
+apps/*/modules/*/android/.cxx/
 *.ipa
 *.apk
 *.aab
