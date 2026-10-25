@@ -1,0 +1,24 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:1:1-4:12
+INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:1:1-4:12
+	package
+		INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:1:11-69
+uses-permission#android.permission.INTERNET
+ADDED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:2:3-65
+	android:name
+		ADDED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:2:20-62
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:3:3-77
+	android:name
+		ADDED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml:3:20-74
+uses-sdk
+INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml
+INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/nderimkrasniqi/Developer/Projects/huddle/apps/tv/modules/lan-server/android/src/main/AndroidManifest.xml
