@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-14 are done; results are in the validation
-ledger. Next: TASK-15, the end-to-end flows on the LAN host.
+scope changes (TASK-01). TASK-02 to TASK-15 are done; results are in the validation
+ledger. Next: TASK-16 (Apple TV module) and TASK-18 (retire Convex).
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -149,7 +149,7 @@ These are new user-visible behaviors, now recorded in
   Done when: the phone shows the Local Network denial, "Can't reach the TV" and
   "Update Huddle" states from TASK-01, with the shared text components and the
   largest text size checked.
-- [ ] TASK-15 Run the end-to-end flows on the LAN host
+- [x] TASK-15 Run the end-to-end flows on the LAN host
   Done when: every Maestro flow in `e2e` passes against the headless TV, and
   Trivia, Bomb Squad and Sumo Bumpers each play to the finish on the Android TV
   emulator with a guest phone and ten bots.
@@ -457,7 +457,7 @@ explicit owner approval.
 
 ## Validation ledger
 
-### TASK-15 end-to-end on the LAN host (in progress)
+### TASK-15 end-to-end on the LAN host
 
 The e2e scripts now seed the headless TV (`tools/headless-tv/seed-*.ts`, run
 with `exec` so ending the script ends the seed and its Bonjour announcement),
@@ -473,8 +473,18 @@ at that address reused a link that only accepted the old TV; and leaving a
 room whose TV was gone failed. Leaving now always succeeds for the player,
 and a TV that comes back marks the silent seat away on its own.
 
-Still open: Trivia, Bomb Squad and Sumo Bumpers to the finish on the Android
-TV emulator with a guest phone and nine bots.
+On the Android TV emulator, with the TV app rebuilt (so the TASK-11 Kotlin
+module ran on Android for the first time) and bundled for `lan`, phones and
+bots reached the TV's room host through `adb forward tcp:7777`. Nine protocol
+bots and the iPhone simulator, joining through a QR-style link
+(`huddle://join/FEJP?hosts=127.0.0.1&port=7777&tv=…`) and pressing Ready
+before each game in one long Maestro flow, played all three games to the
+finish in one room: Trivia (Quick) in 119 s, Bomb Squad (3 bombs, 30 s to
+argue) in 263 s through every phase, and Sumo Bumpers (1 match, 8 s to aim) in
+150 s. The TV showed each game's final scores, the phone flow passed, and no
+pause was logged, so the guest phone stayed present throughout. The emulator
+reports its private address, so its own QR code cannot be used from outside
+it; on real hardware the TV's Wi-Fi address goes in the QR.
 
 ### TASK-14 connection states
 
