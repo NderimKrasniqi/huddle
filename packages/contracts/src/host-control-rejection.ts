@@ -3,8 +3,8 @@
  * refused.
  *
  * Shaped like the join and lifecycle rejections beside it and thrown the
- * same way: as the `data` of a `ConvexError`, the only part of a thrown error
- * Convex does not redact, so the Host's phone tells the cases apart by `kind`
+ * same way: as the `rejection` of a Room Protocol result, which the phone
+ * receives as a `RoomRefusal`, so the Host's phone tells the cases apart by `kind`
  * rather than by a message someone may reword.
  *
  * `transferHost` and `removePlayer` share this type because they share their

@@ -10,7 +10,8 @@ runtime boundaries belong in [`architecture.md`](./architecture.md).
 | iOS Phone | Expo SDK 57 / React Native | Supported | physical Phone party traversal |
 | Android Phone | Expo SDK 57 / React Native | Supported | physical QR, reconnect, and game traversal |
 | Android TV | Expo SDK 57 / `react-native-tvos` | Supported | physical remote/focus traversal |
-| tvOS | Expo / `react-native-tvos` | Experimental | compile/simulator evidence only |
+| tvOS | Expo / `react-native-tvos` | Supported (owner decision, TASK-17) | physical Apple TV traversal |
+| Web TV (Chromium) | Expo web export / `react-native-web` | Smoke-tested (TASK-23), not shipped | Skia via CanvasKit, a Tizen or webOS shell |
 
 Web, accounts, store submission, production release tooling, and a TV
 controller are not supported clients or features.
@@ -26,11 +27,11 @@ controller are not supported clients or features.
 | Expo | SDK `57` | Phone and TV application platform |
 | Expo Router | `~57.0.12` | file-based native routes and deep links |
 | React Native TV | `~0.86.0-2` | shared Android TV runtime |
-| Convex | `^1.42.3` | authoritative room and game state |
+| `@huddle/room-host` | workspace | room and game authority, run by the TV |
 
 Workspace roots are `apps/phone`, `apps/tv`, `games/*`, `packages/contracts`,
 `packages/domain`, `packages/design-tokens`, `packages/ui`,
-`packages/game-registry`, and `convex`. Package exports, rather than source
+`packages/game-registry`, `packages/physics` and `packages/room-host`. Package exports, rather than source
 directory reach-through, enforce those boundaries.
 
 ## Playroom presentation stack
@@ -67,18 +68,39 @@ The TV app owns the only QR/SVG dependencies. The Phone scanner owns the only
 `CameraView`. The TV source graph is checked for buttons, inputs, press handlers,
 positive focus, and D-pad handlers so the TV remains a passive stage.
 
-## Server and game contracts
+## Room and game contracts
 
 | Technology | Version | Use |
 |---|---:|---|
-| Convex | `^1.42.3` | rooms, seats, presence, setup, readiness, runtime |
-| `@convex-dev/rate-limiter` | `^0.4.2` | server-owned party-safe limits |
-| Zod | `^4.4.3` | wire and module decoding |
+| Zod | `^4.4.3` | Room Protocol, wire and module decoding |
 
-The game registry lists the installed games: Trivia and Bomb Squad. Each module owns its settings,
+The game registry lists the installed games: Trivia, Bomb Squad and Sumo
+Bumpers. Each module owns its settings,
 server rules, state/deadlines, redaction, Phone controller, TV presentation,
-and Back-to-lobby boundary. Convex remains the authority; the only schema
-addition is the optional countdown state on setup.
+and Back-to-lobby boundary. The TV's room host is the authority.
+
+## Local-first stack
+
+The room runs on the TV (ADR-01 to ADR-04 in
+[`architecture.md`](architecture.md#architecture-decisions)).
+
+| Technology | Version | Use |
+|---|---:|---|
+| `@huddle/room-host` | workspace | room authority on the TV and in the headless TV |
+| Zod | `^4.4.3` | Room Protocol messages in `@huddle/contracts/protocol` |
+| Java-WebSocket | `1.6.0` | Android TV LAN server in the `lan-server` Expo module (with `NsdManager`) |
+| Network.framework | system | Apple TV LAN server (`NWListener`, `NWProtocolWebSocket`) and Bonjour |
+| Expo File System | `~57.0.2` | the TV's room snapshot |
+| React Native WebSocket | built in | phone room client |
+| `lan-discovery` Expo module | local | phone discovery of a typed code (Bonjour, `NsdManager`) |
+| `ws` | `8.21.1` | headless TV for the end-to-end flows |
+| Rust (stable, edition 2024) | `1.99.1` | `relay/huddle-relay`, the relay service (ADR-03) |
+| React DOM / React Native Web | `19.2.3` / `^0.21.4` | the web TV export (`apps/tv`, TASK-23) |
+| `EXPO_PUBLIC_HUDDLE_RELAY_URL` | env | relay base URL for both apps; unset means LAN only |
+| tokio / axum / tracing | `1.54` / `0.8` / `0.1` | relay runtime, WebSocket routes and logs |
+| cargo-deny | `0.20.2` | relay advisories, licenses and sources |
+| tokio-tungstenite | `0.29` | `relay/huddle-relay-load`, the relay load check |
+| Docker image | `rust:1.99.1-slim-trixie` → `debian:trixie-slim` | `relay/Dockerfile`, the relay container |
 
 ## Asset and motion pipeline
 
@@ -98,15 +120,16 @@ TV uses a 1920×1080 design stage and a 5% overscan-safe frame, scaling down to
 per countdown number. Reduced-motion devices get immediate state changes or
 brief fades without losing status copy or accessibility semantics.
 
-## Local backend
+## Local development
 
-`pnpm dev:local` runs Convex on this Mac instead of the cloud dev deployment,
-and starts both Metro servers against it. Local function calls and database
-bandwidth do not count against the Convex plan, so use it for simulator work
-and bot-driven test games. The iPhone simulator reaches it directly and the TV
-emulator through `adb reverse`; real devices cannot, and keep the cloud URL in
-the apps' env files. The script restores the Convex env file to the cloud selection
-when it stops, so `convex dev --once` still deploys to the cloud.
+`pnpm dev:local` starts the TV Metro on 8081 and the phone Metro on 8082.
+There is no backend: the TV app hosts the room. The iPhone and Apple TV
+simulators share this Mac's network; the Android TV emulator reaches Metro
+through `adb reverse`, and phones reach a room on it through
+`adb forward tcp:7777 tcp:7777`. `pnpm headless-tv` runs a room on this Mac
+without a TV app. To use the relay, run it (`cargo run --release` in
+`relay/`, listening on 8787) and start Metro with
+`EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787 pnpm dev:local --clear`.
 
 ## Verification commands
 
@@ -118,12 +141,13 @@ pnpm lint
 pnpm validate:architecture
 pnpm validate:workflow
 pnpm validate:packs
+pnpm relay:check
 pnpm verify:bundle-seam -- <fresh-export-directory>
 ```
 
 The project keeps end-to-end tests only; there are no unit, render or
 integration suites. The Maestro flows live in `e2e/`; `pnpm e2e:bomb-squad`
-seeds a room through `convex/e2e/seed-bomb-room.mjs` and plays the phone from
+seeds a headless TV through `tools/headless-tv/seed-bomb-room.ts` and plays the phone from
 join to the first bomb on the iPhone simulator. Use `git diff --check` before handoff.
 
 For bundle proof, export Phone and TV into fresh directories and run the seam

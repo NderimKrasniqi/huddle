@@ -5,15 +5,13 @@ belongs in `project-scope.md`, runtime boundaries in `architecture.md`,
 technology/commands in `tech-stack.md`, and current tasks in
 `implementation-plan.md`.
 
-Keep Expo, Convex, pnpm workspaces, one Android TV codebase, the game-registry
-client/server seam, shared primitives, existing assets, and the warm living-room
-palette intact unless an active task explicitly changes them. Current package
-roots are `apps/phone`, `apps/tv`, `games/*`, `packages/contracts`,
-`packages/domain`, `packages/design-tokens`, `packages/ui`, and
-`packages/game-registry`.
-
-Do not hand-edit `convex/convex/_generated/ai/guidelines.md`. Never run the
-development reset against production or leave its environment gate enabled.
+Keep Expo, pnpm workspaces, one TV codebase (Android TV and Apple TV), the
+TV-hosted room (ADR-01), the game-registry rules/screens seam, shared
+primitives, existing assets, and the warm living-room palette intact unless an
+active task explicitly changes them. Current package roots are `apps/phone`,
+`apps/tv`, `games/*`, `packages/contracts`, `packages/domain`,
+`packages/design-tokens`, `packages/ui`, `packages/game-registry`,
+`packages/physics`, and `packages/room-host`.
 
 ## Documentation and dependency research
 
@@ -34,18 +32,32 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
 - Docs and scripts: `pnpm validate:workflow`.
 - Trivia question content: `pnpm validate:packs`.
 - Client/server bundle boundaries: `pnpm verify:bundle-seam` on a fresh export.
+- Relay (`relay/`): `pnpm relay:check` (fmt, clippy, deny). Rust comes from
+  rustup; put `~/.cargo/bin` on `PATH`. For a load change, run
+  `huddle-relay-load` against a relay started with
+  `HUDDLE_RELAY_MAX_PER_IP=20000` (see `relay/huddle-relay-load/src/main.rs`);
+  the image builds with `docker build -t huddle-relay relay/`.
+- Web TV smoke test: `EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787 pnpm
+  --filter @huddle/tv export:web -- --output-dir <dir>`, serve `<dir>`, open
+  it at 1920×1080, then run a flow with `TV_URL=ws://127.0.0.1:8787/v1/join/<code>`.
 - Dependency or production-security changes: `pnpm verify:dependency-security`
   or `pnpm audit:prod`.
 - Behaviour: play it on the simulators against `pnpm dev:local`.
-- End-to-end: `pnpm e2e:bomb-squad` with `pnpm dev:local` running and the
-  phone app open on a booted iPhone simulator. It seeds a room with a fake TV
-  and three bots, then drives the phone from join to the first bomb.
-  `pnpm e2e:phone-starts` checks the phone gets past its start-up screen.
-  `pnpm e2e:crowded-room` seats nine long-named bots that go quiet and
-  checks the phone names them in a short list. `pnpm e2e:host-handoff`
-  uses the same seed and checks the host-change toast. `pnpm e2e:trivia`
-  joins a Trivia room and answers the first question.
-  Both flows target the booted iPhone simulator, or `DEVICE`.
+- End-to-end: run `pnpm dev:local` and
+  open the phone app on a booted iPhone simulator. Each flow seeds a headless
+  TV (`tools/headless-tv`) with bots on port 7777, which advertises itself over
+  Bonjour so the phone finds the typed code. `pnpm e2e:bomb-squad` drives the
+  phone from join to the first bomb. `pnpm e2e:phone-starts` checks the phone
+  gets past its start-up screen. `pnpm e2e:crowded-room` seats nine long-named
+  bots that go quiet and checks the phone names them in a short list.
+  `pnpm e2e:host-handoff` uses the same seed and checks the host-change toast.
+  `pnpm e2e:trivia` joins a Trivia room and answers the first question.
+  `pnpm e2e:sumo` plays a Sumo Bumpers round. To run a flow through the
+  relay, start it (`relay/`, port 8787), run Metro with
+  `EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787`, and prefix the flow with
+  `HEADLESS_TV_RELAY=ws://127.0.0.1:8787 HEADLESS_TV_LAN=0`. Port 7777 must be free (an Apple
+  TV simulator running the TV app also listens there). The flows target the
+  booted iPhone simulator, or `DEVICE`.
 
 Record the commands run and whether a failure is introduced, pre-existing, or
 blocked by the environment.
@@ -57,12 +69,11 @@ blocked by the environment.
   needs `adb reverse tcp:8081 tcp:8081`. If a phone keeps showing old game
   code after an edit under `games/`, reload the app; Fast Refresh does not
   always reach game packages.
-- Room views (roster, setup, browsed card, running game) answer only the
-  room's TV, which passes `tvSessionToken`, or a seated phone, which passes
-  `sessionToken`. A new room query must use `roomViewer` from
-  `convex/convex/lib/authorization.ts`. Changing these arguments breaks clients
-  in both directions, so follow the release order in
-  [`docs/implementation-plan.md`](docs/implementation-plan.md).
+- The TV's room host (`packages/room-host`) is the room's authority. Phones
+  speak the versioned Room Protocol (`@huddle/contracts/protocol`); a
+  connection is anonymous until `joinRoom` or `resumeSession` binds it to one
+  seat, and room views go only to seated phones and the TV's own screens. Any
+  change an older phone or TV would misread bumps `PROTOCOL_VERSION`.
 - Game packages animate with React Native `Animated`, never Reanimated, and keep
   their own palettes: the Cosmic Quiz colours belong to `games/trivia` only.
   `pnpm validate:architecture` enforces both.

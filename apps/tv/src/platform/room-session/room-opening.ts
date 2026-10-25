@@ -1,5 +1,4 @@
-import type { api } from '@huddle/convex';
-import type { FunctionReturnType } from 'convex/server';
+import type { OpenRoom } from '../room-client';
 
 import { onlyOnce } from './only-once';
 import { isTvIdentityError } from './tv-session';
@@ -9,7 +8,7 @@ import { isTvIdentityError } from './tv-session';
  * showing and when it needs another, how long it waits between tries, what it is
  * doing right now, and what the screen says about it.
  *
- * All of it lives here rather than beside the Convex client in `room.ts` —
+ * All of it lives here rather than beside the room client in `room-client.ts` —
  * which is only this launch's instance of it — because the TV app is *untouched
  * after launch*. There is no remote surface, no relaunch, nobody to tell. A
  * television switched on before the router has finished booting has to arrive at
@@ -21,7 +20,7 @@ import { isTvIdentityError } from './tv-session';
  */
 
 /** The room this TV opened: its id, and the Room Code on the pairing screen. */
-export type OpenRoom = FunctionReturnType<typeof api.rooms.openRoom>;
+export type { OpenRoom };
 
 /** The room this TV is showing, and the news that it has expired. */
 export type RoomOpener = {
@@ -93,8 +92,8 @@ export type RoomOpening =
 const RECONNECTING: RoomOpening = { kind: 'reconnecting' };
 
 /**
- * Where a launch starts. `deployed` is whether this build was given a Convex
- * deployment at all (`convexClient !== undefined`); without one there is
+ * Where a launch starts. `deployed` is whether this build has a room service
+ * at all (the room host always is); without one there is
  * nothing to try, so the screen says so straight away instead of pretending to
  * reconnect to something that does not exist.
  */
@@ -128,7 +127,7 @@ export function reopenDelay(failures: number): number {
  * getting through.
  *
  * It exists because the failure that actually happens is silence, not a
- * rejection: `ConvexReactClient` queues a mutation it has no socket for and
+ * rejection: a room service can queue a request it has no socket for and
  * neither resolves nor rejects it, so a TV switched on ahead of its router
  * would sit on four blank code tiles with nothing to say. Four seconds is far
  * longer than the round trip a working deployment makes — a room with wifi
@@ -143,7 +142,7 @@ const OPEN_PATIENCE_MS = 4_000;
  *
  * The two ways it can fail want different answers. A *rejection* is an attempt
  * that is over, so another one is made after `delayAfter`. Silence is an
- * attempt that is still out there — Convex is holding the mutation and will
+ * attempt that is still out there — the room service is holding the request and will
  * send it the moment the socket comes up — so the screen is told it is
  * reconnecting and nothing else is issued: re-asking would open a second room
  * as soon as the connection returned, and every phone that had read the first
@@ -182,7 +181,7 @@ export function keepOpeningRoom(
 
   const impatient = setTimeout(() => {
     if (!stopped) {
-      complainOnce('Huddle TV is not getting through to its Convex deployment; it keeps trying.');
+      complainOnce('Huddle TV is not getting through to its room service; it keeps trying.');
       report(RECONNECTING);
     }
   }, patience);
@@ -274,7 +273,7 @@ export function roomOpeningCaption(opening: RoomOpening): RoomOpeningCaption {
     case 'misconfigured':
       return {
         kind: 'trouble',
-        text: 'No Huddle backend — set EXPO_PUBLIC_CONVEX_URL and rebuild',
+        text: 'No Huddle room service in this build',
       };
     case 'deviceFailure':
       return {

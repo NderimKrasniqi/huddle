@@ -32,7 +32,7 @@ const APPLE_TARGETS = {
     prebuild: 'pnpm --filter @huddle/phone prebuild',
   },
   tvos: {
-    label: 'TV tvOS (experimental)',
+    label: 'TV tvOS',
     workspace: 'apps/tv/ios/Huddle.xcworkspace',
     generatedProject: 'apps/tv/ios',
     scheme: 'Huddle',

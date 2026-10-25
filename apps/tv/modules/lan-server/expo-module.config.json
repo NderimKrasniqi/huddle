@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "apple"],
+  "android": {
+    "modules": ["tv.huddle.lanserver.LanServerModule"]
+  },
+  "apple": {
+    "modules": ["LanServerModule"]
+  }
+}

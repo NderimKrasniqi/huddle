@@ -1,4 +1,3 @@
-import { api } from '@huddle/convex';
 import {
   AVATAR_IDS,
   NICKNAME_MAX_LENGTH,
@@ -20,20 +19,22 @@ import {
 } from '@huddle/ui/native';
 import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery } from 'convex/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { joinFailureMessage } from '../features/join/join-rejection';
+import { lanFromJoinParams } from '../features/scan';
 import { rememberProfile as persistProfile, loadGuestProfile } from '../features/join/identity';
 import { codeEntry, nicknameEntry } from '../features/join/join-entry';
 import { useSeatPreview } from '../features/join/native';
 import { hostControlFailureMessage } from '../features/room';
+import { useRoomClient } from '../platform/room-client/native';
 import { phoneSessionTokenStore } from '../platform/session/native';
 import { joinScreenState, rememberSession, usePhoneSession } from '../platform/session';
 import { phoneIdentityStore } from '../platform/storage/native';
+import { ConnectionProblemScreen } from './connection-problem-screen';
 import { PhoneFrame, PhoneNotice, PhoneTopBar } from './seated/phone-frame';
 
 function normalizedCode(value: string): string {
@@ -76,7 +77,7 @@ function IdentityStateSurface({ title, message, testID, action, loading = false 
 export default function JoinIdentityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ code?: string | string[] }>();
+  const params = useLocalSearchParams<{ code?: string | string[]; hosts?: string; port?: string; tv?: string; relay?: string }>();
   const code = normalizedCode(Array.isArray(params.code) ? params.code[0] ?? '' : params.code ?? '');
   const {
     session,
@@ -87,12 +88,17 @@ export default function JoinIdentityScreen() {
     cancelLeave,
     leave,
   } = usePhoneSession();
-  const joinRoom = useMutation(api.players.joinRoom);
-  const leaveCurrentRoom = useMutation(api.players.leaveRoom);
-  const availability = useQuery(
-    api.players.joinAvailability,
-    code.length === ROOM_CODE_LENGTH ? { code } : 'skip',
+  const room = useRoomClient();
+  const problem = room.useConnectionProblem();
+  // A QR from a TV that hosts its own room says where that TV listens.
+  const linkedLan = useMemo(
+    () => lanFromJoinParams(code, { hosts: params.hosts, port: params.port, tv: params.tv, relay: params.relay }),
+    [code, params.hosts, params.port, params.tv, params.relay],
   );
+  useMemo(() => {
+    if (linkedLan !== undefined) room.rememberTv?.(code, linkedLan);
+  }, [code, linkedLan, room]);
+  const availability = room.useJoinAvailability(code.length === ROOM_CODE_LENGTH ? code : undefined);
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');
   const [chosenAvatarId, setAvatarId] = useState<AvatarId>('fox');
@@ -125,16 +131,21 @@ export default function JoinIdentityScreen() {
 
   // A link to a room that does not exist has nothing to join, so it goes back
   // to room-code entry with the code filled in and its inline "no room" error.
+  // Only the visible join screen may navigate. Each join link pushes a screen,
+  // and the earlier ones stay mounted underneath; when the phone leaves its
+  // seat they would all wake up and send it home for their own ended rooms.
   const linkedRoomMissing = routeState.kind === 'joining' && availability === null;
-  useEffect(() => {
-    if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
-  }, [code, linkedRoomMissing, router]);
+  useFocusEffect(
+    useCallback(() => {
+      if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
+    }, [code, linkedRoomMissing, router]),
+  );
 
-  useEffect(() => {
-    if (shouldReturnToSeat) {
-      router.replace('/');
-    }
-  }, [router, shouldReturnToSeat]);
+  useFocusEffect(
+    useCallback(() => {
+      if (shouldReturnToSeat) router.replace('/');
+    }, [router, shouldReturnToSeat]),
+  );
 
   // A returning guest whose usual avatar is already in the room gets the first
   // free one instead of an error they did nothing to cause.
@@ -161,6 +172,11 @@ export default function JoinIdentityScreen() {
   const avatarLabels = useMemo(() => {
     return Object.fromEntries(AVATAR_IDS.map((id, index) => [id, `Avatar ${index + 1}`])) as Record<AvatarId, string>;
   }, []);
+
+  // A TV this phone cannot reach gets its own explanation instead of the form.
+  if (problem !== undefined && (routeState.kind === 'joining' || routeState.kind === 'handoff')) {
+    return <ConnectionProblemScreen problem={problem} onRetry={room.retryConnection} />;
+  }
 
   if (code.length !== ROOM_CODE_LENGTH) {
     return (
@@ -196,12 +212,12 @@ export default function JoinIdentityScreen() {
   }
 
   async function changeRooms() {
-    if (routeState.kind !== 'handoff' || sessionToken === undefined || !canChangeRooms) return;
+    if (routeState.kind !== 'handoff' || sessionToken === undefined || session === null || session === undefined || !canChangeRooms) return;
     setIsChangingRooms(true);
     setError(undefined);
     beginLeave();
     try {
-      await leaveCurrentRoom({ sessionToken });
+      await room.command('leaveRoom', { roomId: session.roomId, sessionToken }, {});
       await leave();
     } catch (leaveError) {
       cancelLeave();
@@ -272,7 +288,7 @@ export default function JoinIdentityScreen() {
     setIsJoining(true);
     setError(undefined);
     try {
-      const session = await joinRoom({
+      const session = await room.joinRoom({
         code,
         nickname: nickname.trim(),
         avatar: avatarId,

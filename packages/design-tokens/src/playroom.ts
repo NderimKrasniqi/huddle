@@ -44,7 +44,7 @@ export const playroomButtonEdge = 'rgba(45, 11, 78, 0.18)';
 
 /** Shelf cover colours belong to platform presentation, not game themes. */
 export const playroomCoverColors: Readonly<Record<string, string>> = {
-  trivia: '#DED2FF', 'bomb-squad': '#CFEBDC',
+  trivia: '#DED2FF', 'bomb-squad': '#CFEBDC', 'sumo-bumpers': '#CFE6FF',
 };
 
 export type PlayroomColor = keyof typeof playroomColors;

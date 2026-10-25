@@ -22,7 +22,7 @@ fi
 "$adb" -s "$serial" wait-for-device
 until [ "$("$adb" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
 
-# Metro (8081) and a local Convex backend (3210), when one is running.
-for port in 8081 3210; do "$adb" -s "$serial" reverse "tcp:$port" "tcp:$port" >/dev/null; done
+# Metro (8081). Phones reach a room on the emulator with `adb forward tcp:7777 tcp:7777`.
+"$adb" -s "$serial" reverse tcp:8081 tcp:8081 >/dev/null
 "$adb" -s "$serial" shell am start -n tv.huddle.hub/.MainActivity >/dev/null
 echo "Huddle is open on the TV emulator."

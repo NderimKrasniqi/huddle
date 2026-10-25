@@ -1,4 +1,4 @@
-appId: tv.huddle.controller
+appId: tv.huddle.phone
 ---
 - runFlow:
     when:
@@ -6,11 +6,21 @@ appId: tv.huddle.controller
     commands:
       - tapOn: Join a room
 - openLink: huddle://join/${CODE}
+# A phone still seated elsewhere first looks up its old room, then asks to
+# leave it once the new room answers; through the relay that takes seconds.
+- extendedWaitUntil:
+    visible:
+      id: identity-screen|identity-room-handoff
+    timeout: 20000
 - runFlow:
     when:
       visible:
-        id: identity-confirm-handoff
+        id: identity-room-handoff
     commands:
+      - extendedWaitUntil:
+          visible:
+            id: identity-handoff-room-available
+          timeout: 20000
       - tapOn:
           id: identity-confirm-handoff
 - extendedWaitUntil:

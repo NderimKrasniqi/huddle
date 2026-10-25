@@ -4,7 +4,7 @@
  * It takes the list's length rather than reading a list, and that is the whole
  * reason this file exists: the server needs this arithmetic, and every route to
  * it that went through `./carousel` dragged `GAME_REGISTRY` — and therefore
- * every installed game's React Native screens — into the Convex bundle. It did,
+ * every installed game's React Native screens — into the server bundle. It did,
  * once, silently. Nothing here may import a Registry.
  */
 

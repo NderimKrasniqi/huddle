@@ -1,0 +1,52 @@
+appId: tv.huddle.phone
+---
+- runFlow:
+    when:
+      visible: Join a room
+    commands:
+      - tapOn: Join a room
+- openLink: huddle://join/${CODE}
+# A phone still seated elsewhere first looks up its old room, then asks to
+# leave it once the new room answers; through the relay that takes seconds.
+- extendedWaitUntil:
+    visible:
+      id: identity-screen|identity-room-handoff
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: identity-room-handoff
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: identity-handoff-room-available
+          timeout: 20000
+      - tapOn:
+          id: identity-confirm-handoff
+- extendedWaitUntil:
+    visible:
+      id: identity-join
+    timeout: 20000
+- tapOn:
+    id: identity-join
+- extendedWaitUntil:
+    visible:
+      id: toggle-game-ready
+    timeout: 60000
+- tapOn:
+    id: toggle-game-ready
+- extendedWaitUntil:
+    visible: Got it
+    timeout: 60000
+- tapOn: Got it
+- extendedWaitUntil:
+    visible:
+      id: sumo-aim-pad
+    timeout: 60000
+- swipe:
+    start: 50%, 52%
+    end: 44%, 60%
+    duration: 600
+- extendedWaitUntil:
+    visible: Still standing!|Splash!
+    timeout: 30000

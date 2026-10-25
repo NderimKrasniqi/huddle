@@ -1,8 +1,7 @@
-import { api } from '@huddle/convex';
-import { useQuery } from 'convex/react';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
+import { useRoomClient } from '../../platform/room-client/native';
 import { usePhoneSession } from '../../platform/session';
 import { codeEntry } from './join-entry';
 import { RoomCodeScreen } from './room-code-screen';
@@ -21,10 +20,7 @@ export function RoomCodeEntry() {
     setLastLinkedCode(linkedCode);
     if (linkedCode) setCode(linkedCode);
   }
-  const availability = useQuery(
-    api.players.joinAvailability,
-    code.length === 4 ? { code } : 'skip',
-  );
+  const availability = useRoomClient().useJoinAvailability(code.length === 4 ? code : undefined);
 
   function handleCodeChange(next: string) {
     setCode(codeEntry(next));

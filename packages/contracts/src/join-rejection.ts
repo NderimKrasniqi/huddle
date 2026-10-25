@@ -2,9 +2,9 @@
  * Why `joinRoom` turned a phone away.
  *
  * It lives in game-core beside the Room Code format and the Join Link, for the
- * reason they do: it is protocol both sides share. Convex throws it as the
- * `data` of a `ConvexError` — the only part of a thrown error Convex does not
- * redact to "Server Error" — and the Phone's join screen picks its copy by
+ * reason they do: it is protocol both sides share. The room host sends it as
+ * the `rejection` of a Room Protocol result, data rather than prose, and the
+ * Phone's join screen picks its copy by
  * `kind`. The rejections are therefore told apart programmatically, never by
  * matching on a message someone may reword.
  *

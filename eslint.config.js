@@ -23,7 +23,6 @@ module.exports = defineConfig([
     '**/dist/**',
     '**/.expo/**',
     '**/expo-env.d.ts',
-    'convex/convex/_generated/**',
     '.claude/**',
     'output/**',
     'docs/design-reference/**',

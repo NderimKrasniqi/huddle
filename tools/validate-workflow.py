@@ -15,7 +15,6 @@ from urllib.parse import unquote
 
 CURRENT_MARKDOWN = {
     "AGENTS.md",
-    "convex/AGENTS.md",
     "docs/architecture.md",
     "docs/design/playroom/README.md",
     "docs/implementation-plan.md",
@@ -23,7 +22,7 @@ CURRENT_MARKDOWN = {
     "docs/tech-stack.md",
     "packages/ui/assets/README.md",
 }
-GENERATED_MARKDOWN = {"convex/convex/_generated/ai/guidelines.md"}
+GENERATED_MARKDOWN: set[str] = set()
 FORBIDDEN_DOC_ROOTS = ("docs/archive/", "docs/design/legacy/")
 STALE_PRODUCT_TERM = re.compile(
     r"apps/controller|@huddle/controller|packages/games(?:/|\b)|@huddle/game-core"
@@ -93,7 +92,7 @@ def github_anchors(text: str) -> set[str]:
 
 def workspace_packages(root: Path) -> dict[str, tuple[Path, dict[str, object]]]:
     packages: dict[str, tuple[Path, dict[str, object]]] = {}
-    for pattern in ("apps/*/package.json", "games/*/package.json", "packages/*/package.json", "convex/package.json"):
+    for pattern in ("apps/*/package.json", "games/*/package.json", "packages/*/package.json"):
         for manifest_path in root.glob(pattern):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             name = manifest.get("name")
@@ -266,10 +265,6 @@ def main() -> int:
         root / ".claude",
         root / ".ai-workflow",
         root / "CLAUDE.md",
-        root / "convex" / ".claude",
-        root / "convex" / ".agents",
-        root / "convex" / "CLAUDE.md",
-        root / "convex" / "skills-lock.json",
     ]
     # Agent clients may keep ignored local state under these names. Repository
     # truth only owns what is tracked, so ignored tool state is not a failure.

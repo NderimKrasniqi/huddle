@@ -43,17 +43,13 @@ function useLoop(duration: number, reduceMotion: boolean): Animated.Value {
 
 /** A star as a Skia path, for sparks and blasts. */
 function starPath(cx: number, cy: number, outer: number, inner: number, spikes: number) {
-  const path = Skia.Path.Make();
+  let d = '';
   for (let i = 0; i < spikes * 2; i += 1) {
     const radius = i % 2 === 0 ? outer : inner;
     const angle = (Math.PI * i) / spikes - Math.PI / 2;
-    const x = cx + Math.cos(angle) * radius;
-    const y = cy + Math.sin(angle) * radius;
-    if (i === 0) path.moveTo(x, y);
-    else path.lineTo(x, y);
+    d += `${i === 0 ? 'M' : 'L'} ${cx + Math.cos(angle) * radius} ${cy + Math.sin(angle) * radius} `;
   }
-  path.close();
-  return path;
+  return Skia.Path.MakeFromSVGString(`${d}Z`)!;
 }
 
 /** The fuse rope, from the cap up to its free end; trimmed as it burns. */
@@ -292,16 +288,12 @@ export function HazardStripes({ width, height, reduceMotion }: { readonly width:
   const t = useLoop(4000, reduceMotion);
   const shift = t.interpolate({ inputRange: [0, 1], outputRange: [0, -80] });
   const stripes = useMemo(() => {
-    const path = Skia.Path.Make();
+    let d = '';
     for (let i = 0; i < Math.ceil(width / 80) + 3; i += 1) {
       const x = i * 80;
-      path.moveTo(x, 0);
-      path.lineTo(x + 40, 0);
-      path.lineTo(x + 40 - height, height);
-      path.lineTo(x - height, height);
-      path.close();
+      d += `M ${x} 0 L ${x + 40} 0 L ${x + 40 - height} ${height} L ${x - height} ${height} Z `;
     }
-    return path;
+    return Skia.Path.MakeFromSVGString(d)!;
   }, [height, width]);
   return (
     <View style={{ width, height, overflow: 'hidden' }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

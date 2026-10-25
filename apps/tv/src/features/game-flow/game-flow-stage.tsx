@@ -23,7 +23,7 @@ import {
 import { TvGameSetupScreen } from './game-setup-screen';
 import { useTvReducedMotion } from '../../ui';
 
-/** The Convex setup projection consumed by the display-only flow. */
+/** The room host's setup view consumed by the display-only flow. */
 export type TvGameSetupProjection = {
   readonly gameId: string;
   readonly settings: Readonly<Record<string, string>>;
@@ -45,7 +45,7 @@ export type TvGameFlowStageProps = {
 
 /**
  * Coordinates the TV's pre-game presentation without becoming a second source
- * of game state. Convex owns the browsing position, setup draft, and readiness;
+ * of game state. The room host owns the browsing position, setup draft, and readiness;
  * the only local state here is whether this particular selection's decorative
  * art reveal has completed.
  */

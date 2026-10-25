@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "apple"],
+  "android": {
+    "modules": ["tv.huddle.landiscovery.LanDiscoveryModule"]
+  },
+  "apple": {
+    "modules": ["LanDiscoveryModule"]
+  }
+}

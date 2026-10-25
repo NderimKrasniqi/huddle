@@ -9,7 +9,7 @@ type TvSurfaceInput = {
   readonly hasRunningGame?: boolean;
 };
 
-/** Chooses the TV renderer without React, Convex, or registry state. */
+/** Chooses the TV renderer without React, the room client, or registry state. */
 export function tvSurface(input: TvSurfaceInput): TvSurface {
   if (input.runtime === 'game' || input.runtime === 'finished') return 'game';
   if (input.runtime === 'paused' || input.runtime === 'unavailable') return 'runtime-status';

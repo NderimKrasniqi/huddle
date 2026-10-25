@@ -1,4 +1,4 @@
-import { ROOM_PLAYER_CAP, roomJoinLink } from '@huddle/domain';
+import { type LanJoin, ROOM_PLAYER_CAP, roomJoinLink } from '@huddle/domain';
 
 import type { RosterSeat, SeatArrival } from '../../models';
 import { RoomReturnScreen } from './room-return-screen';
@@ -11,7 +11,10 @@ export function RoomStage({
   arrivals = [],
   returned,
   welcomeIds,
+  lan,
 }: {
+  /** Where phones reach this TV when it hosts the room; the QR code carries it. */
+  readonly lan?: LanJoin;
   readonly returned?: boolean;
   readonly welcomeIds?: readonly string[];
   readonly roomCode: string;
@@ -31,7 +34,7 @@ export function RoomStage({
   return (
     <RoomInvitationScreen
       roomCode={roomCode}
-      joinUrl={roomJoinLink(roomCode)}
+      joinUrl={roomJoinLink(roomCode, lan)}
       players={players}
       arriving={arrivals.map((arrival) => ({ id: String(arrival.previewId), name: arrival.nickname, avatarId: arrival.avatar }))}
       welcomeIds={welcomeIds}

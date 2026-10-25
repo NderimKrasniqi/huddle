@@ -30,12 +30,14 @@ ROUTE_EXPORT = re.compile(
     re.MULTILINE,
 )
 COMMENTS = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+# `.web` is Metro's platform suffix: the web TV build (TASK-23) picks
+# `name.web.ts` over `name.ts`. Only the TV platform layer may use it.
 KEBAB_FILE = re.compile(
-    r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.(?:render\.)?test)?\.(?:ts|tsx)$"
+    r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.web)?(?:\.(?:render\.)?test)?\.(?:ts|tsx)$"
 )
 KEBAB_DIR = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 RENDERER_IMPORT = re.compile(
-    r"['\"](?:react|react-native(?:/[^'\"]*)?|convex/react|expo(?:/[^'\"]*)?)['\"]"
+    r"['\"](?:react|react-native(?:/[^'\"]*)?|expo(?:/[^'\"]*)?)['\"]"
 )
 SHARED_RENDERER_IMPORT = re.compile(r"['\"]@huddle/ui/(?:kit|native)['\"]")
 SERVER_CONTENT_IMPORT = re.compile(
@@ -160,6 +162,11 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
         (1200, 750),
         True,
         "d8a52f1d10188aa60f6a5ff9652f3fda8b1522878a0a36afdfa27a086809c5ee",
+    ),
+    "games/sumo-bumpers.png": (
+        (1200, 750),
+        True,
+        "f310ddd42690b1b4405e3f52add53586fd53a98466f31a5085ae55dc285f9e44",
     ),
     "games/trivia.png": (
         (1200, 750),
@@ -326,6 +333,11 @@ BOMB_SQUAD_PALETTE = {
     "bodyLight": "#6B4FA3", "rope": "#E8D3B0", "ropeBurnt": "#5A4A3A", "metalLight": "#E3D9FF",
     "metalDark": "#5E5279", "safeLight": "#6FD69C", "safeDark": "#1F7A4A", "white": "#FFFFFF",
 }
+SUMO_BUMPERS_PALETTE = {
+    "sea": "#0E2A47", "seaDeep": "#071A2E", "wave": "#1D4E7A", "ice": "#EAF6FF", "iceShade": "#B9DDF5",
+    "rim": "#FFFFFF", "hazard": "#FF6B4A", "ink": "#10233A", "cream": "#FFF8EE", "muted": "#9DB7D1",
+    "gold": "#FFC93C", "ghost": "#C9B8FF", "you": "#3DDC97", "panel": "#163A5E", "panelEdge": "#2B5C8A",
+}
 COSMIC_QUIZ_PALETTE = {
     "navy": "#041B39",
     "navyDeep": "#021226",
@@ -470,7 +482,7 @@ def tv_presentation_sources(root: Path = ROOT) -> list[Path]:
     """Return authored TV and game-TV renderers that must remain passive."""
 
     sources = source_files(root / "apps" / "tv" / "src") if (root / "apps" / "tv" / "src").is_dir() else []
-    for game in ("trivia", "bomb-squad"):
+    for game in ("trivia", "bomb-squad", "sumo-bumpers"):
         path = root / "games" / game / "src" / "tv-screen.tsx"
         if path.is_file():
             sources.append(path)
@@ -559,6 +571,8 @@ def validate_filename_conventions(app: Path, root: Path = ROOT) -> None:
     for path in source_files(src):
         if path.name.startswith("_") or not KEBAB_FILE.fullmatch(path.name):
             fail(f"authored filename must be kebab-case: {relative(path, root)}")
+        if ".web." in path.name and not path.is_relative_to(root / "apps" / "tv" / "src" / "platform"):
+            fail(f"a .web file belongs in the TV platform layer: {relative(path, root)}")
 
 
 def validate_entrypoint_content(app: Path, root: Path = ROOT) -> None:
@@ -657,8 +671,6 @@ def package_kind(path: Path, root: Path) -> str:
         return "root"
     if rel[0] == "apps":
         return "app"
-    if rel[0] == "convex":
-        return "convex"
     if rel[:2] == ("packages", "contracts"):
         return "contracts"
     if rel[:2] == ("packages", "domain"):
@@ -669,6 +681,10 @@ def package_kind(path: Path, root: Path) -> str:
         return "registry"
     if rel[:2] == ("packages", "ui"):
         return "ui"
+    if rel[:2] == ("packages", "physics"):
+        return "physics"
+    if rel[:2] == ("packages", "room-host"):
+        return "host"
     if rel[0] == "games":
         return "game"
     return "package"
@@ -706,16 +722,17 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
                     )
 
     allowed: dict[str, set[str]] = {
-        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "convex"},
-        "convex": {"contracts", "domain", "registry"},
+        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "host"},
         "registry": {"contracts", "domain", "game"},
-        "game": {"contracts", "domain", "tokens", "ui"},
+        "game": {"contracts", "domain", "tokens", "ui", "physics"},
+        "physics": set(),
+        "host": {"contracts", "domain", "registry"},
         "ui": {"contracts", "tokens"},
         "domain": {"contracts"},
         "contracts": set(),
         "tokens": set(),
         "package": set(),
-        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "package"},
+        "root": {"app", "contracts", "domain", "tokens", "registry", "game", "ui", "physics", "host", "package"},
     }
     for manifest, payload in payloads.items():
         source_kind = package_kind(manifest, root)
@@ -1181,6 +1198,8 @@ def validate_design_tokens(root: Path = ROOT) -> None:
                 allowed = approved_hexes | set(COSMIC_QUIZ_PALETTE.values())
             if path.is_relative_to(root / "games" / "bomb-squad"):
                 allowed = approved_hexes | set(BOMB_SQUAD_PALETTE.values())
+            if path.is_relative_to(root / "games" / "sumo-bumpers"):
+                allowed = approved_hexes | set(SUMO_BUMPERS_PALETTE.values())
             if not literals.issubset(allowed):
                 fail(f"unapproved color literal in screen source: {relative(path, root)}")
 
@@ -1596,7 +1615,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
         [
             root / "packages" / "ui" / "package.json",
             root / "packages" / "game-registry" / "package.json",
-            *(root / "games" / name / "package.json" for name in ("trivia", "bomb-squad")),
+            *(root / "games" / name / "package.json" for name in ("trivia", "bomb-squad", "sumo-bumpers")),
         ]
     )
     banned_dependencies = {
@@ -1624,7 +1643,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
             fail(f"{app} must pin @expo-google-fonts/nunito@0.4.2")
         if payload.get("dependencies", {}).get("react-native-reanimated") != "4.5.1":
             fail(f"{app} must pin react-native-reanimated@4.5.1")
-    for name in ("trivia", "bomb-squad"):
+    for name in ("trivia", "bomb-squad", "sumo-bumpers"):
         payload = json.loads((root / "games" / name / "package.json").read_text(encoding="utf-8"))
         for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
             if "react-native-reanimated" in payload.get(field, {}):
@@ -1677,8 +1696,9 @@ def validate_consolidation(root: Path = ROOT) -> None:
     if "expo-camera" not in phone_config_path.read_text(encoding="utf-8"):
         fail("Phone Expo Camera configuration must remain")
 
-    stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core")
-    for base in (root / "apps", root / "packages", root / "games", root / "convex", root / "tools"):
+    # Convex was retired (ADR-01): nothing may import it again.
+    stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core|@huddle/convex|['\"]convex(?:/[a-z]+)?['\"]")
+    for base in (root / "apps", root / "packages", root / "games", root / "tools"):
         for source in source_files(base):
             if stale.search(source.read_text(encoding="utf-8")):
                 fail(f"superseded platform/package term remains: {relative(source, root)}")
@@ -1687,10 +1707,69 @@ def validate_consolidation(root: Path = ROOT) -> None:
     validate_heartbeat_brand_source_set(root)
 
 
+# The room host runs inside the TV app on Hermes, under Node for the headless
+# TV, and later inside a web TV. It may reach only these modules.
+ROOM_HOST_ALLOWED_IMPORT = re.compile(
+    r"^(?:\.{1,2}/.*|@huddle/contracts|@huddle/contracts/protocol|@huddle/domain|@huddle/game-registry/logic|zod)$"
+)
+# Globals that exist under Node but not on Hermes or in a TV browser.
+ROOM_HOST_PLATFORM_GLOBAL = re.compile(r"\b(?:process|Buffer|require|__dirname|structuredClone)\b")
+# Modules that need native code. A web TV shell cannot load them, so shared TV
+# code reaches them only through the platform layer (ADR-04).
+TV_NATIVE_ONLY_IMPORT = re.compile(
+    r"['\"](?:expo-secure-store|expo-crypto|expo-file-system|expo-haptics|expo-camera|"
+    r"@react-native-async-storage/async-storage|react-native-tcp-socket)['\"]|"
+    r"\b(?:requireNativeModule|requireOptionalNativeModule|NativeModules|TurboModuleRegistry)\b"
+)
+SKIA_IMPORT = re.compile(r"['\"]@shopify/react-native-skia['\"]")
+
+
+def validate_room_host(root: Path = ROOT) -> None:
+    """Keep the room host free of renderers, native code and platform globals."""
+
+    src = root / "packages" / "room-host" / "src"
+    if not src.is_dir():
+        fail("missing room host package: packages/room-host/src")
+    for source in source_files(src):
+        clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+        for match in MODULE_REFERENCE.finditer(clean):
+            if not ROOM_HOST_ALLOWED_IMPORT.match(match.group("path")):
+                fail(f"room host imports {match.group('path')}: {relative(source, root)}")
+        strings = re.sub(r"(['\"`])(?:\\.|(?!\1).)*\1", "''", clean)
+        global_use = ROOM_HOST_PLATFORM_GLOBAL.search(strings)
+        if global_use:
+            fail(f"room host uses the platform global {global_use.group(0)}: {relative(source, root)}")
+    validate_transitive_renderer_free(src / "index.ts", root, "room host")
+    validate_transitive_renderer_free(root / "packages" / "contracts" / "src" / "protocol.ts", root, "room protocol")
+
+
+def validate_web_tv_portability(root: Path = ROOT) -> None:
+    """The ADR-04 rules that keep a Samsung or LG web shell possible."""
+
+    tv_src = root / "apps" / "tv" / "src"
+    platform = tv_src / "platform"
+    shared_tv = [path for path in source_files(tv_src) if not path.is_relative_to(platform)]
+    shared_tv += [path for path in tv_presentation_sources(root) if not path.is_relative_to(tv_src)]
+    for source in shared_tv:
+        clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+        match = TV_NATIVE_ONLY_IMPORT.search(clean)
+        if match:
+            fail(f"shared TV code reaches native-only {match.group(0).strip(chr(39) + chr(34))}; move it behind apps/tv/src/platform: {relative(source, root)}")
+
+    for base in (root / "apps", root / "packages"):
+        for source in source_files(base):
+            if "metro-stubs" in source.parts:
+                continue
+            if SKIA_IMPORT.search(COMMENTS.sub("", source.read_text(encoding="utf-8"))):
+                fail(f"Skia belongs inside a game package, behind its alias: {relative(source, root)}")
+
+
 def main() -> int:
     for name in APP_NAMES:
         validate_app(ROOT / "apps" / name)
     validate_package_boundaries(ROOT)
+    validate_room_host(ROOT)
+    validate_web_tv_portability(ROOT)
     validate_consolidation(ROOT)
 
     print("App architecture validation passed.")

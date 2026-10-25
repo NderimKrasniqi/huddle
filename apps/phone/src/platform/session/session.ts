@@ -3,8 +3,7 @@ import {
   ROOM_CODE_ACCEPTED_ALPHABET,
   ROOM_CODE_LENGTH,
 } from '@huddle/domain';
-import type { api } from '@huddle/convex';
-import type { FunctionReturnType } from 'convex/server';
+import type { PlayerSession } from '../room-client';
 
 /**
  * Rejoining, from the phone's side: what the Phone does with the Session
@@ -22,8 +21,8 @@ import type { FunctionReturnType } from 'convex/server';
  * screen supplies the query.
  */
 
-/** A player's place in a room, as `players.session` and `joinRoom` both give it. */
-export type PlayerSession = NonNullable<FunctionReturnType<typeof api.players.session>>;
+/** A player's place in a room, as `resumeSession` and `joinRoom` both give it. */
+export type { PlayerSession };
 
 /** Where the Session Token lives between launches of the app. */
 export type SessionTokenStore = {
@@ -138,7 +137,7 @@ export async function forgetSession(store: SessionTokenStore): Promise<void> {
  * How long a launch will stay blank waiting to hear whether this phone already
  * holds a seat, before it gives up and shows the join form.
  *
- * It exists because an unreachable backend does not fail: `ConvexReactClient`
+ * It exists because an unreachable room does not always fail fast: a socket
  * holds a query until a websocket update arrives, with no timeout of its own and
  * no rejection for connectivity, so a phone opened on dropped wifi would wait on
  * that promise for as long as its owner kept staring at nothing. Four seconds is

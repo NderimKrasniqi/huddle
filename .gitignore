@@ -10,14 +10,19 @@ expo-env.d.ts
 # Native build output (generated via prebuild)
 apps/*/ios/
 apps/*/android/
+apps/*/modules/*/android/build/
+apps/*/modules/*/android/.cxx/
 *.ipa
 *.apk
 *.aab
 
+# Rust relay build output
+relay/target/
+
 # Personal local-device build notes
 /LOCAL_BUILDS.md
 
-# Convex
+# Local environment overrides
 .env.local
 .env*.local
 

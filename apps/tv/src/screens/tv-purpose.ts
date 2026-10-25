@@ -13,7 +13,8 @@ type TvPurpose =
   | 'Game unavailable'
   | 'Game finished'
   | 'Trivia game'
-  | 'Bomb Squad game';
+  | 'Bomb Squad game'
+  | 'Sumo Bumpers game';
 
 function tvGamePurpose(gameId: string): TvPurpose {
   switch (gameId) {
@@ -21,6 +22,8 @@ function tvGamePurpose(gameId: string): TvPurpose {
       return 'Trivia game';
     case 'bomb-squad':
       return 'Bomb Squad game';
+    case 'sumo-bumpers':
+      return 'Sumo Bumpers game';
     default:
       return 'Game unavailable';
   }

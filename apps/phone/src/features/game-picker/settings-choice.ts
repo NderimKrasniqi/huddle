@@ -18,7 +18,7 @@ import {
  * The choice is an optimistic mirror for the Host's picker. The authoritative
  * copy lives in the room's optional setup draft, which `configureGame` updates
  * after each tap and which `startGame` locks atomically. A non-Host never gets
- * this screen, and the Convex mutations remain Host-only, so the local mirror
+ * this screen, and the room host's commands remain Host-only, so the local mirror
  * cannot become a second source of truth or a way around authorization.
  */
 

@@ -14,7 +14,7 @@ export function keepTvPresent(
     heartbeatPending = true;
     void heartbeat()
       .catch(() => {
-        // Convex reconnects and the next beat retries. Presence is advisory; a
+        // The next beat retries. Presence is advisory; a
         // transient network failure must not tear down the TV display.
       })
       .finally(() => {

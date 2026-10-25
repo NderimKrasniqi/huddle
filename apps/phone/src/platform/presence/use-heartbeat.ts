@@ -1,8 +1,7 @@
-import { api } from '@huddle/convex';
-import { useMutation } from 'convex/react';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
+import { useRoomClient } from '../room-client/native';
 import { phoneSessionTokenStore } from '../session/native';
 import { type ForegroundWatch, keepPresent } from './presence';
 
@@ -14,12 +13,12 @@ const watchAppForeground: ForegroundWatch = (onChange) => {
 
 /** Keeps the current seat present while the phone is foregrounded. */
 export function useHeartbeat(): void {
-  const heartbeat = useMutation(api.players.heartbeat);
+  const { heartbeat } = useRoomClient();
   useEffect(
     () =>
       keepPresent(
         phoneSessionTokenStore,
-        (sessionToken) => heartbeat({ sessionToken }),
+        (sessionToken) => heartbeat(sessionToken),
         watchAppForeground,
       ),
     [heartbeat],

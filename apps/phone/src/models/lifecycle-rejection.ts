@@ -3,7 +3,7 @@ import type {
   GameSetupRejection,
   RateLimitRejection,
 } from '@huddle/domain';
-import { ConvexError } from 'convex/values';
+import { refusalOf } from '@huddle/contracts/protocol';
 
 const UNEXPECTED_FAILURE = 'Could not reach the room. Check your connection and try again.';
 
@@ -87,7 +87,6 @@ export function rejectionMessage(rejection: PhoneGameRejection): string {
 }
 
 export function lifecycleFailureMessage(error: unknown): string {
-  return error instanceof ConvexError && isGameLifecycleRejection(error.data)
-    ? rejectionMessage(error.data)
-    : UNEXPECTED_FAILURE;
+  const rejection = refusalOf(error);
+  return isGameLifecycleRejection(rejection) ? rejectionMessage(rejection) : UNEXPECTED_FAILURE;
 }

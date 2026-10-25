@@ -71,7 +71,7 @@ export function keepPresent(
   }
 
   function beatNow(): void {
-    // Convex keeps a disconnected mutation pending. One in flight is enough:
+    // A beat sent while reconnecting may wait. One in flight is enough:
     // queuing another every interval would retain an unbounded offline backlog.
     if (sessionToken !== null && !pulsePending) {
       void pulse(sessionToken);
