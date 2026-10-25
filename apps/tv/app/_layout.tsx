@@ -1,4 +1,3 @@
-import { ConvexProvider } from 'convex/react';
 import { Nunito_400Regular } from '@expo-google-fonts/nunito/400Regular';
 import { Nunito_700Bold } from '@expo-google-fonts/nunito/700Bold';
 import { Nunito_800ExtraBold } from '@expo-google-fonts/nunito/800ExtraBold';
@@ -9,7 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 
 import { StatusSurface } from '@huddle/ui/native';
-import { convexClient } from '../src/platform/convex/native';
+import { RoomClientProvider } from '../src/platform/room-client/native';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -61,5 +60,5 @@ export default function TvLayout() {
   }
 
   const app = <Stack screenOptions={{ headerShown: false }} />;
-  return convexClient === undefined ? app : <ConvexProvider client={convexClient}>{app}</ConvexProvider>;
+  return <RoomClientProvider>{app}</RoomClientProvider>;
 }

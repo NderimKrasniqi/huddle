@@ -1,5 +1,4 @@
-import type { api } from '@huddle/convex';
-import type { FunctionReturnType } from 'convex/server';
+import type { OpenRoom } from '../room-client';
 
 import { onlyOnce } from './only-once';
 import { isTvIdentityError } from './tv-session';
@@ -21,7 +20,7 @@ import { isTvIdentityError } from './tv-session';
  */
 
 /** The room this TV opened: its id, and the Room Code on the pairing screen. */
-export type OpenRoom = FunctionReturnType<typeof api.rooms.openRoom>;
+export type { OpenRoom };
 
 /** The room this TV is showing, and the news that it has expired. */
 export type RoomOpener = {

@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 and TASK-05 to TASK-09 are done; results are in
-the validation ledger. Next: TASK-10, then TASK-03 and TASK-04.
+scope changes (TASK-01). TASK-02 and TASK-05 to TASK-10 are done; results are in
+the validation ledger. Next: TASK-03 and TASK-04 (spikes), then TASK-11.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -124,7 +124,7 @@ These are new user-visible behaviors, now recorded in
   Done when: `use-seated-room.ts`, the session provider, join, seat preview and
   heartbeat call an interface with a Convex implementation; behavior is
   unchanged and every `pnpm e2e:*` flow passes against `pnpm dev:local`.
-- [ ] TASK-10 Put the TV behind a room-client interface
+- [x] TASK-10 Put the TV behind a room-client interface
   Done when: room opening, presence, roster, setup, browsing, arrivals and the
   running game go through an interface with a Convex implementation; behavior
   is unchanged on the Android TV emulator.
@@ -456,6 +456,26 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-10 TV room client
+
+The TV reaches its room only through `apps/tv/src/platform/room-client`: a
+`TvRoomClient` interface (`openRoom`, `heartbeat`, live views as the room's TV,
+`useStillOpen`) with a Convex implementation exported as `tvRoomClient`, plus
+`RoomClientProvider` for the root layout. The room opener, presence loop,
+expiry watch, session controller and model types use it. The TV session
+credential stays in the interface; the room host inside the TV app will ignore
+it. Only comments and the missing-backend caption still name Convex.
+
+`pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture` pass. On the
+Android TV emulator against `pnpm dev:local`, Convex bots joined the TV's own
+room and the TV followed each step, read through `maestro hierarchy`: the room
+with three seats, Bomb Squad setup, the ready check, How to play, the first
+bomb (the server agreed at each step), and an empty room again once the bots
+left. `uiautomator dump` is not usable for this: it fails while the screen
+animates and leaves the previous dump in place, and calling it with `execSync`
+blocks a bot script's heartbeats long enough for the room to mark the bots
+away.
 
 ### TASK-09 phone room client
 

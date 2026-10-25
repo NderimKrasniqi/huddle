@@ -1,8 +1,6 @@
 import { useRoomMoments } from '@huddle/ui/native';
-import { api } from '@huddle/convex';
 import { runningGameScreen, type RunningGameScreen } from '@huddle/game-registry';
 import { gamePlayersFrom } from '@huddle/domain';
-import { useQuery } from 'convex/react';
 import { useEffect, useMemo } from 'react';
 
 import { TvGameFlowStage, TvPlatformStatusScreen, type TvGameSetupProjection } from '../features/game-flow/native';
@@ -10,6 +8,8 @@ import { GameStage, TvRuntimeStatus } from '../features/game-session/native';
 import { RoomStage } from '../features/room/native';
 import type { RosterSeat, SeatArrival } from '../models';
 import type { OpenRoom, RoomOpening } from '../platform/room-session';
+import type { TvViewer } from '../platform/room-client';
+import { tvRoomClient } from '../platform/room-client/native';
 import { keepRoomPresent, tvSessionToken, useRoomExpiry } from '../platform/room-session/native';
 import { tvPurposeForSurface } from './tv-purpose';
 import { tvSurface, type TvSurface } from './tv-surface';
@@ -28,17 +28,20 @@ export function TvSessionController({
   readonly opening: RoomOpening;
   readonly onExpired: (expired: OpenRoom) => void;
 }) {
-  // Every room view is asked as this room's TV; the server shows nobody else.
+  // Every room view is asked as this room's TV; the room shows nobody else.
   const tvToken = tvSessionToken();
-  const asTv = tvToken === undefined ? 'skip' : { roomId: room.roomId, tvSessionToken: tvToken };
-  const roster = useQuery(api.players.roster, asTv);
+  const asTv: TvViewer | undefined = useMemo(
+    () => (tvToken === undefined ? undefined : { roomId: room.roomId, tvSessionToken: tvToken }),
+    [room.roomId, tvToken],
+  );
+  const roster = tvRoomClient.useView('roster', asTv);
   useRoomExpiry(room, onExpired);
   useEffect(() => keepRoomPresent(), [room.roomId]);
 
-  const running = useQuery(api.games.running, asTv);
+  const running = tvRoomClient.useView('running', asTv);
   const runtime = runningGameScreen(running);
-  const browsingAt = useQuery(api.gameSetup.browsing, asTv);
-  const setup = useQuery(api.gameSetup.setup, asTv);
+  const browsingAt = tvRoomClient.useView('browsing', asTv);
+  const setup = tvRoomClient.useView('setup', asTv);
   const hasBrowsing = browsingAt !== undefined && browsingAt !== null;
   const surface = tvSurface({
     runtime: runtime.kind,
@@ -48,7 +51,7 @@ export function TvSessionController({
     hasRunningGame: room.hasRunningGame,
   });
   // Arrivals change on every keystroke of a join form; only the room screen draws them.
-  const arrivals = useQuery(api.seatPreviews.arrivals, surface === 'room' ? asTv : 'skip');
+  const arrivals = tvRoomClient.useView('arrivals', surface === 'room' ? asTv : undefined);
 
   const playerIds = useMemo(() => roster?.map((player) => String(player.playerId)), [roster]);
   const moments = useRoomMoments({ playerIds, runtime: runtime.kind,
