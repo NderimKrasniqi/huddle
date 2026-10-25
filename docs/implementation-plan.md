@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-18 are done; results are in the validation
-ledger. Next: TASK-19, making the target architecture current.
+scope changes (TASK-01). TASK-02 to TASK-19 are done; results are in the validation
+ledger. Phase 5 is complete. Next: Phase 6, the Rust relay (TASK-20).
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -26,7 +26,7 @@ artwork rather than source-master design material.
 
 ## Local-first TV host — plan
 
-**Status:** Approved. Design: [`architecture.md`](architecture.md#target-architecture-local-first-tv-host-approved).
+**Status:** Approved. Design: [`architecture.md`](architecture.md#system-architecture).
 Task dependencies are in `.workflow/tasks.json`.
 
 ### Audit summary
@@ -174,7 +174,7 @@ These are new user-visible behaviors, now recorded in
   entry and that the room host is renderer-free; `pnpm typecheck`, `pnpm lint`,
   `pnpm validate:workflow`, `pnpm verify:dependency-security` and every e2e
   flow pass.
-- [ ] TASK-19 Make the target architecture current
+- [x] TASK-19 Make the target architecture current
   Done when: `architecture.md` describes only the TV host (the Convex sections
   removed, under 16 KB), `tech-stack.md` lists the new stack, and the ADRs are
   marked accepted.
@@ -457,6 +457,15 @@ explicit owner approval.
 
 ## Validation ledger
 
+### TASK-19 architecture made current
+
+`architecture.md` now describes only the TV-hosted system: the workspace and
+dependency direction, the room host, the Room Protocol and LAN transport,
+discovery and the phone client, lifecycle, authority and privacy, the web-TV
+portability rules, presentation, verification gates, and compact ADRs (ADR-01
+and ADR-02 marked done). `tech-stack.md` lists the stack in use with its
+versions. `pnpm validate:workflow` passes.
+
 ### TASK-18 Convex retired
 
 Removed: both apps' Convex room clients and the `EXPO_PUBLIC_ROOM_BACKEND`
@@ -680,7 +689,7 @@ simulator, tvOS 26.5, with the TV bundle from `pnpm dev:local`.
   close (1001), and nothing listened on the port. Coming back showed the room
   screen with the listener gone. The shell must therefore mark the TV away on
   background, restart the listener on foreground, and let phones resume
-  (recorded in [`architecture.md`](architecture.md#target-architecture-local-first-tv-host-approved)).
+  (recorded in [`architecture.md`](architecture.md#system-architecture)).
 - **Deep links:** tvOS asks "Open in Huddle?" before following a link from
   `simctl openurl`; Return on the Simulator window selects Open.
 - **Not covered:** a physical Apple TV, real Wi-Fi, and how long a suspended

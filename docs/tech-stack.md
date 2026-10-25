@@ -80,20 +80,20 @@ and Back-to-lobby boundary. The TV's room host is the authority.
 
 ## Local-first stack
 
-Approved with ADR-01 to ADR-04 in
-[`architecture.md`](architecture.md#architecture-decisions). Versions are pinned
-when each piece lands.
+The room runs on the TV (ADR-01 to ADR-04 in
+[`architecture.md`](architecture.md#architecture-decisions)).
 
-| Technology | Use |
-|---|---|
-| TypeScript room host package | room authority on the TV and in the headless TV |
-| Zod (the installed version) | versioned protocol messages in `@huddle/contracts` |
-| Local Expo module, Kotlin | Android TV LAN WebSocket server and mDNS advertising (`NsdManager`) |
-| Local Expo module, Swift, Network.framework | Apple TV LAN server (`NWListener`, `NWProtocolWebSocket`) and Bonjour |
-| React Native WebSocket | phone client, and the relay client on web TVs |
-| `ws` on Node | headless TV for the end-to-end flows |
-| Rust stable: tokio, axum, tracing | relay service |
-| `cargo fmt`, `cargo clippy`, `cargo deny` | relay static and dependency checks |
+| Technology | Version | Use |
+|---|---:|---|
+| `@huddle/room-host` | workspace | room authority on the TV and in the headless TV |
+| Zod | `^4.4.3` | Room Protocol messages in `@huddle/contracts/protocol` |
+| Java-WebSocket | `1.6.0` | Android TV LAN server in the `lan-server` Expo module (with `NsdManager`) |
+| Network.framework | system | Apple TV LAN server (`NWListener`, `NWProtocolWebSocket`) and Bonjour |
+| Expo File System | `~57.0.2` | the TV's room snapshot |
+| React Native WebSocket | built in | phone room client |
+| `lan-discovery` Expo module | local | phone discovery of a typed code (Bonjour, `NsdManager`) |
+| `ws` | `8.21.1` | headless TV for the end-to-end flows |
+| Rust stable: tokio, axum, tracing | not built yet | relay service (ADR-03) |
 
 ## Asset and motion pipeline
 
