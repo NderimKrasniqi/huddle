@@ -240,8 +240,8 @@ Apple TV), the relay transport and its load check, and the web TV smoke test.
 - **Why:** React Native's WebSocket is client-only, and no maintained React
   Native server module covers Android TV and tvOS.
 - **Consequences:** Two small native implementations behind one TypeScript
-  interface. iPhones need Huddle's own Local Network text; Android release
-  builds still need a cleartext exception for `ws://`.
+  interface. iPhones need Huddle's own Local Network text; the phone's
+  `plugins/with-lan-cleartext.js` lets Android release builds use `ws://`.
 - **Rejected alternatives:** A Rust core embedded in the TV apps
   (`aarch64-apple-tvos` is a tier 3 target needing nightly `-Zbuild-std`).
 

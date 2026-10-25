@@ -457,6 +457,26 @@ explicit owner approval.
 
 ## Validation ledger
 
+### Android cleartext and two review follow-ups
+
+- The phone's `plugins/with-lan-cleartext.js` (registered in `app.json`) sets
+  `android:usesCleartextTraffic` on the application, so Android release builds
+  can reach the TV at `ws://<address>:7777`; a LAN address cannot have a TLS
+  certificate. `npx expo config --type introspect` shows it in the manifest.
+  No new dependency: the plugin uses `expo/config-plugins`.
+- The room host closes a connection that holds no seat and sends nothing for
+  30 seconds, so abandoned join forms cannot fill the 32-connection cap (an
+  open form asks every three seconds).
+- A ping from a present seat now only records the beat; it no longer flushes
+  every view, and the snapshot write ignores `lastSeenAt`, so beats alone do
+  not rewrite it every second.
+
+Checked with a fake-clock script (an idle connection closed after 30 s, a
+polling form and seats stayed open, a silent seat still went away, 36 s of
+pings caused one save), all six e2e flows on the LAN plus Trivia relay-only,
+`pnpm typecheck`, `pnpm lint`, `pnpm validate:architecture` and
+`pnpm validate:workflow`. Not checked: a release build on an Android phone.
+
 ### Room host review against the Convex rules
 
 An independent reviewer compared `packages/room-host` with the Convex code as
@@ -477,10 +497,10 @@ redaction rules matched. Fixed:
 Checked with a fake-clock script against `RoomHost` (TV back after 30 s and a
 restart 20 s later leave nobody away; 13 s of real silence still does), all
 six e2e flows, `pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture`.
-Left open: the 32-connection cap has no idle timeout for unseated
-connections; refused commands spend rate-limit tokens; out-of-range frames
+Left open: refused commands spend rate-limit tokens; out-of-range frames
 close the socket instead of returning a rejection; the room code reaches any
-connection in `welcome`; every ping triggers a full view flush and save.
+connection in `welcome`. Fixed afterwards: idle unseated connections and
+ping flushes (next entry).
 
 ### TASK-23 web TV smoke test
 

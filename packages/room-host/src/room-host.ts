@@ -63,6 +63,12 @@ const SEAT_PREVIEW_TTL_MS = 20_000;
 const SWEEP_INTERVAL_MS = 1_000;
 /** Ten seats, a few join forms and some headroom. */
 export const CONNECTION_CAP = 32;
+/**
+ * A connection without a seat that sends nothing for this long is closed, so
+ * abandoned join forms cannot fill the cap. An open join form asks for
+ * availability every three seconds.
+ */
+const UNSEATED_IDLE_MS = 30_000;
 
 /** What the TV's own screens read, in-process. */
 export type TvViews = {
@@ -92,6 +98,8 @@ type Connection = {
   readonly close: () => void;
   greeted: boolean;
   playerId?: string;
+  /** When this connection last sent a frame, by the host's clock. */
+  lastFrameAt: number;
   /** The last value sent per view, without its clock fields. */
   readonly sent: Map<ViewName, string>;
 };
@@ -157,7 +165,7 @@ export class RoomHost {
       close();
       return { receive: () => {}, disconnect: () => {} };
     }
-    const connection: Connection = { id: this.nextConnectionId++, send, close, greeted: false, sent: new Map() };
+    const connection: Connection = { id: this.nextConnectionId++, send, close, greeted: false, sent: new Map(), lastFrameAt: this.ports.now() };
     this.connections.set(connection.id, connection);
     return {
       receive: (frame) => this.receive(connection, frame),
@@ -316,6 +324,12 @@ export class RoomHost {
       return;
     }
     this.room.previews = this.room.previews.filter((preview) => now - preview.updatedAt < SEAT_PREVIEW_TTL_MS);
+    for (const connection of [...this.connections.values()]) {
+      if (this.seatById(connection.playerId) === undefined && now - connection.lastFrameAt >= UNSEATED_IDLE_MS) {
+        connection.close();
+        this.connections.delete(connection.id);
+      }
+    }
     // While the TV is away no phone can reach it; that silence is not theirs.
     if (this.room.tvAway) return;
     for (const seat of this.room.seats) {
@@ -399,6 +413,7 @@ export class RoomHost {
 
   private receive(connection: Connection, frame: string): void {
     if (this.disposed || !this.connections.has(connection.id)) return;
+    connection.lastFrameAt = this.ports.now();
     const decoded = decodeClientMessage(frame);
     if (!decoded.ok) {
       connection.close();
@@ -424,7 +439,9 @@ export class RoomHost {
     }
     const seat = this.seatById(connection.playerId);
     if (message.type === 'ping') {
-      if (seat !== undefined) this.change(() => this.touch(seat));
+      // A beat from a present seat changes no view, so it skips the flush.
+      if (seat !== undefined && !seat.away) seat.lastSeenAt = this.ports.now();
+      else if (seat !== undefined) this.change(() => this.touch(seat));
       this.sendTo(connection, { type: 'pong', sentAt: message.sentAt });
       return;
     }
@@ -1139,7 +1156,8 @@ export class RoomHost {
     }
     const save = this.ports.save;
     if (save === undefined) return;
-    const saved = JSON.stringify(this.room);
+    // Beats alone are not worth a write; a restore gives every seat a fresh one.
+    const saved = JSON.stringify(this.room, (key, value: unknown) => (key === 'lastSeenAt' ? undefined : value));
     if (saved === this.lastSaved) return;
     this.lastSaved = saved;
     save(this.snapshot());
