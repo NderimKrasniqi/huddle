@@ -75,10 +75,28 @@ positive focus, and D-pad handlers so the TV remains a passive stage.
 | `@convex-dev/rate-limiter` | `^0.4.2` | server-owned party-safe limits |
 | Zod | `^4.4.3` | wire and module decoding |
 
-The game registry lists the installed games: Trivia and Bomb Squad. Each module owns its settings,
+The game registry lists the installed games: Trivia, Bomb Squad and Sumo
+Bumpers. Each module owns its settings,
 server rules, state/deadlines, redaction, Phone controller, TV presentation,
-and Back-to-lobby boundary. Convex remains the authority; the only schema
-addition is the optional countdown state on setup.
+and Back-to-lobby boundary. Convex remains the authority until the TV hosts
+the room; the only schema addition is the optional countdown state on setup.
+
+## Approved local-first stack (being built)
+
+Approved with ADR-01 to ADR-04 in
+[`architecture.md`](architecture.md#architecture-decisions). Versions are pinned
+when each piece lands.
+
+| Technology | Use |
+|---|---|
+| TypeScript room host package | room authority on the TV and in the headless TV |
+| Zod (the installed version) | versioned protocol messages in `@huddle/contracts` |
+| Local Expo module, Kotlin | Android TV LAN WebSocket server and mDNS advertising (`NsdManager`) |
+| Local Expo module, Swift, Network.framework | Apple TV LAN server (`NWListener`, `NWProtocolWebSocket`) and Bonjour |
+| React Native WebSocket | phone client, and the relay client on web TVs |
+| `ws` on Node | headless TV for the end-to-end flows |
+| Rust stable: tokio, axum, tracing | relay service |
+| `cargo fmt`, `cargo clippy`, `cargo deny` | relay static and dependency checks |
 
 ## Asset and motion pipeline
 

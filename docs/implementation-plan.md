@@ -1,15 +1,21 @@
 # Huddle implementation plan
 
-> **Current state:** the installed games are Trivia and Bomb Squad. Voting and
-> the Coming soon cards were removed, and the project keeps end-to-end tests
-> only. The sections below are the historical log and mention them as they
-> were at the time.
+> **Current state:** the installed games are Trivia, Bomb Squad and Sumo
+> Bumpers. Voting and the Coming soon cards were removed, and the project keeps
+> end-to-end tests only. The sections after the local-first plan are the
+> historical log and mention them as they were at the time.
 
 ## Execution state
 
 **Current phase:** Playroom redesign, Cosmic Quiz Trivia, the visual polish
 pass and the live seat preview are merged on `main` and live on the only
-Convex deployment. Open: the physical party check and Voting on devices.
+Convex deployment. Sumo Bumpers is on the `sumo-bumpers` branch. Open: the
+physical party check.
+
+**Next phase:** the local-first TV host below. The owner approved ADR-01 to
+ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
+scope changes (TASK-01). TASK-02, TASK-05 and TASK-06 are done; results are in
+the validation ledger. Next: TASK-07 and TASK-08, then TASK-03 and TASK-04.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -17,6 +23,194 @@ follows the Playroom design in
 [`design/playroom/README.md`](design/playroom/README.md), which replaces the
 earlier Heartbeat look. Runtime artwork remains checked-in implementation
 artwork rather than source-master design material.
+
+## Local-first TV host — plan
+
+**Status:** Approved. Design: [`architecture.md`](architecture.md#target-architecture-local-first-tv-host-approved).
+Task dependencies are in `.workflow/tasks.json`.
+
+### Audit summary
+
+- **Convex surface:** 3,369 lines in `convex/convex`: 40 functions (10 queries,
+  23 mutations, 7 scheduled internal mutations, counting the development
+  reset pair) over five tables (`rooms`,
+  `players`, `presence`, `tvSessions`, `seatPreviews`). The scheduler drives
+  away checks, room expiry, seat-preview expiry, the countdown and game
+  deadlines. The rate limiter is the one Convex component.
+- **Already portable:** `@huddle/domain` holds readiness, presence timings,
+  room codes, nicknames, capacity, expiry and the session-token format as pure
+  functions. Each game's `GameLogic` (`reduce`, `deadline`, `redactStateFor`)
+  is pure. Game screens receive props only and never import Convex, so the
+  game seam survives unchanged.
+- **Client coupling:** Convex appears in 13 phone files and 7 TV files. The
+  phone's hub is `apps/phone/src/screens/use-seated-room.ts` (5 queries, 15
+  mutations). The TV's hub is `apps/tv/src/platform/room-session/room-client.ts`
+  and `apps/tv/src/screens/tv-session-controller.tsx`.
+- **Tooling coupling:** the e2e seeds in `convex/e2e` drive a fake TV and bots
+  through the Convex HTTP client. `tools/dev-local.sh` starts a local Convex
+  backend. `tools/validate-architecture.py`, `tools/validate-workflow.py` (it
+  lists `convex/AGENTS.md`), `tools/verify-client-bundle.cjs` and `AGENTS.md`
+  all name Convex.
+- **Weak points the move fixes:** session tokens come from Convex's seeded
+  `Math.random`; every game event is a transaction on the one room document.
+
+### Scope changes (approved in TASK-01)
+
+These are new user-visible behaviors, now recorded in
+[`project-scope.md`](project-scope.md#rooms-hosted-by-the-tv-approved-being-built):
+
+1. Phones join only on the same Wi-Fi as the TV, until the relay ships.
+2. On first join, an iPhone asks for Local Network access. If the player
+   denies it, the phone explains why and links to Settings.
+3. New failure state: "Can't reach the TV" when the network blocks traffic
+   between devices, with short guidance.
+4. The room lives in the TV app. If the TV app restarts, it restores the room
+   from its last snapshot for as long as rooms expire today (ten minutes).
+5. New state: "Update Huddle" when the phone and TV protocol versions differ.
+6. A typed room code works on the same Wi-Fi through local discovery.
+7. The "existing Convex schema remains compatible" non-goal is replaced by
+   "room lifecycle, stable avatar IDs and the game seam remain compatible".
+
+### Phase 0 — Decisions and spikes
+
+- [x] TASK-01 Approve ADR-01 to ADR-04 and the scope changes above
+  Done when: the owner approved them in chat, `project-scope.md` and
+  `tech-stack.md` record them, and the non-negotiable constraints at the end of
+  this file match the new design.
+- [x] TASK-02 Spike the Android TV LAN server
+  Done when: a throwaway local Expo module in Kotlin, built with
+  `npx create-expo-module --local`, runs a WebSocket server in the TV app on
+  the Android TV emulator; an iPhone simulator and an Android phone connect
+  through a QR address (`adb forward` for the emulator); the ledger records the
+  library chosen (Java-WebSocket or Ktor), median and p95 round trip, the iOS
+  Local Network prompt, the cleartext settings both phones need, and whether
+  the server survives the TV screen saver.
+- [ ] TASK-03 Spike the Apple TV LAN server
+  Done when: the same module API in Swift (`NWListener` with
+  `NWProtocolWebSocket`) accepts phone connections on the Apple TV simulator
+  via `pnpm sim:tvos`, and the ledger records any tvOS limits.
+- [ ] TASK-04 Spike local discovery
+  Done when: the TV advertises a `_huddle._tcp` service with the room code
+  (Android `NsdManager`, Apple Bonjour), an iPhone and an Android phone find it
+  by code, and the ledger records the Info.plist keys and Android permissions
+  this needs.
+
+### Phase 1 — Protocol and room host (pure TypeScript)
+
+- [x] TASK-05 Define the versioned protocol in `@huddle/contracts`
+  Done when: zod schemas cover hello/welcome (protocol version, TV instance
+  ID), every command named after today's mutations, every view named after
+  today's queries, the existing rejection unions and ping; `pnpm typecheck`
+  and `pnpm lint` pass.
+- [x] TASK-06 Build the room host package (`packages/room-host`)
+  Done when: it ports rooms, players, game setup, games, seat previews and the
+  `lib` helpers from `convex/convex` with the same rules and rejections; it
+  takes clock, timers, random, storage and send from its caller; it imports
+  only `@huddle/domain`, `@huddle/contracts` and `@huddle/game-registry/logic`;
+  it mints codes and tokens from a cryptographic source; it serialises a
+  snapshot after every change.
+- [ ] TASK-07 Build the headless TV and bots
+  Done when: a Node runner (tsx and the `ws` library) hosts the room host on a
+  LAN port, the four seed scripts are ported from `convex/e2e` to it, and a bot
+  client speaks the protocol.
+- [ ] TASK-08 Enforce the host boundary
+  Done when: `tools/validate-architecture.py` knows the room-host package kind,
+  rejects renderer, native and Convex imports in it, and enforces the web-TV
+  portability rules in `architecture.md`; `pnpm validate:architecture` passes.
+
+### Phase 2 — Client seam, still on Convex
+
+- [ ] TASK-09 Put the phone behind a room-client interface
+  Done when: `use-seated-room.ts`, the session provider, join, seat preview and
+  heartbeat call an interface with a Convex implementation; behavior is
+  unchanged and every `pnpm e2e:*` flow passes against `pnpm dev:local`.
+- [ ] TASK-10 Put the TV behind a room-client interface
+  Done when: room opening, presence, roster, setup, browsing, arrivals and the
+  running game go through an interface with a Convex implementation; behavior
+  is unchanged on the Android TV emulator.
+
+### Phase 3 — Android TV hosts the room
+
+- [ ] TASK-11 Build the Android TV LAN module
+  Done when: a local Expo module in `apps/tv` exposes start, stop, send, close
+  and connection events, reports the LAN address, and advertises the mDNS
+  service, using the library from TASK-02.
+- [ ] TASK-12 Run the room host inside the TV app
+  Done when: the TV shell starts the room host with the LAN transport, the TV
+  screens read the shared view in-process, the QR code carries address, code
+  and TV instance ID, and a restarted TV app restores its room from the
+  snapshot.
+- [ ] TASK-13 Add the phone LAN client
+  Done when: the phone implements the room-client interface over React
+  Native's WebSocket with reconnect and backoff, stores the session token per
+  TV instance, resolves typed codes by mDNS, and plays a full Trivia game
+  against the emulator.
+- [ ] TASK-14 Add the approved new states
+  Done when: the phone shows the Local Network denial, "Can't reach the TV" and
+  "Update Huddle" states from TASK-01, with the shared text components and the
+  largest text size checked.
+- [ ] TASK-15 Run the end-to-end flows on the LAN host
+  Done when: every Maestro flow in `e2e` passes against the headless TV, and
+  Trivia, Bomb Squad and Sumo Bumpers each play to the finish on the Android TV
+  emulator with a guest phone and ten bots.
+
+### Phase 4 — Apple TV
+
+- [ ] TASK-16 Build the Apple TV LAN module
+  Done when: the Swift implementation from TASK-03 sits behind the same module
+  API with Bonjour advertising, and the TV app builds for tvOS.
+- [ ] TASK-17 Play on Apple TV
+  Done when: all three games play to the finish on the Apple TV simulator with
+  an iPhone simulator and bots, and `tech-stack.md` moves tvOS out of
+  experimental if the owner agrees.
+
+### Phase 5 — Retire Convex
+
+- [ ] TASK-18 Remove Convex
+  Done when: the Convex room-client implementations, the `convex` package, its
+  dependencies and env files, the Convex parts of `tools/dev-local.sh` and both
+  validators, `convex/AGENTS.md` and the Convex notes in `AGENTS.md` are gone;
+  `pnpm verify:bundle-seam` now proves that phone exports hold no `/logic`
+  entry and that the room host is renderer-free; `pnpm typecheck`, `pnpm lint`,
+  `pnpm validate:workflow`, `pnpm verify:dependency-security` and every e2e
+  flow pass.
+- [ ] TASK-19 Make the target architecture current
+  Done when: `architecture.md` describes only the TV host (the Convex sections
+  removed, under 16 KB), `tech-stack.md` lists the new stack, and the ADRs are
+  marked accepted.
+
+### Phase 6 — Rust relay (before any web TV)
+
+- [ ] TASK-20 Build the relay
+  Done when: `relay/` holds a Cargo workspace on stable Rust with tokio, axum
+  WebSocket and tracing; a TV registers a code with a host secret, phones join
+  by code, frames pass through unread, and connection, room, size and rate
+  limits plus idle expiry apply; `cargo fmt --check`, `cargo clippy -- -D
+  warnings` and `cargo deny check` pass.
+- [ ] TASK-21 Add the relay transport and fallback
+  Done when: the TV shell can host through the relay with a plain JavaScript
+  WebSocket, the QR code also carries the relay URL, the phone falls back to
+  the relay when the LAN address fails, and a typed code resolves through the
+  relay when mDNS finds nothing.
+- [ ] TASK-22 Load-check and package the relay
+  Done when: a Rust load binary in the same workspace holds 1,000 simulated
+  rooms of ten phones on one small instance with the ledger recording memory
+  and p95 forward time, and the relay ships as one container image.
+
+### Phase 7 — Web TV readiness (Samsung and LG not shipped)
+
+- [ ] TASK-23 Smoke-test a web TV build
+  Done when: an Expo web export of the TV app runs at 1920×1080 in Chromium
+  through the relay, plays Trivia with a phone, and the ledger lists what
+  fails (Skia, storage, fonts) for a later Tizen and webOS shell.
+
+### Release gates
+
+- Every e2e flow passes on the LAN host and, after Phase 6, through the relay.
+- The physical party check runs on a real Android TV with mixed phones,
+  including a guest network that blocks traffic between devices.
+- Independent review of the room host port against the Convex rules before
+  TASK-18.
 
 ## Playroom redesign
 
@@ -263,6 +457,54 @@ explicit owner approval.
 
 ## Validation ledger
 
+### TASK-06 room host
+
+`@huddle/room-host` ports every rule from `convex/convex` except the ones the
+TV now makes unnecessary: TV heartbeats and their silence chain (the TV is the
+host; the shell reports background and foreground with `setTvAway`) and
+desertion expiry (the TV keeps the room, as Convex did while the TV was
+present). The protocol gained two refusals, `gameUnavailable` and `hostError`.
+
+A one-off Node script in the scratchpad (not checked in) drove the host with a
+fake clock and three bot phones: joins and every join refusal, seat previews,
+setup, readiness, the countdown and its cancellation, a full Trivia game on
+deadlines and answers, end game, away and Host handover by silence, return,
+removal, a removed token failing to resume, TV-away pause and resume from the
+exact remainder, and snapshot restore. During a question the phone and TV both
+see Trivia's hidden answer placeholder. Bomb Squad and Sumo Bumpers each ran
+through every phase on deadlines alone. No runtime failure was logged.
+`pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture` pass.
+
+### TASK-02 Android TV LAN server spike
+
+Run on the `huddle_tv` Android TV emulator and the iPhone 17 simulator, both
+debug builds, with the spike screens in `apps/tv/modules/lan-server` and the
+`lan-spike` routes. The phone reached the TV at `127.0.0.1:7777` through
+`adb forward`, because the emulator reports its private address `10.0.2.15`.
+
+- **Library:** Java-WebSocket 1.6.0 (latest release; only depends on
+  `slf4j-api`). Ktor was not needed. In Kotlin, the module's own socket map
+  must not be called `connections`: that name clashes with the server's field.
+- **Round trip, phone → TV JavaScript → phone:** pings once a second, median
+  4.6 ms and p95 9.2 ms (57 samples). Back-to-back pings with a re-render per
+  message, warm: median 27.3 ms, p95 49.8 ms, max 100 ms (200 samples). The
+  first cold run was median 34.6 ms, p95 145 ms.
+- **Sleep and background:** the server answered every ping through 60 seconds
+  of `KEYCODE_SLEEP` and 90 seconds behind the Home screen. The one drop came
+  from the spike stopping the server when its screen unmounted, so the server
+  must belong to the app shell (TASK-12), not to a screen.
+- **iOS Local Network:** the simulator shows no prompt. The phone's
+  `NSLocalNetworkUsageDescription` is the Expo dev launcher's text, so release
+  builds need Huddle's own text (TASK-13). `NSAllowsLocalNetworking` is already
+  true.
+- **Android cleartext:** debug manifests set `usesCleartextTraffic`; release
+  manifests do not, so release builds block `ws://` to the TV until the phone
+  and TV configs allow it (TASK-13).
+- **Not covered:** a physical TV, real Wi-Fi, a real iPhone prompt, an Android
+  phone (the release build was stopped by owner direction after a Gradle
+  Metaspace failure), the TV screen saver on real hardware, and Wi-Fi that
+  blocks traffic between devices.
+
 Focused implementation checks pass for contracts, Convex integration,
 Trivia/Voting logic, Phone/TV render suites, typecheck, lint, client seam,
 architecture fixtures, architecture/routes/UI-stack validation, and
@@ -285,11 +527,14 @@ ten bot players; the largest iOS text sizes; and reduced motion on the TV.
 
 ## Non-negotiable constraints
 
-- Do not change session-token authority, room lifecycle, stable avatar IDs, or
-  the `GameModule` client/server seam. The Convex schema may change only with
-  approval, as it did for the optional countdown fields.
-- TV remains presentation-only; Phone remains the controller.
+- Do not change session-token authority (a token proves exactly one seat),
+  room lifecycle, stable avatar IDs, or the `GameModule` seam. Under ADR-01 the
+  room authority moves from Convex to the TV's room host; until TASK-18 the
+  Convex schema may change only with approval.
+- The TV screen remains display-only and the Phone remains the controller. The
+  TV app may host the room, but it never gains controls or focus targets.
 - Do not add Invite Friend, a web client, fake settings, or playable cards for
-  Doodle Dash, Quick Poll, or Hot Take.
+  Doodle Dash, Quick Poll, or Hot Take. A web build of the TV app for Samsung
+  and LG is allowed only as the Phase 7 smoke test.
 - Keep private player choices/timing and unrevealed game content off the TV
-  and out of other players' Phone projections.
+  screen and out of other players' Phone projections.

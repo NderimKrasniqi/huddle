@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "tasks": {
+    "TASK-01": {"deps": [], "refs": ["ADR-01", "ADR-02", "ADR-03", "ADR-04"], "releaseGate": false},
+    "TASK-02": {"deps": ["TASK-01"], "refs": ["ADR-02"], "releaseGate": false},
+    "TASK-03": {"deps": ["TASK-01"], "refs": ["ADR-02"], "releaseGate": false},
+    "TASK-04": {"deps": ["TASK-01"], "refs": ["ADR-02"], "releaseGate": false},
+    "TASK-05": {"deps": ["TASK-01"], "refs": ["ADR-01"], "releaseGate": false},
+    "TASK-06": {"deps": ["TASK-05"], "refs": ["ADR-01"], "releaseGate": false},
+    "TASK-07": {"deps": ["TASK-06"], "refs": ["ADR-01"], "releaseGate": false},
+    "TASK-08": {"deps": ["TASK-06"], "refs": ["ADR-01", "ADR-04"], "releaseGate": false},
+    "TASK-09": {"deps": ["TASK-05"], "refs": ["ADR-01"], "releaseGate": false},
+    "TASK-10": {"deps": ["TASK-05"], "refs": ["ADR-01"], "releaseGate": false},
+    "TASK-11": {"deps": ["TASK-02", "TASK-04"], "refs": ["ADR-02"], "releaseGate": false},
+    "TASK-12": {"deps": ["TASK-06", "TASK-10", "TASK-11"], "refs": ["ADR-01", "ADR-02"], "releaseGate": false},
+    "TASK-13": {"deps": ["TASK-07", "TASK-09", "TASK-04"], "refs": ["ADR-01", "ADR-02"], "releaseGate": false},
+    "TASK-14": {"deps": ["TASK-13"], "refs": ["ADR-01"], "releaseGate": false},
+    "TASK-15": {"deps": ["TASK-07", "TASK-12", "TASK-13", "TASK-14"], "refs": ["ADR-01"], "releaseGate": true},
+    "TASK-16": {"deps": ["TASK-03", "TASK-12"], "refs": ["ADR-02", "ADR-04"], "releaseGate": false},
+    "TASK-17": {"deps": ["TASK-15", "TASK-16"], "refs": ["ADR-04"], "releaseGate": true},
+    "TASK-18": {"deps": ["TASK-08", "TASK-15"], "refs": ["ADR-01"], "releaseGate": true},
+    "TASK-19": {"deps": ["TASK-18"], "refs": ["ADR-01", "ADR-02", "ADR-03", "ADR-04"], "releaseGate": false},
+    "TASK-20": {"deps": ["TASK-05", "TASK-07"], "refs": ["ADR-03"], "releaseGate": false},
+    "TASK-21": {"deps": ["TASK-12", "TASK-13", "TASK-20"], "refs": ["ADR-03", "ADR-04"], "releaseGate": false},
+    "TASK-22": {"deps": ["TASK-20"], "refs": ["ADR-03"], "releaseGate": true},
+    "TASK-23": {"deps": ["TASK-08", "TASK-21"], "refs": ["ADR-04"], "releaseGate": false}
+  }
+}

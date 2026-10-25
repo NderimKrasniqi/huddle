@@ -100,8 +100,30 @@ Back to lobby, and everyone can leave from the final screen.
 - Experimental: tvOS compile/simulator evidence only.
 - Out of scope: web clients, accounts, store submission, production release
   tooling, Invite Friend, sound/settings that are not backed by authority.
-- Existing Convex schema, room lifecycle, session tokens, stable avatar IDs,
-  and module client/server separation remain compatible.
+- Room lifecycle, session tokens, stable avatar IDs, and the game module seam
+  remain compatible. The Convex schema no longer has to: Convex is retired
+  once the TV hosts the room.
+- Samsung and LG TVs are not built yet, but the design must keep them
+  possible.
+
+## Rooms hosted by the TV (approved, being built)
+
+The owner approved these behaviors with ADR-01 to ADR-04 in
+[`architecture.md`](architecture.md#architecture-decisions). They apply once
+the TV hosts the room; until then rooms run on Convex as described above.
+
+1. A phone joins only on the same Wi-Fi network as the TV, until the relay
+   ships.
+2. On the first join, an iPhone asks for Local Network access. If the player
+   denies it, the phone explains why it needs it and links to Settings.
+3. When the network blocks traffic between devices, the phone shows "Can't
+   reach the TV" with short guidance.
+4. The room lives in the TV app. If the TV app restarts, it restores the room
+   from its last snapshot for as long as a silent room lasts today (ten
+   minutes).
+5. When the phone and the TV speak different protocol versions, the phone
+   shows "Update Huddle".
+6. A typed room code works on the same Wi-Fi network through local discovery.
 
 ## Remaining acceptance work
 
