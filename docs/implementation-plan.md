@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-12 are done; results are in the validation
-ledger. Next: TASK-13, the phone's LAN client.
+scope changes (TASK-01). TASK-02 to TASK-13 are done; results are in the validation
+ledger. Next: TASK-14, the new phone states.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -140,7 +140,7 @@ These are new user-visible behaviors, now recorded in
   screens read the shared view in-process, the QR code carries address, code
   and TV instance ID, and a restarted TV app restores its room from the
   snapshot.
-- [ ] TASK-13 Add the phone LAN client
+- [x] TASK-13 Add the phone LAN client
   Done when: the phone implements the room-client interface over React
   Native's WebSocket with reconnect and backoff, stores the session token per
   TV instance, resolves typed codes by mDNS, and plays a full Trivia game
@@ -456,6 +456,35 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-13 phone LAN client
+
+`apps/phone/src/platform/room-client/lan-room-client.ts` implements the phone's
+`RoomClient` over React Native's WebSocket: one link per TV that tries the
+TV's addresses in order with a two-second timeout each, checks the TV instance
+id, keeps the pushed views (the countdown's end on the phone's clock), and,
+while it holds a seat, reconnects with backoff and resumes the seat by token.
+The TV address is saved with the Session Token (AsyncStorage), so a relaunched
+phone finds its TV. Typed codes resolve through `lan-discovery`; QR codes pass
+their address through the scan and join routes to `rememberTv`. `IncompatibleTv`
+and `TvUnreachable` are thrown for TASK-14 to show. `EXPO_PUBLIC_ROOM_BACKEND=lan`
+selects the client. The headless TV now advertises itself over Bonjour on
+macOS, and the seeds can join a running TV through `TV_URL`.
+
+On the simulators, with both apps bundled for `lan`: a bot hosted Trivia on
+the Apple TV, and a copy of the Trivia Maestro flow (pointed at
+`tv.huddle.phone`) opened the plain code link, so the phone found the TV by
+mDNS, joined, pressed Ready and answered. Maestro closes the app when a flow
+ends, so the TV correctly paused the game for the missing player; reopening
+the app restored the seat from the saved record, the game resumed, and it ran
+to the end with the phone showing the final result. `pnpm typecheck`,
+`pnpm lint` and `pnpm validate:architecture` pass.
+
+Not covered: an Android phone; a dropped socket recovering by backoff while
+the app stays open (only the relaunch path ran); the Android release
+cleartext setting (needs `expo-build-properties`, not installed yet); and the
+checked-in Maestro flows, which still name `tv.huddle.controller` and still
+seed through Convex until TASK-15.
 
 ### TASK-12 room host in the TV app
 

@@ -7,8 +7,11 @@ import { type HeadlessTv, startHeadlessTv } from './headless-tv';
 
 export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** The TV a seed plays against: its own headless TV, or a running one from `TV_URL`. */
+type SeedTv = Pick<HeadlessTv, 'code' | 'url' | 'close'>;
+
 export type Seed = {
-  readonly tv: HeadlessTv;
+  readonly tv: SeedTv;
   /** The first bot is the Host; every bot beats until told otherwise. */
   readonly bots: readonly Bot[];
   readonly host: Bot;
@@ -20,10 +23,12 @@ export type Seed = {
 /**
  * Starts a headless TV, seats the bots, and writes the room code to the file
  * the end-to-end script waits on (the first argument), as the Convex seeds did.
+ * With `TV_URL` set (for example `ws://192.168.1.20:7777`), the bots join that
+ * running TV instead, such as the TV app on a simulator.
  */
 export async function seedRoom(players: readonly (readonly [string, AvatarId])[]): Promise<Seed> {
   const codeFile = process.argv[2];
-  const tv = await startHeadlessTv();
+  const tv = await seedTv();
   const bots: Bot[] = [];
   for (const [nickname, avatar] of players) {
     const bot = await Bot.connect(tv.url, nickname);
@@ -46,6 +51,15 @@ export async function seedRoom(players: readonly (readonly [string, AvatarId])[]
       process.exit(exitCode);
     },
   };
+}
+
+async function seedTv(): Promise<SeedTv> {
+  const url = process.env.TV_URL;
+  if (url === undefined) return await startHeadlessTv();
+  const probe = await Bot.connect(url, 'probe');
+  const code = probe.roomCode ?? '';
+  probe.close();
+  return { url, code, close: async () => {} };
 }
 
 /** Retries the Host's start once a second until the room lets it start. */

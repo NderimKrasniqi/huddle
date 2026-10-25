@@ -1,5 +1,5 @@
 import type { CommandArgs, CommandName, CommandResult, ViewValue } from '@huddle/contracts/protocol';
-import type { RunningGameResponse } from '@huddle/domain';
+import type { LanJoin, RunningGameResponse } from '@huddle/domain';
 
 /**
  * How the phone talks to its room, whatever carries it. Today the Convex
@@ -62,4 +62,6 @@ export type RoomClient = {
   readonly clearSeatPreview: (previewKey: string) => Promise<void>;
   /** "Still here" while the app is in front of its owner. */
   readonly heartbeat: (sessionToken: string) => Promise<void>;
+  /** Where the TV for `code` listens, from its QR code; a remote room service ignores it. */
+  readonly rememberTv?: (code: string, lan: LanJoin) => void;
 };

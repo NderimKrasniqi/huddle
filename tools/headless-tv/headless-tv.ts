@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { randomInt } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
@@ -54,11 +55,19 @@ export async function startHeadlessTv(port: number = DEFAULT_PORT): Promise<Head
     server.once('listening', resolve);
     server.once('error', reject);
   });
+  const code = host.info().code;
+  // On a Mac, announce the room like a TV would, so a phone simulator can find
+  // a typed code. The simulators share this machine's network, so 127.0.0.1 works.
+  const advertiser =
+    process.platform === 'darwin'
+      ? spawn('dns-sd', ['-R', `Huddle-${code}`, '_huddle._tcp', 'local', String(port), `code=${code}`, `port=${port}`, 'hosts=127.0.0.1'], { stdio: 'ignore' })
+      : undefined;
   return {
     host,
-    code: host.info().code,
+    code,
     url: `ws://127.0.0.1:${port}`,
     close: async () => {
+      advertiser?.kill();
       host.dispose();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },

@@ -25,6 +25,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { joinFailureMessage } from '../features/join/join-rejection';
+import { lanFromJoinParams } from '../features/scan';
 import { rememberProfile as persistProfile, loadGuestProfile } from '../features/join/identity';
 import { codeEntry, nicknameEntry } from '../features/join/join-entry';
 import { useSeatPreview } from '../features/join/native';
@@ -75,7 +76,7 @@ function IdentityStateSurface({ title, message, testID, action, loading = false 
 export default function JoinIdentityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ code?: string | string[] }>();
+  const params = useLocalSearchParams<{ code?: string | string[]; hosts?: string; port?: string; tv?: string }>();
   const code = normalizedCode(Array.isArray(params.code) ? params.code[0] ?? '' : params.code ?? '');
   const {
     session,
@@ -87,6 +88,14 @@ export default function JoinIdentityScreen() {
     leave,
   } = usePhoneSession();
   const room = useRoomClient();
+  // A QR from a TV that hosts its own room says where that TV listens.
+  const linkedLan = useMemo(
+    () => lanFromJoinParams(code, { hosts: params.hosts, port: params.port, tv: params.tv }),
+    [code, params.hosts, params.port, params.tv],
+  );
+  useMemo(() => {
+    if (linkedLan !== undefined) room.rememberTv?.(code, linkedLan);
+  }, [code, linkedLan, room]);
   const availability = room.useJoinAvailability(code.length === ROOM_CODE_LENGTH ? code : undefined);
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');

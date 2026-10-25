@@ -243,8 +243,14 @@ Relay (Rust, later) ── forwards opaque frames between phones and one TV by r
   `roomJoinLink` and `parseRoomJoinLink` in `@huddle/domain`). A typed room code is resolved on the local network by
   mDNS (Android `NsdManager`, Apple Bonjour). Later, the relay also resolves a
   typed code.
-- **Phone.** The phone keeps one room client behind an interface. It uses React
-  Native's built-in WebSocket client; only mDNS browsing needs native code.
+- **Phone.** The phone keeps one room client behind an interface; with
+  `EXPO_PUBLIC_ROOM_BACKEND=lan` it is the LAN client in
+  `apps/phone/src/platform/room-client`. It uses React Native's WebSocket,
+  tries the TV's addresses in order, checks the TV instance id, reconnects a
+  seat with backoff and resumes it by token, and keeps the TV's address with
+  the Session Token so a relaunched phone finds its TV. A typed code is
+  resolved by the `lan-discovery` module (Bonjour on iOS, `NsdManager` on
+  Android); a QR code supplies the address directly.
 - **Relay (later).** A small Rust service (tokio and axum) at `relay/` in the
   repository. The TV registers a room code with a random host secret, phones
   join by code, and the relay forwards frames without reading game content. It

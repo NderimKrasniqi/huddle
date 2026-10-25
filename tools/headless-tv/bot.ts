@@ -32,6 +32,8 @@ export class Bot {
   private nextRequest = 1;
   private beat: ReturnType<typeof setInterval> | undefined;
   closed: string | undefined;
+  /** The room code the TV announced in its welcome. */
+  roomCode: string | undefined;
 
   private constructor(
     readonly name: string,
@@ -74,6 +76,7 @@ export class Bot {
     const message = decoded.message;
     if (message.type === 'view') this.views.set(message.name, message.value);
     if (message.type === 'closed') this.closed = message.reason;
+    if (message.type === 'welcome') this.roomCode = message.roomCode;
     if (message.type === 'result') {
       const request = this.pending.get(message.requestId);
       this.pending.delete(message.requestId);
