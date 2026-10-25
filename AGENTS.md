@@ -37,15 +37,18 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
 - Dependency or production-security changes: `pnpm verify:dependency-security`
   or `pnpm audit:prod`.
 - Behaviour: play it on the simulators against `pnpm dev:local`.
-- End-to-end: `pnpm e2e:bomb-squad` with `pnpm dev:local` running and the
-  phone app open on a booted iPhone simulator. It seeds a room with a fake TV
-  and three bots, then drives the phone from join to the first bomb.
-  `pnpm e2e:phone-starts` checks the phone gets past its start-up screen.
-  `pnpm e2e:crowded-room` seats nine long-named bots that go quiet and
-  checks the phone names them in a short list. `pnpm e2e:host-handoff`
-  uses the same seed and checks the host-change toast. `pnpm e2e:trivia`
-  joins a Trivia room and answers the first question.
-  Both flows target the booted iPhone simulator, or `DEVICE`.
+- End-to-end: run `EXPO_PUBLIC_ROOM_BACKEND=lan pnpm dev:local --clear` and
+  open the phone app on a booted iPhone simulator. Each flow seeds a headless
+  TV (`tools/headless-tv`) with bots on port 7777, which advertises itself over
+  Bonjour so the phone finds the typed code. `pnpm e2e:bomb-squad` drives the
+  phone from join to the first bomb. `pnpm e2e:phone-starts` checks the phone
+  gets past its start-up screen. `pnpm e2e:crowded-room` seats nine long-named
+  bots that go quiet and checks the phone names them in a short list.
+  `pnpm e2e:host-handoff` uses the same seed and checks the host-change toast.
+  `pnpm e2e:trivia` joins a Trivia room and answers the first question.
+  `pnpm e2e:sumo` plays a Sumo Bumpers round. Port 7777 must be free (an Apple
+  TV simulator running the TV app also listens there). The flows target the
+  booted iPhone simulator, or `DEVICE`.
 
 Record the commands run and whether a failure is introduced, pre-existing, or
 blocked by the environment.

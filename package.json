@@ -29,10 +29,10 @@
     "tv:emulator": "tools/tv-emulator.sh",
     "e2e:bomb-squad": "tools/e2e-bomb-squad.sh",
     "e2e:phone-starts": "tools/e2e-flow.sh e2e/phone-starts.yaml",
-    "e2e:crowded-room": "tools/e2e-seeded.sh e2e/seed-crowded-room.mjs e2e/crowded-room.yaml",
-    "e2e:host-handoff": "tools/e2e-seeded.sh e2e/seed-crowded-room.mjs e2e/host-handoff.yaml",
-    "e2e:trivia": "tools/e2e-seeded.sh e2e/seed-trivia-room.mjs e2e/trivia-answer.yaml",
-    "e2e:sumo": "tools/e2e-seeded.sh e2e/seed-sumo-room.mjs e2e/sumo-round.yaml"
+    "e2e:crowded-room": "tools/e2e-seeded.sh tools/headless-tv/seed-crowded-room.ts e2e/crowded-room.yaml",
+    "e2e:host-handoff": "tools/e2e-seeded.sh tools/headless-tv/seed-crowded-room.ts e2e/host-handoff.yaml",
+    "e2e:trivia": "tools/e2e-seeded.sh tools/headless-tv/seed-trivia-room.ts e2e/trivia-answer.yaml",
+    "e2e:sumo": "tools/e2e-seeded.sh tools/headless-tv/seed-sumo-room.ts e2e/sumo-round.yaml"
   },
   "devDependencies": {
     "@huddle/contracts": "workspace:*",

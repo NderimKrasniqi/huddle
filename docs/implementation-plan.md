@@ -457,6 +457,25 @@ explicit owner approval.
 
 ## Validation ledger
 
+### TASK-15 end-to-end on the LAN host (in progress)
+
+The e2e scripts now seed the headless TV (`tools/headless-tv/seed-*.ts`, run
+with `exec` so ending the script ends the seed and its Bonjour announcement),
+and every flow targets `tv.huddle.phone`. With both apps bundled for `lan`,
+all six flows pass on the iPhone 17 simulator in one sequence:
+`e2e:phone-starts`, `e2e:trivia`, `e2e:bomb-squad`, `e2e:crowded-room`,
+`e2e:host-handoff` and `e2e:sumo`.
+
+Running them in sequence exposed three phone LAN-client bugs, now fixed: a
+saved seat whose TV was gone raised "Can't reach the TV" on launch instead of
+failing quietly; a seated link was filed under its address, so the next room
+at that address reused a link that only accepted the old TV; and leaving a
+room whose TV was gone failed. Leaving now always succeeds for the player,
+and a TV that comes back marks the silent seat away on its own.
+
+Still open: Trivia, Bomb Squad and Sumo Bumpers to the finish on the Android
+TV emulator with a guest phone and nine bots.
+
 ### TASK-14 connection states
 
 The phone's room client now reports a `ConnectionProblem`

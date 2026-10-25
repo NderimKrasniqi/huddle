@@ -3,7 +3,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 code_file="$(mktemp)"
 trap 'rm -f "$code_file"; kill "$seed" 2>/dev/null || true' EXIT
-(cd "$root/convex" && node e2e/seed-bomb-room.mjs "$code_file") &
+(cd "$root" && exec node --import tsx tools/headless-tv/seed-bomb-room.ts "$code_file") &
 seed=$!
 for _ in $(seq 1 30); do
   [ -s "$code_file" ] && break

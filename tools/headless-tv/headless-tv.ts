@@ -62,6 +62,14 @@ export async function startHeadlessTv(port: number = DEFAULT_PORT): Promise<Head
     process.platform === 'darwin'
       ? spawn('dns-sd', ['-R', `Huddle-${code}`, '_huddle._tcp', 'local', String(port), `code=${code}`, `port=${port}`, 'hosts=127.0.0.1'], { stdio: 'ignore' })
       : undefined;
+  if (advertiser !== undefined) {
+    // The e2e scripts end a seed with SIGTERM; the announcement must not outlive the room.
+    process.once('exit', () => advertiser.kill());
+    process.once('SIGTERM', () => {
+      advertiser.kill();
+      process.exit(0);
+    });
+  }
   return {
     host,
     code,

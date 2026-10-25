@@ -135,7 +135,11 @@ class TvLink {
         if (!settled) {
           if (message.type === 'incompatible') return fail(new IncompatibleTv(message.protocol));
           if (message.type !== 'welcome') return;
-          if (this.tvInstanceId !== undefined && message.tvInstanceId !== this.tvInstanceId) {
+          // A seat belongs to one TV, so a seated link must find that same TV
+          // again. Any other link takes whichever TV answers at the address,
+          // or the one a QR code named.
+          const expected = this.seatToken !== undefined ? this.tvInstanceId : this.endpoint.tvInstanceId;
+          if (expected !== undefined && message.tvInstanceId !== expected) {
             return fail(new TvUnreachable());
           }
           settled = true;
@@ -330,6 +334,16 @@ export function lanRoomClient(): RoomClient {
     }
   }
 
+  /**
+   * A seated link answers to its TV, not to an address: file it under the TV
+   * instance id, so the next lookup at that address (another room, a restarted
+   * TV) gets a fresh link instead of one that only accepts the old TV.
+   */
+  function keepForSeat(link: TvLink): void {
+    for (const [key, value] of links) if (value === link) links.delete(key);
+    if (link.tvInstanceId !== undefined) links.set(link.tvInstanceId, link);
+  }
+
   /** The link holding `sessionToken`'s seat, reconnecting from the saved record if needed. */
   function seatLink(sessionToken: string): Promise<TvLink | undefined> {
     const known = seatLinks.get(sessionToken);
@@ -344,6 +358,7 @@ export function lanRoomClient(): RoomClient {
         if (session === null) return undefined;
         link.seatToken = sessionToken;
         seatLinks.set(sessionToken, link);
+        keepForSeat(link);
         return link;
       })().finally(() => attaching.delete(sessionToken));
       attaching.set(sessionToken, pending);
@@ -411,14 +426,21 @@ export function lanRoomClient(): RoomClient {
     },
 
     command: async (name, seat, args) => {
+      if (name === 'leaveRoom') {
+        // Leaving always works for the player. A TV that is gone or off cannot
+        // hear it, and marks the silent seat away on its own if it comes back.
+        const link = await seatLink(seat.sessionToken).catch(() => undefined);
+        await link?.request('leaveRoom', {}).catch((error: unknown) => {
+          if (!(error instanceof TvUnreachable)) throw error;
+        });
+        if (link !== undefined) link.seatToken = undefined;
+        seatLinks.delete(seat.sessionToken);
+        await writeRecord(undefined);
+        return;
+      }
       const link = await seatLink(seat.sessionToken);
       if (link === undefined) throw new RoomRefusal({ kind: 'notInRoom' });
       await link.request(name, args);
-      if (name === 'leaveRoom') {
-        link.seatToken = undefined;
-        seatLinks.delete(seat.sessionToken);
-        await writeRecord(undefined);
-      }
     },
 
     joinRoom: async (args) => {
@@ -428,6 +450,7 @@ export function lanRoomClient(): RoomClient {
       const seat = (await link.request('joinRoom', args)) as Awaited<ReturnType<RoomClient['joinRoom']>>;
       link.seatToken = seat.sessionToken;
       seatLinks.set(seat.sessionToken, link);
+      keepForSeat(link);
       await writeRecord({
         sessionToken: seat.sessionToken,
         code: seat.code,
@@ -441,7 +464,9 @@ export function lanRoomClient(): RoomClient {
     lookupSession: async (sessionToken): Promise<PlayerSession | null> => {
       const record = await readRecord();
       if (record === undefined || record.sessionToken !== sessionToken) return null;
-      const link = await reaching(() => seatLink(sessionToken));
+      // Restoring a saved seat is not a join attempt: a TV that is gone or off
+      // fails this lookup quietly, and the phone offers the join screen.
+      const link = await seatLink(sessionToken);
       return link === undefined ? null : ((link.view('session') as PlayerSession | null | undefined) ?? null);
     },
 
