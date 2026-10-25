@@ -273,7 +273,12 @@ incoming connections. Until they ship, every change keeps these rules, and
   stubs it, so a web TV can use a lighter renderer.
 - The TV stays display-only. No flow depends on a TV remote.
 - Shells talk to the room host only through protocol messages that the relay
-  could carry.
+  could carry. This one is a review rule; the validator cannot see it.
+
+The validator also keeps the room host portable: it may import only
+`@huddle/contracts`, `@huddle/contracts/protocol`, `@huddle/domain`,
+`@huddle/game-registry/logic` and zod, and may not use Node-only globals such
+as `process`, `Buffer` or `structuredClone`.
 
 ## Architecture Decisions
 

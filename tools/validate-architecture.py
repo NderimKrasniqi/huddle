@@ -1705,10 +1705,69 @@ def validate_consolidation(root: Path = ROOT) -> None:
     validate_heartbeat_brand_source_set(root)
 
 
+# The room host runs inside the TV app on Hermes, under Node for the headless
+# TV, and later inside a web TV. It may reach only these modules.
+ROOM_HOST_ALLOWED_IMPORT = re.compile(
+    r"^(?:\.{1,2}/.*|@huddle/contracts|@huddle/contracts/protocol|@huddle/domain|@huddle/game-registry/logic|zod)$"
+)
+# Globals that exist under Node but not on Hermes or in a TV browser.
+ROOM_HOST_PLATFORM_GLOBAL = re.compile(r"\b(?:process|Buffer|require|__dirname|structuredClone)\b")
+# Modules that need native code. A web TV shell cannot load them, so shared TV
+# code reaches them only through the platform layer (ADR-04).
+TV_NATIVE_ONLY_IMPORT = re.compile(
+    r"['\"](?:expo-secure-store|expo-crypto|expo-file-system|expo-haptics|expo-camera|"
+    r"@react-native-async-storage/async-storage|react-native-tcp-socket)['\"]|"
+    r"\b(?:requireNativeModule|requireOptionalNativeModule|NativeModules|TurboModuleRegistry)\b"
+)
+SKIA_IMPORT = re.compile(r"['\"]@shopify/react-native-skia['\"]")
+
+
+def validate_room_host(root: Path = ROOT) -> None:
+    """Keep the room host free of renderers, native code and platform globals."""
+
+    src = root / "packages" / "room-host" / "src"
+    if not src.is_dir():
+        fail("missing room host package: packages/room-host/src")
+    for source in source_files(src):
+        clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+        for match in MODULE_REFERENCE.finditer(clean):
+            if not ROOM_HOST_ALLOWED_IMPORT.match(match.group("path")):
+                fail(f"room host imports {match.group('path')}: {relative(source, root)}")
+        strings = re.sub(r"(['\"`])(?:\\.|(?!\1).)*\1", "''", clean)
+        global_use = ROOM_HOST_PLATFORM_GLOBAL.search(strings)
+        if global_use:
+            fail(f"room host uses the platform global {global_use.group(0)}: {relative(source, root)}")
+    validate_transitive_renderer_free(src / "index.ts", root, "room host")
+    validate_transitive_renderer_free(root / "packages" / "contracts" / "src" / "protocol.ts", root, "room protocol")
+
+
+def validate_web_tv_portability(root: Path = ROOT) -> None:
+    """The ADR-04 rules that keep a Samsung or LG web shell possible."""
+
+    tv_src = root / "apps" / "tv" / "src"
+    platform = tv_src / "platform"
+    shared_tv = [path for path in source_files(tv_src) if not path.is_relative_to(platform)]
+    shared_tv += [path for path in tv_presentation_sources(root) if not path.is_relative_to(tv_src)]
+    for source in shared_tv:
+        clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
+        match = TV_NATIVE_ONLY_IMPORT.search(clean)
+        if match:
+            fail(f"shared TV code reaches native-only {match.group(0).strip(chr(39) + chr(34))}; move it behind apps/tv/src/platform: {relative(source, root)}")
+
+    for base in (root / "apps", root / "packages"):
+        for source in source_files(base):
+            if "metro-stubs" in source.parts:
+                continue
+            if SKIA_IMPORT.search(COMMENTS.sub("", source.read_text(encoding="utf-8"))):
+                fail(f"Skia belongs inside a game package, behind its alias: {relative(source, root)}")
+
+
 def main() -> int:
     for name in APP_NAMES:
         validate_app(ROOT / "apps" / name)
     validate_package_boundaries(ROOT)
+    validate_room_host(ROOT)
+    validate_web_tv_portability(ROOT)
     validate_consolidation(ROOT)
 
     print("App architecture validation passed.")

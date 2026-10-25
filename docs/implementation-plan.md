@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 and TASK-05 to TASK-07 are done; results are in
-the validation ledger. Next: TASK-08, then TASK-03 and TASK-04.
+scope changes (TASK-01). TASK-02 and TASK-05 to TASK-08 are done; results are in
+the validation ledger. Next: TASK-03, TASK-04, TASK-09 and TASK-10.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -113,7 +113,7 @@ These are new user-visible behaviors, now recorded in
   Done when: a Node runner (tsx and the `ws` library) hosts the room host on a
   LAN port, the four seed scripts are ported from `convex/e2e` to it, and a bot
   client speaks the protocol.
-- [ ] TASK-08 Enforce the host boundary
+- [x] TASK-08 Enforce the host boundary
   Done when: `tools/validate-architecture.py` knows the room-host package kind,
   rejects renderer, native and Convex imports in it, and enforces the web-TV
   portability rules in `architecture.md`; `pnpm validate:architecture` passes.
@@ -456,6 +456,22 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-08 host boundary
+
+`tools/validate-architecture.py` now has a `host` package kind (it may depend
+on contracts, domain and the registry) and two new checks. The room host may
+import only the modules listed in
+[`architecture.md`](architecture.md#portability-rules-for-web-tvs) and may not
+use Node-only globals; it and the protocol entry must be renderer-free. Shared
+TV code (everything in `apps/tv/src` outside `platform`, and each game's TV
+screen) may not reach native-only modules, and Skia may appear only in game
+packages. Each rule was proved by planting a violation: React Native,
+`node:crypto` and the registry's client entry in the host, `process` and
+`structuredClone` in the host, SecureStore and `requireNativeModule` in shared
+TV code, AsyncStorage in a game's TV screen, and Skia in `packages/ui`. All
+failed with a named file; a string containing "process" and SecureStore in the
+TV platform layer passed.
 
 ### TASK-07 headless TV and bots
 
