@@ -63,9 +63,10 @@ jobs:
       - name: Validate packs
         run: pnpm validate:packs
 
-      # A source seam can miss a bundler-only edge. Export both client graphs
-      # and scan the actual Hermes output for curated question text and the
-      # serialized pack; this is the production proof described in F-011.
+      # A source seam can miss a bundler-only edge. Export both apps and scan
+      # the phone's Hermes output for curated question text and the serialized
+      # pack. The TV's room host holds the rules and content (ADR-01), so the
+      # TV bundle carries the pack by design; its export only proves it builds.
       - name: Export and inspect client bundle seams
         run: |
           phone_export="$(mktemp -d)"
@@ -73,7 +74,6 @@ jobs:
           pnpm --filter @huddle/phone exec expo export --platform ios --output-dir "$phone_export"
           pnpm --filter @huddle/tv exec expo export --platform ios --output-dir "$tv_export"
           pnpm verify:bundle-seam -- "$phone_export"
-          pnpm verify:bundle-seam -- "$tv_export"
 
       - name: Inspect Android TV prebuild metadata
         run: pnpm --filter @huddle/tv prebuild --platform android --no-install
