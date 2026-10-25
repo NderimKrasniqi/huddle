@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02, TASK-03 and TASK-05 to TASK-10 are done; results are
-in the validation ledger. Next: TASK-04 (discovery spike), then TASK-11.
+scope changes (TASK-01). TASK-02 to TASK-10 are done; results are in the validation
+ledger. Next: TASK-11, the real Android TV LAN module.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -89,7 +89,7 @@ These are new user-visible behaviors, now recorded in
   Done when: the same module API in Swift (`NWListener` with
   `NWProtocolWebSocket`) accepts phone connections on the Apple TV simulator
   via `pnpm sim:tvos`, and the ledger records any tvOS limits.
-- [ ] TASK-04 Spike local discovery
+- [x] TASK-04 Spike local discovery
   Done when: the TV advertises a `_huddle._tcp` service with the room code
   (Android `NsdManager`, Apple Bonjour), an iPhone and an Android phone find it
   by code, and the ledger records the Info.plist keys and Android permissions
@@ -456,6 +456,37 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-04 local discovery spike
+
+The TV spike module gained `advertise(code, port)` and `stopAdvertising()`:
+Bonjour through `NWListener.service` on Apple TV and `NsdManager` on Android
+TV. The service is `Huddle-<code>` of type `_huddle._tcp`, with TXT entries
+`code`, `port` and `hosts` (the TV's IPv4 addresses). A phone module,
+`apps/phone/modules/lan-discovery`, answers `find(code, timeoutMs)` with
+`NWBrowser` on iOS and `NsdManager` on Android.
+
+- **Apple TV to iPhone (simulators):** the Mac's own `dns-sd -B` saw the TV's
+  service, `dns-sd -L` showed `port=7777 code=PFPW hosts=192.168.1.207,100.82.48.124`,
+  and the iPhone found the TV by code in 36 ms and connected (back-to-back
+  median 6.2 ms, p95 10.5 ms).
+- **Use the TXT addresses, not the resolved endpoint.** Resolving the Bonjour
+  endpoint first stalled in `preparing` when IPv4 was required, and without
+  that requirement it returned an IPv6 link-local address
+  (`fe80::…%ap1`) whose interface zone a WebSocket URL cannot carry. The
+  TV now publishes its IPv4 addresses; the phone tries them in order. The list
+  can include VPN interfaces (here `100.82.48.124`), so the real client
+  (TASK-13) must try each with a short timeout.
+- **Info.plist (both apps):** `NSBonjourServices` with `_huddle._tcp` (the dev
+  launcher adds its own `_expo._tcp`) and Huddle's own
+  `NSLocalNetworkUsageDescription`, both set in each `app.json`. Android
+  needs no permission beyond `INTERNET` for `NsdManager`.
+- **Android:** both Kotlin modules compile. Not run: the Android TV emulator
+  shut down before the advertising check, and two Android emulators each sit
+  behind their own virtual network, so emulator-to-emulator discovery cannot
+  be tested. Android advertising and discovery need real devices on one Wi-Fi.
+- **Not covered:** physical devices, the iOS Local Network prompt (the
+  simulator shows none), and networks that block multicast.
 
 ### TASK-03 Apple TV LAN server spike
 

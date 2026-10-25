@@ -22,6 +22,12 @@
       "icon": {
         "light": "../../packages/ui/assets/app-icons/huddle-app-icon-light.png",
         "dark": "../../packages/ui/assets/app-icons/huddle-app-icon-dark.png"
+      },
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Huddle lets phones on your Wi-Fi find this TV and join the room.",
+        "NSBonjourServices": [
+          "_huddle._tcp"
+        ]
       }
     },
     "plugins": [
@@ -57,7 +63,9 @@
     "experiments": {
       "typedRoutes": true
     },
-    "web": { "bundler": "metro" },
+    "web": {
+      "bundler": "metro"
+    },
     "icon": "../../packages/ui/assets/app-icons/huddle-app-icon-light.png"
   }
 }

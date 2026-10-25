@@ -41,6 +41,24 @@ public class LanServerModule: Module {
       }
     }
 
+    // TASK-04 spike: announce the room over Bonjour as `Huddle-<code>`.
+    AsyncFunction("advertise") { (code: String, _port: Int, promise: Promise) in
+      self.queue.async {
+        guard let listener = self.listener else {
+          promise.reject("E_NOT_LISTENING", "Start the server before advertising")
+          return
+        }
+        let hosts = LanServerModule.ipv4Addresses().joined(separator: ",")
+        let txt = NWTXTRecord(["code": code, "port": "\(_port)", "hosts": hosts])
+        listener.service = NWListener.Service(name: "Huddle-\(code)", type: "_huddle._tcp", domain: nil, txtRecord: txt)
+        promise.resolve("Huddle-\(code)")
+      }
+    }
+
+    Function("stopAdvertising") {
+      self.queue.async { self.listener?.service = nil }
+    }
+
     Function("addresses") { () -> [String] in
       LanServerModule.ipv4Addresses()
     }
@@ -79,6 +97,11 @@ public class LanServerModule: Module {
           self?.sendEvent("onError", ["message": error.localizedDescription])
         default:
           break
+        }
+      }
+      created.serviceRegistrationUpdateHandler = { [weak self] change in
+        if case .add(let endpoint) = change {
+          self?.sendEvent("onError", ["message": "advertised \(endpoint)"])
         }
       }
       created.newConnectionHandler = { [weak self] connection in

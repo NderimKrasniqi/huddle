@@ -3,6 +3,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { lanDiscovery } from '../platform/lan-discovery/native';
+
 const SAMPLES = 200;
 const SOAK_INTERVAL_MS = 1000;
 
@@ -26,8 +28,32 @@ function percentile(sorted: readonly number[], p: number): number {
  * round trips, then pings once a second so a sleeping TV shows up as silence.
  */
 export default function LanSpikeScreen() {
-  const { url } = useLocalSearchParams<{ url?: string }>();
-  const [result, setResult] = useState<Result>({ status: url === undefined ? 'no url' : 'connecting', done: 0 });
+  const { url: linkedUrl, code } = useLocalSearchParams<{ url?: string; code?: string }>();
+  const [foundUrl, setFoundUrl] = useState<string>();
+  const url = linkedUrl ?? foundUrl;
+  const [result, setResult] = useState<Result>({
+    status: linkedUrl !== undefined ? 'connecting' : code !== undefined ? `finding ${code}` : 'no url',
+    done: 0,
+  });
+
+  // TASK-04: a typed room code becomes an address through local discovery.
+  useEffect(() => {
+    if (linkedUrl !== undefined || code === undefined) return;
+    const startedAt = performance.now();
+    lanDiscovery
+      .find(code, 8000)
+      .then((tv) => {
+        const ms = Math.round(performance.now() - startedAt);
+        console.log('LAN_DISCOVERY', JSON.stringify({ code, tv, ms }));
+        const host = tv?.hosts[0];
+        if (tv === null || host === undefined) setResult((r) => ({ ...r, status: `no TV advertising ${code}` }));
+        else setFoundUrl(`ws://${host}:${tv.port}`);
+      })
+      .catch((error: unknown) => {
+        console.log('LAN_DISCOVERY_ERROR', String(error));
+        setResult((r) => ({ ...r, status: `discovery failed: ${String(error)}` }));
+      });
+  }, [code, linkedUrl]);
 
   useEffect(() => {
     if (url === undefined) return;

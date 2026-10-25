@@ -10,7 +10,10 @@ type Stats = {
   readonly open: number;
   readonly messages: number;
   readonly lastError?: string;
+  readonly advertised?: string;
 };
+
+const SPIKE_CODE = Array.from({ length: 4 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
 
 /**
  * TASK-02 spike: hosts a WebSocket server and answers every ping from
@@ -31,10 +34,15 @@ export default function LanSpikeScreen() {
     ];
     lanServer
       .start(LAN_SPIKE_PORT)
-      .then(() => setStats((s) => ({ ...s, status: 'listening', addresses: lanServer.addresses() })))
+      .then(() => {
+        setStats((s) => ({ ...s, status: 'listening', addresses: lanServer.addresses() }));
+        return lanServer.advertise(SPIKE_CODE, LAN_SPIKE_PORT);
+      })
+      .then((name) => setStats((s) => ({ ...s, advertised: name })))
       .catch((error: unknown) => setStats((s) => ({ ...s, status: 'failed', lastError: String(error) })));
     return () => {
       for (const subscription of subscriptions) subscription.remove();
+      lanServer.stopAdvertising();
       void lanServer.stop();
     };
   }, []);
@@ -47,6 +55,7 @@ export default function LanSpikeScreen() {
       <PlayroomText style={styles.line}>
         Phone link: huddle://lan-spike?url=ws://{address}:{LAN_SPIKE_PORT}
       </PlayroomText>
+      <PlayroomText style={styles.line}>Advertised as: {stats.advertised ?? '—'} (code {SPIKE_CODE})</PlayroomText>
       <PlayroomText style={styles.line}>Open connections: {stats.open}</PlayroomText>
       <PlayroomText style={styles.line}>Messages answered: {stats.messages}</PlayroomText>
       {stats.lastError === undefined ? null : (

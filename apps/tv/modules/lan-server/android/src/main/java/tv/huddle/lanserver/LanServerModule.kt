@@ -11,6 +11,9 @@ import java.net.InetSocketAddress
 import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import android.content.Context
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
 
 /**
  * TASK-02 spike: a WebSocket server inside the TV app.
@@ -25,6 +28,17 @@ class LanServerModule : Module() {
   private val nextId = AtomicInteger(1)
 
   private fun emit(name: String, body: Map<String, Any?>) = sendEvent(name, body)
+
+  private var registration: NsdManager.RegistrationListener? = null
+
+  private fun nsd(): NsdManager? =
+    appContext.reactContext?.getSystemService(Context.NSD_SERVICE) as? NsdManager
+
+  private fun stopAdvertising() {
+    val listener = registration ?: return
+    registration = null
+    runCatching { nsd()?.unregisterService(listener) }
+  }
 
   override fun definition() = ModuleDefinition {
     Name("LanServer")
@@ -84,6 +98,46 @@ class LanServerModule : Module() {
       sockets.clear()
     }
 
+    // TASK-04 spike: announce the room on the local network as `Huddle-<code>`.
+    AsyncFunction("advertise") { code: String, port: Int, promise: Promise ->
+      val manager = nsd()
+      if (manager == null) {
+        promise.reject("E_NSD", "NsdManager unavailable", null)
+        return@AsyncFunction
+      }
+      stopAdvertising()
+      val info = NsdServiceInfo().apply {
+        serviceName = "Huddle-$code"
+        serviceType = "_huddle._tcp"
+        setPort(port)
+        setAttribute("code", code)
+        setAttribute("port", port.toString())
+        setAttribute(
+          "hosts",
+          NetworkInterface.getNetworkInterfaces().toList()
+            .filter { it.isUp && !it.isLoopback }
+            .flatMap { it.inetAddresses.toList() }
+            .filterIsInstance<Inet4Address>()
+            .mapNotNull { it.hostAddress }
+            .joinToString(","),
+        )
+      }
+      val listener = object : NsdManager.RegistrationListener {
+        override fun onServiceRegistered(registered: NsdServiceInfo) {
+          promise.resolve(registered.serviceName)
+        }
+        override fun onRegistrationFailed(failed: NsdServiceInfo, errorCode: Int) {
+          promise.reject("E_NSD", "registration failed: $errorCode", null)
+        }
+        override fun onServiceUnregistered(unregistered: NsdServiceInfo) {}
+        override fun onUnregistrationFailed(failed: NsdServiceInfo, errorCode: Int) {}
+      }
+      registration = listener
+      manager.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
+    }
+
+    Function("stopAdvertising") { stopAdvertising() }
+
     Function("addresses") {
       NetworkInterface.getNetworkInterfaces().toList()
         .filter { it.isUp && !it.isLoopback }
@@ -94,6 +148,7 @@ class LanServerModule : Module() {
     }
 
     OnDestroy {
+      stopAdvertising()
       server?.stop(0)
       server = null
     }
