@@ -681,6 +681,8 @@ def package_kind(path: Path, root: Path) -> str:
         return "ui"
     if rel[:2] == ("packages", "physics"):
         return "physics"
+    if rel[:2] == ("packages", "room-host"):
+        return "host"
     if rel[0] == "games":
         return "game"
     return "package"
@@ -718,17 +720,18 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
                     )
 
     allowed: dict[str, set[str]] = {
-        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "convex"},
+        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "convex", "host"},
         "convex": {"contracts", "domain", "registry"},
         "registry": {"contracts", "domain", "game"},
         "game": {"contracts", "domain", "tokens", "ui", "physics"},
         "physics": set(),
+        "host": {"contracts", "domain", "registry"},
         "ui": {"contracts", "tokens"},
         "domain": {"contracts"},
         "contracts": set(),
         "tokens": set(),
         "package": set(),
-        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "physics", "package"},
+        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "physics", "host", "package"},
     }
     for manifest, payload in payloads.items():
         source_kind = package_kind(manifest, root)
