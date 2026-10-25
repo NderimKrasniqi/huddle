@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 and TASK-05 to TASK-08 are done; results are in
-the validation ledger. Next: TASK-03, TASK-04, TASK-09 and TASK-10.
+scope changes (TASK-01). TASK-02 and TASK-05 to TASK-09 are done; results are in
+the validation ledger. Next: TASK-10, then TASK-03 and TASK-04.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -120,7 +120,7 @@ These are new user-visible behaviors, now recorded in
 
 ### Phase 2 — Client seam, still on Convex
 
-- [ ] TASK-09 Put the phone behind a room-client interface
+- [x] TASK-09 Put the phone behind a room-client interface
   Done when: `use-seated-room.ts`, the session provider, join, seat preview and
   heartbeat call an interface with a Convex implementation; behavior is
   unchanged and every `pnpm e2e:*` flow passes against `pnpm dev:local`.
@@ -456,6 +456,27 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-09 phone room client
+
+The phone reaches its room only through `apps/phone/src/platform/room-client`:
+a `RoomClient` interface (live views, join availability, seat commands, join,
+session lookup, seat previews, heartbeat) with a Convex implementation behind
+`RoomClientProvider`. Refusals arrive as `RoomRefusal` from
+`@huddle/contracts/protocol`, so the rejection messages no longer read
+`ConvexError`. Screens keep an absolute `countdownEndsAt` on the phone's clock;
+the LAN client will derive it from the protocol's remaining time. Only comments
+still name Convex outside the room client.
+
+`pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture` pass. Against
+`pnpm dev:local` on the iPhone 17 simulator, every flow passed:
+`e2e:phone-starts`, `e2e:trivia`, `e2e:bomb-squad`, `e2e:crowded-room`,
+`e2e:host-handoff` and `e2e:sumo`. The first `e2e:trivia` run straight after
+`e2e:phone-starts` timed out before the Ready button; the rerun passed every
+step, so that was a cold start rather than a change in behavior. The flows
+launch `tv.huddle.controller`, an older app ID than the phone's current
+`tv.huddle.phone`; both load the current JavaScript from Metro, and the
+mismatch predates this change.
 
 ### TASK-08 host boundary
 

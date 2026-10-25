@@ -1,5 +1,4 @@
-import type { api } from '@huddle/convex';
-import type { FunctionReturnType } from 'convex/server';
+import type { ViewValue } from '@huddle/contracts/protocol';
 
-/** One seat of the room roster as projected by Convex. */
-export type RosterSeat = FunctionReturnType<typeof api.players.roster>[number];
+/** One seat of the room roster, as the room projects it. */
+export type RosterSeat = ViewValue<'roster'>[number];

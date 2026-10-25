@@ -1,8 +1,8 @@
-import { api } from '@huddle/convex';
 import type { AvatarId } from '@huddle/domain';
-import { useMutation } from 'convex/react';
 import * as Crypto from 'expo-crypto';
 import { useEffect, useState } from 'react';
+
+import { useRoomClient } from '../../platform/room-client/native';
 
 /** Wait for typing to settle before telling the TV. */
 const PREVIEW_DEBOUNCE_MS = 300;
@@ -27,8 +27,7 @@ export function useSeatPreview({
   readonly avatarId: AvatarId;
   readonly active: boolean;
 }): void {
-  const previewSeat = useMutation(api.seatPreviews.previewSeat);
-  const clearSeatPreview = useMutation(api.seatPreviews.clearSeatPreview);
+  const { previewSeat, clearSeatPreview } = useRoomClient();
   const [previewKey] = useState(() => Crypto.randomUUID());
 
   useEffect(() => {
@@ -47,7 +46,7 @@ export function useSeatPreview({
   useEffect(() => {
     if (!active) return;
     return () => {
-      clearSeatPreview({ previewKey }).catch(() => {});
+      clearSeatPreview(previewKey).catch(() => {});
     };
   }, [active, clearSeatPreview, previewKey]);
 }

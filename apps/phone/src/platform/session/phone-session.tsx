@@ -1,6 +1,4 @@
-import { api } from '@huddle/convex';
 import type { GuestProfileV1 } from '@huddle/domain';
-import { useConvex } from 'convex/react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 
 import {
@@ -13,6 +11,7 @@ import {
   type PlayerSession,
   type SessionTokenStatus,
 } from './session';
+import { useRoomClient } from '../room-client/native';
 import { phoneSessionTokenStore } from './native';
 
 export type PhoneSessionContextValue = {
@@ -48,7 +47,7 @@ const PhoneSessionContext = createContext<PhoneSessionContextValue | null>(null)
 const RESTORED_SEAT_GONE = 'Your seat was freed while Huddle was closed. Join again with the code on the TV.';
 
 export function PhoneSessionProvider({ children }: PropsWithChildren) {
-  const convex = useConvex();
+  const { lookupSession } = useRoomClient();
   const [session, setSession] = useState<PlayerSession | null | undefined>();
   const [restoringToken, setRestoringToken] = useState(false);
   const [joinWelcomeUntil, setJoinWelcomeUntil] = useState<number>();
@@ -90,7 +89,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
         // candidate only when no newer join/leave decision has won.
         candidateTokenRef.current = token;
         try {
-          const result = await convex.query(api.players.session, { sessionToken: token });
+          const result = await lookupSession(token);
           restoreLookupResultRef.current = result === null ? 'null' : 'seat';
           return result;
         } catch (error) {
@@ -152,7 +151,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
         }
       },
     );
-  }, [clearPersistedCredential, convex]);
+  }, [clearPersistedCredential, lookupSession]);
 
   const completeJoin = useCallback((next: PlayerSession & { readonly sessionToken: string }) => {
     const { sessionToken: joinedToken, ...publicSeat } = next;

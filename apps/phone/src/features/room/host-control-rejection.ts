@@ -1,5 +1,5 @@
 import type { HostControlRejection, RateLimitRejection } from '@huddle/domain';
-import { ConvexError } from 'convex/values';
+import { refusalOf } from '@huddle/contracts/protocol';
 
 /**
  * What the Host's phone says when transferring the room or removing a player
@@ -7,7 +7,7 @@ import { ConvexError } from 'convex/values';
  *
  * Built exactly like `game-rejection.ts` and `join-rejection.ts`: the failure
  * is told apart by `kind` off
- * `ConvexError.data`, never by matching a message somebody may reword.
+ * the refusal's `rejection`, never by matching a message somebody may reword.
  */
 
 /** When the failure is not one of the server's answers, but the trip itself. */
@@ -28,7 +28,7 @@ const REJECTION_KINDS: Readonly<Record<HostControlRejection['kind'], true>> = {
 
 type PhoneHostControlRejection = HostControlRejection | RateLimitRejection;
 
-/** Whether `data` off a `ConvexError` is one of the host-control refusals. */
+/** Whether `data` off a room refusal is one of the host-control refusals. */
 function isHostControlRejection(data: unknown): data is PhoneHostControlRejection {
   return (
     typeof data === 'object' &&
@@ -81,7 +81,6 @@ export function hostControlRejectionMessage(rejection: PhoneHostControlRejection
  * is where it has to be taught one rather than being silently generic.
  */
 export function hostControlFailureMessage(error: unknown): string {
-  return error instanceof ConvexError && isHostControlRejection(error.data)
-    ? hostControlRejectionMessage(error.data)
-    : UNEXPECTED_FAILURE;
+  const rejection = refusalOf(error);
+  return isHostControlRejection(rejection) ? hostControlRejectionMessage(rejection) : UNEXPECTED_FAILURE;
 }

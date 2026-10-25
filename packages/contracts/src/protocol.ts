@@ -170,6 +170,22 @@ export type RoomRejection =
   | RateLimitRejection;
 
 /**
+ * A command the room refused, as every room client throws it, whatever the
+ * transport. Code that shows refusals reads `rejection.kind`, never a message.
+ */
+export class RoomRefusal extends Error {
+  constructor(readonly rejection: RoomRejection) {
+    super(`Room refused the command: ${rejection.kind}`);
+    this.name = 'RoomRefusal';
+  }
+}
+
+/** The rejection a room client threw, or `undefined` for any other failure. */
+export function refusalOf(error: unknown): RoomRejection | undefined {
+  return error instanceof RoomRefusal ? error.rejection : undefined;
+}
+
+/**
  * A rejection is checked for shape only. Its `kind` is matched against the
  * unions above by the code that shows it, which already handles a kind it
  * does not know.

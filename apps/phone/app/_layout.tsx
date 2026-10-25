@@ -1,4 +1,3 @@
-import { ConvexProvider } from 'convex/react';
 import { Nunito_400Regular } from '@expo-google-fonts/nunito/400Regular';
 import { Nunito_700Bold } from '@expo-google-fonts/nunito/700Bold';
 import { Nunito_800ExtraBold } from '@expo-google-fonts/nunito/800ExtraBold';
@@ -10,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StatusSurface, useSystemReducedMotion } from '@huddle/ui/native';
-import { convexClient } from '../src/platform/convex/native';
+import { RoomClientProvider } from '../src/platform/room-client/native';
 import { PhoneSessionProvider } from '../src/platform/session';
 import { phoneNavigationAnimations } from '../src/ui/navigation-motion';
 
@@ -64,7 +63,7 @@ export default function PhoneLayout() {
   }
 
   return (
-    <ConvexProvider client={convexClient}>
+    <RoomClientProvider>
       <SafeAreaProvider>
         <PhoneSessionProvider>
           <Stack screenOptions={{ headerShown: false, animation: navigationAnimations.root }}>
@@ -72,6 +71,6 @@ export default function PhoneLayout() {
           </Stack>
         </PhoneSessionProvider>
       </SafeAreaProvider>
-    </ConvexProvider>
+    </RoomClientProvider>
   );
 }

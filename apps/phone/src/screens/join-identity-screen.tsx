@@ -1,4 +1,3 @@
-import { api } from '@huddle/convex';
 import {
   AVATAR_IDS,
   NICKNAME_MAX_LENGTH,
@@ -21,7 +20,6 @@ import {
 import * as Haptics from 'expo-haptics';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery } from 'convex/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +29,7 @@ import { rememberProfile as persistProfile, loadGuestProfile } from '../features
 import { codeEntry, nicknameEntry } from '../features/join/join-entry';
 import { useSeatPreview } from '../features/join/native';
 import { hostControlFailureMessage } from '../features/room';
+import { useRoomClient } from '../platform/room-client/native';
 import { phoneSessionTokenStore } from '../platform/session/native';
 import { joinScreenState, rememberSession, usePhoneSession } from '../platform/session';
 import { phoneIdentityStore } from '../platform/storage/native';
@@ -87,12 +86,8 @@ export default function JoinIdentityScreen() {
     cancelLeave,
     leave,
   } = usePhoneSession();
-  const joinRoom = useMutation(api.players.joinRoom);
-  const leaveCurrentRoom = useMutation(api.players.leaveRoom);
-  const availability = useQuery(
-    api.players.joinAvailability,
-    code.length === ROOM_CODE_LENGTH ? { code } : 'skip',
-  );
+  const room = useRoomClient();
+  const availability = room.useJoinAvailability(code.length === ROOM_CODE_LENGTH ? code : undefined);
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');
   const [chosenAvatarId, setAvatarId] = useState<AvatarId>('fox');
@@ -196,12 +191,12 @@ export default function JoinIdentityScreen() {
   }
 
   async function changeRooms() {
-    if (routeState.kind !== 'handoff' || sessionToken === undefined || !canChangeRooms) return;
+    if (routeState.kind !== 'handoff' || sessionToken === undefined || session === null || session === undefined || !canChangeRooms) return;
     setIsChangingRooms(true);
     setError(undefined);
     beginLeave();
     try {
-      await leaveCurrentRoom({ sessionToken });
+      await room.command('leaveRoom', { roomId: session.roomId, sessionToken }, {});
       await leave();
     } catch (leaveError) {
       cancelLeave();
@@ -272,7 +267,7 @@ export default function JoinIdentityScreen() {
     setIsJoining(true);
     setError(undefined);
     try {
-      const session = await joinRoom({
+      const session = await room.joinRoom({
         code,
         nickname: nickname.trim(),
         avatar: avatarId,

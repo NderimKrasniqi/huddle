@@ -1,10 +1,10 @@
 import type { JoinRejection, RateLimitRejection } from '@huddle/domain';
-import { ConvexError } from 'convex/values';
+import { refusalOf } from '@huddle/contracts/protocol';
 
 /**
  * What the join screen says when a join does not happen.
  *
- * The rejection is read off `ConvexError.data` and told apart by its `kind`.
+ * The rejection is read off the refusal's `rejection` and told apart by its `kind`.
  * That is the whole reason `joinRoom` throws a discriminated union rather than
  * a sentence: Convex redacts the message of anything that is not a
  * `ConvexError` to "Server Error", and even a message that survives is English
@@ -36,7 +36,7 @@ const REJECTION_KINDS: Readonly<Record<JoinRejection['kind'], true>> = {
 type PhoneJoinRejection = JoinRejection | RateLimitRejection;
 
 /**
- * Whether `data` off a `ConvexError` is one of `joinRoom`'s rejections.
+ * Whether `data` off a room refusal is one of `joinRoom`'s rejections.
  *
  * The `kind` is what is checked: it is the discriminant, and the payload beside
  * it is written by the same typed mutation that chose the kind. A stranger
@@ -92,7 +92,6 @@ export function rejectionMessage(rejection: PhoneJoinRejection): string {
 
 /** What to show when `joinRoom` throws, whatever it threw. */
 export function joinFailureMessage(error: unknown): string {
-  return error instanceof ConvexError && isJoinRejection(error.data)
-    ? rejectionMessage(error.data)
-    : UNEXPECTED_FAILURE;
+  const rejection = refusalOf(error);
+  return isJoinRejection(rejection) ? rejectionMessage(rejection) : UNEXPECTED_FAILURE;
 }

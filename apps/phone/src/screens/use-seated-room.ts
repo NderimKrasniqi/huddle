@@ -1,8 +1,6 @@
 import { useRoomMoments, useSystemReducedMotion } from '@huddle/ui/native';
-import { api } from '@huddle/convex';
 import type { GameEvent, GameModule, GameSettings, GameSettingsMode } from '@huddle/domain';
 import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
-import { useMutation, useQuery } from 'convex/react';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -14,6 +12,8 @@ import {
 } from '../features/room';
 import { lifecycleFailureMessage } from '../models/lifecycle-rejection';
 import { useHeartbeat } from '../platform/presence/native';
+import type { SeatCredential } from '../platform/room-client';
+import { useRoomClient } from '../platform/room-client/native';
 import { usePhoneSession, type PlayerSession } from '../platform/session';
 import { pickerVisibility } from './seated-phone-model';
 
@@ -47,7 +47,7 @@ export type Confirmation = {
 /**
  * Everything a seated phone knows and can do: the room's live projections,
  * the action busy/failure state, and every Host and player action. Screens
- * render what this returns and call its actions; none of them talk to Convex.
+ * render what this returns and call its actions; none of them name a transport.
  */
 export function useSeatedRoom({
   session,
@@ -62,17 +62,18 @@ export function useSeatedRoom({
   const { beginLeave, cancelLeave, sessionToken, joinWelcomeUntil } = usePhoneSession();
   const reduceMotion = useSystemReducedMotion();
   const token = sessionToken;
-  // Every room view is asked as this seat; the server shows nobody else.
-  const asSeat = token === undefined ? 'skip' : { roomId: session.roomId, sessionToken: token };
-  const rosterAnswer = useQuery(api.players.roster, asSeat);
-  const roster = useMemo(() => rosterAnswer ?? [], [rosterAnswer]);
-  const running = useQuery(api.games.running, asSeat);
-  const seat = useQuery(
-    api.players.session,
-    token === undefined ? 'skip' : { sessionToken: token },
+  const room = useRoomClient();
+  // Every room view is asked as this seat; the room shows nobody else.
+  const asSeat: SeatCredential | undefined = useMemo(
+    () => (token === undefined ? undefined : { roomId: session.roomId, sessionToken: token }),
+    [session.roomId, token],
   );
-  const browsingAt = useQuery(api.gameSetup.browsing, asSeat);
-  const setupDraft = useQuery(api.gameSetup.setup, asSeat);
+  const rosterAnswer = room.useView('roster', asSeat);
+  const roster = useMemo(() => rosterAnswer ?? [], [rosterAnswer]);
+  const running = room.useView('running', asSeat);
+  const seat = room.useView('session', asSeat);
+  const browsingAt = room.useView('browsing', asSeat);
+  const setupDraft = room.useView('setup', asSeat);
   const standing = lobbyStanding(roster, session.playerId);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
@@ -86,21 +87,6 @@ export function useSeatedRoom({
   const busyRef = useRef<BusyAction>(null);
   const seatLossReported = useRef(false);
 
-  const leaveRoom = useMutation(api.players.leaveRoom);
-  const transferHost = useMutation(api.players.transferHost);
-  const removePlayer = useMutation(api.players.removePlayer);
-  const browseGame = useMutation(api.gameSetup.browseGame);
-  const selectGame = useMutation(api.gameSetup.selectGame);
-  const configureGame = useMutation(api.gameSetup.configureGame);
-  const finalizeGameSetup = useMutation(api.gameSetup.finalizeGameSetup);
-  const reopenGameSetup = useMutation(api.gameSetup.reopenGameSetup);
-  const cancelGameSetup = useMutation(api.gameSetup.cancelGameSetup);
-  const setGameReady = useMutation(api.gameSetup.setGameReady);
-  const startCountdown = useMutation(api.gameSetup.startCountdown);
-  const stopCountdown = useMutation(api.gameSetup.stopCountdown);
-  const endGame = useMutation(api.games.endGame);
-  const continueAfterDisconnect = useMutation(api.games.continueAfterDisconnect);
-  const sendEvent = useMutation(api.games.sendEvent);
 
   useEffect(() => {
     if (seatLossReported.current || seat === undefined || seat !== null) return;
@@ -168,7 +154,7 @@ export function useSeatedRoom({
   async function runAction(action: Exclude<BusyAction, null>, callback: () => Promise<unknown>, message = lifecycleFailureMessage) {
     // State updates are batched until this event yields. The ref closes the
     // same-tick double-tap window that a visible `busy` state alone leaves.
-    if (busyRef.current !== null || token === undefined) return false;
+    if (busyRef.current !== null || asSeat === undefined) return false;
     busyRef.current = action;
     setBusy(action);
     setFailure(undefined);
@@ -200,7 +186,7 @@ export function useSeatedRoom({
             // subscription update is an expected Leave, not a Host removal.
             beginLeave();
             try {
-              await leaveRoom({ sessionToken: token as string });
+              await room.command('leaveRoom', asSeat as SeatCredential, {});
               await onLeft();
             } catch (error) {
               cancelLeave();
@@ -223,7 +209,7 @@ export function useSeatedRoom({
       action: 'transfer',
       onConfirm: () => {
         void (async () => {
-          const didTransfer = await runAction('transfer', () => transferHost({ sessionToken: token as string, playerId: target.playerId }), hostControlFailureMessage);
+          const didTransfer = await runAction('transfer', () => room.command('transferHost', asSeat as SeatCredential, { playerId: target.playerId }), hostControlFailureMessage);
           if (didTransfer) {
             setConfirmation(undefined);
             setSuccess(`${target.nickname} is now the host.`);
@@ -244,7 +230,7 @@ export function useSeatedRoom({
       action: 'remove',
       onConfirm: () => {
         void (async () => {
-          const didRemove = await runAction('remove', () => removePlayer({ sessionToken: token as string, playerId: target.playerId }), hostControlFailureMessage);
+          const didRemove = await runAction('remove', () => room.command('removePlayer', asSeat as SeatCredential, { playerId: target.playerId }), hostControlFailureMessage);
           if (didRemove) {
             setConfirmation(undefined);
             setSuccess(`${target.nickname} was removed from the room.`);
@@ -255,11 +241,11 @@ export function useSeatedRoom({
   }
 
   function openPicker() {
-    if (!standing.youAreHost || token === undefined) return;
+    if (!standing.youAreHost || asSeat === undefined) return;
     setPickerOpen(true);
     const index = browsingAt ?? 0;
     void (async () => {
-      await runAction('browse', () => browseGame({ sessionToken: token, index }));
+      await runAction('browse', () => room.command('browseGame', asSeat, { index }));
       // The room's browse projection, not this optimistic flag, decides
       // whether everyone entered the carousel. A TV-away no-op therefore
       // returns the Host to the same room surface as everyone else.
@@ -268,32 +254,32 @@ export function useSeatedRoom({
   }
 
   function browse(index: number) {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('browse', () => browseGame({ sessionToken: token, index }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('browse', () => room.command('browseGame', asSeat, { index }));
   }
 
   function chooseGame(module: GameModule) {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('select', () => selectGame({ sessionToken: token, gameId: module.metadata.id, mode: 'standard' }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('select', () => room.command('selectGame', asSeat, { gameId: module.metadata.id, mode: 'standard' }));
   }
 
   function configure(mode: GameSettingsMode, settings: GameSettings) {
-    if (!standing.youAreHost || token === undefined || setupDraft === null || setupDraft === undefined) return;
-    void runAction('configure', () => configureGame({ sessionToken: token, gameId: setupDraft.gameId, settings: { ...settings }, mode }));
+    if (!standing.youAreHost || asSeat === undefined || setupDraft === null || setupDraft === undefined) return;
+    void runAction('configure', () => room.command('configureGame', asSeat, { gameId: setupDraft.gameId, settings: { ...settings }, mode }));
   }
 
   function finalize() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('finalize', () => finalizeGameSetup({ sessionToken: token }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('finalize', () => room.command('finalizeGameSetup', asSeat, {}));
   }
 
   function reopen() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('reopen', () => reopenGameSetup({ sessionToken: token }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('reopen', () => room.command('reopenGameSetup', asSeat, {}));
   }
 
   function confirmReturnToRoom(hasDraft: boolean) {
-    if (!standing.youAreHost || token === undefined) return;
+    if (!standing.youAreHost || asSeat === undefined) return;
     setFailure(undefined);
     setConfirmation({
       title: 'Back to the room?',
@@ -304,7 +290,7 @@ export function useSeatedRoom({
       action: 'cancel',
       onConfirm: () => {
         void (async () => {
-          const didReturn = await runAction('cancel', () => cancelGameSetup({ sessionToken: token }));
+          const didReturn = await runAction('cancel', () => room.command('cancelGameSetup', asSeat, {}));
           if (didReturn) {
             setPickerOpen(false);
             setConfirmation(undefined);
@@ -315,23 +301,23 @@ export function useSeatedRoom({
   }
 
   function toggleReady() {
-    if (token === undefined || setupDraft === null || setupDraft === undefined) return;
+    if (asSeat === undefined || setupDraft === null || setupDraft === undefined) return;
     const ready = setupDraft.readyPlayerIds.includes(session.playerId);
-    void runAction('ready', () => setGameReady({ sessionToken: token, ready: !ready }));
+    void runAction('ready', () => room.command('setGameReady', asSeat, { ready: !ready }));
   }
 
   function start() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('start', () => startCountdown({ sessionToken: token }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('start', () => room.command('startCountdown', asSeat, {}));
   }
 
   function stopTheCountdown() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('stop', () => stopCountdown({ sessionToken: token }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('stop', () => room.command('stopCountdown', asSeat, {}));
   }
 
   function end() {
-    if (!standing.youAreHost || token === undefined) return;
+    if (!standing.youAreHost || asSeat === undefined) return;
     setFailure(undefined);
     setConfirmation({
       title: 'Back to the room?',
@@ -343,7 +329,7 @@ export function useSeatedRoom({
       action: 'end',
       onConfirm: () => {
         void (async () => {
-          const didEnd = await runAction('end', () => endGame({ sessionToken: token }));
+          const didEnd = await runAction('end', () => room.command('endGame', asSeat, {}));
           if (didEnd) {
             setPickerOpen(false);
             setConfirmation(undefined);
@@ -354,13 +340,13 @@ export function useSeatedRoom({
   }
 
   function continueGame() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('continue', () => continueAfterDisconnect({ sessionToken: token }));
+    if (!standing.youAreHost || asSeat === undefined) return;
+    void runAction('continue', () => room.command('continueAfterDisconnect', asSeat, {}));
   }
 
   function event(event: GameEvent) {
-    if (token === undefined || busy !== null) return;
-    void runAction('event', () => sendEvent({ sessionToken: token, event }));
+    if (asSeat === undefined || busy !== null) return;
+    void runAction('event', () => room.command('sendEvent', asSeat, { event }));
   }
 
   function managePlayer(target: RosterSeat) {
