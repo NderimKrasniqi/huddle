@@ -7,7 +7,7 @@ const SECOND = 1_000;
 
 type Bucket = { readonly rate: number; readonly period: number; readonly capacity: number };
 
-/** The limits the Convex backend enforced, unchanged. */
+/** The limits the retired Convex backend enforced, kept unchanged. */
 const RATE_LIMITS = {
   joinGlobal: { rate: 600, period: MINUTE, capacity: 1_200 },
   joinRoom: { rate: 120, period: MINUTE, capacity: 240 },

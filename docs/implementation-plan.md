@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-17 are done; results are in the validation
-ledger. Next: TASK-18, retiring Convex.
+scope changes (TASK-01). TASK-02 to TASK-18 are done; results are in the validation
+ledger. Next: TASK-19, making the target architecture current.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -31,7 +31,7 @@ Task dependencies are in `.workflow/tasks.json`.
 
 ### Audit summary
 
-- **Convex surface:** 3,369 lines in `convex/convex`: 40 functions (10 queries,
+- **Convex surface:** 3,369 lines in convex/convex: 40 functions (10 queries,
   23 mutations, 7 scheduled internal mutations, counting the development
   reset pair) over five tables (`rooms`,
   `players`, `presence`, `tvSessions`, `seatPreviews`). The scheduler drives
@@ -46,10 +46,10 @@ Task dependencies are in `.workflow/tasks.json`.
   phone's hub is `apps/phone/src/screens/use-seated-room.ts` (5 queries, 15
   mutations). The TV's hub is `apps/tv/src/platform/room-session/room-client.ts`
   and `apps/tv/src/screens/tv-session-controller.tsx`.
-- **Tooling coupling:** the e2e seeds in `convex/e2e` drive a fake TV and bots
+- **Tooling coupling:** the e2e seeds in convex/e2e drive a fake TV and bots
   through the Convex HTTP client. `tools/dev-local.sh` starts a local Convex
   backend. `tools/validate-architecture.py`, `tools/validate-workflow.py` (it
-  lists `convex/AGENTS.md`), `tools/verify-client-bundle.cjs` and `AGENTS.md`
+  lists convex/AGENTS.md), `tools/verify-client-bundle.cjs` and `AGENTS.md`
   all name Convex.
 - **Weak points the move fixes:** session tokens come from Convex's seeded
   `Math.random`; every game event is a transaction on the one room document.
@@ -57,7 +57,7 @@ Task dependencies are in `.workflow/tasks.json`.
 ### Scope changes (approved in TASK-01)
 
 These are new user-visible behaviors, now recorded in
-[`project-scope.md`](project-scope.md#rooms-hosted-by-the-tv-approved-being-built):
+[`project-scope.md`](project-scope.md#rooms-hosted-by-the-tv):
 
 1. Phones join only on the same Wi-Fi as the TV, until the relay ships.
 2. On first join, an iPhone asks for Local Network access. If the player
@@ -104,14 +104,14 @@ These are new user-visible behaviors, now recorded in
   and `pnpm lint` pass.
 - [x] TASK-06 Build the room host package (`packages/room-host`)
   Done when: it ports rooms, players, game setup, games, seat previews and the
-  `lib` helpers from `convex/convex` with the same rules and rejections; it
+  `lib` helpers from convex/convex with the same rules and rejections; it
   takes clock, timers, random, storage and send from its caller; it imports
   only `@huddle/domain`, `@huddle/contracts` and `@huddle/game-registry/logic`;
   it mints codes and tokens from a cryptographic source; it serialises a
   snapshot after every change.
 - [x] TASK-07 Build the headless TV and bots
   Done when: a Node runner (tsx and the `ws` library) hosts the room host on a
-  LAN port, the four seed scripts are ported from `convex/e2e` to it, and a bot
+  LAN port, the four seed scripts are ported from convex/e2e to it, and a bot
   client speaks the protocol.
 - [x] TASK-08 Enforce the host boundary
   Done when: `tools/validate-architecture.py` knows the room-host package kind,
@@ -166,10 +166,10 @@ These are new user-visible behaviors, now recorded in
 
 ### Phase 5 — Retire Convex
 
-- [ ] TASK-18 Remove Convex
+- [x] TASK-18 Remove Convex
   Done when: the Convex room-client implementations, the `convex` package, its
   dependencies and env files, the Convex parts of `tools/dev-local.sh` and both
-  validators, `convex/AGENTS.md` and the Convex notes in `AGENTS.md` are gone;
+  validators, convex/AGENTS.md and the Convex notes in `AGENTS.md` are gone;
   `pnpm verify:bundle-seam` now proves that phone exports hold no `/logic`
   entry and that the room host is renderer-free; `pnpm typecheck`, `pnpm lint`,
   `pnpm validate:workflow`, `pnpm verify:dependency-security` and every e2e
@@ -457,6 +457,25 @@ explicit owner approval.
 
 ## Validation ledger
 
+### TASK-18 Convex retired
+
+Removed: both apps' Convex room clients and the `EXPO_PUBLIC_ROOM_BACKEND`
+switch (the TV-hosted room is the only one), the `convex` package and its
+e2e seeds, the `convex` and Convex package dependencies, both apps' `.env`
+files, the Convex parts of `tools/dev-local.sh` (now just the two Metro
+servers), `tools/tv-emulator.sh`, both validators and the ESLint config, the
+Convex notes in `AGENTS.md`, and the comments that described Convex. The
+architecture validator now refuses any Convex import. `pnpm verify:bundle-seam`
+is reworded for its remaining job: a phone export must carry no Trivia pack,
+because the TV's room host holds the rules and content.
+
+`pnpm typecheck`, `pnpm lint`, `pnpm validate:architecture`,
+`pnpm validate:workflow` and `pnpm verify:dependency-security` pass; a fresh
+iOS phone export passes `pnpm verify:bundle-seam`; and all six e2e flows pass
+against the new `pnpm dev:local`. Untracked local leftovers in the old
+`convex` folder (its `node_modules`, `skills-lock.json` and env file) are not
+in git and were left in place.
+
 ### TASK-17 Apple TV play-through
 
 On the Apple TV 4K (at 1080p) simulator, tvOS 26.5, with the TV app bundled
@@ -734,7 +753,7 @@ TV platform layer passed.
 `pnpm headless-tv` runs the room host behind a `ws` server on port 7777
 (`HEADLESS_TV_PORT` changes it). `tools/headless-tv/bot.ts` is a protocol
 client on Node's built-in WebSocket. The four seeds in `tools/headless-tv`
-match the ones in `convex/e2e` and take the same code-file argument. The
+match the ones in convex/e2e and take the same code-file argument. The
 `pnpm e2e:*` scripts still use the Convex seeds, because the phone app talks to
 Convex until TASK-13; TASK-15 switches them.
 
@@ -748,7 +767,7 @@ replayed a round once everyone aimed. `pnpm typecheck` (now including
 
 ### TASK-06 room host
 
-`@huddle/room-host` ports every rule from `convex/convex` except the ones the
+`@huddle/room-host` ports every rule from convex/convex except the ones the
 TV now makes unnecessary: TV heartbeats and their silence chain (the TV is the
 host; the shell reports background and foreground with `setTvAway`) and
 desertion expiry (the TV keeps the room, as Convex did while the TV was

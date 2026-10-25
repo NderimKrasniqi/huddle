@@ -103,7 +103,7 @@ type StartArgs = {
 };
 
 /**
- * The room's authority: what the Convex backend did, run by the TV.
+ * The room's authority, run by the TV (ADR-01).
  *
  * Every change goes through `change`, which recomputes the views, pushes the
  * ones that changed to each phone and to the TV's own screens, and saves a

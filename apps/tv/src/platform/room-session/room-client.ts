@@ -7,7 +7,7 @@ import { type OpenRoom, roomOpener } from './room-opening';
 let activeTvSessionToken: string | undefined;
 
 /**
- * The room this TV shows, bound to this launch's Convex connection. The TV app
+ * The room this TV shows, held by this launch's room host. The TV app
  * holds no player record and needs no remote — launching it *is* the act of
  * opening a room.
  *

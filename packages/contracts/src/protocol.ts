@@ -19,8 +19,7 @@ import {
  * A connection opens with `hello` and `welcome`. It is anonymous until
  * `joinRoom` or `resumeSession` binds it to one seat, and every later command
  * acts as that seat — which is why no command carries a Session Token. Command
- * names follow the Convex mutations they replace; view names follow the Convex
- * queries. Presence is the transport's `ping`, so there is no heartbeat
+ * and view names are the room's own actions and projections. Presence is the transport's `ping`, so there is no heartbeat
  * command.
  *
  * Bump `PROTOCOL_VERSION` for any change an older peer would misread. A host

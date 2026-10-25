@@ -19,7 +19,7 @@ apps/*/modules/*/android/.cxx/
 # Personal local-device build notes
 /LOCAL_BUILDS.md
 
-# Convex
+# Local environment overrides
 .env.local
 .env*.local
 

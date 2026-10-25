@@ -5,9 +5,9 @@ import type { AvatarId } from './avatar';
 /**
  * The game contracts: everything the hub knows about a game, split by runtime.
  *
- * The hub — the TV app, the Phone, and the Convex mutations between them —
- * contains no game logic and no game names. Clients render a `GameModule`; the
- * Convex server runs a `GameLogic`; both share metadata and settings while game
+ * The hub — the TV app, the Phone, and the room host between them — contains
+ * no game logic and no game names. Clients render a `GameModule`; the room
+ * host runs a `GameLogic`; both share metadata and settings while game
  * state remains opaque to the hub. That split is what makes another game an
  * entry rather than a change
  * (docs/project-scope.md: "adding a hypothetical game #2 requires no hub
@@ -409,8 +409,8 @@ export interface GameLogic<
   /** The state a game begins in, given its players and the Host's settings. */
   createInitialState(setup: GameSetup<Settings>): State;
   /**
-   * The rules, as a pure function. It runs server-side inside a Convex
-   * mutation, so it may not reach for a clock, a random number or a network:
+   * The rules, as a pure function. It runs inside the room host, so it may
+   * not reach for a clock, a random number or a network:
    * everything it needs arrives in `state` and `event`.
    */
   reduce(state: State, event: Event): State;
@@ -458,9 +458,9 @@ export interface GameLogic<
  * `GameModule` does not extend `GameLogic`. A client renders a game — the
  * carousel card from `metadata`, the Host's options from `settingsSchema`, the
  * `screens` once it starts — but it never runs one: `createInitialState` and
- * `reduce` execute inside Convex mutations, and the state a screen draws arrives
+ * `reduce` execute inside the room host, and the state a screen draws arrives
  * from the room. Leaving the rules off this type is not tidiness, it is the seam
- * that keeps a game's *content* server-side. Trivia's `createInitialState` deals
+ * that keeps a game's *content* off the phone. Trivia's `createInitialState` deals
  * from the Question Pack, so a module that carried it would carry the pack —
  * every question and its answer — into the phone bundle, where a modified client
  * could reproduce the deterministic deal and know each answer before the TV

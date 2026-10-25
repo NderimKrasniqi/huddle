@@ -26,11 +26,11 @@ controller are not supported clients or features.
 | Expo | SDK `57` | Phone and TV application platform |
 | Expo Router | `~57.0.12` | file-based native routes and deep links |
 | React Native TV | `~0.86.0-2` | shared Android TV runtime |
-| Convex | `^1.42.3` | authoritative room and game state |
+| `@huddle/room-host` | workspace | room and game authority, run by the TV |
 
 Workspace roots are `apps/phone`, `apps/tv`, `games/*`, `packages/contracts`,
 `packages/domain`, `packages/design-tokens`, `packages/ui`,
-`packages/game-registry`, and `convex`. Package exports, rather than source
+`packages/game-registry`, `packages/physics` and `packages/room-host`. Package exports, rather than source
 directory reach-through, enforce those boundaries.
 
 ## Playroom presentation stack
@@ -67,21 +67,18 @@ The TV app owns the only QR/SVG dependencies. The Phone scanner owns the only
 `CameraView`. The TV source graph is checked for buttons, inputs, press handlers,
 positive focus, and D-pad handlers so the TV remains a passive stage.
 
-## Server and game contracts
+## Room and game contracts
 
 | Technology | Version | Use |
 |---|---:|---|
-| Convex | `^1.42.3` | rooms, seats, presence, setup, readiness, runtime |
-| `@convex-dev/rate-limiter` | `^0.4.2` | server-owned party-safe limits |
-| Zod | `^4.4.3` | wire and module decoding |
+| Zod | `^4.4.3` | Room Protocol, wire and module decoding |
 
 The game registry lists the installed games: Trivia, Bomb Squad and Sumo
 Bumpers. Each module owns its settings,
 server rules, state/deadlines, redaction, Phone controller, TV presentation,
-and Back-to-lobby boundary. Convex remains the authority until the TV hosts
-the room; the only schema addition is the optional countdown state on setup.
+and Back-to-lobby boundary. The TV's room host is the authority.
 
-## Approved local-first stack (being built)
+## Local-first stack
 
 Approved with ADR-01 to ADR-04 in
 [`architecture.md`](architecture.md#architecture-decisions). Versions are pinned
@@ -116,15 +113,14 @@ TV uses a 1920×1080 design stage and a 5% overscan-safe frame, scaling down to
 per countdown number. Reduced-motion devices get immediate state changes or
 brief fades without losing status copy or accessibility semantics.
 
-## Local backend
+## Local development
 
-`pnpm dev:local` runs Convex on this Mac instead of the cloud dev deployment,
-and starts both Metro servers against it. Local function calls and database
-bandwidth do not count against the Convex plan, so use it for simulator work
-and bot-driven test games. The iPhone simulator reaches it directly and the TV
-emulator through `adb reverse`; real devices cannot, and keep the cloud URL in
-the apps' env files. The script restores the Convex env file to the cloud selection
-when it stops, so `convex dev --once` still deploys to the cloud.
+`pnpm dev:local` starts the TV Metro on 8081 and the phone Metro on 8082.
+There is no backend: the TV app hosts the room. The iPhone and Apple TV
+simulators share this Mac's network; the Android TV emulator reaches Metro
+through `adb reverse`, and phones reach a room on it through
+`adb forward tcp:7777 tcp:7777`. `pnpm headless-tv` runs a room on this Mac
+without a TV app.
 
 ## Verification commands
 
@@ -141,7 +137,7 @@ pnpm verify:bundle-seam -- <fresh-export-directory>
 
 The project keeps end-to-end tests only; there are no unit, render or
 integration suites. The Maestro flows live in `e2e/`; `pnpm e2e:bomb-squad`
-seeds a room through `convex/e2e/seed-bomb-room.mjs` and plays the phone from
+seeds a headless TV through `tools/headless-tv/seed-bomb-room.ts` and plays the phone from
 join to the first bomb on the iPhone simulator. Use `git diff --check` before handoff.
 
 For bundle proof, export Phone and TV into fresh directories and run the seam

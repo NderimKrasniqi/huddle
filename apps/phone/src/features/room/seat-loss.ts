@@ -10,7 +10,7 @@ import type { RosterSeat } from '../../models';
  * A removal leaves the room standing — the Host who did it is still in it — so
  * the roster this phone was already watching still has people on it. A room
  * ended by expiry takes every seat at once, so the roster is empty. Both queries
- * move on one Convex snapshot, so the roster read the moment the seat vanished
+ * move in one push from the room host, so the roster read the moment the seat vanished
  * is the room as it was at that instant.
  *
  * **There is now a third reason, and it is the one this must never speak for.**

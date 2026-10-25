@@ -5,7 +5,7 @@
   "description": "Sumo Bumpers Game Module: aim, launch together, last blob on the ice wins.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "//exports": "`./logic` is the rules without the screens, and exists so the Convex server can import them without bundling React Native. A module's screens are properties of it and do not tree-shake, so the seam has to be an entry point rather than a hope about the bundler.",
+  "//exports": "`./logic` is the rules without the screens, and exists so the room host can import them without bundling React Native. A module's screens are properties of it and do not tree-shake, so the seam has to be an entry point rather than a hope about the bundler.",
   "exports": {
     ".": "./src/index.ts",
     "./logic": "./src/logic.ts"
@@ -19,7 +19,7 @@
     "zod": "catalog:",
     "@huddle/physics": "workspace:*"
   },
-  "//peerDependencies": "Screens only, and for the same reason `@huddle/ui` declares them this way: `react-native` resolves to whichever variant the consuming app installed — react-native-tvos on the TV, stock on the phone. The `./logic` entry point imports none of it, which is what lets the Convex server take the rules without any of this. `@shopify/react-native-skia` is the TV app's copy; the phone app aliases it to a stub (apps/phone/metro.config.js) because only the TV renders this game's Skia art.",
+  "//peerDependencies": "Screens only, and for the same reason `@huddle/ui` declares them this way: `react-native` resolves to whichever variant the consuming app installed — react-native-tvos on the TV, stock on the phone. The `./logic` entry point imports none of it, which is what lets the room host take the rules without any of this. `@shopify/react-native-skia` is the TV app's copy; the phone app aliases it to a stub (apps/phone/metro.config.js) because only the TV renders this game's Skia art.",
   "peerDependencies": {
     "react": "*",
     "react-native": "*",

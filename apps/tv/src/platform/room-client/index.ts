@@ -2,9 +2,8 @@ import type { ViewValue } from '@huddle/contracts/protocol';
 import type { LanJoin, RunningGameResponse } from '@huddle/domain';
 
 /**
- * How the TV reaches its room, whatever holds it. Today the Convex
- * implementation backs it; the room host running inside the TV app replaces
- * it (TASK-12). Screens never name a backend.
+ * How the TV reaches its room: the room host running inside this app
+ * (`lan-tv-room-client.ts`). Screens never name a backend.
  */
 
 /** The room this TV opened: its id, its Room Code, and whether it was picked back up. */

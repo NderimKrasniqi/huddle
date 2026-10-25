@@ -35,7 +35,7 @@ KEBAB_FILE = re.compile(
 )
 KEBAB_DIR = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 RENDERER_IMPORT = re.compile(
-    r"['\"](?:react|react-native(?:/[^'\"]*)?|convex/react|expo(?:/[^'\"]*)?)['\"]"
+    r"['\"](?:react|react-native(?:/[^'\"]*)?|expo(?:/[^'\"]*)?)['\"]"
 )
 SHARED_RENDERER_IMPORT = re.compile(r"['\"]@huddle/ui/(?:kit|native)['\"]")
 SERVER_CONTENT_IMPORT = re.compile(
@@ -667,8 +667,6 @@ def package_kind(path: Path, root: Path) -> str:
         return "root"
     if rel[0] == "apps":
         return "app"
-    if rel[0] == "convex":
-        return "convex"
     if rel[:2] == ("packages", "contracts"):
         return "contracts"
     if rel[:2] == ("packages", "domain"):
@@ -720,8 +718,7 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
                     )
 
     allowed: dict[str, set[str]] = {
-        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "convex", "host"},
-        "convex": {"contracts", "domain", "registry"},
+        "app": {"contracts", "domain", "tokens", "registry", "game", "ui", "host"},
         "registry": {"contracts", "domain", "game"},
         "game": {"contracts", "domain", "tokens", "ui", "physics"},
         "physics": set(),
@@ -731,7 +728,7 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
         "contracts": set(),
         "tokens": set(),
         "package": set(),
-        "root": {"app", "convex", "contracts", "domain", "tokens", "registry", "game", "ui", "physics", "host", "package"},
+        "root": {"app", "contracts", "domain", "tokens", "registry", "game", "ui", "physics", "host", "package"},
     }
     for manifest, payload in payloads.items():
         source_kind = package_kind(manifest, root)
@@ -1695,8 +1692,9 @@ def validate_consolidation(root: Path = ROOT) -> None:
     if "expo-camera" not in phone_config_path.read_text(encoding="utf-8"):
         fail("Phone Expo Camera configuration must remain")
 
-    stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core")
-    for base in (root / "apps", root / "packages", root / "games", root / "convex", root / "tools"):
+    # Convex was retired (ADR-01): nothing may import it again.
+    stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core|@huddle/convex|['\"]convex(?:/[a-z]+)?['\"]")
+    for base in (root / "apps", root / "packages", root / "games", root / "tools"):
         for source in source_files(base):
             if stale.search(source.read_text(encoding="utf-8")):
                 fail(f"superseded platform/package term remains: {relative(source, root)}")

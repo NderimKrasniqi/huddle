@@ -1,8 +1,8 @@
 /**
  * The letters a Room Code is minted from: the full A–Z
  * (docs/implementation-plan.md pins the 4-letter shape). It lives here rather
- * than in the backend because every side of the protocol needs it — Convex
- * mints codes, the TV renders one tile per letter, and the Phone's join
+ * than in the room host because every side of the protocol needs it — the
+ * room host mints codes, the TV renders one tile per letter, and the Phone's join
  * screen advances one cell per typed letter.
  *
  * **The full alphabet is deliberate.** A tvOS text-layout cache once made an I

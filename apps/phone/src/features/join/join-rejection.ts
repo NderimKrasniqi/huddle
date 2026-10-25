@@ -6,8 +6,8 @@ import { refusalOf } from '@huddle/contracts/protocol';
  *
  * The rejection is read off the refusal's `rejection` and told apart by its `kind`.
  * That is the whole reason `joinRoom` throws a discriminated union rather than
- * a sentence: Convex redacts the message of anything that is not a
- * `ConvexError` to "Server Error", and even a message that survives is English
+ * a sentence: the room sends refusals as data (`RoomRefusal`), never as
+ * prose, and even a message that survived would be English
  * somebody may reword. Matching on it would leave a player staring at a screen
  * that cannot tell "room full" from "name taken".
  */

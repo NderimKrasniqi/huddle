@@ -1,5 +1,10 @@
 # Huddle architecture
 
+> **Convex is retired (TASK-18).** The TV hosts the room (ADR-01); see
+> [Target architecture](#target-architecture-local-first-tv-host-approved).
+> Sections that still describe Convex are history until TASK-19 rewrites this
+> file around the TV host.
+
 ## Workspace boundaries
 
 ```text
@@ -207,7 +212,7 @@ Relay (Rust, later) ── forwards opaque frames between phones and one TV by r
 - **Room host.** `@huddle/room-host` (runs inside the TV app when it is
   bundled with `EXPO_PUBLIC_ROOM_BACKEND=lan`; Convex stays the default until
   TASK-15)
-  takes over the rules that `convex/convex` holds today: seats, the Host pointer,
+  takes over the rules that convex/convex holds today: seats, the Host pointer,
   presence and away, setup, readiness, the countdown, the game runtime,
   deadlines, rate limits and per-viewer redaction. It depends only on
   `@huddle/domain` and `@huddle/game-registry/logic`. It gets its clock, timer,
@@ -272,7 +277,7 @@ Relay (Rust, later) ── forwards opaque frames between phones and one TV by r
   tokens protect seats against mistakes, not against a hostile network. Relay
   traffic uses `wss://`.
 - The room host caps connections and applies per-connection token buckets with
-  the limits that `convex/convex/lib/rateLimits.ts` uses today.
+  the limits that convex/convex/lib/rateLimits.ts uses today.
 
 ### Portability rules for web TVs
 

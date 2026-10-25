@@ -2,9 +2,9 @@ import type { CommandArgs, CommandName, CommandResult, ViewValue } from '@huddle
 import type { LanJoin, RunningGameResponse } from '@huddle/domain';
 
 /**
- * How the phone talks to its room, whatever carries it. Today the Convex
- * implementation backs it; the LAN client to the TV's room host replaces it
- * (TASK-13). Screens and features never name a transport.
+ * How the phone talks to its room: the LAN client to the TV that hosts it
+ * (`lan-room-client.ts`), or a relay later (ADR-03). Screens and features
+ * never name a transport.
  */
 
 /** What proves a seat: the room it is in and the Session Token it holds. */

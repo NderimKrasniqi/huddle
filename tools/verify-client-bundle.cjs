@@ -2,8 +2,9 @@
 /* global __dirname, Buffer */
 
 /**
- * Verify an Expo export does not carry server-only Trivia content.
- * Run after an export, for example:
+ * Verify a phone export does not carry Trivia's question pack. The TV's room
+ * host holds the rules and content (ADR-01); the phone renders views only.
+ * Run after a phone export, for example:
  *
  *   pnpm verify:bundle-seam -- /private/tmp/huddle-phone-export
  *
@@ -60,9 +61,9 @@ for (const file of filesUnder(directory)) {
 }
 
 if (matches.length > 0) {
-  console.error('Server-only Trivia content found in the client export:');
+  console.error('Trivia pack content found in the phone export:');
   for (const match of matches) console.error(`- ${match}`);
   process.exit(1);
 }
 
-console.log(`Client bundle seam passed: no server-only Trivia content found in ${directory}`);
+console.log(`Bundle seam passed: no Trivia pack content found in ${directory}`);

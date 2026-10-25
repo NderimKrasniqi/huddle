@@ -24,22 +24,19 @@ const SESSION_TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
  * `rooms.openRoom` needs for its 456,976 Room Codes would be checking against a
  * collision that does not happen.
  *
- * Read that as headroom against collisions, not as 124 bits of entropy. The
- * draws come from `Math.random`, which inside a Convex mutation is Convex's
- * seeded generator (see `generateSessionToken`), so what an attacker would have
- * to guess is that generator's per-execution seed rather than the 124 bits the
- * length suggests. Length past the seed buys separation between tokens, which
- * is what the no-loop insert relies on; it does not buy unguessability.
+ * The draws come from the `random` the caller passes (see
+ * `generateSessionToken`). The room host passes a cryptographic source, so the
+ * length is real entropy as well as headroom against collisions, which is what
+ * the no-loop insert relies on.
  */
 const SESSION_TOKEN_LENGTH = 24;
 
 /**
  * One random Session Token.
  *
- * The randomness is `Math.random`, exactly as the Room Code draw uses it. Inside
- * a Convex mutation that is Convex's own seeded generator rather than the
- * platform's — strong, and reseeded per function execution, but a PRNG and not
- * `crypto.getRandomValues`. That is a deliberate call at this scope: the token
+ * The randomness is whatever `random` the caller passes, as for the Room Code
+ * draw; the default is `Math.random`, a PRNG and not `crypto.getRandomValues`.
+ * The room host always passes its cryptographic source. That is a deliberate call at this scope: the token
  * guards a nickname at a house party, the product holds no sensitive data by
  * design (docs/project-scope.md), and the Web Crypto path is not documented as
  * usable from a mutation, whose determinism contract is the reason `Math.random`

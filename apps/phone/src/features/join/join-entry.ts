@@ -66,7 +66,7 @@ export function nicknameEntry(typed: string): string {
  * Whether Join is worth tapping: a whole code, and a name with something in it.
  *
  * The screen asks the server anyway — this is a courtesy to whoever is typing,
- * not a rule. The rules are `joinRoom`'s (see convex/convex/players.ts).
+ * not a rule. The rules are `joinRoom`'s (see packages/room-host/src/room-host.ts).
  */
 export function canJoin(code: string, nickname: string): boolean {
   return isCodeComplete(code) && nickname.trim() !== '';

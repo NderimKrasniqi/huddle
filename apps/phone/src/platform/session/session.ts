@@ -137,7 +137,7 @@ export async function forgetSession(store: SessionTokenStore): Promise<void> {
  * How long a launch will stay blank waiting to hear whether this phone already
  * holds a seat, before it gives up and shows the join form.
  *
- * It exists because an unreachable backend does not fail: `ConvexReactClient`
+ * It exists because an unreachable room does not always fail fast: a socket
  * holds a query until a websocket update arrives, with no timeout of its own and
  * no rejection for connectivity, so a phone opened on dropped wifi would wait on
  * that promise for as long as its owner kept staring at nothing. Four seconds is

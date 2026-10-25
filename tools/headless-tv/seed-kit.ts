@@ -22,7 +22,7 @@ export type Seed = {
 
 /**
  * Starts a headless TV, seats the bots, and writes the room code to the file
- * the end-to-end script waits on (the first argument), as the Convex seeds did.
+ * the end-to-end script waits on (the first argument).
  * With `TV_URL` set (for example `ws://192.168.1.20:7777`), the bots join that
  * running TV instead, such as the TV app on a simulator.
  */

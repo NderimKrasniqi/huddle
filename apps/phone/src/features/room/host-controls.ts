@@ -3,7 +3,7 @@ import type { RosterSeat } from '../../models';
 /**
  * What the Host can do to another player's row, and whether they can do it now.
  *
- * The two powers are `transferHost` and `removePlayer` (`convex/convex/players.ts`),
+ * The two powers are `transferHost` and `removePlayer` (the room host's commands),
  * and this module is only the *offer* of them: which controls a row shows and
  * which are live, resolved against the one seat the row draws. The mutations
  * still guard themselves — the roster the Host taps from is the room's own live
