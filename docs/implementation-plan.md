@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 and TASK-05 to TASK-10 are done; results are in
-the validation ledger. Next: TASK-03 and TASK-04 (spikes), then TASK-11.
+scope changes (TASK-01). TASK-02, TASK-03 and TASK-05 to TASK-10 are done; results are
+in the validation ledger. Next: TASK-04 (discovery spike), then TASK-11.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -85,7 +85,7 @@ These are new user-visible behaviors, now recorded in
   library chosen (Java-WebSocket or Ktor), median and p95 round trip, the iOS
   Local Network prompt, the cleartext settings both phones need, and whether
   the server survives the TV screen saver.
-- [ ] TASK-03 Spike the Apple TV LAN server
+- [x] TASK-03 Spike the Apple TV LAN server
   Done when: the same module API in Swift (`NWListener` with
   `NWProtocolWebSocket`) accepts phone connections on the Apple TV simulator
   via `pnpm sim:tvos`, and the ledger records any tvOS limits.
@@ -456,6 +456,37 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-03 Apple TV LAN server spike
+
+The spike module in `apps/tv/modules/lan-server` gained a Swift
+implementation on Network.framework (`NWListener` with `NWProtocolWebSocket`,
+TCP no-delay) behind the same module API as the Kotlin one. CocoaPods picked
+up the local module, and a Debug build ran on the Apple TV 4K (at 1080p)
+simulator, tvOS 26.5, with the TV bundle from `pnpm dev:local`.
+
+- **Address:** the tvOS simulator shares the Mac's network, so the module
+  reported the Mac's real LAN address (`192.168.1.207`) and the iPhone
+  simulator connected to exactly the address a QR code would carry. No port
+  forward is needed, unlike the Android emulator.
+- **Round trip, phone → TV JavaScript → phone:** back-to-back with a re-render
+  per message, median 11.4 ms, p95 15.3 ms, max 142 ms (200 samples); pings
+  once a second, median 1.7 ms, p95 2.3 ms (66 samples).
+- **Background:** after Home, tvOS suspended the app within about two
+  seconds: two pings were answered in 60 seconds, the phone saw the socket
+  close (1001), and nothing listened on the port. Coming back showed the room
+  screen with the listener gone. The shell must therefore mark the TV away on
+  background, restart the listener on foreground, and let phones resume
+  (recorded in [`architecture.md`](architecture.md#target-architecture-local-first-tv-host-approved)).
+- **Deep links:** tvOS asks "Open in Huddle?" before following a link from
+  `simctl openurl`; Return on the Simulator window selects Open.
+- **Not covered:** a physical Apple TV, real Wi-Fi, and how long a suspended
+  app stays in memory before tvOS ends it.
+- **Unrelated, seen on the way:** the phone's join screen showed a red Convex
+  error when a `joinAvailability` query hit the local backend's one-second
+  limit while this Mac ran two simulators, an emulator and a build. It is a
+  load effect on `pnpm dev:local`, gone after a restart, and Convex leaves with
+  TASK-18.
 
 ### TASK-10 TV room client
 

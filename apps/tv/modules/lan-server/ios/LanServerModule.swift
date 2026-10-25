@@ -1,0 +1,163 @@
+import ExpoModulesCore
+import Network
+
+/**
+ * TASK-03 spike: a WebSocket server inside the TV app on Apple TV, built on
+ * Network.framework. Same API as the Android module: text frames go to
+ * JavaScript as events, and JavaScript answers through `send`.
+ */
+public class LanServerModule: Module {
+  private let queue = DispatchQueue(label: "tv.huddle.lanserver")
+  private var listener: NWListener?
+  private var connections: [Int: NWConnection] = [:]
+  private var nextId = 1
+
+  public func definition() -> ModuleDefinition {
+    Name("LanServer")
+
+    Events("onOpen", "onMessage", "onClose", "onError")
+
+    AsyncFunction("start") { (port: Int, promise: Promise) in
+      self.queue.async { self.start(port: port, promise: promise) }
+    }
+
+    Function("send") { (id: Int, data: String) in
+      self.queue.async {
+        guard let connection = self.connections[id] else { return }
+        let metadata = NWProtocolWebSocket.Metadata(opcode: .text)
+        let context = NWConnection.ContentContext(identifier: "text", metadata: [metadata])
+        connection.send(content: data.data(using: .utf8), contentContext: context, isComplete: true, completion: .idempotent)
+      }
+    }
+
+    Function("close") { (id: Int) in
+      self.queue.async { self.connections[id]?.cancel() }
+    }
+
+    AsyncFunction("stop") { (promise: Promise) in
+      self.queue.async {
+        self.stopAll()
+        promise.resolve(nil)
+      }
+    }
+
+    Function("addresses") { () -> [String] in
+      LanServerModule.ipv4Addresses()
+    }
+
+    OnDestroy {
+      self.queue.sync { self.stopAll() }
+    }
+  }
+
+  private func start(port: Int, promise: Promise) {
+    if listener != nil {
+      promise.resolve(port)
+      return
+    }
+    let parameters = NWParameters.tcp
+    let webSocket = NWProtocolWebSocket.Options()
+    webSocket.autoReplyPing = true
+    parameters.defaultProtocolStack.applicationProtocols.insert(webSocket, at: 0)
+    parameters.allowLocalEndpointReuse = true
+    if let tcp = parameters.defaultProtocolStack.transportProtocol as? NWProtocolTCP.Options {
+      tcp.noDelay = true
+    }
+    guard let nwPort = NWEndpoint.Port(rawValue: UInt16(clamping: port)) else {
+      promise.reject("E_PORT", "Invalid port \(port)")
+      return
+    }
+    do {
+      let created = try NWListener(using: parameters, on: nwPort)
+      var settled = false
+      created.stateUpdateHandler = { [weak self] state in
+        switch state {
+        case .ready:
+          if !settled { settled = true; promise.resolve(port) }
+        case .failed(let error):
+          if !settled { settled = true; promise.reject("E_LISTEN", error.localizedDescription) }
+          self?.sendEvent("onError", ["message": error.localizedDescription])
+        default:
+          break
+        }
+      }
+      created.newConnectionHandler = { [weak self] connection in
+        self?.accept(connection)
+      }
+      listener = created
+      created.start(queue: queue)
+    } catch {
+      promise.reject("E_LISTEN", error.localizedDescription)
+    }
+  }
+
+  private func accept(_ connection: NWConnection) {
+    let id = nextId
+    nextId += 1
+    connections[id] = connection
+    connection.stateUpdateHandler = { [weak self] state in
+      guard let self else { return }
+      switch state {
+      case .ready:
+        self.sendEvent("onOpen", ["id": id, "remote": "\(connection.endpoint)"])
+        self.receive(id: id, connection: connection)
+      case .failed(let error):
+        self.drop(id: id, code: 1006, reason: error.localizedDescription)
+      case .cancelled:
+        self.drop(id: id, code: 1000, reason: "")
+      default:
+        break
+      }
+    }
+    connection.start(queue: queue)
+  }
+
+  private func receive(id: Int, connection: NWConnection) {
+    connection.receiveMessage { [weak self] data, context, _, error in
+      guard let self else { return }
+      if let error {
+        self.drop(id: id, code: 1006, reason: error.localizedDescription)
+        connection.cancel()
+        return
+      }
+      let metadata = context?.protocolMetadata(definition: NWProtocolWebSocket.definition) as? NWProtocolWebSocket.Metadata
+      if metadata?.opcode == .close {
+        connection.cancel()
+        return
+      }
+      if metadata?.opcode == .text, let data, let text = String(data: data, encoding: .utf8) {
+        self.sendEvent("onMessage", ["id": id, "data": text])
+      }
+      self.receive(id: id, connection: connection)
+    }
+  }
+
+  private func drop(id: Int, code: Int, reason: String) {
+    guard connections.removeValue(forKey: id) != nil else { return }
+    sendEvent("onClose", ["id": id, "code": code, "reason": reason])
+  }
+
+  private func stopAll() {
+    listener?.cancel()
+    listener = nil
+    for connection in connections.values { connection.cancel() }
+    connections.removeAll()
+  }
+
+  private static func ipv4Addresses() -> [String] {
+    var result: [String] = []
+    var pointer: UnsafeMutablePointer<ifaddrs>?
+    guard getifaddrs(&pointer) == 0, let first = pointer else { return result }
+    defer { freeifaddrs(pointer) }
+    for entry in sequence(first: first, next: { $0.pointee.ifa_next }) {
+      let flags = Int32(entry.pointee.ifa_flags)
+      guard let address = entry.pointee.ifa_addr, address.pointee.sa_family == UInt8(AF_INET),
+            flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0 else { continue }
+      var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+      if getnameinfo(address, socklen_t(address.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
+        result.append(String(cString: host))
+      }
+    }
+    return result
+  }
+}

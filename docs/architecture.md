@@ -231,6 +231,10 @@ Relay (Rust, later) ── forwards opaque frames between phones and one TV by r
   `LanTransport` is a native WebSocket server in a local Expo module: Kotlin on
   Android TV, Swift with Network.framework (`NWListener`) on Apple TV.
   `RelayTransport` is an outgoing WebSocket, so it works on web TVs too.
+  Apple TV suspends a backgrounded app within seconds and its listener stops,
+  so on both TVs the shell calls `setTvAway(true)` when the app leaves the
+  foreground, restarts the listener when it returns, and phones reconnect with
+  `resumeSession`.
 - **Discovery.** The TV's QR code carries the TV's LAN address, the room code
   and the TV instance ID. A typed room code is resolved on the local network by
   mDNS (Android `NsdManager`, Apple Bonjour). Later, the relay also resolves a
