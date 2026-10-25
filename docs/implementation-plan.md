@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-19 are done; results are in the validation
-ledger. Phase 5 is complete. Next: Phase 6, the Rust relay (TASK-20).
+scope changes (TASK-01). TASK-02 to TASK-20 are done; results are in the validation
+ledger. Next: the relay transport and fallback (TASK-21).
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -181,7 +181,7 @@ These are new user-visible behaviors, now recorded in
 
 ### Phase 6 — Rust relay (before any web TV)
 
-- [ ] TASK-20 Build the relay
+- [x] TASK-20 Build the relay
   Done when: `relay/` holds a Cargo workspace on stable Rust with tokio, axum
   WebSocket and tracing; a TV registers a code with a host secret, phones join
   by code, frames pass through unread, and connection, room, size and rate
@@ -456,6 +456,32 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-20 relay built
+
+`relay/` is a Cargo workspace on stable Rust (rustc 1.99.1, edition 2024)
+holding `huddle-relay`: tokio 1.54, axum 0.8 WebSocket, tracing. A TV opens
+`/v1/host` and registers a four-letter code with a 16–128 character secret;
+the same secret reclaims the code, which stays reserved for ten minutes after
+the TV leaves. Phones open `/v1/join/{code}`; their frames reach the TV
+wrapped with a connection id and the TV's replies come back unwrapped, never
+parsed. Limits (`limits.rs`): 256 KiB phone and 1 MiB TV frames, 10,000
+rooms, 32 phones per room, 64 connections per IP, 60 phone and 600 TV frames
+a second, a 10-second registration timeout, 15-second pings and a 45-second
+idle timeout. A closing connection drains the peer for up to two seconds so
+the close code arrives before the socket shuts. Logs carry codes, ids and
+counts, never frames.
+
+`pnpm relay:check` (`cargo fmt --check`, `cargo clippy --all-targets -- -D
+warnings`, `cargo deny check`) passes; `cargo deny` warns only about two
+`syn` versions in the dependency graph. A smoke run against the release build
+with a scratch Node client passed: registration, a refused second secret
+(`codeTaken`), two phones opening, wrapped and unwrapped frames reaching only
+their phone, phone and TV closes, 4404 for an unknown room, 4408 for a
+flooding phone, 4410 for phones when the TV leaves and no joins while it is
+away, the same secret reclaiming the code, and a TV that never registers
+being closed. An oversized frame closes the connection with 1005 rather than
+1009, because axum ends the socket before the relay sees the frame.
 
 ### TASK-19 architecture made current
 

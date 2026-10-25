@@ -19,7 +19,8 @@ Phone app ── Room Protocol over WebSocket ──┐
                      │   → @huddle/game-registry/logic → each game's rules     │
                      │ TV screens: read the host's shared views in-process     │
                      └─────────────────────────────────────────────────────────┘
-Later: a Rust relay forwards frames between phones and a web TV (ADR-03, ADR-04).
+Built, not yet wired in: relay/ (Rust) forwards frames between phones and a
+TV that cannot accept connections, such as a web TV (ADR-03, ADR-04).
 ```
 
 ### Workspace and dependency direction
@@ -188,13 +189,14 @@ pnpm validate:architecture
 pnpm validate:workflow
 pnpm verify:bundle-seam -- <fresh-phone-export>
 pnpm verify:dependency-security
+pnpm relay:check
 ```
 
 The project keeps end-to-end tests only: the Maestro flows in `e2e/` run
 against the headless TV with `pnpm dev:local` (see `AGENTS.md`). The bundle
 check proves a phone export carries no Trivia pack. Still open: physical
 devices (QR scan, Local Network prompt, Wi-Fi that blocks devices, a real
-Apple TV), the relay, and the web TV smoke test.
+Apple TV), the relay transport and its load check, and the web TV smoke test.
 
 ## Architecture Decisions
 

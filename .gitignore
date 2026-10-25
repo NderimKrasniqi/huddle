@@ -16,6 +16,9 @@ apps/*/modules/*/android/.cxx/
 *.apk
 *.aab
 
+# Rust relay build output
+relay/target/
+
 # Personal local-device build notes
 /LOCAL_BUILDS.md
 

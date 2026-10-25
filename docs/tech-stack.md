@@ -93,7 +93,9 @@ The room runs on the TV (ADR-01 to ADR-04 in
 | React Native WebSocket | built in | phone room client |
 | `lan-discovery` Expo module | local | phone discovery of a typed code (Bonjour, `NsdManager`) |
 | `ws` | `8.21.1` | headless TV for the end-to-end flows |
-| Rust stable: tokio, axum, tracing | not built yet | relay service (ADR-03) |
+| Rust (stable, edition 2024) | `1.99.1` | `relay/huddle-relay`, the relay service (ADR-03) |
+| tokio / axum / tracing | `1.54` / `0.8` / `0.1` | relay runtime, WebSocket routes and logs |
+| cargo-deny | `0.20.2` | relay advisories, licenses and sources |
 
 ## Asset and motion pipeline
 
@@ -132,6 +134,7 @@ pnpm lint
 pnpm validate:architecture
 pnpm validate:workflow
 pnpm validate:packs
+pnpm relay:check
 pnpm verify:bundle-seam -- <fresh-export-directory>
 ```
 

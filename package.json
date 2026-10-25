@@ -18,6 +18,7 @@
     "sim:tv": "node tools/run-simulators.mjs tv",
     "sim:tvos": "node tools/run-simulators.mjs tvos",
     "sim:all": "node tools/run-simulators.mjs all",
+    "relay:check": "cd relay && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo deny check",
     "validate:workflow": "python3 tools/validate-workflow.py",
     "validate:architecture": "python3 tools/validate-architecture.py",
     "validate:routes": "python3 tools/validate-architecture.py",

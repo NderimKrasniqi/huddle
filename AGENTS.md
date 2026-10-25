@@ -32,6 +32,8 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
 - Docs and scripts: `pnpm validate:workflow`.
 - Trivia question content: `pnpm validate:packs`.
 - Client/server bundle boundaries: `pnpm verify:bundle-seam` on a fresh export.
+- Relay (`relay/`): `pnpm relay:check` (fmt, clippy, deny). Rust comes from
+  rustup; put `~/.cargo/bin` on `PATH`.
 - Dependency or production-security changes: `pnpm verify:dependency-security`
   or `pnpm audit:prod`.
 - Behaviour: play it on the simulators against `pnpm dev:local`.
