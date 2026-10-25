@@ -2,3 +2,4 @@
 export { RoomCodeEntry } from './room-code-entry';
 export { RoomCodeScreen, type RoomCodeAvailability, type RoomCodeScreenProps } from './room-code-screen';
 export { useSeatPreview } from './seat-preview';
+export { useScreenFocused } from './use-screen-focused';

@@ -5,6 +5,7 @@ import { useRoomClient } from '../../platform/room-client/native';
 import { usePhoneSession } from '../../platform/session';
 import { codeEntry } from './join-entry';
 import { RoomCodeScreen } from './room-code-screen';
+import { useScreenFocused } from './use-screen-focused';
 
 /** Root route adapter for manual code entry and availability gating. */
 export function RoomCodeEntry() {
@@ -20,7 +21,8 @@ export function RoomCodeEntry() {
     setLastLinkedCode(linkedCode);
     if (linkedCode) setCode(linkedCode);
   }
-  const availability = useRoomClient().useJoinAvailability(code.length === 4 ? code : undefined);
+  const focused = useScreenFocused();
+  const availability = useRoomClient().useJoinAvailability(focused && code.length === 4 ? code : undefined);
 
   function handleCodeChange(next: string) {
     setCode(codeEntry(next));
