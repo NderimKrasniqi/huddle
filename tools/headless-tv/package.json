@@ -1,0 +1,5 @@
+{
+  "//": "ES modules, so the headless TV and the seeds can use top-level await under tsx.",
+  "private": true,
+  "type": "module"
+}

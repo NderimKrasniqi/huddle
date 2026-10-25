@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02, TASK-05 and TASK-06 are done; results are in
-the validation ledger. Next: TASK-07 and TASK-08, then TASK-03 and TASK-04.
+scope changes (TASK-01). TASK-02 and TASK-05 to TASK-07 are done; results are in
+the validation ledger. Next: TASK-08, then TASK-03 and TASK-04.
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -109,7 +109,7 @@ These are new user-visible behaviors, now recorded in
   only `@huddle/domain`, `@huddle/contracts` and `@huddle/game-registry/logic`;
   it mints codes and tokens from a cryptographic source; it serialises a
   snapshot after every change.
-- [ ] TASK-07 Build the headless TV and bots
+- [x] TASK-07 Build the headless TV and bots
   Done when: a Node runner (tsx and the `ws` library) hosts the room host on a
   LAN port, the four seed scripts are ported from `convex/e2e` to it, and a bot
   client speaks the protocol.
@@ -456,6 +456,23 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-07 headless TV and bots
+
+`pnpm headless-tv` runs the room host behind a `ws` server on port 7777
+(`HEADLESS_TV_PORT` changes it). `tools/headless-tv/bot.ts` is a protocol
+client on Node's built-in WebSocket. The four seeds in `tools/headless-tv`
+match the ones in `convex/e2e` and take the same code-file argument. The
+`pnpm e2e:*` scripts still use the Convex seeds, because the phone app talks to
+Convex until TASK-13; TASK-15 switches them.
+
+Each seed ran against a scratchpad stand-in phone bot playing the human's part:
+Trivia started and took an answer, with only the phone's own answer visible;
+Bomb Squad left How to play once everyone tapped Got it; the crowded room
+locked setup with ten seats and marked the nine quiet bots away; Sumo Bumpers
+replayed a round once everyone aimed. `pnpm typecheck` (now including
+`tools/headless-tv`), `pnpm lint` and `pnpm validate:architecture` pass. Port
+7777 must be free: an `adb forward` left from the LAN spike takes it.
 
 ### TASK-06 room host
 

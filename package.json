@@ -7,7 +7,7 @@
     "node": "^22.13.0 || >=24.0.0"
   },
   "scripts": {
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && tsc --noEmit -p tools/headless-tv",
     "lint": "eslint . --max-warnings=0",
     "audit:prod": "pnpm audit --prod --ignore CVE-2025-71329 --ignore CVE-2025-71330",
     "verify:dependency-security": "node tools/verify-dependency-security.cjs",
@@ -25,6 +25,7 @@
     "validate:boundaries": "python3 tools/validate-architecture.py",
     "validate:ui-stack": "python3 tools/validate-architecture.py",
     "dev:local": "tools/dev-local.sh",
+    "headless-tv": "node --import tsx tools/headless-tv/headless-tv.ts",
     "tv:emulator": "tools/tv-emulator.sh",
     "e2e:bomb-squad": "tools/e2e-bomb-squad.sh",
     "e2e:phone-starts": "tools/e2e-flow.sh e2e/phone-starts.yaml",
@@ -34,15 +35,18 @@
     "e2e:sumo": "tools/e2e-seeded.sh e2e/seed-sumo-room.mjs e2e/sumo-round.yaml"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
     "@huddle/contracts": "workspace:*",
     "@huddle/domain": "workspace:*",
     "@huddle/game-registry": "workspace:*",
     "@huddle/game-trivia": "workspace:*",
+    "@huddle/room-host": "workspace:*",
     "@huddle/ui": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/ws": "^8.18.2",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.0",
     "tsx": "^4.23.1",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "ws": "8.21.1"
   }
 }
