@@ -14,8 +14,8 @@ physical party check.
 
 **Next phase:** the local-first TV host below. The owner approved ADR-01 to
 ADR-04 in [`architecture.md`](architecture.md#architecture-decisions) and the
-scope changes (TASK-01). TASK-02 to TASK-15 are done; results are in the validation
-ledger. Next: TASK-16 (Apple TV module) and TASK-18 (retire Convex).
+scope changes (TASK-01). TASK-02 to TASK-16 are done; results are in the validation
+ledger. Next: TASK-17 (all three games on Apple TV) and TASK-18 (retire Convex).
 
 **Runtime milestone:** the platform/game behavior and Phone-controller /
 TV-stage handoff are implemented. Every platform screen on Phone and TV now
@@ -156,7 +156,7 @@ These are new user-visible behaviors, now recorded in
 
 ### Phase 4 — Apple TV
 
-- [ ] TASK-16 Build the Apple TV LAN module
+- [x] TASK-16 Build the Apple TV LAN module
   Done when: the Swift implementation from TASK-03 sits behind the same module
   API with Bonjour advertising, and the TV app builds for tvOS.
 - [ ] TASK-17 Play on Apple TV
@@ -456,6 +456,14 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### TASK-16 Apple TV LAN module
+
+Delivered with TASK-11 (`c232739`); the Swift module has not changed since.
+Its evidence: the tvOS build compiled it and it ran on the Apple TV simulator
+with port fallback, Bonjour advertising and an iPhone connection (TASK-11),
+and the TV app hosted a room on Apple TV with it, advertised over Bonjour,
+ran a game with bots and restored the room after a restart (TASK-12).
 
 ### TASK-15 end-to-end on the LAN host
 
