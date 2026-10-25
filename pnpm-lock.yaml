@@ -358,6 +358,10 @@ importers:
         version: 5.9.3
 
   packages/contracts:
+    dependencies:
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -411,6 +415,25 @@ importers:
         version: 5.9.3
 
   packages/physics:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.20.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/room-host:
+    dependencies:
+      '@huddle/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@huddle/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@huddle/game-registry':
+        specifier: workspace:*
+        version: link:../game-registry
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
