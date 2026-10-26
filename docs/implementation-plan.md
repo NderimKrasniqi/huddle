@@ -58,6 +58,24 @@ dependencies are in `.workflow/tasks.json`.
 
 Most recent first.
 
+### Session and presence cleanup
+
+Removed the TV's Convex-era session layer: the TV session token and its
+SecureStore copy, the no-op TV heartbeat, the `deployed` flag and the
+retrying room opener (the TV app no longer depends on `expo-secure-store`).
+`TvRoomClient` is `openRoom`, `useView`, `useStillOpen` and `useLanJoin`.
+Fixed on the way: a failed LAN server start was cached, so the TV never
+retried. The phone keeps one seat record in SecureStore, owned by the room
+client and written in order, in place of the SecureStore token plus the
+AsyncStorage record and the late-answer restore logic. The room host's
+one-second sweep now flushes views only when it changed something. CI runs a
+Relay job (`cargo fmt`, `clippy`, `cargo deny`). Checked: typecheck, lint,
+both validators, all six e2e flows (one Trivia run right after a cold
+simulator boot timed out and passed on two reruns), a phone force-quit and
+relaunch that went straight back into the running game, and the Apple TV app
+opening a room, stopping its server in the background, keeping the same code
+after returning, and restoring it after a restart.
+
 ### Physical party check (Android TV and iPhone)
 
 Release builds on home Wi-Fi with no relay: the TV app (`armeabi-v7a` APK) on

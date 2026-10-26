@@ -253,29 +253,43 @@ export class RoomHost {
   private armSweep(): void {
     this.sweepTimer = this.ports.setTimer(SWEEP_INTERVAL_MS, () => {
       if (this.disposed) return;
-      this.change(() => this.sweep());
+      // Most seconds change nothing; only then are views rebuilt and sent.
+      this.depth += 1;
+      let changed = false;
+      try {
+        changed = this.sweep();
+      } finally {
+        this.depth -= 1;
+      }
+      if (changed && this.depth === 0) this.flush();
       this.limiter.prune();
       this.armSweep();
     });
   }
 
-  private sweep(): void {
+  private sweep(): boolean {
     const now = this.ports.now();
     if (this.room.tvAway && this.room.tvAwaySince !== undefined && now - this.room.tvAwaySince >= ROOM_EXPIRY_MS) {
       this.closeRoom();
-      return;
+      return true;
     }
+    const previews = this.room.previews.length;
     this.room.previews = this.room.previews.filter((preview) => now - preview.updatedAt < SEAT_PREVIEW_TTL_MS);
+    let changed = this.room.previews.length !== previews;
     for (const connection of [...this.connections.values()]) {
       if (this.seatById(connection.playerId) === undefined && now - connection.lastFrameAt >= UNSEATED_IDLE_MS) {
         connection.close();
         this.connections.delete(connection.id);
       }
     }
-    if (this.room.tvAway) return;
+    if (this.room.tvAway) return changed;
     for (const seat of this.room.seats) {
-      if (!seat.away && now - seat.lastSeenAt >= AWAY_AFTER_MS) this.markAway(seat);
+      if (!seat.away && now - seat.lastSeenAt >= AWAY_AFTER_MS) {
+        this.markAway(seat);
+        changed = true;
+      }
     }
+    return changed;
   }
 
   private silenceOf(seat: Seat): number {

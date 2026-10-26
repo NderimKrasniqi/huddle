@@ -42,7 +42,6 @@ export function TvScreen() {
     <TvSessionController
       key={opening.room.roomId}
       room={opening.room}
-      opening={opening}
       onExpired={reopen}
     />
   );

@@ -1,9 +1,6 @@
-export type TvBootPhase = 'startup' | 'opening' | 'reconnecting' | 'misconfigured' | 'deviceFailure';
+export type TvBootPhase = 'startup' | 'opening' | 'reconnecting';
 
-export type TvAnimatedBootPhase = Extract<
-  TvBootPhase,
-  'startup' | 'opening' | 'reconnecting'
->;
+export type TvAnimatedBootPhase = TvBootPhase;
 
 export type TvBootAnimationCopy = {
   readonly title: string;
@@ -14,9 +11,7 @@ export type TvBootPresentation = {
   readonly purpose:
     | 'Starting Huddle'
     | 'Creating a room'
-    | 'Reconnecting to room'
-    | 'TV setup required'
-    | 'TV unavailable';
+    | 'Reconnecting to room';
 };
 
 export function tvBootPresentation(phase: TvBootPhase): TvBootPresentation {
@@ -27,10 +22,6 @@ export function tvBootPresentation(phase: TvBootPhase): TvBootPresentation {
       return { purpose: 'Creating a room' };
     case 'reconnecting':
       return { purpose: 'Reconnecting to room' };
-    case 'misconfigured':
-      return { purpose: 'TV setup required' };
-    case 'deviceFailure':
-      return { purpose: 'TV unavailable' };
   }
 }
 

@@ -123,9 +123,10 @@ when Local Network access is off, is looked up on the relay
 The phone's room client tries the TV's addresses in order, then the relay, keeps one link
 per TV, and files a seated link under the TV instance id so a new TV at the
 same address gets a fresh link. A seated link reconnects with backoff and
-resumes by token; the TV's address is saved with the Session Token, so a
-relaunched phone finds its TV, and a saved seat whose TV is gone fails
-quietly. Leaving always succeeds for the player. Problems reaching the TV
+resumes by token. The room client keeps one seat record in SecureStore, the
+Session Token with the TV's address, so a relaunched phone finds its TV; a
+saved seat whose TV is gone fails quietly, and one the TV reports gone is
+dropped with a notice. Leaving always succeeds for the player. Problems reaching the TV
 surface as the Local Network, "Can't reach the TV" and "Update Huddle" states.
 
 ## Platform and module lifecycle

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { useRoomClient } from '../room-client/native';
-import { phoneSessionTokenStore } from '../session/native';
+import { usePhoneSession } from '../session';
 import { type ForegroundWatch, keepPresent } from './presence';
 
 const watchAppForeground: ForegroundWatch = (onChange) => {
@@ -13,13 +13,14 @@ const watchAppForeground: ForegroundWatch = (onChange) => {
 
 export function useHeartbeat(): void {
   const { heartbeat } = useRoomClient();
+  const { sessionToken } = usePhoneSession();
   useEffect(
     () =>
       keepPresent(
-        phoneSessionTokenStore,
-        (sessionToken) => heartbeat(sessionToken),
+        { read: async () => sessionToken ?? null },
+        (token) => heartbeat(token),
         watchAppForeground,
       ),
-    [heartbeat],
+    [heartbeat, sessionToken],
   );
 }

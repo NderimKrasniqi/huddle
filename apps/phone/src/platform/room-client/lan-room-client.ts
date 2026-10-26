@@ -9,7 +9,7 @@ import {
   type ViewName,
 } from '@huddle/contracts/protocol';
 import { normalizeRoomCode, ROOM_CODE_LENGTH } from '@huddle/domain';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { lanDiscovery } from '../lan-discovery/native';
@@ -19,7 +19,7 @@ const CONNECT_TIMEOUT_MS = 2_000;
 const DISCOVERY_TIMEOUT_MS = 4_000;
 const RECONNECT_DELAYS_MS = [500, 1_000, 2_000, 4_000, 5_000];
 const AVAILABILITY_REFRESH_MS = 3_000;
-const SEAT_RECORD_KEY = 'huddle.lan.seat.v1';
+const SEAT_RECORD_KEY = 'huddle.seat.v2';
 const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL || undefined;
 const RELAY_NO_ROOM = 4404;
 
@@ -324,21 +324,34 @@ export function lanRoomClient(): RoomClient {
     return endpoint;
   }
 
-  async function readRecord(): Promise<SeatRecord | undefined> {
-    try {
-      const raw = await AsyncStorage.getItem(SEAT_RECORD_KEY);
-      return raw === null ? undefined : (JSON.parse(raw) as SeatRecord);
-    } catch {
-      return undefined;
-    }
+  // Record writes run in order, so a slow forget can never wipe a newer join.
+  let recordQueue: Promise<unknown> = Promise.resolve();
+  function queued<T>(step: () => Promise<T>): Promise<T> {
+    const next = recordQueue.then(step, step);
+    recordQueue = next.catch(() => undefined);
+    return next;
   }
 
-  async function writeRecord(record: SeatRecord | undefined): Promise<void> {
-    try {
-      if (record === undefined) await AsyncStorage.removeItem(SEAT_RECORD_KEY);
-      else await AsyncStorage.setItem(SEAT_RECORD_KEY, JSON.stringify(record));
-    } catch {
-    }
+  function readRecord(): Promise<SeatRecord | undefined> {
+    return queued(async () => {
+      try {
+        const raw = await SecureStore.getItemAsync(SEAT_RECORD_KEY);
+        return raw === null ? undefined : (JSON.parse(raw) as SeatRecord);
+      } catch {
+        return undefined;
+      }
+    });
+  }
+
+  function writeRecord(record: SeatRecord | undefined): Promise<void> {
+    return queued(async () => {
+      try {
+        if (record === undefined) await SecureStore.deleteItemAsync(SEAT_RECORD_KEY);
+        else await SecureStore.setItemAsync(SEAT_RECORD_KEY, JSON.stringify(record));
+      } catch {
+        // Without the record the phone only fails to find its seat after a relaunch.
+      }
+    });
   }
 
   // A seated link answers to its TV, not an address, so a new TV at the same address gets a fresh link.
@@ -470,6 +483,16 @@ export function lanRoomClient(): RoomClient {
         ...(link.relay === undefined ? {} : { relay: link.relay }),
       });
       return seat;
+    },
+
+    savedSeatToken: async () => (await readRecord())?.sessionToken,
+
+    forgetSeat: async (sessionToken) => {
+      const record = await readRecord();
+      if (record?.sessionToken === sessionToken) await writeRecord(undefined);
+      const link = seatLinks.get(sessionToken);
+      if (link !== undefined) link.seatToken = undefined;
+      seatLinks.delete(sessionToken);
     },
 
     lookupSession: async (sessionToken): Promise<PlayerSession | null> => {
