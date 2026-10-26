@@ -1,12 +1,6 @@
 import ExpoModulesCore
 import Network
 
-/**
- * TASK-04 spike: finds a Huddle TV on the local network by its room code. The
- * TV advertises `Huddle-<code>` as `_huddle._tcp` with a `code` TXT entry; a
- * short TCP connection to the match yields an IPv4 host and port the phone's
- * WebSocket can use.
- */
 public class LanDiscoveryModule: Module {
   private let queue = DispatchQueue(label: "tv.huddle.landiscovery")
 
@@ -39,7 +33,6 @@ public class LanDiscoveryModule: Module {
       switch state {
       case .waiting(let error), .failed(let error):
         guard !settled else { return }
-        // The player turned off Local Network access for Huddle.
         if case .dns(let code) = error, code == DNSServiceErrorType(kDNSServiceErr_PolicyDenied) {
           settled = true
           browser.cancel()
@@ -65,12 +58,11 @@ public class LanDiscoveryModule: Module {
         var txtPort: Int?
         if case .bonjour(let txt) = result.metadata {
           advertisedCode = txt["code"]
+          // Prefer the TV's own IPv4 list: a resolved Bonjour endpoint is often IPv6 link-local.
           txtHosts = (txt["hosts"] ?? "").split(separator: ",").map(String.init)
           txtPort = txt["port"].flatMap { Int($0) }
         }
         guard name == "Huddle-\(code)" || advertisedCode == code else { continue }
-        // The TV publishes its IPv4 addresses: a resolved Bonjour endpoint is
-        // often IPv6 link-local, whose interface zone a WebSocket URL cannot carry.
         if let txtPort, !txtHosts.isEmpty {
           finish(["hosts": txtHosts, "port": txtPort, "name": name])
           return
@@ -106,7 +98,6 @@ public class LanDiscoveryModule: Module {
     }
     browser.start(queue: queue)
     queue.asyncAfter(deadline: .now() + .milliseconds(timeoutMs)) {
-      // Spike diagnostics: what the browser saw and where resolving stopped.
       if seen.isEmpty { finish(nil) } else {
         finish(["hosts": [], "port": 0, "name": "timeout", "seen": seen, "resolver": resolverState, "browser": browserState])
       }

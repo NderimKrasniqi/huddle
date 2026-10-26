@@ -34,7 +34,6 @@ export function tvBootPresentation(phase: TvBootPhase): TvBootPresentation {
   }
 }
 
-/** Copy used by the app-owned animated renderer while a room is unresolved. */
 export function tvBootAnimationCopy(
   phase: TvAnimatedBootPhase,
 ): TvBootAnimationCopy {

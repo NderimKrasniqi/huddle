@@ -11,7 +11,6 @@ export const setupStyles = StyleSheet.create({
   },
   readyPerson: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 20, backgroundColor: playroomColors.surface },
-  // A raised hand reads at a glance: the chip turns the success colour.
   readyPersonUp: { backgroundColor: playroomColors.successSurface },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
   summaryValue: { flexShrink: 1, textAlign: 'right', maxWidth: '55%' },

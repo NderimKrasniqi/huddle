@@ -5,10 +5,6 @@ import { StyleSheet, View } from 'react-native';
 import type { RosterSeat } from '../../features/room';
 import { PhoneCard } from './phone-frame';
 
-/**
- * Who is in the room, for screens where a guest waits on the host: the reason
- * to keep looking is the people, so they fill the space rather than nothing.
- */
 export function RoomFaces({ roster }: { readonly roster: readonly RosterSeat[] }) {
   if (roster.length === 0) return null;
   return (

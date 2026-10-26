@@ -1,6 +1,5 @@
 import { seedRoom, startWhenReady, stateOf } from './seed-kit';
 
-/** Three bots wait for a phone, start Bomb Squad and tap Got it on How to play. */
 const seed = await seedRoom([['Ana', 'fox'], ['Bo', 'puppy'], ['Cy', 'mint-cat']]);
 await seed.host.waitFor(() => seed.roomSize() >= 4);
 await seed.host.command('selectGame', { gameId: 'bomb-squad' });

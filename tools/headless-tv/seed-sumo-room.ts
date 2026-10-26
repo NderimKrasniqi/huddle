@@ -1,6 +1,5 @@
 import { seedRoom, startWhenReady, stateOf } from './seed-kit';
 
-/** Two bots wait for a phone, start Sumo Bumpers, and aim every round. */
 const seed = await seedRoom([['Ana', 'fox'], ['Bo', 'puppy']]);
 await seed.host.waitFor(() => seed.roomSize() >= 3);
 await seed.host.command('selectGame', { gameId: 'sumo-bumpers' });

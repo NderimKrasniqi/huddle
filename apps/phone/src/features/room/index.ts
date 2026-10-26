@@ -1,4 +1,3 @@
-/** Public room/lobby feature seam. */
 export { lobbyStanding, type LobbyStanding } from './host';
 export type { RosterSeat } from '../../models';
 export {

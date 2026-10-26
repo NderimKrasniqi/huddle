@@ -6,7 +6,6 @@ import { lanRoomClient } from './lan-room-client';
 const RoomClientContext = createContext<RoomClient | null>(null);
 const defaultClient = lanRoomClient();
 
-/** Gives every route the room client: the TV that hosts the room, over Wi-Fi (ADR-01). */
 export function RoomClientProvider({ children }: PropsWithChildren) {
   return <RoomClientContext.Provider value={defaultClient}>{children}</RoomClientContext.Provider>;
 }

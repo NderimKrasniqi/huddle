@@ -33,7 +33,6 @@ type LobbyScreenProps = {
   readonly onLeave: () => void;
 };
 
-/** The room before a game: the host sees everyone and chooses; guests wait. */
 export function LobbyScreen(props: LobbyScreenProps) {
   const { session, roster, standing, busy, failure, success, onOpenPicker, onLeave, returned, welcoming } = props;
   const me = roster.find((seat) => seat.playerId === session.playerId);
@@ -67,7 +66,6 @@ export function LobbyScreen(props: LobbyScreenProps) {
       </PhoneCard> : null}
       {returned ? <>
         <PlayroomMoment art="highFive" width={280} height={240} style={styles.moment} />
-        {/* "One more?" is the host's question to answer; a guest just had a good game. */}
         <PlayroomHeading type={playroomPhone.type.hero}>{standing.youAreHost ? 'One more?' : 'Good game!'}</PlayroomHeading>
         <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
           {standing.youAreHost ? 'Same people. New surprises. Choose what’s next.' : `${standing.hostNickname ?? 'The host'} is choosing what’s next. Your seat stays yours.`}
@@ -121,7 +119,6 @@ function HostLobby({ session, roster, onManage }: LobbyScreenProps) {
   );
 }
 
-/** A player arriving in the lobby, the same arrival the TV gives their seat. */
 const TILE_ARRIVAL = new Keyframe({
   0: { opacity: 0, transform: [{ scale: 0.9 }] },
   100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -137,7 +134,6 @@ function PlayerTile({ seat }: { readonly seat: RosterSeat }) {
         <PlayroomText numberOfLines={1} style={styles.tileName}>
           {seat.nickname}
         </PlayroomText>
-        {/* The crown on the avatar already marks the host; only "away" needs a word. */}
         {seat.away ? <Tag label="AWAY" tone="away" /> : null}
       </View>
     </Animated.View>
@@ -157,7 +153,6 @@ function GuestLobby({ session, roster, welcoming }: LobbyScreenProps) {
   const host = roster.find((seat) => seat.host);
   return (
     <>
-      {/* The welcome banner already says it; one greeting is enough. */}
       {welcoming ? null : <PlayroomHeading type={playroomPhone.type.heading}>You’re in!</PlayroomHeading>}
       <PhoneCard style={styles.pass}>
         <PlayroomAvatar avatarId={me?.avatar ?? session.avatar} size={72} />
@@ -166,7 +161,6 @@ function GuestLobby({ session, roster, welcoming }: LobbyScreenProps) {
           <PlayroomText color="muted" style={playroomPhone.type.body}>{me?.away ? `Room ${session.code} · Reconnecting` : `Room ${session.code}`}</PlayroomText>
         </View>
       </PhoneCard>
-      {/* One line for the host (the crown marks them below); the room is what a guest watches. */}
       {host ? (
         <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]} testID="guest-lobby-host">
           {`${host.nickname} is the host and picks the games.`}
@@ -187,7 +181,6 @@ type ManagePlayerScreenProps = {
   readonly onRemove: (seat: RosterSeat) => void;
 };
 
-/** Host actions for one player, as a full screen. */
 export function ManagePlayerScreen({ player, you, busy, onBack, onTransfer, onRemove }: ManagePlayerScreenProps) {
   const controls = rosterRowControls(player);
   return (
@@ -232,7 +225,6 @@ export function ManagePlayerScreen({ player, you, busy, onBack, onTransfer, onRe
 const styles = StyleSheet.create({
   welcome: { backgroundColor: playroomColors.successSurface, gap: 4 },
   moment: { alignItems: 'center' },
-  // A white card like every other container; lavender is for selection and status.
   pass: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   code: {
     alignItems: 'center',

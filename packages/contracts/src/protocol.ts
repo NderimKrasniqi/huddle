@@ -10,25 +10,8 @@ import {
   type RateLimitRejection,
 } from './room-contracts';
 
-/**
- * The Room Protocol: what a phone and the TV's room host say to each other
- * over any transport (ADR-01, ADR-02). The TV is always the host, so the
- * protocol only runs between a phone and the host; the TV's own screens read
- * the host in-process.
- *
- * A connection opens with `hello` and `welcome`. It is anonymous until
- * `joinRoom` or `resumeSession` binds it to one seat, and every later command
- * acts as that seat — which is why no command carries a Session Token. Command
- * and view names are the room's own actions and projections. Presence is the transport's `ping`, so there is no heartbeat
- * command.
- *
- * Bump `PROTOCOL_VERSION` for any change an older peer would misread. A host
- * answers a different version with `incompatible` and closes, and the phone
- * shows "Update Huddle".
- */
 export const PROTOCOL_VERSION = 1;
 
-/** Largest frame either side accepts, in UTF-16 code units of the raw text. */
 export const MAX_FRAME_LENGTH = 256 * 1024;
 
 const id = z.string().min(1).max(64);
@@ -37,11 +20,8 @@ const avatar = z.enum(AVATAR_IDS);
 const mode = z.enum(GAME_SETUP_MODES);
 const settings = z.record(z.string().max(64), z.string().max(64));
 
-// ---------------------------------------------------------------- commands
-
 const noArgs = z.object({});
 
-/** Every command's arguments, by command name. */
 export const COMMAND_ARGS = {
   joinAvailability: z.object({ code: text }),
   previewSeat: z.object({ code: text, previewKey: text, nickname: text, avatar: text }),
@@ -69,7 +49,6 @@ export const COMMAND_ARGS = {
 export type CommandName = keyof typeof COMMAND_ARGS;
 export type CommandArgs<Name extends CommandName> = z.infer<(typeof COMMAND_ARGS)[Name]>;
 
-/** Commands a connection may send before it holds a seat. */
 export const ANONYMOUS_COMMANDS: ReadonlySet<CommandName> = new Set([
   'joinAvailability',
   'previewSeat',
@@ -77,8 +56,6 @@ export const ANONYMOUS_COMMANDS: ReadonlySet<CommandName> = new Set([
   'joinRoom',
   'resumeSession',
 ]);
-
-// ------------------------------------------------------------------- views
 
 const session = z.object({
   playerId: id,
@@ -90,7 +67,6 @@ const session = z.object({
 
 const seatedSession = session.extend({ sessionToken: z.string() });
 
-/** Every view's value, by view name. A host pushes a view whenever it changes. */
 export const VIEW_VALUES = {
   session: session.nullable(),
   roster: z.array(
@@ -103,7 +79,6 @@ export const VIEW_VALUES = {
       mode,
       stage: z.enum(['configuring', 'ready', 'countdown']),
       readyPlayerIds: z.array(id),
-      /** Milliseconds left on the countdown when the host sent this view. */
       countdownRemainingMs: z.number().nonnegative().optional(),
     })
     .nullable(),
@@ -127,19 +102,14 @@ export const VIEW_VALUES = {
     ])
     .nullable(),
   connection: z.object({ away: z.boolean() }).nullable(),
-  /** Seats being typed on join forms; only the TV's own screens read these. */
   arrivals: z.array(z.object({ previewId: id, nickname: z.string(), avatar })),
 } as const;
 
 export type ViewName = keyof typeof VIEW_VALUES;
 export type ViewValue<Name extends ViewName> = z.infer<(typeof VIEW_VALUES)[Name]>;
 
-/** The views a seated phone receives; `arrivals` stays on the TV. */
 export const PHONE_VIEWS: readonly ViewName[] = ['session', 'roster', 'setup', 'browsing', 'running', 'connection'];
 
-// ----------------------------------------------------------------- results
-
-/** What a successful command returns; commands not listed return `null`. */
 export const COMMAND_RESULTS = {
   joinAvailability: z.object({ full: z.boolean(), takenAvatarIds: z.array(avatar) }).nullable(),
   joinRoom: seatedSession,
@@ -150,14 +120,11 @@ export type CommandResult<Name extends CommandName> = Name extends keyof typeof 
   ? z.infer<(typeof COMMAND_RESULTS)[Name]>
   : null;
 
-/** Protocol-level refusals, beside the room's own rejection unions. */
 export type ProtocolRejection =
   | { readonly kind: 'badMessage' }
   | { readonly kind: 'notJoined' }
   | { readonly kind: 'sessionNotFound' }
-  /** The game's own code failed to deal or decode its opening state. */
   | { readonly kind: 'gameUnavailable'; readonly gameId: string }
-  /** The host hit an unexpected error; the command changed nothing. */
   | { readonly kind: 'hostError' };
 
 export type RoomRejection =
@@ -168,10 +135,6 @@ export type RoomRejection =
   | GameSetupRejection
   | RateLimitRejection;
 
-/**
- * A command the room refused, as every room client throws it, whatever the
- * transport. Code that shows refusals reads `rejection.kind`, never a message.
- */
 export class RoomRefusal extends Error {
   constructor(readonly rejection: RoomRejection) {
     super(`Room refused the command: ${rejection.kind}`);
@@ -179,23 +142,14 @@ export class RoomRefusal extends Error {
   }
 }
 
-/** The rejection a room client threw, or `undefined` for any other failure. */
 export function refusalOf(error: unknown): RoomRejection | undefined {
   return error instanceof RoomRefusal ? error.rejection : undefined;
 }
 
-/**
- * A rejection is checked for shape only. Its `kind` is matched against the
- * unions above by the code that shows it, which already handles a kind it
- * does not know.
- */
 const rejection = z.looseObject({ kind: z.string().max(64) });
-
-// ---------------------------------------------------------------- messages
 
 const commandMessage = z.object({
   type: z.literal('command'),
-  /** Chosen by the phone; the host echoes it on the result. */
   requestId: z.number().int().nonnegative(),
   name: z.enum(Object.keys(COMMAND_ARGS) as [CommandName, ...CommandName[]]),
   args: z.unknown(),
@@ -252,7 +206,6 @@ export type Decoded<Message> =
   | {
       readonly ok: false;
       readonly rejection: { readonly kind: 'badMessage' };
-      /** Set when the frame was a command whose arguments failed, so it can be answered. */
       readonly requestId?: number;
     };
 
@@ -267,7 +220,6 @@ function parseFrame(raw: string): unknown {
   }
 }
 
-/** Decodes a frame from a phone, including the command's own arguments. */
 export function decodeClientMessage(raw: string): Decoded<ClientMessage> {
   const parsed = clientMessage.safeParse(parseFrame(raw));
   if (!parsed.success) return BAD_MESSAGE;
@@ -278,7 +230,6 @@ export function decodeClientMessage(raw: string): Decoded<ClientMessage> {
   return { ok: true, message: { ...message, args: args.data } as ClientMessage };
 }
 
-/** Decodes a frame from the host, including a view's value. */
 export function decodeHostMessage(raw: string): Decoded<HostMessage> {
   const parsed = hostMessage.safeParse(parseFrame(raw));
   if (!parsed.success) return BAD_MESSAGE;
@@ -289,7 +240,6 @@ export function decodeHostMessage(raw: string): Decoded<HostMessage> {
   return { ok: true, message: { ...message, value: value.data } as HostMessage };
 }
 
-/** Checks a successful command's value against what that command returns. */
 export function decodeCommandResult<Name extends CommandName>(
   name: Name,
   value: unknown,

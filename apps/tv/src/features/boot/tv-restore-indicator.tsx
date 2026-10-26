@@ -12,9 +12,7 @@ export type TvRestoreIndicatorStage = 'restoring' | 'reconnecting' | 'ready';
 export type TvRestoreIndicatorProps = {
   readonly stage: TvRestoreIndicatorStage;
   readonly size?: number;
-  /** Override motion for deterministic previews and reduced-motion devices. */
   readonly reduceMotion?: boolean;
-  /** Called once the ready check's spring has finished. */
   readonly onReadyAnimationComplete?: () => void;
 };
 
@@ -25,7 +23,6 @@ const COLORS = [
   playroomColors.border,
 ] as const;
 
-/** Display-only restoring spinner that resolves into a green check. */
 export function TvRestoreIndicator({
   stage,
   size = 82,

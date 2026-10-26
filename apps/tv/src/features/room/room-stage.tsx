@@ -4,7 +4,6 @@ import type { RosterSeat, SeatArrival } from '../../models';
 import { RoomReturnScreen } from './room-return-screen';
 import { RoomInvitationScreen } from './room-invitation-screen';
 
-/** Maps the live room projection into the app-owned illustrated renderer. */
 export function RoomStage({
   roomCode,
   roster,
@@ -13,7 +12,6 @@ export function RoomStage({
   welcomeIds,
   lan,
 }: {
-  /** Where phones reach this TV when it hosts the room; the QR code carries it. */
   readonly lan?: LanJoin;
   readonly returned?: boolean;
   readonly welcomeIds?: readonly string[];

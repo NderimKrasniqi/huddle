@@ -1,18 +1,8 @@
 import ExpoModulesCore
 import Network
 
-/** Largest text frame the TV accepts; matches the Room Protocol's limit. */
 private let maxFrameBytes = 256 * 1024
 
-/**
- * The TV's LAN WebSocket server on Apple TV (ADR-02), on Network.framework.
- *
- * Same API as the Android module: each phone connection gets a small integer
- * id, text frames reach JavaScript as `onMessage` events, and JavaScript
- * answers with `send`. Binary frames are refused by closing the connection.
- * tvOS suspends a backgrounded app within seconds, so the shell stops and
- * restarts this server around background and foreground.
- */
 public class LanServerModule: Module {
   private let queue = DispatchQueue(label: "tv.huddle.lanserver")
   private var listener: NWListener?
@@ -24,7 +14,6 @@ public class LanServerModule: Module {
 
     Events("onOpen", "onMessage", "onClose", "onError")
 
-    /** Listens on `port`, or on any free port when that one is taken; resolves the port in use. */
     AsyncFunction("start") { (port: Int, promise: Promise) in
       self.queue.async {
         if let running = self.listener, let current = running.port {
@@ -55,12 +44,10 @@ public class LanServerModule: Module {
       }
     }
 
-    /** IPv4 addresses, home-network ranges first, so a QR code can carry the likeliest one. */
     Function("addresses") { () -> [String] in
       LanServerModule.ipv4Addresses()
     }
 
-    /** Announces the room as `Huddle-<code>` (`_huddle._tcp`) with code, port and hosts in TXT. */
     AsyncFunction("advertise") { (code: String, port: Int, promise: Promise) in
       self.queue.async {
         guard let listener = self.listener else {
@@ -115,7 +102,6 @@ public class LanServerModule: Module {
         if self.listener === created { self.listener = nil }
         if !settled {
           settled = true
-          // The port is taken: listen anywhere instead.
           if fallBack && port != 0 { self.listen(port: 0, fallBack: false, promise: promise) } else { promise.reject("E_LISTEN", error.localizedDescription) }
           return
         }
@@ -189,7 +175,6 @@ public class LanServerModule: Module {
     connections.removeAll()
   }
 
-  /** Non-loopback IPv4 addresses, private home-network ranges first and VPN-style ranges last. */
   private static func ipv4Addresses() -> [String] {
     var result: [String] = []
     var pointer: UnsafeMutablePointer<ifaddrs>?

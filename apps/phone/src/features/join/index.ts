@@ -1,4 +1,3 @@
-/** Public join feature seam. */
 export {
   activeCodeCell,
   canJoin,

@@ -2,7 +2,6 @@ import type { AvatarId } from '@huddle/domain';
 
 import { seedRoom } from './seed-kit';
 
-/** Nine long-named bots fill the room with a phone, lock Bomb Squad, then go quiet. */
 const names = ['Alexandrina Maxwell', 'Bartholomew Jenkins', 'Constantine Oakley', 'Dorothea Featherst', 'Evangeline Whitmor', 'Fitzgerald Pennywo', 'Gwendolyn Ashcroft', 'Hieronymus Blackwo', 'Isadora Pemberton'];
 const avatars: AvatarId[] = ['fox', 'pink-bunny', 'blue-robot', 'purple-owl', 'yellow-robot', 'red-robot', 'teal-bear', 'mint-cat', 'puppy'];
 const seed = await seedRoom(names.map((name, index) => [name, avatars[index]!] as const));

@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Validate the app boundaries that TypeScript alone cannot express.
-
-The validator deliberately works on source paths rather than importing the
-apps. That keeps it runnable before dependencies are installed and makes the
-same checks useful against isolated fixture apps in the Python test suite.
-"""
 
 from __future__ import annotations
 
@@ -15,7 +9,6 @@ import struct
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_NAMES = ("phone", "tv")
@@ -30,8 +23,7 @@ ROUTE_EXPORT = re.compile(
     re.MULTILINE,
 )
 COMMENTS = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
-# `.web` is Metro's platform suffix: the web TV build (TASK-23) picks
-# `name.web.ts` over `name.ts`. Only the TV platform layer may use it.
+
 KEBAB_FILE = re.compile(
     r"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.web)?(?:\.(?:render\.)?test)?\.(?:ts|tsx)$"
 )
@@ -78,7 +70,7 @@ TV_QR_DEPENDENCIES = {
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-svg": "15.15.4",
 }
-# The Playroom palette from the Huddle-Platform design system (docs/design/playroom/README.md).
+
 PLAYROOM_PALETTE = {
     "canvas": "#F9F1E6",
     "surface": "#FFFCF7",
@@ -93,7 +85,7 @@ PLAYROOM_PALETTE = {
     "dangerSurface": "#FFE0E5",
     "disabled": "#E5DEE9",
 }
-# Playroom platform artwork.
+
 PLAYROOM_RUNTIME_ASSET_SPECS = {
     "moments/high-five.png": ((1254, 1254), True, "ddc9014f2e7b31f88e2d707cfb2c051b7b6d542fbefc34f80247dd66188d2d5e"),
     "moments/eyes-on-the-tv.png": ((1254, 1254), True, "617b4c200d508f046419b57053678611ef61165da26f7f19325ded97ba91ea1f"),
@@ -284,7 +276,7 @@ PLAYROOM_RUNTIME_ASSET_SPECS = {
         "87c4a7a83e4bf3223aa0fca48d67665a7b17d41c2770bc6a506b3e12f97dded0",
     ),
 }
-# Trivia's own artwork.
+
 TRIVIA_RUNTIME_ASSET_SPECS = {
     "logo-dark.png": (
         (720, 360),
@@ -316,16 +308,14 @@ TRIVIA_RUNTIME_ASSET_SPECS = {
         True,
         "e797cf558bedbe8a710003331109628e94e17385652a110d397e381677f639e9",
     ),
-    # An opaque photo-like backdrop: JPEG is an eighth of the PNG's size.
+
     "space.jpg": (
         (1600, 900),
         False,
         "05865fda84db2b558be19f99913b4c928482ae63d68c2ba25bf770b411cbe2bb",
     ),
 }
-# Trivia's own Cosmic Quiz look (games/trivia/src/cosmic.tsx). Only the
-# Trivia package may use these; the platform keeps its own palettes.
-# Bomb Squad's own stage palette (games/bomb-squad/src/theme.ts).
+
 BOMB_SQUAD_PALETTE = {
     "night": "#1B1530", "panel": "#2A2147", "panelEdge": "#4A3D78", "cream": "#FFF6E5",
     "muted": "#A99BC6", "hazard": "#FFC83D", "spark": "#FF8A3D", "danger": "#FF5A5F",
@@ -350,21 +340,17 @@ COSMIC_QUIZ_PALETTE = {
     "correct": "#1E7A55",
     "missed": "#6B7891",
 }
-# Each runtime artwork folder and the exact files it may hold. Runtime
-# validation never depends on a design manifest or source-master tree, so a
-# stale or incomplete drop fails on its own.
+
 RUNTIME_ASSET_BUNDLES = (
     ("Playroom runtime", Path("packages/ui/assets/playroom"), PLAYROOM_RUNTIME_ASSET_SPECS),
     ("Trivia runtime", Path("games/trivia/assets"), TRIVIA_RUNTIME_ASSET_SPECS),
 )
 
-# Keep guards for files retired from runtime and design locations. They are
-# presence checks only; the validator never requires the design tree to exist.
 HEARTBEAT_OBSOLETE_PATHS = (
     Path("docs/design/heartbeat/brand/huddle-tv-banner.svg"),
     Path("docs/design/heartbeat/assets/tv/living-room.png"),
     Path("packages/ui/assets/heartbeat/tv/living-room.png"),
-    # The whole Heartbeat runtime bundle and its avatars were retired for Playroom.
+
     Path("packages/ui/assets/heartbeat"),
     Path("packages/ui/assets/avatars"),
 )
@@ -418,17 +404,14 @@ def relative(path: Path, root: Path = ROOT) -> str:
     except ValueError:
         return str(path)
 
-
 def fail(message: str) -> None:
     raise SystemExit(message)
-
 
 @dataclass(frozen=True)
 class Owner:
     kind: str
     name: str
     root: Path
-
 
 def source_files(src: Path) -> list[Path]:
     return sorted(
@@ -438,23 +421,17 @@ def source_files(src: Path) -> list[Path]:
         if not path.name.endswith(".d.ts") and "node_modules" not in path.parts
     )
 
-
 def is_approved_illustrated_renderer(path: Path, root: Path = ROOT) -> bool:
-    """Compatibility helper for the current Heartbeat renderer seams."""
 
     return any(path.resolve() == (root / approved).resolve() for approved in APPROVED_ILLUSTRATED_RENDERERS)
 
-
 def is_approved_interactive_renderer(path: Path, root: Path = ROOT) -> bool:
-    """Compatibility name retained for isolated validator callers."""
 
     return is_approved_illustrated_renderer(path, root)
-
 
 def validate_presentation_renderer_scope(
     source: Path, clean_source: str, root: Path = ROOT
 ) -> None:
-    """Keep native-only capabilities in the one app-owned seam that needs them."""
 
     resolved = source.resolve()
     svg_renderers = {(root / renderer).resolve() for renderer in TV_SVG_RENDERERS}
@@ -468,7 +445,6 @@ def validate_presentation_renderer_scope(
     if re.search(r"\breact-native-svg\b", clean_source) and resolved not in svg_renderers:
         fail(f"SVG renderer import is outside approved TV renderers: {relative(source, root)}")
 
-
 TV_CONTROL_REFERENCE = re.compile(
     r"\b(?:Pressable|TextInput|TouchableOpacity|TouchableWithoutFeedback|"
     r"TouchableHighlight|Button|CameraView|TVEventHandler)\b|"
@@ -477,9 +453,7 @@ TV_CONTROL_REFERENCE = re.compile(
     r"accessibilityRole\s*=\s*['\"]button['\"]"
 )
 
-
 def tv_presentation_sources(root: Path = ROOT) -> list[Path]:
-    """Return authored TV and game-TV renderers that must remain passive."""
 
     sources = source_files(root / "apps" / "tv" / "src") if (root / "apps" / "tv" / "src").is_dir() else []
     for game in ("trivia", "bomb-squad", "sumo-bumpers"):
@@ -488,16 +462,13 @@ def tv_presentation_sources(root: Path = ROOT) -> list[Path]:
             sources.append(path)
     return sorted(set(sources))
 
-
 def validate_tv_display_only(root: Path = ROOT) -> None:
-    """Ensure TV sources cannot become controller or D-pad surfaces."""
 
     for source in tv_presentation_sources(root):
         clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
         match = TV_CONTROL_REFERENCE.search(clean)
         if match:
             fail(f"TV presentation must remain display-only: {relative(source, root)}")
-
 
 def owner_for(path: Path, src: Path) -> Owner | None:
     for kind, directory in (("feature", src / "features"), ("platform", src / "platform")):
@@ -513,7 +484,6 @@ def owner_for(path: Path, src: Path) -> Owner | None:
         return Owner("screens", "screens", src / "screens")
     return None
 
-
 def resolve_import(source: Path, imported: str) -> Path | None:
     if not imported.startswith("."):
         return None
@@ -528,16 +498,12 @@ def resolve_import(source: Path, imported: str) -> Path | None:
             return candidate
     return None
 
-
 def runtime_module_references(source: str) -> list[re.Match[str]]:
-    """Return module edges that survive transpilation into runtime code."""
 
     return list(MODULE_REFERENCE.finditer(TYPE_ONLY_DECLARATION.sub("", source)))
 
-
 def is_entrypoint(path: Path, owner: Owner) -> bool:
     return path == owner.root / "index.ts" or path == owner.root / "native.ts"
-
 
 def validate_route_adapters(app: Path, root: Path = ROOT) -> None:
     app = app.resolve()
@@ -559,7 +525,6 @@ def validate_route_adapters(app: Path, root: Path = ROOT) -> None:
         if target is None or not target.is_relative_to(src):
             fail(f"route adapter bypasses src ownership: {relative(route, root)}")
 
-
 def validate_filename_conventions(app: Path, root: Path = ROOT) -> None:
     src = (app / "src").resolve()
     for directory in sorted(path for path in src.rglob("*") if path.is_dir()):
@@ -573,7 +538,6 @@ def validate_filename_conventions(app: Path, root: Path = ROOT) -> None:
             fail(f"authored filename must be kebab-case: {relative(path, root)}")
         if ".web." in path.name and not path.is_relative_to(root / "apps" / "tv" / "src" / "platform"):
             fail(f"a .web file belongs in the TV platform layer: {relative(path, root)}")
-
 
 def validate_entrypoint_content(app: Path, root: Path = ROOT) -> None:
     src = (app / "src").resolve()
@@ -592,9 +556,7 @@ def validate_entrypoint_content(app: Path, root: Path = ROOT) -> None:
             source = COMMENTS.sub("", entrypoint.read_text(encoding="utf-8")).strip()
             if not source:
                 fail(f"empty public entrypoint: {relative(entrypoint, root)}")
-            # The Phone session index intentionally exports the React provider
-            # that owns restoration, active-seat handoff, and notices. It is a
-            # platform-native seam, not a pure domain barrel.
+
             session_index = src / "platform" / "session" / "index.ts"
             if entrypoint.name == "index.ts" and entrypoint != session_index and RENDERER_IMPORT.search(source):
                 fail(f"pure entrypoint imports renderer code: {relative(entrypoint, root)}")
@@ -613,15 +575,11 @@ def validate_entrypoint_content(app: Path, root: Path = ROOT) -> None:
     if not (ui / "index.ts").is_file():
         fail(f"missing public UI entrypoint: {relative(ui / 'index.ts', root)}")
 
-
 def renderer_import(source: str) -> re.Match[str] | None:
-    """Return a renderer import, including a renderer-bearing UI seam."""
 
     return RENDERER_IMPORT.search(source) or SHARED_RENDERER_IMPORT.search(source)
 
-
 def validate_transitive_renderer_free(entrypoint: Path, root: Path, label: str) -> None:
-    """Ensure a pure entrypoint cannot hide a renderer behind a re-export."""
 
     pending = [entrypoint]
     visited: set[Path] = set()
@@ -638,9 +596,7 @@ def validate_transitive_renderer_free(entrypoint: Path, root: Path, label: str) 
             if target is not None:
                 pending.append(target)
 
-
 def export_values(value: object) -> list[str]:
-    """Flatten conditional/package export declarations into target strings."""
 
     if isinstance(value, str):
         return [value]
@@ -656,14 +612,12 @@ def export_values(value: object) -> list[str]:
         return result
     return []
 
-
 def package_manifests(root: Path) -> list[Path]:
     return sorted(
         path
         for path in root.rglob("package.json")
         if "node_modules" not in path.parts and ".git" not in path.parts
     )
-
 
 def package_kind(path: Path, root: Path) -> str:
     rel = path.parent.relative_to(root).parts
@@ -689,9 +643,7 @@ def package_kind(path: Path, root: Path) -> str:
         return "game"
     return "package"
 
-
 def validate_package_boundaries(root: Path = ROOT) -> None:
-    """Validate package export targets and workspace dependency direction."""
 
     manifests = package_manifests(root)
     by_name: dict[str, Path] = {}
@@ -755,8 +707,6 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
                     f"forbidden workspace dependency direction: {relative(manifest, root)} -> {dependency}"
                 )
 
-    # Rules-only and client-safe exports are intentionally renderer-free and
-    # cannot reach the server/content graph through an accidental re-export.
     for manifest, payload in payloads.items():
         exports = payload.get("exports")
         if not isinstance(exports, dict):
@@ -793,7 +743,6 @@ def validate_package_boundaries(root: Path = ROOT) -> None:
                             if child is not None:
                                 pending.append(child)
 
-
 def allowed_cross_boundary(source_owner: Owner, target_owner: Owner, target: Path) -> bool:
     if source_owner == target_owner:
         return True
@@ -826,7 +775,6 @@ def allowed_cross_boundary(source_owner: Owner, target_owner: Owner, target: Pat
     if source_owner.kind == "platform":
         return target_owner.kind in {"platform", "models"} and is_entrypoint(target, target_owner)
     return False
-
 
 def validate_dependency_direction(app: Path, root: Path = ROOT) -> None:
     src = (app / "src").resolve()
@@ -878,17 +826,13 @@ def validate_dependency_direction(app: Path, root: Path = ROOT) -> None:
     for source in graph:
         visit(source)
 
-
 def validate_public_entrypoints(app: Path, root: Path = ROOT) -> None:
-    # Kept as a named compatibility seam for callers that used the original
-    # validator function. The stricter checks now live alongside it.
+
     validate_entrypoint_content(app, root)
 
-
 def validate_cross_boundary_imports(app: Path, root: Path = ROOT) -> None:
-    # Kept as a named compatibility seam for isolated validator fixtures.
-    validate_dependency_direction(app, root)
 
+    validate_dependency_direction(app, root)
 
 def validate_app(app: Path, root: Path = ROOT) -> None:
     validate_route_adapters(app, root)
@@ -896,9 +840,7 @@ def validate_app(app: Path, root: Path = ROOT) -> None:
     validate_public_entrypoints(app, root)
     validate_cross_boundary_imports(app, root)
 
-
 def validate_qr_dependency_scope(root: Path = ROOT) -> None:
-    """Keep QR/SVG packages exact and local to the TV application."""
 
     tv_manifest = (root / "apps" / "tv" / "package.json").resolve()
     found_on_tv: dict[str, str] = {}
@@ -928,14 +870,12 @@ def validate_qr_dependency_scope(root: Path = ROOT) -> None:
     if missing:
         fail(f"TV QR/SVG dependency missing: {sorted(missing)[0]}")
 
-
 def validate_png_asset_set(
     asset_root: Path,
     specs: dict[str, tuple[tuple[int, int], str]],
     label: str,
     root: Path = ROOT,
 ) -> None:
-    """Validate one supplied PNG set by exact names, dimensions, and digests."""
 
     if not asset_root.is_dir():
         fail(f"{label} asset directory missing: {relative(asset_root, root)}")
@@ -959,9 +899,7 @@ def validate_png_asset_set(
         if hashlib.sha256(payload).hexdigest() != expected_digest:
             fail(f"{label} asset differs from supplied PNG: {relative(path, root)}")
 
-
 def png_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple[tuple[int, int], bool]:
-    """Read PNG dimensions and whether the color type carries an alpha channel."""
 
     payload = path.read_bytes()
     if payload[:8] != b"\x89PNG\r\n\x1a\n" or len(payload) < 26:
@@ -972,9 +910,7 @@ def png_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple
         fail(f"{label} asset has an unsupported PNG color type: {relative(path, root)}")
     return dimensions, color_type in {4, 6}
 
-
 def jpeg_dimensions(path: Path, label: str, root: Path = ROOT) -> tuple[int, int]:
-    """Read JPEG dimensions from its first start-of-frame marker."""
 
     payload = path.read_bytes()
     if payload[:2] != b"\xff\xd8":
@@ -985,7 +921,7 @@ def jpeg_dimensions(path: Path, label: str, root: Path = ROOT) -> tuple[int, int
             break
         marker = payload[offset + 1]
         length = struct.unpack(">H", payload[offset + 2 : offset + 4])[0]
-        # SOF0-SOF15, excluding DHT (C4), JPG (C8) and DAC (CC).
+
         if 0xC0 <= marker <= 0xCF and marker not in {0xC4, 0xC8, 0xCC}:
             if offset + 9 > len(payload):
                 break
@@ -994,23 +930,13 @@ def jpeg_dimensions(path: Path, label: str, root: Path = ROOT) -> tuple[int, int
         offset += 2 + length
     fail(f"{label} asset is not a complete JPEG: {relative(path, root)}")
 
-
 def image_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple[tuple[int, int], bool]:
-    """PNG dimensions and alpha, or JPEG dimensions (a JPEG never has alpha)."""
 
     if path.suffix.lower() in {".jpg", ".jpeg"}:
         return jpeg_dimensions(path, label, root), False
     return png_dimensions_and_alpha(path, label, root)
 
-
 def png_has_huddle_mark(path: Path, label: str, root: Path = ROOT) -> bool:
-    """Detect the Playroom mark, a deep-purple H with orange dashes, without Pillow.
-
-    Native generators may change PNG encoding and dimensions, so a digest is
-    not a useful stale-resource guard for generated launcher/splash files. A
-    small, dependency-free decoder lets us reject older black-H and Heartbeat
-    resources while accepting resized or re-encoded Playroom derivatives.
-    """
 
     payload = path.read_bytes()
     if payload[:8] != b"\x89PNG\r\n\x1a\n":
@@ -1039,10 +965,7 @@ def png_has_huddle_mark(path: Path, label: str, root: Path = ROOT) -> bool:
 
     channels = {0: 1, 2: 3, 4: 2, 6: 4}[color_type]
     row_bytes = width * channels
-    # Native launcher/splash outputs are at most a few thousand pixels wide;
-    # cap the decoded prefix so a future large presentation asset cannot turn
-    # this stale-resource guard into a full-image reconstruction. Heartbeat
-    # marks are centered or occupy the leading presentation-safe area.
+
     rows_to_scan = min(height, 1024)
     try:
         decompressor = zlib.decompressobj()
@@ -1052,9 +975,6 @@ def png_has_huddle_mark(path: Path, label: str, root: Path = ROOT) -> bool:
     if len(decoded) < rows_to_scan * (row_bytes + 1):
         return False
 
-    # Scan a bounded number of samples after PNG row unfiltering. The exact
-    # shades vary between artwork and platform resizes, so use broad hue
-    # buckets for the mark's deep-purple ink and orange dashes.
     found = {"ink": False, "orange": False}
     previous = bytearray(row_bytes)
 
@@ -1118,9 +1038,7 @@ def png_has_huddle_mark(path: Path, label: str, root: Path = ROOT) -> bool:
         previous = current
     return all(found.values())
 
-
 def validate_runtime_assets(root: Path = ROOT) -> None:
-    """Validate each checked-in runtime artwork folder without design sources."""
 
     for label, bundle_root, specs in RUNTIME_ASSET_BUNDLES:
         runtime_root = root / bundle_root
@@ -1154,9 +1072,7 @@ def validate_runtime_assets(root: Path = ROOT) -> None:
             if hashlib.sha256(path.read_bytes()).hexdigest() != expected_digest:
                 fail(f"{label} asset differs from its checked-in digest: {relative(path, root)}")
 
-
 def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
-    """Reference composites stay in design docs and never enter Metro."""
 
     source_root = root / "apps" / "tv" / "src"
     if not source_root.is_dir():
@@ -1167,9 +1083,7 @@ def validate_reference_composite_exclusion(root: Path = ROOT) -> None:
                 f"TV Room reference composite is imported at runtime: {relative(source, root)}"
             )
 
-
 def validate_design_tokens(root: Path = ROOT) -> None:
-    """Require the exact Playroom palette and token-based screen colors."""
 
     playroom_path = root / "packages" / "design-tokens" / "src" / "playroom.ts"
     if not playroom_path.is_file():
@@ -1203,9 +1117,7 @@ def validate_design_tokens(root: Path = ROOT) -> None:
             if not literals.issubset(allowed):
                 fail(f"unapproved color literal in screen source: {relative(path, root)}")
 
-
 def validate_native_assets(root: Path = ROOT) -> None:
-    """Validate launcher, splash, adaptive, TV, and Apple TV derivatives."""
 
     asset_root = root / "packages" / "ui" / "assets" / "app-icons"
     alpha_expected = {
@@ -1229,9 +1141,6 @@ def validate_native_assets(root: Path = ROOT) -> None:
                 f"({has_alpha}, expected {expected_alpha})"
             )
 
-        # The monochrome foreground is intentionally one colour. Every other
-        # identity derivative must visibly carry the Playroom mark so an old
-        # resource cannot silently pass dimension checks.
         if name != "huddle-android-monochrome.png" and not png_has_huddle_mark(
             path, "Native identity", root
         ):
@@ -1264,9 +1173,7 @@ def validate_native_assets(root: Path = ROOT) -> None:
         if hashlib.sha256(path.read_bytes()).hexdigest() != expected_digest:
             fail(f"Apple TV native asset differs from the deterministic current derivative: {relative(path, root)}")
 
-
 def resolve_config_asset(config_path: Path, configured: object, root: Path, label: str) -> Path:
-    """Resolve an Expo asset path and require it stays inside this project."""
 
     if not isinstance(configured, str):
         fail(f"{label} must be a string asset path")
@@ -1276,7 +1183,6 @@ def resolve_config_asset(config_path: Path, configured: object, root: Path, labe
     if not resolved.is_file():
         fail(f"{label} is missing: {relative(resolved, root)}")
     return resolved
-
 
 def require_config_asset(
     config_path: Path,
@@ -1292,9 +1198,7 @@ def require_config_asset(
             f"{relative(actual, root)} (expected {relative(expected, root)})"
         )
 
-
 def splash_plugin_options(expo: dict[str, object]) -> dict[str, object]:
-    """Return the configured expo-splash-screen options for an app."""
 
     plugins = expo.get("plugins")
     if not isinstance(plugins, list):
@@ -1306,7 +1210,6 @@ def splash_plugin_options(expo: dict[str, object]) -> dict[str, object]:
                 fail("expo-splash-screen options must be an object")
             return options
     fail("Expo splash-screen plugin is missing")
-
 
 def tv_plugin_options(expo: dict[str, object]) -> dict[str, object]:
     plugins = expo.get("plugins")
@@ -1320,9 +1223,7 @@ def tv_plugin_options(expo: dict[str, object]) -> dict[str, object]:
             return options
     fail("TV Expo config-tv plugin is missing")
 
-
 def validate_native_config(root: Path = ROOT) -> None:
-    """Ensure both Expo apps point at the current shared identity derivatives."""
 
     asset_root = root / "packages" / "ui" / "assets" / "app-icons"
     shared = {
@@ -1410,9 +1311,7 @@ def validate_native_config(root: Path = ROOT) -> None:
                 f"TV Apple TV {key}",
             )
 
-
 def validate_android_cream_background(path: Path, root: Path, label: str) -> None:
-    """Check generated Android colors without requiring an XML parser."""
 
     if not path.is_file():
         fail(f"{label} colors missing: {relative(path, root)}")
@@ -1422,7 +1321,6 @@ def validate_android_cream_background(path: Path, root: Path, label: str) -> Non
         match = re.search(rf'<color\s+name="{name}">(?P<value>#[0-9A-Fa-f]{{6}})</color>', source)
         if match is None or match.group("value").upper() != expected:
             fail(f"{label} {name} must be {expected}")
-
 
 def validate_ios_cream_background(path: Path, root: Path, label: str) -> None:
     if not path.is_file():
@@ -1437,17 +1335,14 @@ def validate_ios_cream_background(path: Path, root: Path, label: str) -> None:
     except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as error:
         fail(f"{label} colorset is malformed: {error}")
 
-
 def validate_native_generated_resources(root: Path = ROOT) -> None:
-    """Inspect existing prebuild output while remaining usable before prebuild."""
 
     for app_name in APP_NAMES:
         app_root = root / "apps" / app_name
         ios_root = app_root / "ios"
         android_root = app_root / "android"
         if not ios_root.exists() and not android_root.exists():
-            # Native folders are intentionally ignored build output. Config
-            # and source derivatives are still checked on clean checkouts.
+
             continue
 
         if ios_root.is_dir():
@@ -1513,9 +1408,7 @@ def validate_native_generated_resources(root: Path = ROOT) -> None:
                         if filename != "ic_launcher_monochrome.webp" and not png_has_huddle_mark(native, "Phone Android", root):
                             fail(f"Phone Android launcher resource is stale: {relative(native, root)}")
 
-
 def validate_no_obsolete_surface_paths(root: Path = ROOT) -> None:
-    """Keep removed clean-slate surfaces and duplicate asset trees out of source."""
 
     obsolete_paths = (
         root / "packages" / "ui" / "src" / "native" / "purpose-screen.tsx",
@@ -1540,22 +1433,14 @@ def validate_no_obsolete_surface_paths(root: Path = ROOT) -> None:
             if obsolete_terms.search(path.read_text(encoding="utf-8")):
                 fail(f"obsolete Heartbeat surface reference remains: {relative(path, root)}")
 
-
 def validate_heartbeat_brand_source_set(root: Path = ROOT) -> None:
-    """Reject explicitly retired Heartbeat brand and artwork files.
-
-    This is deliberately a presence guard, not a source-master validation
-    step. The design folder may contain only the original board reference.
-    """
 
     for relative_path in HEARTBEAT_OBSOLETE_PATHS:
         path = root / relative_path
         if path.exists():
             fail(f"obsolete Heartbeat artwork remains: {relative(path, root)}")
 
-
 def validate_consolidation(root: Path = ROOT) -> None:
-    """Guard Heartbeat tokens, native boundaries, identity, and runtime assets."""
 
     forbidden_paths = (
         root / "apps" / "controller",
@@ -1601,8 +1486,7 @@ def validate_consolidation(root: Path = ROOT) -> None:
             clean = COMMENTS.sub("", source.read_text(encoding="utf-8"))
             if forbidden_modules.search(clean):
                 fail(f"superseded presentation dependency remains: {relative(source, root)}")
-            # Playroom platform motion runs on Reanimated; game modules keep
-            # their own presentation and do not take on the dependency.
+
             if "games" in source.relative_to(root).parts[:1] and "react-native-reanimated" in clean:
                 fail(f"game modules must not import Reanimated: {relative(source, root)}")
             validate_presentation_renderer_scope(source, clean, root)
@@ -1696,7 +1580,6 @@ def validate_consolidation(root: Path = ROOT) -> None:
     if "expo-camera" not in phone_config_path.read_text(encoding="utf-8"):
         fail("Phone Expo Camera configuration must remain")
 
-    # Convex was retired (ADR-01): nothing may import it again.
     stale = re.compile(r"apps/controller|@huddle/controller|packages/games|@huddle/game-core|@huddle/convex|['\"]convex(?:/[a-z]+)?['\"]")
     for base in (root / "apps", root / "packages", root / "games", root / "tools"):
         for source in source_files(base):
@@ -1706,16 +1589,12 @@ def validate_consolidation(root: Path = ROOT) -> None:
     validate_no_obsolete_surface_paths(root)
     validate_heartbeat_brand_source_set(root)
 
-
-# The room host runs inside the TV app on Hermes, under Node for the headless
-# TV, and later inside a web TV. It may reach only these modules.
 ROOM_HOST_ALLOWED_IMPORT = re.compile(
     r"^(?:\.{1,2}/.*|@huddle/contracts|@huddle/contracts/protocol|@huddle/domain|@huddle/game-registry/logic|zod)$"
 )
-# Globals that exist under Node but not on Hermes or in a TV browser.
+
 ROOM_HOST_PLATFORM_GLOBAL = re.compile(r"\b(?:process|Buffer|require|__dirname|structuredClone)\b")
-# Modules that need native code. A web TV shell cannot load them, so shared TV
-# code reaches them only through the platform layer (ADR-04).
+
 TV_NATIVE_ONLY_IMPORT = re.compile(
     r"['\"](?:expo-secure-store|expo-crypto|expo-file-system|expo-haptics|expo-camera|"
     r"@react-native-async-storage/async-storage|react-native-tcp-socket)['\"]|"
@@ -1723,9 +1602,7 @@ TV_NATIVE_ONLY_IMPORT = re.compile(
 )
 SKIA_IMPORT = re.compile(r"['\"]@shopify/react-native-skia['\"]")
 
-
 def validate_room_host(root: Path = ROOT) -> None:
-    """Keep the room host free of renderers, native code and platform globals."""
 
     src = root / "packages" / "room-host" / "src"
     if not src.is_dir():
@@ -1742,9 +1619,7 @@ def validate_room_host(root: Path = ROOT) -> None:
     validate_transitive_renderer_free(src / "index.ts", root, "room host")
     validate_transitive_renderer_free(root / "packages" / "contracts" / "src" / "protocol.ts", root, "room protocol")
 
-
 def validate_web_tv_portability(root: Path = ROOT) -> None:
-    """The ADR-04 rules that keep a Samsung or LG web shell possible."""
 
     tv_src = root / "apps" / "tv" / "src"
     platform = tv_src / "platform"
@@ -1763,7 +1638,6 @@ def validate_web_tv_portability(root: Path = ROOT) -> None:
             if SKIA_IMPORT.search(COMMENTS.sub("", source.read_text(encoding="utf-8"))):
                 fail(f"Skia belongs inside a game package, behind its alias: {relative(source, root)}")
 
-
 def main() -> int:
     for name in APP_NAMES:
         validate_app(ROOT / "apps" / name)
@@ -1774,7 +1648,6 @@ def main() -> int:
 
     print("App architecture validation passed.")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

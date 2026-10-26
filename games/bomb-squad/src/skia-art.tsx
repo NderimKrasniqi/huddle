@@ -1,11 +1,3 @@
-/**
- * Bomb Squad's TV art, drawn with Skia (GPU gradients, blur and shadows) and
- * moved with React Native `Animated`: games may not use Reanimated, so each
- * moving part is its own small canvas inside an animated view.
- *
- * TV only: the phone app does not ship Skia, so its Metro config aliases
- * `@shopify/react-native-skia` to a stub that draws nothing.
- */
 import {
   BlurMask,
   Canvas,
@@ -29,7 +21,6 @@ import { WIRE_COLOR } from './presentation';
 import { bomb } from './theme';
 import { WIRES } from './types';
 
-/** A value that loops 0 → 1 for as long as motion is allowed. */
 function useLoop(duration: number, reduceMotion: boolean): Animated.Value {
   const [value] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -41,7 +32,6 @@ function useLoop(duration: number, reduceMotion: boolean): Animated.Value {
   return value;
 }
 
-/** A star as a Skia path, for sparks and blasts. */
 function starPath(cx: number, cy: number, outer: number, inner: number, spikes: number) {
   let d = '';
   for (let i = 0; i < spikes * 2; i += 1) {
@@ -52,13 +42,8 @@ function starPath(cx: number, cy: number, outer: number, inner: number, spikes: 
   return Skia.Path.MakeFromSVGString(`${d}Z`)!;
 }
 
-/** The fuse rope, from the cap up to its free end; trimmed as it burns. */
 const FUSE = Skia.Path.MakeFromSVGString('M 300 132 C 304 70, 360 60, 400 54 S 452 22, 448 -4')!;
 
-/**
- * The bomb. `fuse` is how much rope is left (1 → 0); `urgency` (0 → 1) speeds
- * up the shake and the spark. Drawn on a 600×600 board, scaled to `size`.
- */
 export function SkiaBomb({
   size,
   fuse,
@@ -80,7 +65,6 @@ export function SkiaBomb({
   const sparkTurn = flicker.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '120deg'] });
   const scale = size / 600;
   const left = Math.max(0, Math.min(1, fuse));
-  // Where the burning tip sits on the rope.
   const tip = useMemo(() => FUSE.getPoint(FUSE.countPoints() - 1), []);
   const tipAt = left >= 0.999 ? tip : pointAlong(left);
   const wires = useMemo(() => wirePaths(), []);
@@ -93,11 +77,9 @@ export function SkiaBomb({
     >
       <Canvas style={{ width: size, height: size }}>
         <Group transform={[{ scale }]}>
-          {/* Soft floor shadow. */}
           <Oval x={140} y={520} width={320} height={50} color={bomb.night} opacity={0.75}>
             <BlurMask blur={18} style="normal" />
           </Oval>
-          {/* Wires, each with a little sheen. */}
           {wires.map(({ wire, path }) => (
             <Group key={wire}>
               <Path path={path} style="stroke" strokeWidth={20} strokeCap="round" color={WIRE_COLOR[wire]}>
@@ -106,7 +88,6 @@ export function SkiaBomb({
               <Path path={path} style="stroke" strokeWidth={5} strokeCap="round" color={bomb.cream} opacity={0.35} transform={[{ translateX: -4 }, { translateY: -3 }]} />
             </Group>
           ))}
-          {/* Body: lit from the top left, with a cast shadow and a rim. */}
           <Circle cx={300} cy={330} r={196}>
             <RadialGradient c={vec(230, 250)} r={290} colors={[bomb.bodyLight, bomb.panel, bomb.night]} positions={[0, 0.5, 1]} />
             <Shadow dx={0} dy={24} blur={30} color="rgba(0,0,0,0.55)" />
@@ -114,14 +95,12 @@ export function SkiaBomb({
           <Circle cx={300} cy={330} r={193} style="stroke" strokeWidth={6}>
             <LinearGradient start={vec(160, 160)} end={vec(440, 500)} colors={['rgba(255,246,229,0.35)', 'rgba(255,246,229,0)']} />
           </Circle>
-          {/* Specular highlight and a smaller glint. */}
           <Oval x={170} y={200} width={130} height={90} color={bomb.cream} opacity={0.32}>
             <BlurMask blur={22} style="normal" />
           </Oval>
           <Circle cx={212} cy={226} r={14} color={bomb.cream} opacity={0.85}>
             <BlurMask blur={3} style="normal" />
           </Circle>
-          {/* The timer face: a glowing LED readout. */}
           <RoundedRect x={196} y={352} width={208} height={84} r={42} color={bomb.night}>
             <Shadow dx={0} dy={2} blur={4} color="rgba(255,246,229,0.25)" inner />
           </RoundedRect>
@@ -133,20 +112,17 @@ export function SkiaBomb({
               <Circle cx={cx} cy={394} r={11} color={index === 2 ? bomb.danger : bomb.hazard} />
             </Group>
           ))}
-          {/* Metal cap. */}
           <RoundedRect x={246} y={122} width={108} height={58} r={16}>
             <LinearGradient start={vec(246, 122)} end={vec(354, 180)} colors={[bomb.metalLight, bomb.muted, bomb.metalDark]} positions={[0, 0.5, 1]} />
             <Shadow dx={0} dy={8} blur={10} color="rgba(0,0,0,0.4)" />
           </RoundedRect>
           <Rect x={252} y={134} width={96} height={6} color={bomb.cream} opacity={0.35} />
-          {/* Fuse: the burnt stub, then the rope that is left. */}
           <Path path={FUSE} style="stroke" strokeWidth={15} strokeCap="round" color={bomb.ropeBurnt} opacity={0.6} />
           <Path path={FUSE} style="stroke" strokeWidth={15} strokeCap="round" color={bomb.rope} start={0} end={left}>
             <DashPathEffect intervals={[10, 6]} />
           </Path>
         </Group>
       </Canvas>
-      {/* The spark, on the burning tip: its own canvas so it can flicker natively. */}
       {left > 0 ? (
         <Animated.View
           style={[
@@ -161,7 +137,6 @@ export function SkiaBomb({
   );
 }
 
-/** A point `fraction` of the way along the fuse rope. */
 function pointAlong(fraction: number) {
   const measure = Skia.ContourMeasureIter(FUSE, false, 1).next();
   if (measure === null) return { x: 300, y: 132 };
@@ -177,7 +152,6 @@ function wirePaths() {
   });
 }
 
-/** A glowing, many-pointed spark. */
 function Spark({ size }: { readonly size: number }) {
   const s = size / 160;
   const star = useMemo(() => starPath(80, 80, 44, 14, 8), []);
@@ -197,7 +171,6 @@ function Spark({ size }: { readonly size: number }) {
   );
 }
 
-/** The blast: a flash, a fireball that blooms outward, and smoke that drifts. */
 export function SkiaExplosion({ size, reduceMotion }: { readonly size: number; readonly reduceMotion: boolean }) {
   const [t] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
   useEffect(() => {
@@ -242,7 +215,6 @@ export function SkiaExplosion({ size, reduceMotion }: { readonly size: number; r
   );
 }
 
-/** The defuse: a calm green glow, an expanding ring and a check mark. */
 export function SkiaDefused({ size, reduceMotion }: { readonly size: number; readonly reduceMotion: boolean }) {
   const [t] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
   useEffect(() => {
@@ -283,7 +255,6 @@ export function SkiaDefused({ size, reduceMotion }: { readonly size: number; rea
   );
 }
 
-/** Hazard tape along an edge of the stage, scrolling slowly. */
 export function HazardStripes({ width, height, reduceMotion }: { readonly width: number; readonly height: number; readonly reduceMotion: boolean }) {
   const t = useLoop(4000, reduceMotion);
   const shift = t.interpolate({ inputRange: [0, 1], outputRange: [0, -80] });

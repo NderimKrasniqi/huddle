@@ -1,4 +1,3 @@
-/** Session lifecycle seam for the phone platform. */
 export {
   alsoInMemory,
   forgetSession,

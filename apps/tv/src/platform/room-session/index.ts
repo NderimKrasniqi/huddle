@@ -1,4 +1,3 @@
-/** Durable room-session lifecycle seam for the TV platform. */
 export {
   keepOpeningRoom,
   type OpenRoom,

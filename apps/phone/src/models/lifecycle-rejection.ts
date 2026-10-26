@@ -40,7 +40,6 @@ function isGameLifecycleRejection(data: unknown): data is PhoneGameRejection {
   );
 }
 
-/** A lifecycle/setup refusal in the words the Host reads. */
 export function rejectionMessage(rejection: PhoneGameRejection): string {
   switch (rejection.kind) {
     case 'notEnoughPlayers':

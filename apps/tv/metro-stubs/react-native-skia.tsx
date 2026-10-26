@@ -1,10 +1,3 @@
-/**
- * Stand-in for @shopify/react-native-skia in the web TV build only (TASK-23).
- * Skia on the web needs CanvasKit (a WebAssembly file) loaded before any game
- * module runs; until a web TV shell does that, every shape draws nothing, so
- * Bomb Squad and Sumo Bumpers lose their TV art on the web. A copy of the
- * phone's stub; wired up by apps/tv/metro.config.js.
- */
 import { forwardRef } from 'react';
 
 const Nothing = forwardRef<unknown, Record<string, unknown>>(function Nothing() {
@@ -32,7 +25,6 @@ const emptyPath = {
   getPoint: () => ({ x: 0, y: 0 }),
 };
 
-/** Path builders return a path that draws nothing. */
 export const Skia = {
   Path: { Make: () => emptyPath, MakeFromSVGString: () => emptyPath },
   ContourMeasureIter: () => ({ next: () => null }),

@@ -9,7 +9,6 @@ import { TvPlayroomFrame } from './playroom-frame';
 
 export const TV_GAME_ART_REVEAL_DURATION_MS = 900;
 
-/** The chosen game's art grows in from 0.8; never from nothing. */
 const GROW = new Keyframe({
   0: { opacity: 0, transform: [{ scale: 0.8 }] },
   100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -25,7 +24,6 @@ export type TvSelectedGameArtScreenProps = {
   readonly onComplete?: () => void;
 };
 
-/** The beat between the host choosing a game and the setup draft appearing. */
 export function TvSelectedGameArtScreen({
   gameId,
   gameTitle,

@@ -5,17 +5,11 @@ import { StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle }
 import { PlayroomWordmark } from './playroom-text';
 
 export type PlayroomTvStageProps = PropsWithChildren<{
-  /** Show the wordmark in the top-left corner. Off for the splash, which centres it. */
   readonly wordmark?: boolean;
   readonly style?: StyleProp<ViewStyle>;
   readonly testID?: string;
 }>;
 
-/**
- * The Playroom TV stage: a flat 1920×1080 canvas scaled uniformly to fit,
- * with content laid out in stage pixels inside the overscan-safe frame. It is
- * display-only and never takes focus.
- */
 export function PlayroomTvStage({ children, wordmark = true, style, testID }: PlayroomTvStageProps) {
   const viewport = useWindowDimensions();
   const scale = stageScale(viewport.width, viewport.height);

@@ -21,11 +21,6 @@ const COPY: Readonly<Record<ConnectionProblem, { readonly title: string; readonl
   },
 };
 
-/**
- * Why the phone cannot reach a TV that hosts its room (approved scope changes
- * 2, 3 and 5): Local Network access is off, the network keeps devices apart,
- * or the phone and the TV speak different versions.
- */
 export function ConnectionProblemScreen({
   problem,
   onRetry,

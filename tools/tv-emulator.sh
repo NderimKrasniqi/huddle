@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Start the Android TV emulator and open Huddle on it.
-#
-# Quick boot resumes from the saved snapshot (seconds, not minutes). If the
-# emulator then sits at "offline", the snapshot is bad: run with --cold once,
-# which boots from scratch and saves a fresh snapshot on exit.
-#
-# Software rendering: this Mac shows a black emulator window with host GPU.
 set -euo pipefail
 
 sdk="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -22,7 +15,6 @@ fi
 "$adb" -s "$serial" wait-for-device
 until [ "$("$adb" -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 2; done
 
-# Metro (8081). Phones reach a room on the emulator with `adb forward tcp:7777 tcp:7777`.
 "$adb" -s "$serial" reverse tcp:8081 tcp:8081 >/dev/null
 "$adb" -s "$serial" shell am start -n tv.huddle.hub/.MainActivity >/dev/null
 echo "Huddle is open on the TV emulator."

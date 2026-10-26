@@ -1,7 +1,3 @@
-/**
- * Bomb Squad's own colours. Games keep their theme local and never read the
- * platform's design tokens; `tools/validate-architecture.py` lists these hexes.
- */
 export const bomb = {
   night: '#1B1530',
   panel: '#2A2147',

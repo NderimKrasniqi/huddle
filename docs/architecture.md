@@ -226,7 +226,7 @@ Apple TV), the relay transport and its load check, and the web TV smoke test.
   played end to end on the TV host.
 - **Why:** Lower latency and no backend vendor between phones and TV;
   `GameLogic` and `@huddle/domain` were already pure TypeScript.
-- **Consequences:** Phones and TV share a network until the relay ships. The
+- **Consequences:** Phones and TV share a network unless a relay is hosted. The
   room ends with the TV app unless a snapshot restores it. The TV device holds
   all room secrets. The rules/screens seam is now a host/renderer seam.
 - **Rejected alternatives:** Keep Convex (a cloud round trip and a vendor per

@@ -15,7 +15,6 @@ export type RoomCodeAvailability = {
 
 export type RoomCodeScreenProps = {
   readonly code?: string;
-  /** `undefined` is the pending query state; `null` is a missing room. */
   readonly availability?: RoomCodeAvailability | null;
   readonly error?: string;
   readonly onCodeChange?: (code: string) => void;
@@ -23,10 +22,6 @@ export type RoomCodeScreenProps = {
   readonly onScanQr: () => void;
 };
 
-/**
- * Join a room: four boxes that match the four tiles on the TV. Identity is a
- * separate route.
- */
 export function RoomCodeScreen({
   code: initialCode = '',
   availability,
@@ -45,7 +40,6 @@ export function RoomCodeScreen({
   const full = complete && availability?.full === true;
   const canContinue = complete && availability !== undefined && availability !== null && !full;
   const active = focused ? activeCodeCell(code) : undefined;
-  // Before the keyboard is up, the next empty tile still hints where to type.
   const hint = focused ? undefined : activeCodeCell(code);
 
   function updateCode(value: string) {

@@ -6,11 +6,6 @@ type Browser = {
 };
 const browser = globalThis as unknown as Browser;
 
-/**
- * The web TV's durable identity: `localStorage` in place of the Keychain. A
- * TV browser has no secure store; the token only proves this TV to its own
- * room host in the same page.
- */
 export const secureTvSessionStore: TvSessionStore = {
   read: async () => {
     try {
@@ -23,7 +18,6 @@ export const secureTvSessionStore: TvSessionStore = {
     try {
       browser.localStorage?.setItem(TV_SESSION_TOKEN_KEY, token);
     } catch {
-      // Without storage the TV gets a new token next launch, as on first run.
     }
   },
 };

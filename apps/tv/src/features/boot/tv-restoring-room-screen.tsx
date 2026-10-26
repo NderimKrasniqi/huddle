@@ -17,13 +17,11 @@ export type TvRestoringRoomStage = TvRestoreIndicatorStage;
 
 export type TvRestoringRoomScreenProps = {
   readonly roomCode: string;
-  /** Called after the green-check spring completes. */
   readonly onReadyAnimationComplete?: () => void;
 };
 
 export const TV_RESTORE_READY_DELAY_MS = 1_300;
 
-/** Display-only restore handoff for a persisted TV room. */
 export function TvRestoringRoomScreen({
   roomCode,
   onReadyAnimationComplete,

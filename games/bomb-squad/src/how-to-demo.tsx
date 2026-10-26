@@ -1,13 +1,3 @@
-/**
- * The animated "how to play" on the TV: four agents, their clues, one lie, a
- * cut wire and an accusation, looping in four beats. Drawn with Skia and moved
- * with React Native `Animated` (games may not use Reanimated), so each moving
- * part is its own small canvas inside an animated view.
- *
- * TV only. The agents are generic figures, never the room's real avatars: a
- * real face marked as the liar would read as an accusation before the game.
- * Paths are built from SVG strings, which the phone's Skia stub supports.
- */
 import { BlurMask, Canvas, Circle, Group, LinearGradient, Path, RadialGradient, RoundedRect, Shadow, Skia, vec } from '@shopify/react-native-skia';
 import { GameText } from '@huddle/ui/game-kit';
 import { useEffect, useState } from 'react';
@@ -18,23 +8,19 @@ import { SkiaBomb } from './skia-art';
 import { bomb } from './theme';
 import type { Wire } from './types';
 
-/** How long each beat holds before the next. */
 const DEMO_BEAT_MS = 2500;
 const DEMO_BEATS = 4;
 
 const WIDTH = 1500;
 const HEIGHT = 440;
 const AGENT_X = [120, 330, 540, 750] as const;
-/** The demo's liar: always the third agent, a figure, never a real player. */
 const LIAR = 2;
-/** The wire each agent's clue points at; the liar's points elsewhere. */
 const CLUE_WIRES: readonly Wire[] = ['red', 'red', 'blue', 'red'];
 
 const BUBBLE_TAIL = Skia.Path.MakeFromSVGString('M 58 92 L 70 112 L 82 92 Z')!;
 const ARROW = Skia.Path.MakeFromSVGString('M 0 20 L 60 20 L 60 6 L 90 30 L 60 54 L 60 40 L 0 40 Z')!;
 const BLADE = Skia.Path.MakeFromSVGString('M 60 60 C 80 40, 104 28, 118 26 C 104 40, 84 54, 60 64 Z')!;
 
-/** Which beat is showing, advancing every `DEMO_BEAT_MS` while motion is allowed. */
 export function useDemoBeat(reduceMotion: boolean): number {
   const [beat, setBeat] = useState(0);
   useEffect(() => {
@@ -45,7 +31,6 @@ export function useDemoBeat(reduceMotion: boolean): number {
   return beat;
 }
 
-/** 0 → 1 once at the start of each beat. */
 function useBeatProgress(beat: number): Animated.Value {
   const [t] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -57,7 +42,6 @@ function useBeatProgress(beat: number): Animated.Value {
   return t;
 }
 
-/** A gentle back-and-forth while the agents argue. */
 function useWobble(active: boolean): Animated.Value {
   const [w] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -78,11 +62,6 @@ function useWobble(active: boolean): Animated.Value {
   return w;
 }
 
-/**
- * A section of `t` from `from` to `to`, held at both ends. The native driver
- * cannot ease inside an interpolation, so the section is shaped by a midpoint
- * that is 80% of the way there: a cheap ease-out.
- */
 function span(t: Animated.Value, from: number, to: number, out: [number, number] = [0, 1]) {
   const mid = from + (to - from) * 0.35;
   return t.interpolate({ inputRange: [from, mid, to], outputRange: [out[0], out[0] + (out[1] - out[0]) * 0.8, out[1]], extrapolate: 'clamp' });
@@ -93,7 +72,6 @@ export function HowToDemo({ beat }: { readonly beat: number }) {
   const wobble = useWobble(beat === 1);
   return (
     <View style={styles.stage} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {/* The bomb, with a loose wire hanging under it for the cut. */}
       <View style={styles.bomb}>
         <SkiaBomb size={330} fuse={0.7} urgency={0.15} reduceMotion={false} />
       </View>
@@ -120,14 +98,11 @@ function AgentWithClue({
   readonly wobble: Animated.Value;
 }) {
   const liar = index === LIAR;
-  // Read: the bubbles pop in one after another, then stay.
   const pop = beat === 0 ? span(t, index * 0.12, index * 0.12 + 0.3) : 1;
   const bubbleScale = beat === 0 ? span(t, index * 0.12, index * 0.12 + 0.3, [0.9, 1]) : 1;
-  // Argue: the bubbles wobble, then the lie turns red.
   const turn = wobble.interpolate({ inputRange: [-1, 1], outputRange: [`${-4 - index}deg`, `${4 + index}deg`] });
   const lie = liar ? (beat === 1 ? span(t, 0.45, 0.65) : beat >= 2 ? 1 : 0) : 0;
   const stamp = liar && beat === 1 ? span(t, 0.55, 0.75, [1.25, 1]) : 1;
-  // Accuse: the agents either side lean in towards the liar.
   const lean = beat === 3 && Math.abs(index - LIAR) === 1 ? span(t, 0, 0.3, [0, index < LIAR ? 14 : -14]) : 0;
   return (
     <Animated.View style={[styles.agent, { left: x - 80, transform: [{ translateX: lean }] }]}>
@@ -147,7 +122,6 @@ function AgentWithClue({
   );
 }
 
-/** A speech bubble holding a little wire: the clue. */
 function Bubble({ wire, tone }: { readonly wire: Wire; readonly tone: 'calm' | 'lie' }) {
   const fill = tone === 'lie' ? bomb.danger : bomb.cream;
   return (
@@ -162,7 +136,6 @@ function Bubble({ wire, tone }: { readonly wire: Wire; readonly tone: 'calm' | '
   );
 }
 
-/** A red "LIE" stamp; the word is drawn as text in a bordered box. */
 function Stamp() {
   return (
     <View style={styles.stampBox}>
@@ -171,7 +144,6 @@ function Stamp() {
   );
 }
 
-/** A faceless agent in a dark suit with a coloured badge. */
 function Agent({ index }: { readonly index: number }) {
   const badge = [bomb.wireBlue, bomb.wireYellow, bomb.wireGreen, bomb.wireRed][index]!;
   return (
@@ -184,7 +156,6 @@ function Agent({ index }: { readonly index: number }) {
         <Circle cx={80} cy={62} r={40}>
           <RadialGradient c={vec(66, 48)} r={52} colors={[bomb.cream, bomb.rope]} />
         </Circle>
-        {/* Dark glasses: every agent looks equally suspicious. */}
         <RoundedRect x={50} y={52} width={60} height={16} r={8} color={bomb.night} />
         <Circle cx={104} cy={140} r={10} color={badge} />
       </Group>
@@ -192,7 +163,6 @@ function Agent({ index }: { readonly index: number }) {
   );
 }
 
-/** Scissors close on the hanging wire, and it snaps in two. */
 function CutWire({ beat, t }: { readonly beat: number; readonly t: Animated.Value }) {
   const cutting = beat === 2;
   const cut = beat >= 2;
@@ -237,7 +207,6 @@ function WireSegment() {
   );
 }
 
-/** Two blades on a pivot; `closed` (0 → 1) brings them together. */
 function Scissors({ closed }: { readonly closed: Animated.AnimatedInterpolation<number> | number }) {
   const open = typeof closed === 'number' ? `${(1 - closed) * 18}deg` : closed.interpolate({ inputRange: [0, 1], outputRange: ['18deg', '0deg'] });
   const openBack = typeof closed === 'number' ? `${-(1 - closed) * 18}deg` : closed.interpolate({ inputRange: [0, 1], outputRange: ['-18deg', '0deg'] });
@@ -267,7 +236,6 @@ function ScissorHalf({ flip }: { readonly flip: boolean }) {
   );
 }
 
-/** Arrows from the others point at the liar, a ring closes round them, and +50 pops. */
 function Accusation({ beat, t }: { readonly beat: number; readonly t: Animated.Value }) {
   if (beat !== 3) return null;
   const ring = span(t, 0.1, 0.4);

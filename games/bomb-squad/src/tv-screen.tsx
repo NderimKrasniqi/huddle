@@ -14,11 +14,9 @@ import { type BombState, type Wire, WIRES } from './types';
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
 
-/** The TV: the bomb on its stage. Shows no secret until the room has cut a wire. */
 export function BombSquadTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<BombState>) {
   const viewport = useWindowDimensions();
   const scale = Math.min(viewport.width / STAGE_WIDTH, viewport.height / STAGE_HEIGHT) || 1;
-  // Still until the device answers: the bomb shakes, so motion is opt-in.
   const reduceMotion = useSystemReducedMotion() ?? true;
   const fallback = phaseSeconds(state);
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, fallback, `${state.round}:${state.phase}`);
@@ -54,11 +52,6 @@ const HOW_TO_STEPS = [
   { title: 'Accuse', line: 'Then name the liar. Catch them for points.' },
 ] as const;
 
-/**
- * The rules, once, before the first bomb. With motion, an animated demo plays
- * the four steps with a caption for each; with reduced motion, the four steps
- * stand as cards. Starts when everyone taps "Got it" on their phone.
- */
 function HowTo({
   state,
   players,
@@ -149,7 +142,6 @@ function Brief({ seconds, reduceMotion }: { readonly seconds: number; readonly r
 function Debate({ state, players, seconds, reduceMotion }: { readonly state: BombState; readonly players: readonly GamePlayer[]; readonly seconds: number; readonly reduceMotion: boolean }) {
   const playing = state.standings.length;
   const voted = state.votedCount ?? 0;
-  // The shaking builds as the clock runs down.
   const urgency = Math.min(1, Math.max(0, 1 - seconds / state.debateSeconds));
   return (
     <View style={styles.debate} accessible accessibilityRole="text" accessibilityLabel={`Argue, then cut a wire on your phone. ${seconds} seconds left. ${voted} of ${playing} have voted.`}>
@@ -174,7 +166,6 @@ function Debate({ state, players, seconds, reduceMotion }: { readonly state: Bom
   );
 }
 
-/** The wire is cut: the blast or the defuse, and who voted for which wire. Nobody is unmasked yet. */
 function Cut({ state, players, reduceMotion }: { readonly state: BombState; readonly players: readonly GamePlayer[]; readonly reduceMotion: boolean }) {
   const result = state.results[state.round];
   if (result === undefined) return null;
@@ -204,7 +195,6 @@ function voteSummary(state: BombState, players: readonly GamePlayer[]): string {
     .join(' ');
 }
 
-/** Four columns, one per wire, with the faces of everyone who voted for it. */
 function VoteBoard({ state, players, cut }: { readonly state: BombState; readonly players: readonly GamePlayer[]; readonly cut: Wire | null }) {
   const voters = playingPlayers(state, players);
   return (
@@ -330,7 +320,6 @@ function Finished({ state, players }: { readonly state: BombState; readonly play
   );
 }
 
-/** A red glow that throbs at the edges of the stage in the last ten seconds. */
 function DangerPulse({ reduceMotion }: { readonly reduceMotion: boolean }) {
   const [t] = useState(() => new Animated.Value(reduceMotion ? 0.5 : 0));
   useEffect(() => {
@@ -356,7 +345,6 @@ function Pop({ children, reduceMotion }: { readonly children: ReactNode; readonl
   return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
 }
 
-/** The TV's text: Bomb Squad type, set tighter for reading across a room. */
 function Text(props: ComponentProps<typeof BombText>) {
   return <BombText leading={1.18} {...props} />;
 }

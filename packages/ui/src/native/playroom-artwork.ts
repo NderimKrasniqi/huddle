@@ -1,11 +1,6 @@
 import type { AvatarId, GameSettingIcon } from '@huddle/contracts';
 import type { ImageSourcePropType } from 'react-native';
 
-/**
- * Playroom runtime artwork (docs/design/playroom/README.md). Native bundles
- * receive numeric Metro asset handles; the guarded require keeps Node-based
- * contract and render tests able to import this module.
- */
 function nativeAsset(load: () => number): ImageSourcePropType {
   try {
     return load();
@@ -27,7 +22,6 @@ export const PLAYROOM_ARTWORK = {
   props: {
     controller: nativeAsset(() => require('../../assets/playroom/props/controller.png')),
     crown: nativeAsset(() => require('../../assets/playroom/props/crown.png')),
-    /** A raised hand: this player is ready. */
     hand: nativeAsset(() => require('../../assets/playroom/props/hand.png')),
     starPurple: nativeAsset(() => require('../../assets/playroom/props/star-purple.png')),
     starYellow: nativeAsset(() => require('../../assets/playroom/props/star-yellow.png')),
@@ -49,7 +43,6 @@ export const PLAYROOM_ARTWORK = {
 export type PlayroomProp = keyof typeof PLAYROOM_ARTWORK.props;
 export type PlayroomStatusArt = keyof typeof PLAYROOM_ARTWORK.status;
 
-/** Portraits without circles; `PlayroomAvatar` draws the circle behind them. */
 export const PLAYROOM_AVATARS: Readonly<Record<AvatarId, ImageSourcePropType>> = {
   fox: nativeAsset(() => require('../../assets/playroom/avatars/fox.png')),
   'green-alien': nativeAsset(() => require('../../assets/playroom/avatars/green-alien.png')),
@@ -63,7 +56,6 @@ export const PLAYROOM_AVATARS: Readonly<Record<AvatarId, ImageSourcePropType>> =
   puppy: nativeAsset(() => require('../../assets/playroom/avatars/puppy.png')),
 };
 
-/** Setting pictures, by the icon name a game declares on its setting. */
 export const PLAYROOM_SETTING_ICONS: Readonly<Record<GameSettingIcon, ImageSourcePropType>> = {
   count: nativeAsset(() => require('../../assets/playroom/settings/count.png')),
   difficulty: nativeAsset(() => require('../../assets/playroom/settings/difficulty.png')),
@@ -74,16 +66,12 @@ export const PLAYROOM_SETTING_ICONS: Readonly<Record<GameSettingIcon, ImageSourc
   players: nativeAsset(() => require('../../assets/playroom/settings/players.png')),
 };
 
-/**
- * Shelf art for each installed game.
- */
 const GAME_ART: Readonly<Record<string, ImageSourcePropType>> = {
   trivia: nativeAsset(() => require('../../assets/playroom/games/trivia.png')),
   'bomb-squad': nativeAsset(() => require('../../assets/playroom/games/bomb-squad.png')),
   'sumo-bumpers': nativeAsset(() => require('../../assets/playroom/games/sumo-bumpers.png')),
 };
 
-/** Catalog art for a registry game id, or undefined for a game without any. */
 export function playroomGameArt(gameId: string): ImageSourcePropType | undefined {
   return GAME_ART[gameId];
 }

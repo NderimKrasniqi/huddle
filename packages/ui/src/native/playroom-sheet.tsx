@@ -4,15 +4,12 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 export interface PlayroomSheetProps {
   readonly onClose: () => void;
-  /** The device's bottom safe-area inset, so the last button clears the home bar. */
   readonly bottomInset: number;
-  /** Tapping the dim area closes the sheet. Off for confirmations that need an answer. */
   readonly dismissOnScrim?: boolean;
   readonly testID?: string;
   readonly children: ReactNode;
 }
 
-/** The phone's bottom sheet: a dimmed room behind, a cream card with a grab handle in front. */
 export function PlayroomSheet({ onClose, bottomInset, dismissOnScrim = true, testID, children }: PlayroomSheetProps) {
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal testID={testID}>

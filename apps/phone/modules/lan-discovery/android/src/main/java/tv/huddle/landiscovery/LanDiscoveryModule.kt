@@ -10,10 +10,6 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * TASK-04 spike: finds a Huddle TV on the local network by its room code with
- * NsdManager. The TV registers `Huddle-<code>` as `_huddle._tcp`.
- */
 class LanDiscoveryModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("LanDiscovery")
@@ -47,6 +43,7 @@ class LanDiscoveryModule : Module() {
           manager.resolveService(service, object : NsdManager.ResolveListener {
             override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) = finish(null)
             override fun onServiceResolved(info: NsdServiceInfo) {
+              // Prefer the TV's own IPv4 list: a resolved address is often IPv6 link-local.
               val txtHosts = info.attributes["hosts"]?.toString(Charsets.UTF_8)?.split(",")?.filter { it.isNotBlank() }.orEmpty()
               @Suppress("DEPRECATION")
               val hosts = txtHosts.ifEmpty { listOfNotNull(info.host?.hostAddress) }

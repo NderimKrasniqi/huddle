@@ -15,29 +15,17 @@ import {
 import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Height of the band in the player's colour below the status bar. */
 const BAND = 90;
 
 export type PhoneFrameProps = {
   readonly children: ReactNode;
-  /** The seated player's avatar: the header band takes its circle colour. */
   readonly avatarId?: AvatarId;
-  /** Pinned to the bottom, outside the scrolling content. */
   readonly footer?: ReactNode;
   readonly contentStyle?: StyleProp<ViewStyle>;
-  /**
-   * Drawn behind the whole screen, footer included, so a full-screen colour
-   * (the countdown's flash) never stops at the footer in a visible seam.
-   */
   readonly backdrop?: ReactNode;
   readonly testID?: string;
 };
 
-/**
- * A seated phone screen: canvas background, a header band in your avatar's
- * colour so everyone can tell whose phone is whose, scrolling content, and
- * an optional footer for the main action.
- */
 export function PhoneFrame({ children, avatarId, footer, contentStyle, backdrop, testID }: PhoneFrameProps) {
   const insets = useSafeAreaInsets();
   const moreBelow = useMoreBelow();
@@ -61,7 +49,6 @@ export function PhoneFrame({ children, avatarId, footer, contentStyle, backdrop,
         onContentSizeChange={(_width, height) => moreBelow.measure({ content: height })}
         onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => moreBelow.measure({ offset: event.nativeEvent.contentOffset.y })}
       >
-        {/* Each step of the flow arrives with a short lift, so moving on reads as moving on. */}
         <Animated.View entering={STEP_ENTER} style={[styles.stepBody, contentStyle]}>
           {children}
         </Animated.View>
@@ -76,10 +63,6 @@ export function PhoneFrame({ children, avatarId, footer, contentStyle, backdrop,
   );
 }
 
-/**
- * Whether scrolled content continues under the footer. Then it fades out above
- * the footer, so a list cut off mid-line reads as "more below", not broken.
- */
 function useMoreBelow() {
   const sizes = useRef({ viewport: 0, content: 0, offset: 0 });
   const [value, setValue] = useState(false);
@@ -102,11 +85,6 @@ const STEP_ENTER = new Keyframe({
 const FADE_STEPS = 8;
 const FADE_STEP_HEIGHT = 4;
 
-/**
- * Content fading into the footer instead of being sliced mid-line. Stacked
- * bands of the canvas colour stand in for a gradient, which would need a
- * native dependency.
- */
 function ScrollFade() {
   return (
     <View style={styles.fade} pointerEvents="none" testID="phone-footer-fade">
@@ -118,13 +96,10 @@ function ScrollFade() {
 }
 
 export type PhoneTopBarProps = {
-  /** A back link on the left; the wordmark shows when there is none. */
   readonly back?: { readonly label: string; readonly onPress: () => void; readonly testID?: string };
-  /** Who this phone is; `roomCode` adds the room to the chip, so it is never out of sight. */
   readonly you?: { readonly nickname: string; readonly avatarId: AvatarId; readonly roomCode?: string };
 };
 
-/** Back link or wordmark on the left, and who this phone belongs to on the right. */
 export function PhoneTopBar({ back, you }: PhoneTopBarProps) {
   return (
     <View style={styles.topBar}>
@@ -160,12 +135,10 @@ function YouChip({ nickname, avatarId, roomCode }: { readonly nickname: string; 
   );
 }
 
-/** A white card, for featured content and grouped rows. */
 export function PhoneCard({ children, style }: { readonly children: ReactNode; readonly style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-/** An error or status line under the controls it concerns. */
 export function PhoneNotice({ children, testID }: { readonly children: string; readonly testID?: string }) {
   return (
     <PlayroomText color="danger" style={[playroomPhone.type.caption, styles.notice]} accessibilityRole="alert" testID={testID}>
@@ -205,7 +178,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 4,
   },
-  // The animated wrapper takes the content's own column layout.
   stepBody: {
     flexGrow: 1,
     gap: 16,
@@ -230,7 +202,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  // A back link reads as a control: a white pill like the "You" chip opposite.
   back: {
     flexDirection: 'row',
     alignItems: 'center',

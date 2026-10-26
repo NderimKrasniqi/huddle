@@ -13,18 +13,12 @@ import {
 } from '@huddle/contracts/protocol';
 import { HEARTBEAT_INTERVAL_MS } from '@huddle/domain';
 
-/** A command the host refused. */
 export class BotRefusal extends Error {
   constructor(readonly rejection: RoomRejection) {
     super(`refused: ${rejection.kind}`);
   }
 }
 
-/**
- * A scripted phone: it speaks the Room Protocol over Node's built-in
- * WebSocket, keeps the views the host pushes, and beats like a phone in front
- * of its owner until told to go quiet.
- */
 export class Bot {
   private readonly views = new Map<ViewName, unknown>();
   private readonly pending = new Map<number, { name: CommandName; resolve: (value: unknown) => void; reject: (error: Error) => void }>();
@@ -32,7 +26,6 @@ export class Bot {
   private nextRequest = 1;
   private beat: ReturnType<typeof setInterval> | undefined;
   closed: string | undefined;
-  /** The room code and TV instance id the TV announced in its welcome. */
   roomCode: string | undefined;
   tvInstanceId: string | undefined;
 
@@ -105,7 +98,6 @@ export class Bot {
     });
   }
 
-  /** Like `command`, but a refusal resolves to `false` instead of throwing. */
   async attempt<Name extends CommandName>(name: Name, args: CommandArgs<Name>): Promise<boolean> {
     try {
       await this.command(name, args);
@@ -120,7 +112,6 @@ export class Bot {
     return this.views.get(name) as ViewValue<Name> | undefined;
   }
 
-  /** Resolves once `check` holds against the latest views, or rejects after `timeoutMs`. */
   waitFor(check: (bot: Bot) => boolean, timeoutMs = 120_000): Promise<void> {
     if (check(this)) return Promise.resolve();
     return new Promise((resolve, reject) => {
@@ -145,7 +136,6 @@ export class Bot {
     }, HEARTBEAT_INTERVAL_MS);
   }
 
-  /** The phone goes in a pocket: no more beats, so the room marks it away. */
   stopBeating(): void {
     if (this.beat !== undefined) clearInterval(this.beat);
     this.beat = undefined;

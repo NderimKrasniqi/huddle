@@ -44,11 +44,6 @@ export type Confirmation = {
   readonly onConfirm: () => void;
 };
 
-/**
- * Everything a seated phone knows and can do: the room's live projections,
- * the action busy/failure state, and every Host and player action. Screens
- * render what this returns and call its actions; none of them name a transport.
- */
 export function useSeatedRoom({
   session,
   onSeatLost,
@@ -63,7 +58,6 @@ export function useSeatedRoom({
   const reduceMotion = useSystemReducedMotion();
   const token = sessionToken;
   const room = useRoomClient();
-  // Every room view is asked as this seat; the room shows nobody else.
   const asSeat: SeatCredential | undefined = useMemo(
     () => (token === undefined ? undefined : { roomId: session.roomId, sessionToken: token }),
     [session.roomId, token],
@@ -80,13 +74,10 @@ export function useSeatedRoom({
   const [failure, setFailure] = useState<string>();
   const [success, setSuccess] = useState<string>();
   const [confirmation, setConfirmation] = useState<Confirmation>();
-  // The sheet is a window-level modal: it would stay on top of any screen
-  // pushed over this one (a join link, say), so it closes when this one blurs.
   useFocusEffect(useCallback(() => () => setConfirmation(undefined), []));
   const [managedPlayer, setManagedPlayer] = useState<RosterSeat>();
   const busyRef = useRef<BusyAction>(null);
   const seatLossReported = useRef(false);
-
 
   useEffect(() => {
     if (seatLossReported.current || seat === undefined || seat !== null) return;
@@ -94,7 +85,6 @@ export function useSeatedRoom({
     onSeatLost(seatLossNotice(roster));
   }, [onSeatLost, roster, seat]);
 
-  // A new host is announced once on every phone, so whoever holds the controls knows it.
   const hostSeat = roster.find((candidate) => candidate.host);
   const previousHostId = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -117,12 +107,6 @@ export function useSeatedRoom({
       return;
     }
 
-    // A setup draft makes the shared picker visible on every phone, including
-    // a guest that may later become Host. Once the authoritative projections
-    // both say the room is back in its lobby, retire that historical local
-    // optimism so a Host promotion cannot resurrect the old picker.
-    // Deliberate `openPicker` optimism is preserved: this effect only reruns
-    // when one of the server projections changes, not on the local state flip.
     if (browsingAt === null) setPickerOpen(false);
   }, [browsingAt, setupDraft]);
 
@@ -135,9 +119,6 @@ export function useSeatedRoom({
   const installedOrSelectedModule = setupDraft === null || setupDraft === undefined
     ? undefined
     : GAME_REGISTRY.find((module) => module.metadata.id === setupDraft.gameId);
-  // Once browsing has begun it is shared room state. Keep the Host on the
-  // picker after a remount as well as while the local browse mutation settles;
-  // the Host's explicit Back-to-room action clears that shared index.
   const hostPicker = standing.youAreHost && screen.kind === 'lobby' && pickerVisibility({
     youAreHost: true,
     pickerOpen,
@@ -152,8 +133,6 @@ export function useSeatedRoom({
   });
 
   async function runAction(action: Exclude<BusyAction, null>, callback: () => Promise<unknown>, message = lifecycleFailureMessage) {
-    // State updates are batched until this event yields. The ref closes the
-    // same-tick double-tap window that a visible `busy` state alone leaves.
     if (busyRef.current !== null || asSeat === undefined) return false;
     busyRef.current = action;
     setBusy(action);
@@ -182,8 +161,6 @@ export function useSeatedRoom({
       onConfirm: () => {
         void (async () => {
           const didLeave = await runAction('leave', async () => {
-            // Mark intent before the mutation can publish a null seat. That
-            // subscription update is an expected Leave, not a Host removal.
             beginLeave();
             try {
               await room.command('leaveRoom', asSeat as SeatCredential, {});
@@ -246,9 +223,6 @@ export function useSeatedRoom({
     const index = browsingAt ?? 0;
     void (async () => {
       await runAction('browse', () => room.command('browseGame', asSeat, { index }));
-      // The room's browse projection, not this optimistic flag, decides
-      // whether everyone entered the carousel. A TV-away no-op therefore
-      // returns the Host to the same room surface as everyone else.
       setPickerOpen(false);
     })();
   }
@@ -395,4 +369,3 @@ export function useSeatedRoom({
     managePlayer,
   };
 }
-

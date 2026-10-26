@@ -1,4 +1,3 @@
-/** React Native entrypoint for the TV boot feature. */
 export { TvBootScreen } from './boot-screen';
 export { TvCreatingRoomScreen } from './tv-creating-room-screen';
 export {

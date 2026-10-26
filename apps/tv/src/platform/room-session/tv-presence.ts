@@ -1,6 +1,5 @@
 import { HEARTBEAT_INTERVAL_MS } from '@huddle/domain';
 
-/** A small injectable loop so TV presence is deterministic in tests. */
 export function keepTvPresent(
   heartbeat: () => Promise<void>,
   intervalMs: number = HEARTBEAT_INTERVAL_MS,
@@ -14,8 +13,6 @@ export function keepTvPresent(
     heartbeatPending = true;
     void heartbeat()
       .catch(() => {
-        // The next beat retries. Presence is advisory; a
-        // transient network failure must not tear down the TV display.
       })
       .finally(() => {
         heartbeatPending = false;

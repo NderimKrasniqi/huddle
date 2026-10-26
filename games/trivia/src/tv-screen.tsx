@@ -30,11 +30,6 @@ import { INTRO_SECONDS, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 import type { TriviaState } from './types';
 import { watchedScreen, type FinalStanding, type WatchedOption, type WatchedScreen } from './watching';
 
-/**
- * The night sky is the heaviest picture Trivia draws, and on a cold start it
- * decodes a beat after the stage mounts. Hold what sits on it until it has
- * loaded — never longer than `SKY_WAIT_MS`, so a slow device only waits briefly.
- */
 const SKY_WAIT_MS = 600;
 
 function useSkyFirst(): readonly [boolean, () => void] {
@@ -53,14 +48,6 @@ const SAFE_Y = 54;
 
 type Players = TvGameScreenProps<TriviaState>['players'];
 
-/**
- * Trivia's shared living-room stage: Cosmic Quiz on a night sky.
- *
- * Display-only. It imports no pressable, its root is not focusable, and it is
- * handed the room's redacted state: it shows the question, how many have
- * answered, the reveal and the scores — never who chose what. Answers happen
- * on the phones (`TriviaPhoneScreen`).
- */
 export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<TriviaState>) {
   const viewport = useWindowDimensions();
   const scale = safeScale(viewport.width, viewport.height);
@@ -85,7 +72,6 @@ export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname 
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="trivia-tv-screen">
       <View style={[styles.stage, { transform: [{ scale }] }]} pointerEvents="none" focusable={false}>
         <Image source={TRIVIA_ART.space} resizeMode="cover" style={styles.space} accessible={false} testID="trivia-tv-world" onLoad={showStage} />
-        {/* With motion, the intro's launch wipe already covers the sky's load; without it, the stage waits for the sky. */}
         <View style={[StyleSheet.absoluteFill, { opacity: skyShown || reduceMotion === false ? 1 : 0 }]} testID="trivia-tv-stage-content">
           <Twinkle size={40} style={{ left: 40, top: 420 }} reduceMotion={reduceMotion} period={3400} />
           <Twinkle size={30} style={{ left: 1420, top: 330 }} reduceMotion={reduceMotion} period={4600} />
@@ -109,7 +95,6 @@ export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname 
     </View>
   );
 }
-
 
 function IntroStage({
   screen,
@@ -172,7 +157,6 @@ function IntroStage({
   );
 }
 
-/** Ten seats and their gaps must fit the 1728-wide safe area. */
 function crewSeatWidth(count: number): number {
   return count > 7 ? 148 : 170;
 }
@@ -186,9 +170,7 @@ function QuestionStage({
   readonly players: Players;
   readonly reduceMotion: boolean | undefined;
 }) {
-  // Names fit under the faces only for a smaller room; seats stay avatar-wide otherwise.
   const named = players.length <= 6;
-  // Named seats share the footer's middle, so a small crew shows whole names.
   const seatWidth = named ? Math.min(220, Math.floor((FOOTER_SEATS_WIDTH - 14 * (players.length - 1)) / Math.max(1, players.length))) : undefined;
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={questionAccessibilityLabel(screen)}>
@@ -243,7 +225,6 @@ function QuestionStage({
   );
 }
 
-/** A line for the room to laugh at when everybody, or nobody, got it. */
 function tallyQuip(right: number, total: number): string | undefined {
   if (total < 2) return undefined;
   if (right === total) return 'Big brains all round!';
@@ -252,7 +233,6 @@ function tallyQuip(right: number, total: number): string | undefined {
   return undefined;
 }
 
-/** Shorter questions read bigger; three lines of the longest still fit. */
 function questionSize(text: string): number {
   if (text.length > 90) return 52;
   if (text.length > 55) return 60;
@@ -284,7 +264,6 @@ function RevealStage({
   const correct = screen.options.find((option) => option.correct === true);
   const last = screen.questionNumber >= screen.questionCount;
   const compact = screen.scoreboard.length > 5;
-  // Four or fewer rows would leave the panel mostly empty, so they read bigger.
   const roomy = screen.scoreboard.length <= 4;
   const anyGain = screen.scoreboard.some((row) => row.gain !== undefined && row.gain > 0);
   const gotIt = screen.verdicts.filter((verdict) => verdict.correct).length;
@@ -303,7 +282,6 @@ function RevealStage({
           </CosmicText>
           {correct ? (
             <Enter reduceMotion={reduceMotion} delay={350} scale={0.9} from={0} style={{ alignSelf: 'stretch', marginTop: 36 }}>
-              {/* After the tile lands, one beat so the room finds the answer. */}
               <Pulse reduceMotion={reduceMotion} delay={350 + COSMIC_MOTION.enter}>
                 <View style={[styles.correctTile, { backgroundColor: answerTone(correct.optionIndex) }]}>
                   <LetterBadge optionIndex={correct.optionIndex} size={72} />
@@ -342,8 +320,6 @@ function RevealStage({
                       </CosmicText>
                     )}
                   </View>
-                  {/* This round's points, so the total beside a cross never reads as points won.
-                      Compact rows keep the slot whenever anyone scored, so every total lines up. */}
                   {compact ? (
                     anyGain ? (
                       <View style={styles.gainSlotCompact} testID="trivia-tv-gain-slot">
@@ -393,15 +369,12 @@ function RevealStage({
   );
 }
 
-/** Width of one podium step. */
 const PODIUM_SLOT_WIDTH = 386;
 const REST_SEAT_WIDTH = 236;
 
-/** Every winner of a tie too big for the podium, ringed in gold together. */
 function WinnersCircle({ winners, reduceMotion }: { readonly winners: readonly FinalStanding[]; readonly reduceMotion: boolean | undefined }) {
   const size = winners.length > 6 ? 96 : 120;
   const score = winners[0]?.score ?? 0;
-  // Balanced rows (5 + 5, not 8 + 2), each seat wide enough for a name.
   const seat = size + 90;
   const columns = winners.length > 6 ? Math.ceil(winners.length / 2) : winners.length;
   return (
@@ -425,13 +398,8 @@ function WinnersCircle({ winners, reduceMotion }: { readonly winners: readonly F
   );
 }
 
-/** Left to right: the second, first and third finisher take these slots. */
 const PODIUM_SLOTS = [2, 1, 3] as const;
 
-/**
- * A step's look follows the rank, not the slot, so players who tie stand
- * equally high: a three-way tie for first is three gold steps.
- */
 const STEP_BY_RANK = {
   1: { color: cosmic.butter, height: 250, avatar: 150 },
   2: { color: cosmic.periwinkle, height: 205, avatar: 124 },
@@ -450,14 +418,11 @@ function FinishedStage({
   readonly reduceMotion: boolean | undefined;
 }) {
   const winners = screen.standings.filter((standing) => standing.winner);
-  // More winners than podium steps: a podium of three equal "1"s says nothing,
-  // so every winner shares one circle and the rest wait below.
   const circle = winners.length > PODIUM_SLOTS.length;
   const top = circle ? [] : screen.standings.slice(0, 3);
   const rest = circle ? screen.standings.filter((standing) => !standing.winner) : screen.standings.slice(3);
   const byPlace = (place: number): FinalStanding | undefined => top[place - 1];
   const compactRest = rest.length > 4;
-  // Rest seats wrap into balanced rows (4 + 3, not 6 + 1) at a fixed seat width.
   const restColumns = compactRest ? Math.ceil(Math.min(rest.length, 7) / 2) : rest.length;
 
   return (
@@ -479,7 +444,6 @@ function FinishedStage({
           return (
             <Enter key={standing.playerId} reduceMotion={reduceMotion} delay={250 + index * 160} from={120} style={styles.podiumSlot} testID={`trivia-tv-final-row-${standing.playerId}`}>
               {standing.winner && standing.avatar ? (
-                // A gold ring and a sparkle for every winner; a tie shares the honour.
                 <>
                   <View style={[styles.winnerRing, { width: avatar + 28, height: avatar + 28, borderRadius: (avatar + 28) / 2, top: -14 }]} pointerEvents="none" />
                   <Twinkle size={40} style={{ top: -30, left: PODIUM_SLOT_WIDTH / 2 + avatar / 2 - 6 }} reduceMotion={reduceMotion} period={2600} />
@@ -492,14 +456,12 @@ function FinishedStage({
                 <View style={styles.rankBadge}>
                   <CosmicText weight="black" size={40} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
                 </View>
-                {/* Badge, name and score must fit the shortest (3rd rank) step. */}
                 <CosmicText weight="black" size={40} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
                 <CosmicText weight="black" size={40}>{standing.score}</CosmicText>
               </View>
             </Enter>
           );
         })}
-        {/* The steps stand on a lit stage edge instead of ending in mid-air. */}
         {circle ? null : <View style={styles.podiumFloor} pointerEvents="none" />}
       </View>
       {rest.length > 0 ? (
@@ -567,17 +529,14 @@ const panel = {
   borderRadius: 56,
 } as const;
 
-/** The reveal tile has room for about 250px of text, so one word must never break mid-word. */
 function correctAnswerSize(text: string): number {
   const longestWord = Math.max(...text.split(/\s+/).map((word) => word.length));
   if (text.length <= 7) return 54;
   if (longestWord <= 10 && text.length <= 16) return 40;
-  // "Deoxyribonucleic" would split even at 34; Android only auto-shrinks past numberOfLines.
   if (longestWord > 12) return 28;
   return 34;
 }
 
-/** Room for the named seats between the answered count and the hint. */
 const FOOTER_SEATS_WIDTH = 900;
 
 const styles = StyleSheet.create({
@@ -606,9 +565,7 @@ const styles = StyleSheet.create({
   answerCell: { width: 604 },
   answerTile: { height: 148, borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, gap: 30 },
   answerText: { flex: 1 },
-  // Hands rest on the footer rule: it peeks over the edge rather than floating.
   peekingMascot: { position: 'absolute', right: 56, bottom: SAFE_Y + 96 },
-  // Names under the faces make the footer row taller, so the rule sits higher.
   peekingMascotNamed: { bottom: SAFE_Y + 128 },
   footer: { position: 'absolute', left: SAFE_X, right: SAFE_X, bottom: SAFE_Y },
   footerRule: { height: 2, backgroundColor: cosmicWash.rule, marginBottom: 24 },
@@ -635,7 +592,6 @@ const styles = StyleSheet.create({
   verdictRoomy: { width: 250 },
   resultScore: { width: 110 },
   gainPill: { paddingHorizontal: 14, paddingVertical: 2 },
-  // A floor, not a fixed width: a pill grown by the TV's text size pushes the name, not the badge.
   gainSlotCompact: { minWidth: 72, alignItems: 'flex-end' },
   gainPillCompact: { paddingHorizontal: 10, paddingVertical: 0 },
   resultScoreCompact: { width: 76 },
@@ -650,10 +606,8 @@ const styles = StyleSheet.create({
   podiumSlot: { width: PODIUM_SLOT_WIDTH, alignItems: 'center' },
   podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 16, marginTop: -16 },
   winnerRing: { position: 'absolute', alignSelf: 'center', borderWidth: 6, borderColor: cosmic.butter },
-  // A lighter top face gives the flat steps some depth, like the pack's podium art.
   podiumTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 22, borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: cosmicWash.highlight },
   rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  // The panel hugs its seats, so one 4th place is a pill rather than an empty bar.
   restDock: { position: 'absolute', left: 200, right: 200, bottom: 186, alignItems: 'center' },
   podiumFloor: { position: 'absolute', left: -48, right: -48, bottom: -14, height: 14, borderRadius: 7, backgroundColor: cosmic.turquoise, opacity: 0.55 },
   restRow: { ...panel, maxWidth: '100%', minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },

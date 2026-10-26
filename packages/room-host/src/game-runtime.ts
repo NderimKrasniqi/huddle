@@ -13,7 +13,6 @@ export type DeadlineResult =
   | { readonly ok: true; readonly deadline?: GameDeadline }
   | { readonly ok: false };
 
-/** Log only identifiers and a category; never tokens, events, or state. */
 export function runtimeFailure(log: HostPorts['log'], roomId: string, running: StoredGame, category: string): void {
   log?.('Huddle game runtime unavailable', {
     roomId,
@@ -23,7 +22,6 @@ export function runtimeFailure(log: HostPorts['log'], roomId: string, running: S
   });
 }
 
-/** Resolve and decode the stored game without ever returning invalid data. */
 export function decodeStoredRuntime(
   log: HostPorts['log'],
   roomId: string,
@@ -48,7 +46,6 @@ export function decodeStoredRuntime(
   }
 }
 
-/** Validate and decode a module deadline before a timer is set for it. */
 export function validatedDeadline(
   log: HostPorts['log'],
   roomId: string,
@@ -77,7 +74,6 @@ export function validatedDeadline(
   }
 }
 
-/** The state as `viewer` may see it (the TV is `undefined`), validated. */
 export function projectRuntime(runtime: DecodedRuntime, viewer: string | undefined): unknown {
   try {
     const projected = runtime.game.redactStateFor(runtime.state, viewer);

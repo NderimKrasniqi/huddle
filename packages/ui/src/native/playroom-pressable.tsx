@@ -9,12 +9,6 @@ export type PlayroomPressableProps = Omit<PressableProps, 'style'> & {
   readonly style?: StyleProp<ViewStyle>;
 };
 
-/**
- * A tappable surface with the Playroom press: the same subtle scale as
- * `PlayroomButton`, on press-in so the phone answers the finger at once,
- * and settling back on release. Rows, options, tiles and cards use it so
- * nothing tappable feels dead.
- */
 export function PlayroomPressable({ style, disabled, onPressIn, onPressOut, ...props }: PlayroomPressableProps) {
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));

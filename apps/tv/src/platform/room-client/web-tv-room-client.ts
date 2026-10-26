@@ -12,7 +12,6 @@ import { useSyncExternalStore } from 'react';
 import type { OpenRoom, TvRoomClient, TvViewName, TvViews } from './index';
 import { setupView, stable } from './views';
 
-/** The browser APIs this client uses, typed here because the app's types are React Native's. */
 type Browser = {
   readonly localStorage?: { getItem(key: string): string | null; setItem(key: string, value: string): void };
   readonly crypto: { getRandomValues<T extends Uint8Array | Uint32Array>(array: T): T };
@@ -23,7 +22,6 @@ const browser = globalThis as unknown as Browser;
 const SNAPSHOT_KEY = 'huddle.room-snapshot';
 const RELAY_SECRET_KEY = 'huddle.relay-secret';
 const SAVE_DEBOUNCE_MS = 300;
-/** The relay's base URL. A web TV cannot listen, so without it no phone can join. */
 const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL;
 
 type Store = {
@@ -43,7 +41,6 @@ function write(key: string, value: string): void {
   try {
     browser.localStorage?.setItem(key, value);
   } catch {
-    // Private windows and full storage: the room still runs, it just does not survive a reload.
   }
 }
 
@@ -56,12 +53,6 @@ function relaySecret(): string {
   return secret;
 }
 
-/**
- * The room client for a TV that runs as a web app, such as a Samsung (Tizen)
- * or LG (webOS) shell (ADR-04). A browser cannot accept connections, so the
- * room host is reachable only through the relay; the snapshot and the relay
- * secret live in `localStorage`. TASK-23 runs it in Chromium as a smoke test.
- */
 export function webTvRoomClient(): TvRoomClient {
   let host: RoomHost | undefined;
   let restoredRoomId: string | undefined;
