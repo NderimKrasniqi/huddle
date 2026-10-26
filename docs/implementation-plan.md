@@ -207,7 +207,7 @@ These are new user-visible behaviors, now recorded in
 ### Release gates
 
 - Every e2e flow passes on the LAN host and, after Phase 6, through the relay.
-- The physical party check runs on a real Android TV with mixed phones,
+- [~] The physical party check runs on a real Android TV with mixed phones,
   including a guest network that blocks traffic between devices.
 - [x] Independent review of the room host port against the Convex rules
   (done after TASK-23; see the ledger).
@@ -456,6 +456,25 @@ back means rolling back server and apps together. Any production deploy needs
 explicit owner approval.
 
 ## Validation ledger
+
+### First physical party check (Android TV and iPhone)
+
+Release builds on real devices, home Wi-Fi, no relay: the Android TV app
+(`armeabi-v7a` APK) on a Philips 75PUS8506 running Android 11, installed over
+`adb` on Wi-Fi, and the phone app (Release, signed with a personal
+development team) on an iPhone XS Max. The owner ran the checklist by hand
+and every step passed: the TV opened a room with code and QR and took no
+remote focus; the Local Network prompt showed Huddle's text; joining by QR
+and by typed code; Trivia alone, Bomb Squad and Sumo Bumpers with three bots
+joined from the Mac over Wi-Fi; locking the phone mid-game; the TV's Home
+button for 30 seconds and a force-close and reopen kept the room, the
+players and the Host; Local Network turned off showed its screen; leaving;
+the largest text size and Reduce Motion. A screenshot of the TV confirmed
+the invitation screen, and the room host answered `welcome` from the Mac.
+
+Not covered yet: switching the iPhone's Wi-Fi off and on mid-game, an
+Android phone (including the release `ws://` setting), a physical Apple TV,
+and a guest Wi-Fi that blocks devices (needs the relay, deferred).
 
 ### Rate limits, bad arguments and hidden join screens
 
