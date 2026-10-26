@@ -214,16 +214,20 @@ export function lanTvRoomClient(): TvRoomClient {
   }
 
   async function ensureHost(): Promise<RoomHost> {
-    if (host !== undefined) return host;
     starting ??= (async () => {
-      const created = new RoomHost(ports, readSnapshot());
-      host = created;
-      if (created.restored) restoredRoomId = created.info().roomId;
-      created.subscribeTv(publish);
-      wireServer(created);
-      await startServer(created);
-      return created;
-    })();
+      if (host === undefined) {
+        const created = new RoomHost(ports, readSnapshot());
+        host = created;
+        if (created.restored) restoredRoomId = created.info().roomId;
+        created.subscribeTv(publish);
+        wireServer(created);
+      }
+      await startServer(host);
+      return host;
+    })().catch((error: unknown) => {
+      starting = undefined;
+      throw error;
+    });
     return await starting;
   }
 
@@ -233,15 +237,13 @@ export function lanTvRoomClient(): TvRoomClient {
   }
 
   return {
-    deployed: true,
     openRoom: async (): Promise<OpenRoom> => {
       const running = await ensureHost();
       const info = running.info();
       return { roomId: info.roomId, code: info.code, restored: info.roomId === restoredRoomId, hasRunningGame: info.hasRunningGame };
     },
-    heartbeat: async () => {},
-    useView: <Name extends TvViewName>(name: Name, viewer: Parameters<TvRoomClient['useView']>[1]) =>
-      useSyncExternalStore(subscribe, () => (viewer === undefined || store === undefined ? undefined : store.views[name])),
+    useView: <Name extends TvViewName>(name: Name, enabled = true) =>
+      useSyncExternalStore(subscribe, () => (!enabled || store === undefined ? undefined : store.views[name])),
     useStillOpen: (roomId) => useSyncExternalStore(subscribe, () => (store === undefined ? undefined : store.roomId === roomId)),
     useLanJoin: () => useSyncExternalStore(subscribe, () => store?.lan ?? lan),
   };

@@ -8,11 +8,6 @@ export type OpenRoom = {
   readonly hasRunningGame: boolean;
 };
 
-export type TvViewer = {
-  readonly roomId: string;
-  readonly tvSessionToken: string;
-};
-
 export type RosterSeat = ViewValue<'roster'>[number];
 export type SeatArrival = ViewValue<'arrivals'>[number];
 
@@ -36,10 +31,8 @@ export type TvViews = {
 export type TvViewName = keyof TvViews;
 
 export type TvRoomClient = {
-  readonly deployed: boolean;
-  readonly openRoom: (tvSessionToken: string) => Promise<OpenRoom>;
-  readonly heartbeat: (tvSessionToken: string) => Promise<void>;
-  readonly useView: <Name extends TvViewName>(name: Name, viewer: TvViewer | undefined) => TvViews[Name] | undefined;
+  readonly openRoom: () => Promise<OpenRoom>;
+  readonly useView: <Name extends TvViewName>(name: Name, enabled?: boolean) => TvViews[Name] | undefined;
   readonly useStillOpen: (roomId: string) => boolean | undefined;
   readonly useLanJoin: () => LanJoin | undefined;
 };

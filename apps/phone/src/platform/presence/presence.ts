@@ -1,13 +1,13 @@
 import { HEARTBEAT_INTERVAL_MS } from '@huddle/domain';
 
-import type { SessionTokenStore } from '../session';
+export type TokenSource = { readonly read: () => Promise<string | null> };
 
 export type Heartbeat = (sessionToken: string) => Promise<unknown>;
 
 export type ForegroundWatch = (onChange: (inForeground: boolean) => void) => () => void;
 
 export function keepPresent(
-  store: SessionTokenStore,
+  store: TokenSource,
   beat: Heartbeat,
   watchForeground: ForegroundWatch,
   interval: number = HEARTBEAT_INTERVAL_MS,

@@ -1,18 +1,8 @@
 import type { GuestProfileV1 } from '@huddle/domain';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 
-import {
-  forgetSession,
-  rememberSession,
-  resumeSession,
-  resumeReportState,
-  shouldClearRestoredCredential,
-  type ResumeLookupResult,
-  type PlayerSession,
-  type SessionTokenStatus,
-} from './session';
 import { useRoomClient } from '../room-client/native';
-import { phoneSessionTokenStore } from './native';
+import type { PlayerSession } from './session';
 
 export type PhoneSessionContextValue = {
   readonly session: PlayerSession | null | undefined;
@@ -34,156 +24,93 @@ export type PhoneSessionContextValue = {
 const PhoneSessionContext = createContext<PhoneSessionContextValue | null>(null);
 
 const RESTORED_SEAT_GONE = 'Your seat was freed while Huddle was closed. Join again with the code on the TV.';
+const RESTORE_LIMIT_MS = 5_000;
+const JOIN_WELCOME_MS = 4_600;
 
 export function PhoneSessionProvider({ children }: PropsWithChildren) {
-  const { lookupSession } = useRoomClient();
+  const room = useRoomClient();
   const [session, setSession] = useState<PlayerSession | null | undefined>();
+  const [sessionToken, setSessionToken] = useState<string>();
   const [restoringToken, setRestoringToken] = useState(false);
   const [joinWelcomeUntil, setJoinWelcomeUntil] = useState<number>();
+  const [notice, setNotice] = useState<string>();
+  const [rememberedProfile, setRememberedProfile] = useState<GuestProfileV1>();
+  // A join or leave during the launch restore wins over whatever the restore finds.
+  const decided = useRef(false);
+  const leaving = useRef(false);
+
   useEffect(() => {
     if (joinWelcomeUntil === undefined) return;
     const timer = setTimeout(() => setJoinWelcomeUntil(undefined), Math.max(0, joinWelcomeUntil - Date.now()));
     return () => clearTimeout(timer);
   }, [joinWelcomeUntil]);
-  const [sessionToken, setSessionToken] = useState<string>();
-  const [notice, setNotice] = useState<string>();
-  const [rememberedProfile, setRememberedProfile] = useState<GuestProfileV1>();
-  const candidateTokenRef = useRef<string | undefined>(undefined);
-  const activeSessionRef = useRef<PlayerSession | null | undefined>(undefined);
-  const activeTokenRef = useRef<string | undefined>(undefined);
-  const ignoreLateResumeRef = useRef(false);
-  const deliberateLeaveRef = useRef(false);
-  const credentialRevisionRef = useRef(0);
-  const restoreLookupResultRef = useRef<ResumeLookupResult>('pending');
-  const restoreNullClearedRef = useRef(false);
 
-  const clearPersistedCredential = useCallback(() => {
-    const revision = credentialRevisionRef.current;
-    void forgetSession(phoneSessionTokenStore).then(() => {
-      if (credentialRevisionRef.current === revision) return;
-      const currentToken = activeTokenRef.current;
-      if (currentToken !== undefined) void rememberSession(phoneSessionTokenStore, currentToken);
-    });
+  const seat = useCallback((next: PlayerSession | null, token: string | undefined) => {
+    setSession(next);
+    setSessionToken(next === null ? undefined : token);
+    if (next === null) setJoinWelcomeUntil(undefined);
   }, []);
 
   useEffect(() => {
-    restoreLookupResultRef.current = 'pending';
-    return resumeSession(
-      phoneSessionTokenStore,
-      async (token) => {
-        candidateTokenRef.current = token;
-        try {
-          const result = await lookupSession(token);
-          restoreLookupResultRef.current = result === null ? 'null' : 'seat';
-          return result;
-        } catch (error) {
-          restoreLookupResultRef.current = 'failed';
-          throw error;
-        }
-      },
-      (late) => {
-        setRestoringToken(false);
-        const next = resumeReportState({
-          current: activeSessionRef.current,
-          currentToken: activeTokenRef.current,
-          candidateToken: candidateTokenRef.current,
-          late,
-          ignoreLateResume: ignoreLateResumeRef.current,
-        });
-        activeSessionRef.current = next.session;
-        activeTokenRef.current = next.sessionToken;
-        setSession(next.session);
-        setSessionToken(next.sessionToken);
-
-        if (
-          !restoreNullClearedRef.current &&
-          shouldClearRestoredCredential({
-            lookupResult: restoreLookupResultRef.current,
-            reported: late,
-            current: next.session,
-            ignoreLateResume: ignoreLateResumeRef.current,
-          })
-        ) {
-          restoreNullClearedRef.current = true;
-          clearPersistedCredential();
-          setNotice(RESTORED_SEAT_GONE);
-        }
-      },
-      undefined,
-      (status: SessionTokenStatus) => {
-        if (status === 'present') {
-          setRestoringToken(true);
-        } else {
-          if (ignoreLateResumeRef.current || (activeSessionRef.current !== undefined && activeSessionRef.current !== null)) return;
-          setRestoringToken(false);
-          activeSessionRef.current = null;
-          activeTokenRef.current = undefined;
-          setSessionToken(undefined);
-          setJoinWelcomeUntil(undefined);
-    setSession(null);
-        }
-      },
-    );
-  }, [clearPersistedCredential, lookupSession]);
+    let live = true;
+    void (async () => {
+      const token = await room.savedSeatToken();
+      if (!live || decided.current) return;
+      if (token === undefined) {
+        seat(null, undefined);
+        return;
+      }
+      setRestoringToken(true);
+      const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), RESTORE_LIMIT_MS));
+      const found = await Promise.race([room.lookupSession(token), timeout]).catch(() => 'unreachable' as const);
+      if (!live || decided.current) return;
+      setRestoringToken(false);
+      if (found === null) {
+        // The TV answered and the seat is gone.
+        await room.forgetSeat(token);
+        setNotice(RESTORED_SEAT_GONE);
+      }
+      seat(typeof found === 'object' && found !== null ? found : null, token);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [room, seat]);
 
   const completeJoin = useCallback((next: PlayerSession & { readonly sessionToken: string }) => {
     const { sessionToken: joinedToken, ...publicSeat } = next;
-    credentialRevisionRef.current += 1;
-    deliberateLeaveRef.current = false;
-    ignoreLateResumeRef.current = true;
-    activeSessionRef.current = publicSeat;
-    activeTokenRef.current = joinedToken;
-    setSessionToken(joinedToken);
-    setSession(publicSeat);
-    setJoinWelcomeUntil(Date.now() + 4600);
+    decided.current = true;
+    leaving.current = false;
+    setRestoringToken(false);
+    seat(publicSeat, joinedToken);
+    setJoinWelcomeUntil(Date.now() + JOIN_WELCOME_MS);
     setNotice(undefined);
-  }, []);
+  }, [seat]);
 
-  const rememberProfile = useCallback((profile: GuestProfileV1) => {
-    setRememberedProfile(profile);
-  }, []);
-
+  const rememberProfile = useCallback((profile: GuestProfileV1) => setRememberedProfile(profile), []);
   const beginLeave = useCallback(() => {
-    deliberateLeaveRef.current = true;
+    leaving.current = true;
   }, []);
-
   const cancelLeave = useCallback(() => {
-    deliberateLeaveRef.current = false;
+    leaving.current = false;
   }, []);
 
   const reportSeatLost = useCallback((reason: string) => {
-    ignoreLateResumeRef.current = true;
-    if (deliberateLeaveRef.current) {
-      credentialRevisionRef.current += 1;
-      activeSessionRef.current = null;
-      activeTokenRef.current = undefined;
-      setJoinWelcomeUntil(undefined);
-    setSession(null);
-      setSessionToken(undefined);
-      return;
+    decided.current = true;
+    if (!leaving.current) {
+      setNotice(reason);
+      if (sessionToken !== undefined) void room.forgetSeat(sessionToken);
     }
-    credentialRevisionRef.current += 1;
-    setNotice(reason);
-    activeSessionRef.current = null;
-    activeTokenRef.current = undefined;
-    setJoinWelcomeUntil(undefined);
-    setSession(null);
-    setSessionToken(undefined);
-    clearPersistedCredential();
-  }, [clearPersistedCredential]);
+    seat(null, undefined);
+  }, [room, seat, sessionToken]);
 
   const leave = useCallback(async () => {
-    credentialRevisionRef.current += 1;
-    deliberateLeaveRef.current = true;
-    ignoreLateResumeRef.current = true;
-    activeSessionRef.current = null;
-    activeTokenRef.current = undefined;
-    await forgetSession(phoneSessionTokenStore);
+    decided.current = true;
+    leaving.current = true;
+    if (sessionToken !== undefined) await room.forgetSeat(sessionToken);
     setNotice(undefined);
-    setJoinWelcomeUntil(undefined);
-    setSession(null);
-    setSessionToken(undefined);
-  }, []);
+    seat(null, undefined);
+  }, [room, seat, sessionToken]);
 
   const clearNotice = useCallback(() => setNotice(undefined), []);
   const value = useMemo<PhoneSessionContextValue>(() => ({
@@ -201,7 +128,7 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     reportSeatLost,
     leave,
     clearNotice,
-  }), [joinWelcomeUntil, beginLeave, cancelLeave, clearNotice, completeJoin, leave, notice, rememberProfile, rememberedProfile, reportSeatLost, restoringToken, session, sessionToken]);
+  }), [beginLeave, cancelLeave, clearNotice, completeJoin, joinWelcomeUntil, leave, notice, rememberProfile, rememberedProfile, reportSeatLost, restoringToken, session, sessionToken]);
 
   return <PhoneSessionContext.Provider value={value}>{children}</PhoneSessionContext.Provider>;
 }

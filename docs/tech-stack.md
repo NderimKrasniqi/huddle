@@ -48,7 +48,7 @@ directory reach-through, enforce those boundaries.
 | Expo Splash Screen | `~57.0.5` | font/frame-coordinated startup |
 | Expo Crypto | `~57.0.1` | local guest UUID generation |
 | AsyncStorage | `~2.2.0` | non-secret GuestProfileV1 |
-| Expo SecureStore | `~57.0.1` | Phone/TV session credentials |
+| Expo SecureStore | `~57.0.1` | the phone's seat record (Session Token and TV address) |
 
 Both Expo layouts call `useFonts` for Nunito and keep the native splash visible
 until fonts and the first frame are ready. The shared

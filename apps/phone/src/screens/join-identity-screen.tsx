@@ -31,8 +31,7 @@ import { codeEntry, nicknameEntry } from '../features/join/join-entry';
 import { useScreenFocused, useSeatPreview } from '../features/join/native';
 import { hostControlFailureMessage } from '../features/room';
 import { useRoomClient } from '../platform/room-client/native';
-import { phoneSessionTokenStore } from '../platform/session/native';
-import { joinScreenState, rememberSession, usePhoneSession } from '../platform/session';
+import { joinScreenState, usePhoneSession } from '../platform/session';
 import { phoneIdentityStore } from '../platform/storage/native';
 import { ConnectionProblemScreen } from './connection-problem-screen';
 import { PhoneFrame, PhoneNotice, PhoneTopBar } from './seated/phone-frame';
@@ -279,7 +278,6 @@ export default function JoinIdentityScreen() {
       });
       completeJoin(session);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await rememberSession(phoneSessionTokenStore, session.sessionToken);
       const nextProfile: GuestProfileV1 = {
         version: 1,
         guestId: profile.guestId,

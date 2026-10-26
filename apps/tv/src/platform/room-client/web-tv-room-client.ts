@@ -140,15 +140,13 @@ export function webTvRoomClient(): TvRoomClient {
   }
 
   return {
-    deployed: true,
     openRoom: async (): Promise<OpenRoom> => {
       const running = ensureHost();
       const info = running.info();
       return { roomId: info.roomId, code: info.code, restored: info.roomId === restoredRoomId, hasRunningGame: info.hasRunningGame };
     },
-    heartbeat: async () => {},
-    useView: <Name extends TvViewName>(name: Name, viewer: Parameters<TvRoomClient['useView']>[1]) =>
-      useSyncExternalStore(subscribe, () => (viewer === undefined || store === undefined ? undefined : store.views[name])),
+    useView: <Name extends TvViewName>(name: Name, enabled = true) =>
+      useSyncExternalStore(subscribe, () => (!enabled || store === undefined ? undefined : store.views[name])),
     useStillOpen: (roomId) => useSyncExternalStore(subscribe, () => (store === undefined ? undefined : store.roomId === roomId)),
     useLanJoin: () => useSyncExternalStore(subscribe, () => lan),
   };

@@ -198,9 +198,6 @@ importers:
       expo-router:
         specifier: ~57.0.12
         version: 57.0.12(481e7939d3a38fd8a55f941579cb88a4)
-      expo-secure-store:
-        specifier: ~57.0.1
-        version: 57.0.1(expo@57.0.12)
       expo-splash-screen:
         specifier: ~57.0.5
         version: 57.0.6(expo@57.0.12)(typescript@5.9.3)
@@ -7017,9 +7014,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
