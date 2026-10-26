@@ -1,144 +1,48 @@
-import type { LanJoin } from '@huddle/domain';
-import {
-  type HostConnection,
-  type HostPorts,
-  type HostSnapshot,
-  hostThroughRelay,
-  type RelayHost,
-  type RelaySocket,
-  RoomHost,
-  type TvViews as HostViews,
-} from '@huddle/room-host';
+import type { HostConnection, RelaySocket, RoomHost } from '@huddle/room-host';
 import * as Crypto from 'expo-crypto';
 import { File, Paths } from 'expo-file-system';
-import { useSyncExternalStore } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { LAN_PORT, lanServer } from '../lan-server/native';
-import type { OpenRoom, TvRoomClient, TvViewName, TvViews } from './index';
-import { setupView, stable } from './views';
+import { hostedRoom } from './hosted-room';
+import type { TvRoomClient } from './index';
 
-const SAVE_DEBOUNCE_MS = 300;
-const SNAPSHOT_FILE = 'huddle-room-snapshot.json';
-const RELAY_SECRET_FILE = 'huddle-relay-secret.txt';
-const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL;
-
-type Store = {
-  readonly roomId: string;
-  readonly views: TvViews;
-  readonly lan: LanJoin | undefined;
-};
+function file(name: string): File {
+  return new File(Paths.document, `huddle-${name}`);
+}
 
 export function lanTvRoomClient(): TvRoomClient {
-  let host: RoomHost | undefined;
-  let restoredRoomId: string | undefined;
-  let starting: Promise<RoomHost> | undefined;
-  let port = LAN_PORT;
-  let store: Store | undefined;
-  let lan: LanJoin | undefined;
-  const listeners = new Set<() => void>();
-  const connections = new Map<number, HostConnection>();
-  let appState: AppStateStatus = AppState.currentState;
-
-  let relay: RelayHost | undefined;
-  let relayJoin: string | undefined;
-  let advertisedCode: string | undefined;
-
-  const snapshotFile = new File(Paths.document, SNAPSHOT_FILE);
-  let saveTimer: ReturnType<typeof setTimeout> | undefined;
-  let pendingSnapshot: HostSnapshot | undefined;
-
-  const ports: HostPorts = {
-    now: () => Date.now(),
-    setTimer: (afterMs, run) => {
-      const timer = setTimeout(run, afterMs);
-      return () => clearTimeout(timer);
-    },
-    random: () => {
-      const word = new Uint32Array(1);
-      Crypto.getRandomValues(word);
-      return (word[0] ?? 0) / 2 ** 32;
-    },
-    save: (snapshot) => {
-      pendingSnapshot = snapshot;
-      if (saveTimer !== undefined) return;
-      saveTimer = setTimeout(() => {
-        saveTimer = undefined;
-        const latest = pendingSnapshot;
-        pendingSnapshot = undefined;
-        if (latest === undefined) return;
+  const room = hostedRoom(
+    {
+      randomBytes: (count) => Crypto.getRandomValues(new Uint8Array(count)),
+      read: (name) => {
         try {
-          if (!snapshotFile.exists) snapshotFile.create();
-          snapshotFile.write(JSON.stringify(latest));
-        } catch (error) {
-          console.warn('Huddle TV could not save its room', String(error));
+          const target = file(name);
+          return target.exists ? target.textSync() : undefined;
+        } catch {
+          return undefined;
         }
-      }, SAVE_DEBOUNCE_MS);
-    },
-    log: (message, details) => console.warn(message, JSON.stringify(details)),
-  };
-
-  function readSnapshot(): HostSnapshot | undefined {
-    try {
-      return snapshotFile.exists ? (JSON.parse(snapshotFile.textSync()) as HostSnapshot) : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  function relaySecret(): string {
-    const file = new File(Paths.document, RELAY_SECRET_FILE);
-    try {
-      if (file.exists) {
-        const saved = file.textSync().trim();
-        if (saved.length >= 16) return saved;
-      }
-    } catch {
-    }
-    const bytes = new Uint8Array(24);
-    Crypto.getRandomValues(bytes);
-    const secret = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-    try {
-      if (!file.exists) file.create();
-      file.write(secret);
-    } catch (error) {
-      console.warn('Huddle TV could not save its relay secret', String(error));
-    }
-    return secret;
-  }
-
-  function setLan(next: LanJoin | undefined): void {
-    lan = next;
-    if (store !== undefined) store = { ...store, lan };
-    for (const listener of listeners) listener();
-  }
-
-  function withRelay(base: LanJoin | undefined): LanJoin | undefined {
-    if (base === undefined || relayJoin === undefined) return base;
-    return { ...base, relay: relayJoin };
-  }
-
-  function startRelay(running: RoomHost): void {
-    if (RELAY_URL === undefined || RELAY_URL === '' || relay !== undefined) return;
-    const url = RELAY_URL;
-    relay = hostThroughRelay(running, {
-      url,
-      secret: relaySecret(),
-      open: (address) => new WebSocket(address) as unknown as RelaySocket,
-      ports,
-      onState: (state) => {
-        relayJoin = state === 'registered' ? url : undefined;
-        const base = lan === undefined ? undefined : { hosts: lan.hosts, port: lan.port, tvInstanceId: lan.tvInstanceId };
-        setLan(withRelay(base));
       },
-    });
-  }
-
-  function stopRelay(): void {
-    relay?.stop();
-    relay = undefined;
-    relayJoin = undefined;
-  }
+      write: (name, text) => {
+        try {
+          const target = file(name);
+          if (!target.exists) target.create();
+          target.write(text);
+        } catch (error) {
+          console.warn(`Huddle TV could not save ${name}`, String(error));
+        }
+      },
+      // React Native's WebSocket has these members; its handler types name DOM events.
+      openSocket: (url) => new WebSocket(url) as unknown as RelaySocket,
+    },
+    process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL,
+  );
+  const connections = new Map<number, HostConnection>();
+  let port = LAN_PORT;
+  let advertisedCode: string | undefined;
+  let appState: AppStateStatus = AppState.currentState;
+  let starting: Promise<RoomHost> | undefined;
+  let wired = false;
 
   function advertise(code: string): void {
     advertisedCode = code;
@@ -147,36 +51,15 @@ export function lanTvRoomClient(): TvRoomClient {
     });
   }
 
-  function publish(views: HostViews): void {
-    if (advertisedCode !== undefined && advertisedCode !== views.code) {
-      lanServer.stopAdvertising();
-      advertise(views.code);
-    }
-    const previous = store?.roomId === views.roomId ? store.views : undefined;
-    store = {
-      roomId: views.roomId,
-      lan,
-      views: {
-        roster: stable(previous?.roster, views.roster),
-        running: stable(previous?.running, views.running),
-        browsing: views.browsing,
-        setup: stable(previous?.setup, setupView(views.setup)),
-        arrivals: stable(previous?.arrivals, views.arrivals),
-      },
-    };
-    for (const listener of listeners) listener();
-  }
-
-  async function startServer(running: RoomHost): Promise<void> {
+  async function startServer(host: RoomHost): Promise<void> {
     port = await lanServer.start(port);
-    const info = running.info();
-    setLan(withRelay({ hosts: lanServer.addresses(), port, tvInstanceId: info.tvInstanceId }));
-    startRelay(running);
-    advertise(info.code);
+    room.setAddress({ hosts: lanServer.addresses(), port });
+    room.startRelay();
+    advertise(host.info().code);
   }
 
   async function stopServer(): Promise<void> {
-    stopRelay();
+    room.stopRelay();
     advertisedCode = undefined;
     lanServer.stopAdvertising();
     for (const connection of connections.values()) connection.disconnect();
@@ -184,15 +67,16 @@ export function lanTvRoomClient(): TvRoomClient {
     await lanServer.stop();
   }
 
-  function wireServer(running: RoomHost): void {
+  function wire(host: RoomHost): void {
+    if (wired) return;
+    wired = true;
+    room.onCodeChange((code) => {
+      if (advertisedCode === undefined || advertisedCode === code) return;
+      lanServer.stopAdvertising();
+      advertise(code);
+    });
     lanServer.addListener('onOpen', ({ id }) => {
-      connections.set(
-        id,
-        running.connect(
-          (frame) => lanServer.send(id, frame),
-          () => lanServer.close(id),
-        ),
-      );
+      connections.set(id, host.connect((frame) => lanServer.send(id, frame), () => lanServer.close(id)));
     });
     lanServer.addListener('onMessage', ({ id, data }) => connections.get(id)?.receive(data));
     lanServer.addListener('onClose', ({ id }) => {
@@ -205,46 +89,24 @@ export function lanTvRoomClient(): TvRoomClient {
       appState = next;
       // Apple TV suspends a backgrounded app within seconds, so stop serving and mark the TV away.
       if (wasActive && next === 'background') {
-        running.setTvAway(true);
+        host.setTvAway(true);
         void stopServer();
       } else if (!wasActive && next === 'active') {
-        void startServer(running).then(() => running.setTvAway(false));
+        void startServer(host).then(() => host.setTvAway(false));
       }
     });
   }
 
-  async function ensureHost(): Promise<RoomHost> {
+  return room.client(() => {
     starting ??= (async () => {
-      if (host === undefined) {
-        const created = new RoomHost(ports, readSnapshot());
-        host = created;
-        if (created.restored) restoredRoomId = created.info().roomId;
-        created.subscribeTv(publish);
-        wireServer(created);
-      }
+      const host = room.host();
+      wire(host);
       await startServer(host);
       return host;
     })().catch((error: unknown) => {
       starting = undefined;
       throw error;
     });
-    return await starting;
-  }
-
-  function subscribe(listener: () => void): () => void {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }
-
-  return {
-    openRoom: async (): Promise<OpenRoom> => {
-      const running = await ensureHost();
-      const info = running.info();
-      return { roomId: info.roomId, code: info.code, restored: info.roomId === restoredRoomId, hasRunningGame: info.hasRunningGame };
-    },
-    useView: <Name extends TvViewName>(name: Name, enabled = true) =>
-      useSyncExternalStore(subscribe, () => (!enabled || store === undefined ? undefined : store.views[name])),
-    useStillOpen: (roomId) => useSyncExternalStore(subscribe, () => (store === undefined ? undefined : store.roomId === roomId)),
-    useLanJoin: () => useSyncExternalStore(subscribe, () => store?.lan ?? lan),
-  };
+    return starting;
+  });
 }

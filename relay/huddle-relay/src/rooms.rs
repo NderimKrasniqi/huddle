@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use axum::extract::ws::{CloseFrame, Message};
+use axum::http::HeaderMap;
 use tokio::sync::mpsc::Sender;
 
 use crate::limits::{
@@ -33,6 +34,7 @@ pub struct Relay {
     inner: Mutex<Inner>,
     next_id: AtomicU64,
     max_per_ip: u32,
+    trust_proxy: bool,
 }
 
 pub fn close_frame(code: u16, reason: &'static str) -> Message {
@@ -47,11 +49,12 @@ fn valid_code(code: &str) -> bool {
 }
 
 impl Relay {
-    pub fn new(max_per_ip: u32) -> Self {
+    pub fn new(max_per_ip: u32, trust_proxy: bool) -> Self {
         Self {
             inner: Mutex::default(),
             next_id: AtomicU64::default(),
             max_per_ip,
+            trust_proxy,
         }
     }
 
@@ -63,6 +66,19 @@ impl Relay {
 
     fn next(&self) -> u64 {
         self.next_id.fetch_add(1, Ordering::Relaxed) + 1
+    }
+
+    // Behind a trusted proxy the socket shows the proxy; the last X-Forwarded-For entry is the one it appended.
+    pub fn client_ip(&self, peer: IpAddr, headers: &HeaderMap) -> IpAddr {
+        if !self.trust_proxy {
+            return peer;
+        }
+        headers
+            .get("x-forwarded-for")
+            .and_then(|value| value.to_str().ok())
+            .and_then(|list| list.rsplit(',').next())
+            .and_then(|last| last.trim().parse().ok())
+            .unwrap_or(peer)
     }
 
     pub fn acquire_ip(&self, ip: IpAddr) -> bool {

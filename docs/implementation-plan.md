@@ -14,10 +14,9 @@ In order of value:
    Wi-Fi off and on mid-game, an Android phone (including the release `ws://`
    setting), and a physical Apple TV.
 2. **Host the relay** (deferred by the owner on 2026-10-26). Needed only for
-   guest Wi-Fi that blocks devices, phones on mobile data, and web TVs. Any
-   proxied host needs `HUDDLE_RELAY_MAX_PER_IP` raised, or the relay must read
-   `X-Forwarded-For`, and the apps need the production
-   `EXPO_PUBLIC_HUDDLE_RELAY_URL` over `wss://`.
+   guest Wi-Fi that blocks devices, phones on mobile data, and web TVs. Run it
+   behind a host that terminates TLS with `HUDDLE_RELAY_TRUST_PROXY=1`, and
+   build the apps with the production `EXPO_PUBLIC_HUDDLE_RELAY_URL` (`wss://`).
 3. **Web TVs (Samsung Tizen, LG webOS).** Load CanvasKit so Skia art draws on
    the web, mark the TV away when the page is hidden, and test on real TV
    browsers.
@@ -57,6 +56,23 @@ dependencies are in `.workflow/tasks.json`.
 ## Validation ledger
 
 Most recent first.
+
+### Audit follow-ups
+
+The room host's view projections, setup helpers and game event pipeline
+moved to `views.ts`, `setup.ts` and `game-runtime.ts` (`room-host.ts` from
+1,086 to 942 lines). Both TV shells run on one core, `hosted-room.ts`. The
+phone's commands and views take the Session Token directly, and its link
+class lives in `tv-link.ts`. The relay reads the client address from
+`X-Forwarded-For` behind a trusted proxy (`HUDDLE_RELAY_TRUST_PROXY=1`).
+The architecture validator dropped its rules for long-deleted paths and
+splits its rules into `tools/architecture/`. Bomb Squad and Sumo Bumpers
+build their text component with `themedGameText` from `@huddle/ui/game-kit`.
+Checked: typecheck, lint, both validators (and two deliberate violations they
+caught), `pnpm relay:check`, the web TV export, the trivia, bomb-squad, sumo
+and host-handoff flows, two relay clients behind one proxy address, and the
+Apple TV app opening a room, seating a bot, and keeping the room through the
+background and a restart.
 
 ### Session and presence cleanup
 

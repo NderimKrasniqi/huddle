@@ -1,10 +1,6 @@
 import type { CommandArgs, CommandName, CommandResult, ViewValue } from '@huddle/contracts/protocol';
 import type { LanJoin, RunningGameResponse } from '@huddle/domain';
 
-export type SeatCredential = {
-  readonly roomId: string;
-  readonly sessionToken: string;
-};
 
 export type PlayerSession = NonNullable<ViewValue<'session'>>;
 export type RosterSeat = ViewValue<'roster'>[number];
@@ -38,9 +34,9 @@ export type SeatCommandName = Exclude<
 >;
 
 export type RoomClient = {
-  readonly useView: <Name extends RoomViewName>(name: Name, seat: SeatCredential | undefined) => RoomViews[Name] | undefined;
+  readonly useView: <Name extends RoomViewName>(name: Name, sessionToken: string | undefined) => RoomViews[Name] | undefined;
   readonly useJoinAvailability: (code: string | undefined) => JoinAvailability | undefined;
-  readonly command: <Name extends SeatCommandName>(name: Name, seat: SeatCredential, args: CommandArgs<Name>) => Promise<void>;
+  readonly command: <Name extends SeatCommandName>(name: Name, sessionToken: string, args: CommandArgs<Name>) => Promise<void>;
   readonly joinRoom: (args: CommandArgs<'joinRoom'>) => Promise<JoinedSeat>;
   readonly lookupSession: (sessionToken: string) => Promise<PlayerSession | null>;
   readonly savedSeatToken: () => Promise<string | undefined>;

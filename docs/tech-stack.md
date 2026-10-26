@@ -110,7 +110,7 @@ art, props, setting icons, status illustrations, brand); each game keeps its
 world art in its own `assets/`; launcher and splash derivatives are in
 `packages/ui/assets/app-icons`, produced by `tools/generate-app-icons.py` from
 the supplied Huddle-Platform app artwork. These are implementation assets, not
-source masters. `tools/validate-architecture.py` validates each runtime bundle
+source masters. `tools/validate-architecture.py` (rules in `tools/architecture/`) validates each runtime bundle
 directly for its exact file set, dimensions, alpha, and SHA-256 digests
 without requiring a design manifest or source-master tree.
 
