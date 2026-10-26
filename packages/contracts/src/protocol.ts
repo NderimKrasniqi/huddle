@@ -249,7 +249,12 @@ export type HostMessage =
 
 export type Decoded<Message> =
   | { readonly ok: true; readonly message: Message }
-  | { readonly ok: false; readonly rejection: { readonly kind: 'badMessage' } };
+  | {
+      readonly ok: false;
+      readonly rejection: { readonly kind: 'badMessage' };
+      /** Set when the frame was a command whose arguments failed, so it can be answered. */
+      readonly requestId?: number;
+    };
 
 const BAD_MESSAGE = { ok: false, rejection: { kind: 'badMessage' } } as const;
 
@@ -269,7 +274,7 @@ export function decodeClientMessage(raw: string): Decoded<ClientMessage> {
   const message = parsed.data;
   if (message.type !== 'command') return { ok: true, message };
   const args = COMMAND_ARGS[message.name].safeParse(message.args);
-  if (!args.success) return BAD_MESSAGE;
+  if (!args.success) return { ...BAD_MESSAGE, requestId: message.requestId };
   return { ok: true, message: { ...message, args: args.data } as ClientMessage };
 }
 

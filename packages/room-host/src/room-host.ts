@@ -415,6 +415,11 @@ export class RoomHost {
     if (this.disposed || !this.connections.has(connection.id)) return;
     connection.lastFrameAt = this.ports.now();
     const decoded = decodeClientMessage(frame);
+    if (!decoded.ok && decoded.requestId !== undefined && connection.greeted) {
+      // A command with arguments out of range is refused, not punished with a disconnect.
+      this.sendTo(connection, { type: 'result', requestId: decoded.requestId, ok: false, rejection: decoded.rejection });
+      return;
+    }
     if (!decoded.ok) {
       connection.close();
       this.connections.delete(connection.id);
@@ -446,14 +451,17 @@ export class RoomHost {
       return;
     }
     const { requestId, name, args } = message;
+    this.limiter.begin();
     try {
       let value: unknown = null;
       this.change(() => {
         if (seat !== undefined) this.touch(seat);
         value = this.run(connection, name, args as never);
       });
+      this.limiter.commit();
       this.sendTo(connection, { type: 'result', requestId, ok: true, value });
     } catch (error) {
+      this.limiter.rollback();
       const rejection: RoomRejection = error instanceof Refusal ? error.rejection : { kind: 'hostError' };
       if (!(error instanceof Refusal)) this.ports.log?.('Huddle room host error', { command: name });
       this.sendTo(connection, { type: 'result', requestId, ok: false, rejection });

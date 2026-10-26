@@ -457,6 +457,26 @@ explicit owner approval.
 
 ## Validation ledger
 
+### Rate limits, bad arguments and hidden join screens
+
+- The rate limiter journals each command: a refused command (a taken name,
+  not the Host, a rate limit) gets its tokens back, as the Convex
+  transactions did. Numbers are unchanged.
+- A command whose arguments fail the protocol's limits (a fractional browse
+  index, a 300-character nickname) now gets a `badMessage` result and keeps
+  its connection; only frames that are not valid messages close it.
+  `decodeClientMessage` reports the `requestId` for that case; the wire format
+  and `PROTOCOL_VERSION` are unchanged.
+- The phone asks for room availability only from the visible screen
+  (`useScreenFocused` in the join feature), so join screens left under newer
+  ones stop asking every three seconds.
+
+Checked with a fake-clock script (400 refused Host commands, over the
+240-token burst, all came back `notHost` and never `rateLimited`; bad
+arguments got `badMessage` with the connection open), all six e2e flows on
+the LAN plus Trivia relay-only, `pnpm typecheck`, `pnpm lint`,
+`pnpm validate:architecture` and `pnpm validate:workflow`.
+
 ### Android cleartext and two review follow-ups
 
 - The phone's `plugins/with-lan-cleartext.js` (registered in `app.json`) sets
@@ -497,10 +517,11 @@ redaction rules matched. Fixed:
 Checked with a fake-clock script against `RoomHost` (TV back after 30 s and a
 restart 20 s later leave nobody away; 13 s of real silence still does), all
 six e2e flows, `pnpm typecheck`, `pnpm lint` and `pnpm validate:architecture`.
-Left open: refused commands spend rate-limit tokens; out-of-range frames
-close the socket instead of returning a rejection; the room code reaches any
-connection in `welcome`. Fixed afterwards: idle unseated connections and
-ping flushes (next entry).
+Fixed afterwards: idle unseated connections and ping flushes, refused
+commands spending rate-limit tokens, and out-of-range arguments closing the
+socket (the entries above). Kept on purpose: the room code in `welcome`, because
+the TV already announces it on the network through Bonjour and a relay phone
+must know it to connect.
 
 ### TASK-23 web TV smoke test
 

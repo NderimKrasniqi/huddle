@@ -28,7 +28,7 @@ import { joinFailureMessage } from '../features/join/join-rejection';
 import { lanFromJoinParams } from '../features/scan';
 import { rememberProfile as persistProfile, loadGuestProfile } from '../features/join/identity';
 import { codeEntry, nicknameEntry } from '../features/join/join-entry';
-import { useSeatPreview } from '../features/join/native';
+import { useScreenFocused, useSeatPreview } from '../features/join/native';
 import { hostControlFailureMessage } from '../features/room';
 import { useRoomClient } from '../platform/room-client/native';
 import { phoneSessionTokenStore } from '../platform/session/native';
@@ -98,7 +98,8 @@ export default function JoinIdentityScreen() {
   useMemo(() => {
     if (linkedLan !== undefined) room.rememberTv?.(code, linkedLan);
   }, [code, linkedLan, room]);
-  const availability = room.useJoinAvailability(code.length === ROOM_CODE_LENGTH ? code : undefined);
+  const focused = useScreenFocused();
+  const availability = room.useJoinAvailability(focused && code.length === ROOM_CODE_LENGTH ? code : undefined);
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');
   const [chosenAvatarId, setAvatarId] = useState<AvatarId>('fox');
