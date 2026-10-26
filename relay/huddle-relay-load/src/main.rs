@@ -1,19 +1,3 @@
-//! Load check for the Huddle relay (TASK-22): simulated TVs and phones.
-//!
-//! Each room is one TV connection that registers a code and answers every
-//! phone frame with a view-sized frame, and `--phones` phone connections that
-//! each send `--rate` frames a second. Frames carry the time they were sent,
-//! so the binary measures how long the relay takes to forward phone → TV and
-//! TV → phone (on this machine's clock, so its own scheduling counts too).
-//!
-//! ```sh
-//! cargo run --release -p huddle-relay-load -- --url ws://127.0.0.1:8787 \
-//!   --rooms 1000 --phones 10 --rate 1 --seconds 60 --ramp 20
-//! ```
-//!
-//! The relay must allow this many connections from one address:
-//! `HUDDLE_RELAY_MAX_PER_IP=20000`.
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
@@ -24,9 +8,7 @@ use tokio::time::{MissedTickBehavior, interval, sleep, timeout};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 
-/// About the size of a phone command.
 const PHONE_PAD: usize = 160;
-/// About the size of a view the TV pushes back.
 const VIEW_PAD: usize = 1_000;
 
 struct Options {
@@ -78,7 +60,6 @@ struct Counters {
     failures: AtomicU64,
 }
 
-/// What the TV gets from the relay.
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum FromRelay {
@@ -112,8 +93,6 @@ fn stamped(start: Instant, pad: usize) -> String {
     format!(r#"{{"t":{},"pad":"{}"}}"#, micros(start), "x".repeat(pad))
 }
 
-/// One TV: registers its code, then answers every phone frame. Returns the
-/// phone → TV forward times in microseconds.
 async fn run_tv(
     url: String,
     code: String,
@@ -127,7 +106,6 @@ async fn run_tv(
         counters.failures.fetch_add(1, Ordering::Relaxed);
         return times;
     };
-    // A fixed secret per code, so a rerun within the relay's grace window reclaims it.
     let register =
         format!(r#"{{"type":"register","code":"{code}","secret":"huddle-load-{code}-secret"}}"#);
     if socket.send(Message::text(register)).await.is_err() {
@@ -174,8 +152,6 @@ async fn run_tv(
     times
 }
 
-/// One phone: sends `rate` frames a second until `until`. Returns the TV →
-/// phone forward times in microseconds.
 async fn run_phone(
     url: String,
     code: String,
@@ -219,7 +195,6 @@ async fn run_phone(
     if closed_early {
         counters.failures.fetch_add(1, Ordering::Relaxed);
     }
-    // Collect the replies still in flight, then leave.
     let _ = timeout(Duration::from_secs(1), async {
         while let Some(Ok(Message::Text(text))) = stream.next().await {
             if let Ok(stamp) = serde_json::from_str::<Stamp>(text.as_str()) {
@@ -281,7 +256,6 @@ async fn main() {
             counters.clone(),
             ready_tx,
         )));
-        // Phones join once their TV holds the code.
         if timeout(Duration::from_secs(10), ready_rx).await.is_ok() {
             for _ in 0..options.phones {
                 phones.push(tokio::spawn(run_phone(

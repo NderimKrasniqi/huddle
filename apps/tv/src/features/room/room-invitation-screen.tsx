@@ -28,11 +28,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTvReducedMotion } from '../../ui';
 
-
-/** The room's seat count comes from the room rules, not from the avatar set. */
 const PLAYER_CAPACITY = ROOM_PLAYER_CAP;
 
-/** A seat's portrait arriving: from 0.9 and transparent, never from nothing. */
 function seatArrival(delay: number) {
   return new Keyframe({
     0: { opacity: 0, transform: [{ scale: 0.9 }] },
@@ -43,7 +40,6 @@ function seatArrival(delay: number) {
     .reduceMotion(ReduceMotion.System);
 }
 
-/** Someone new dropping into their seat: a rare, happy moment, so it bounces once. */
 const SEAT_DROP_IN = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: -60 }, { scale: 0.9 }] },
   60: { opacity: 1, transform: [{ translateY: 6 }, { scale: 1.04 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -52,12 +48,10 @@ const SEAT_DROP_IN = new Keyframe({
   .duration(520)
   .reduceMotion(ReduceMotion.System);
 
-/** How far a seat rises: the middle seats sit highest, like a row round the couch. */
 function arcLift(position: number): number {
   return Math.round(Math.sin((Math.PI * (position + 0.5)) / PLAYER_CAPACITY) * 64);
 }
 
-/** The stable roster data needed by the display-only invitation renderer. */
 export type RoomInvitationPlayer = {
   readonly id: string;
   readonly name: string;
@@ -66,7 +60,6 @@ export type RoomInvitationPlayer = {
   readonly away?: boolean;
 };
 
-/** Someone on the join form: the avatar and name they are picking. */
 type RoomInvitationArrival = {
   readonly id: string;
   readonly name: string;
@@ -75,20 +68,13 @@ type RoomInvitationArrival = {
 
 export type RoomInvitationScreenProps = {
   readonly welcomeIds?: readonly string[];
-  /** People still on the join form; they fill the next empty seats, faded. */
   readonly arriving?: readonly RoomInvitationArrival[];
   readonly roomCode: string;
   readonly joinUrl: string;
   readonly players?: readonly RoomInvitationPlayer[];
-  /** Overrides the system setting in previews and tests. */
   readonly reduceMotion?: boolean;
 };
 
-/**
- * The TV room: the join code as four tiles that match the phone's four input
- * boxes, the QR code beside them, the room's ten seats, and who is running
- * it. Display-only; phones do the joining.
- */
 export function RoomInvitationScreen({
   roomCode,
   joinUrl,
@@ -103,8 +89,6 @@ export function RoomInvitationScreen({
   const visiblePlayers = players.slice(0, PLAYER_CAPACITY);
   const joined = visiblePlayers.length;
   const hostName = visiblePlayers.find((player) => player.host)?.name.trim();
-  // Seats present when the room first appears cascade in; anyone joining
-  // afterwards arrives on their own, without waiting on a stagger.
   const [firstShow, setFirstShow] = useState(true);
   useEffect(() => {
     const timer = setTimeout(() => setFirstShow(false), PLAYER_CAPACITY * playroomMotion.stagger + playroomMotion.entrance);
@@ -114,7 +98,6 @@ export function RoomInvitationScreen({
   return (
     <View style={styles.viewport} pointerEvents="none" focusable={false} accessible={false} testID="room-invitation-viewport">
       <PlayroomTvStage testID="room-invitation-stage">
-        {/* The lounge sets the scene behind everything; the code is the hero. */}
         <PlayroomMoment art="lounge" width={1100} height={550} glow style={styles.backdrop} />
         <View style={styles.stack} pointerEvents="none" focusable={false}>
           <PlayroomText accessibilityRole="header" style={[playroomTv.type.heading, styles.center]} testID="room-invitation-heading">
@@ -187,7 +170,6 @@ export function RoomInvitationScreen({
                 <EmptySlot position={position} />
               );
               return (
-                // Seats are keyed by place, so a departure never shifts the row.
                 <View key={`seat-${position}`} style={{ marginBottom: arcLift(position) }}>
                   <Fragment key={arrival ? `arriving-${arrival.id}` : player ? player.id : 'empty'}>{seat}</Fragment>
                 </View>
@@ -208,7 +190,6 @@ function JoinedPlayer({
 }: {
   readonly player: RoomInvitationPlayer;
   readonly arrivalDelay: number;
-  /** Joined while the room was already showing: drop in and light up the name. */
   readonly justArrived?: boolean;
   readonly reduceMotion: boolean;
 }) {
@@ -241,7 +222,6 @@ function JoinedPlayer({
   );
 }
 
-/** Someone choosing their look on the join form: faded, ringed, gently breathing. */
 function ArrivingSeat({ arrival, reduceMotion }: { readonly arrival: RoomInvitationArrival; readonly reduceMotion: boolean }) {
   const name = arrival.name.trim();
   const breath = useSharedValue(1);
@@ -293,7 +273,6 @@ function EmptySlot({ position }: { readonly position: number }) {
       accessibilityLabel={`Empty player slot ${position + 1}`}
       testID="empty-player-slot"
     >
-      {/* A quiet silhouette: no number, no label. */}
       <View style={styles.empty} pointerEvents="none" focusable={false}>
         <View style={styles.silhouetteHead} />
         <View style={styles.silhouetteBody} />
@@ -308,7 +287,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: playroomColors.canvas,
   },
-  // Behind the seats, not the code: the couch the room gathers round.
   backdrop: { position: 'absolute', left: 410, bottom: 20, opacity: 0.28, alignItems: 'center' },
   stack: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, top: 168, alignItems: 'center', gap: 34 },
   center: { textAlign: 'center' },
@@ -316,11 +294,9 @@ const styles = StyleSheet.create({
   footerLine: { alignSelf: 'stretch', textAlign: 'center' },
   tileLetter: { ...playroomTv.type.codeTile },
   greeting: { position: 'absolute', left: 0, right: 0, bottom: 300, height: 80, alignItems: 'center', justifyContent: 'center' },
-  // The room along the bottom, one row of ten, lifted at the middle like seats round a couch.
   seats: { position: 'absolute', left: playroomTv.safeX, right: playroomTv.safeX, bottom: playroomTv.safeY, alignItems: 'center' },
   welcome: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 24,
     borderRadius: 28, backgroundColor: playroomColors.successSurface },
-  // The code owns the centre; the QR waits off to the right for anyone scanning.
   joinRow: {
     alignSelf: 'stretch',
     alignItems: 'center',
@@ -358,7 +334,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 10,
   },
-  // Seats sit on the room itself; lavender is kept for selection and status.
   grid: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -377,8 +352,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Someone choosing their look: the seat they are heading for, ringed in the
-  // room's orange and held back until they join.
   arrivingRing: {
     width: 100,
     height: 100,
@@ -389,8 +362,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // An open seat reads as an invitation from across the room: a dashed ring
-  // around a soft figure, rather than a grey disc that disappears on the panel.
   empty: {
     width: 100,
     height: 100,
@@ -416,7 +387,6 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: playroomColors.lavender,
   },
-  // A new arrival's name, lit for the few seconds the room says hello.
   nameNew: {
     paddingHorizontal: 12,
     borderRadius: playroomRadii.pill,
@@ -431,7 +401,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     height: playroomTv.type.caption.lineHeight,
   },
-  // A status sits above the head like a little speech tag, clear of the name below.
   tag: {
     position: 'absolute',
     top: -30,
@@ -463,7 +432,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   footerText: {
-    // Long host names wrap inside the 720-wide column instead of clipping.
     flexShrink: 1,
     textAlign: 'left',
   },

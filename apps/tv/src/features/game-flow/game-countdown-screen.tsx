@@ -9,7 +9,6 @@ import { gameTitleFor } from './game-flow-model';
 import type { TvGameSetupScreenProps } from './game-setup-screen';
 import { TvPlayroomFrame } from './playroom-frame';
 
-/** Each number pops from 0.9; never from nothing. */
 const TICK = new Keyframe({
   0: { opacity: 0, transform: [{ scale: 0.9 }] },
   100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -19,10 +18,6 @@ const TICK = new Keyframe({
 
 const RING = 600;
 
-/**
- * The countdown before a game starts. The server owns the deadline and
- * launches the game; this only shows the seconds left on the TV's clock.
- */
 export function TvCountdownScreen({
   gameId,
   gameTitle,
@@ -69,7 +64,6 @@ export function TvCountdownScreen({
   );
 }
 
-/** Whole seconds until the deadline on this device's clock, 0 once it passes. */
 function useSecondsLeft(endsAt: number): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

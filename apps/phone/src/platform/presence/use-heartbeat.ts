@@ -11,7 +11,6 @@ const watchAppForeground: ForegroundWatch = (onChange) => {
   return () => watching.remove();
 };
 
-/** Keeps the current seat present while the phone is foregrounded. */
 export function useHeartbeat(): void {
   const { heartbeat } = useRoomClient();
   useEffect(

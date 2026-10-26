@@ -4,7 +4,6 @@ import type { TextStyle } from 'react-native';
 
 import { bomb, FONT } from './theme';
 
-/** Bomb Squad's type: Nunito at a set size, cream on the night sky by default. */
 export function BombText({
   children,
   size,
@@ -22,7 +21,6 @@ export function BombText({
   readonly color?: string;
   readonly tracking?: number;
   readonly align?: 'center' | 'left';
-  /** Line height as a multiple of the size; the TV sets display type tighter. */
   readonly leading?: number;
   readonly numberOfLines?: number;
   readonly style?: TextStyle;

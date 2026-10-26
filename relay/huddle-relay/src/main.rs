@@ -1,20 +1,3 @@
-//! Huddle relay (ADR-03): lets phones reach a TV that cannot accept incoming
-//! connections, such as a Samsung or LG web TV.
-//!
-//! - A TV opens `GET /v1/host` as a WebSocket and registers its room code with
-//!   a secret. The same secret reclaims the code after a TV restart.
-//! - A phone opens `GET /v1/join/{code}`. Its frames are the Room Protocol and
-//!   reach the TV wrapped as `{ "type": "frame", "id", "data" }`; the TV's
-//!   replies come back unwrapped. The relay never reads `data`.
-//! - The relay keeps no database and no game rules. It enforces frame size,
-//!   rooms, phones per room, connections per IP, per-connection rates, and idle
-//!   and registration timeouts (see `limits`).
-//!
-//! `HUDDLE_RELAY_ADDR` sets the listen address (default `0.0.0.0:8787`);
-//! `HUDDLE_RELAY_MAX_PER_IP` the connections one IP address may hold (default
-//! 64; raise it behind a proxy that hides client addresses, or for a load
-//! check from one machine); `RUST_LOG` sets the log filter. Logs carry codes, ids and counts, never frames.
-
 mod limits;
 mod rooms;
 mod wire;
@@ -42,8 +25,7 @@ use crate::limits::{
 };
 use crate::rooms::{Relay, close_frame};
 
-/// Read buffer per WebSocket. The default (128 KiB) cost 1.5 GB for 11,000
-/// mostly idle connections; frames larger than this still arrive, in pieces.
+// axum's 128 KiB default cost 1.5 GB for 11,000 mostly idle sockets.
 const SOCKET_BUFFER: usize = 4 * 1024;
 use crate::wire::{FromHost, ToHost};
 
@@ -81,7 +63,6 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-/// Returns room codes whose TV never came back, and logs the load now and then.
 fn spawn_sweeper(relay: Arc<Relay>) {
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(10));
@@ -134,7 +115,6 @@ async fn join_upgrade(
         })
 }
 
-/// Sends queued messages to one socket and pings it, until the queue closes.
 async fn write_loop(mut sink: SplitSink<WebSocket, Message>, mut outbox: mpsc::Receiver<Message>) {
     let mut ping = tokio::time::interval(PING_INTERVAL);
     ping.tick().await;
@@ -157,9 +137,7 @@ async fn write_loop(mut sink: SplitSink<WebSocket, Message>, mut outbox: mpsc::R
     let _ = sink.close().await;
 }
 
-/// Ends a connection: closes the outbox, then reads and discards what the peer
-/// still sends until it answers the close (or two seconds pass), so the socket
-/// does not reset before the peer reads the close code.
+// Drain the peer before closing, or the socket resets before the close code arrives.
 async fn finish(
     mut stream: SplitStream<WebSocket>,
     tx: mpsc::Sender<Message>,
@@ -173,8 +151,6 @@ async fn finish(
     let _ = writer.await;
 }
 
-/// The next text frame, or `None` when the connection ends, idles out or
-/// sends something the relay does not accept. Pings and pongs count as life.
 async fn next_text(stream: &mut SplitStream<WebSocket>, wait: Duration) -> Option<String> {
     loop {
         match timeout(wait, stream.next()).await {
@@ -236,7 +212,6 @@ async fn host_connection(socket: WebSocket, relay: &Relay) {
         }
         match serde_json::from_str::<FromHost>(&text) {
             Ok(FromHost::Frame { id, data }) => {
-                // A phone that cannot keep up is closed rather than buffered.
                 if let Some(phone) = relay.phone(&code, id)
                     && phone.try_send(Message::Text(data.into())).is_err()
                 {

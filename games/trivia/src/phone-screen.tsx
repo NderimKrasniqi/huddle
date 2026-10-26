@@ -23,14 +23,6 @@ import {
 import { QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 import type { TriviaEvent, TriviaState } from './types';
 
-/**
- * Trivia's private controller: the answer pad.
- *
- * The phone is the only place a player sees and sends an answer. The state it
- * is handed is already projected for its owner, so it never reconstructs
- * anybody else's choice or the answer key; the TV owns the shared question and
- * the reveal. Between questions the Host's phone alone offers "Next question".
- */
 export function TriviaPhoneScreen({
   state,
   player,
@@ -45,8 +37,6 @@ export function TriviaPhoneScreen({
 }: PhoneGameScreenProps<TriviaState, TriviaEvent>) {
   const reduceMotion = useSystemReducedMotion();
   const device = safeAreaInsets ?? ZERO_INSETS;
-  // Platform chrome at the bottom (the Host's Back to lobby) extends the
-  // device inset, so every surface's footer stays clear of it.
   const insets = { ...device, bottom: device.bottom + finiteInset(hostChromeInsetBottom) };
   const chromeTop = finiteInset(hostChromeInsetTop);
   const current = state;
@@ -56,16 +46,13 @@ export function TriviaPhoneScreen({
     `${current.questionIndex}:${current.phase}`,
   );
   const frame = { insets, chromeTop };
-  // One tap of feedback when this phone's own result lands, matching the badge.
   const ownVerdict = current.phase === 'reveal' ? revealVerdict(current, player.playerId) : undefined;
   const verdictKey = ownVerdict === undefined ? undefined : `${current.questionIndex}:${ownVerdict}`;
   useEffect(() => {
     if (verdictKey === undefined) return;
     feedback?.(verdictKey.endsWith(':right') ? 'success' : 'error');
-    // Fires once per question's verdict; `feedback` identity is not a trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verdictKey]);
-
 
   const count = current.questions.length;
 
@@ -100,7 +87,6 @@ export function TriviaPhoneScreen({
         <Enter reduceMotion={reduceMotion} scale={0.88} from={0} delay={80}>
           <LockMark size={150} />
         </Enter>
-        {/* The rest follows the lock in, so the swap from four answers never teleports. */}
         <Enter reduceMotion={reduceMotion} delay={160} style={{ alignItems: 'center' }}>
           {answered !== undefined ? (
             <CosmicText weight="bold" size={20} align="center" style={{ marginTop: 28 }}>
@@ -118,7 +104,6 @@ export function TriviaPhoneScreen({
     return (
       <Surface {...frame} testID="trivia-phone-screen" scrollTestID="trivia-phone-scroll" align="stretch">
         <Header progress={progress} seconds={seconds} />
-        {/* The question takes the space above; the answers sit low, where a thumb reaches. */}
         <View style={styles.questionArea}>
           {model.category ? (
             <Pill color={cosmic.turquoise} style={styles.categoryChip} testID="trivia-phone-category">
@@ -175,7 +160,6 @@ export function TriviaPhoneScreen({
 
   if (current.phase === 'finished') {
     const place = finishingPlace(current, player.playerId);
-    // Same call as the TV headline: a shared top score is a tie, never a win.
     const won = place?.rank === 1;
     return (
       <Surface {...frame} testID="trivia-phone-finished" scrollTestID="trivia-phone-finished-scroll">
@@ -214,16 +198,13 @@ type RevealVerdict = 'right' | 'wrong' | 'missed';
 const VERDICT_COPY: Readonly<Record<RevealVerdict, { readonly title: string; readonly line: string; readonly tone: string }>> = {
   right: { title: 'You got it!', line: 'Nice one. See how everyone did on the TV.', tone: cosmic.turquoise },
   wrong: { title: 'Not this time', line: 'The answer and scores are on the TV.', tone: cosmic.coral },
-  // Not a wrong answer: the clock simply beat them to it.
   missed: { title: 'Out of time', line: 'No answer this round. The next one is yours.', tone: cosmic.butter },
 };
 
-/** The verdict's line, minding that the last question has no next one. */
 function verdictLine(verdict: RevealVerdict, last: boolean): string {
   return verdict === 'missed' && last ? 'No answer on the last one. Final scores are next.' : VERDICT_COPY[verdict].line;
 }
 
-/** This phone's own outcome, once the room has seen the reveal. */
 function revealVerdict(state: TriviaState, playerId: string): RevealVerdict | undefined {
   const right = state.revealVerdicts?.[playerId];
   if (right === undefined) return undefined;
@@ -247,7 +228,6 @@ function RevealSurface({
   readonly insets: PhoneSafeAreaInsets;
   readonly chromeTop: number;
   readonly state: TriviaState;
-  /** This phone's own outcome, when the room has revealed it. */
   readonly verdict: RevealVerdict | undefined;
   readonly progress: string;
   readonly seconds: number;
@@ -270,7 +250,6 @@ function RevealSurface({
         </>
       ) : (
         <>
-          {/* Only this phone's own outcome: the TV is showing everyone's. */}
           <Enter reduceMotion={reduceMotion} scale={0.88} from={0} testID="trivia-phone-verdict">
             <View style={[styles.verdictBadge, { backgroundColor: VERDICT_COPY[verdict].tone }]}>
               <CosmicText weight="black" size={28} align="center" accessibilityRole="header">
@@ -284,7 +263,6 @@ function RevealSurface({
           </CosmicText>
         </>
       )}
-      {/* A plain line, not a pill: the only thing shaped like a button is the button. */}
       <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`} testID="trivia-phone-next-clock">
         <CosmicText weight="bold" size={18} color={cosmic.muted}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
         <CosmicText weight="black" size={22}>{`${seconds}s`}</CosmicText>
@@ -375,7 +353,6 @@ function AnswerButton({
   );
 }
 
-/** A pressable that squashes slightly under the finger; still with reduced motion. */
 function PressScale({
   children,
   onPress,
@@ -398,7 +375,6 @@ function PressScale({
   const scale = useState(() => new Animated.Value(1))[0];
   const to = (value: number) => {
     if (reduceMotion !== false) return;
-    // Feedback the instant the finger lands; the release settles without a wobble.
     Animated.timing(scale, {
       toValue: value,
       duration: value === 1 ? COSMIC_MOTION.release : COSMIC_MOTION.press,
@@ -423,7 +399,6 @@ function PressScale({
   );
 }
 
-/** The cream answer pad: safe-area padding, a few twinkles, centred content. */
 function Surface({
   insets,
   chromeTop,
@@ -462,8 +437,6 @@ function Surface({
         {align === 'stretch' ? (
           <View style={[styles.page, styles.pageStretch]}>{children}</View>
         ) : (
-          // A short stack sits about a third of the way down, not dead centre,
-          // so the screen does not look empty above and below it.
           <View style={styles.page}>
             <View style={styles.spaceAbove} />
             {children}
@@ -475,11 +448,6 @@ function Surface({
   );
 }
 
-/**
- * This phone's own place, ranked like the TV podium: equal scores share a
- * place and use up the ones below (1, 1, 3). Standings are already shared
- * with every phone, so nothing new leaves the server.
- */
 function finishingPlace(state: TriviaState, playerId: string) {
   const own = state.standings.find((standing) => standing.playerId === playerId);
   if (!own) return undefined;

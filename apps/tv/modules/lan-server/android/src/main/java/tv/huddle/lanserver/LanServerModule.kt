@@ -18,20 +18,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Largest text frame the TV accepts; matches the Room Protocol's limit. */
 private const val MAX_FRAME_BYTES = 256 * 1024
 
-/** Seconds without a pong before Java-WebSocket drops a connection. */
 private const val CONNECTION_LOST_SECONDS = 10
 
-/**
- * The TV's LAN WebSocket server on Android TV (ADR-02).
- *
- * Phones connect to it; each connection gets a small integer id. Text frames
- * reach JavaScript as `onMessage` events and JavaScript answers with `send`,
- * so the room host decides everything and this module only carries frames.
- * Binary frames are refused by closing the connection.
- */
 class LanServerModule : Module() {
   private var server: WebSocketServer? = null
   private val sockets = ConcurrentHashMap<Int, WebSocket>()
@@ -43,7 +33,6 @@ class LanServerModule : Module() {
 
     Events("onOpen", "onMessage", "onClose", "onError")
 
-    /** Listens on `port`, or on any free port when that one is taken; resolves the port in use. */
     AsyncFunction("start") { port: Int, promise: Promise ->
       val running = server
       if (running != null) {
@@ -65,12 +54,10 @@ class LanServerModule : Module() {
       stopAll()
     }
 
-    /** IPv4 addresses, home-network ranges first, so a QR code can carry the likeliest one. */
     Function("addresses") {
       ipv4Addresses()
     }
 
-    /** Announces the room as `Huddle-<code>` (`_huddle._tcp`) with code, port and hosts in TXT. */
     AsyncFunction("advertise") { code: String, port: Int, promise: Promise ->
       val manager = nsd()
       if (manager == null) {
@@ -133,7 +120,6 @@ class LanServerModule : Module() {
 
       override fun onError(conn: WebSocket?, ex: Exception) {
         if (conn == null && started.compareAndSet(false, true)) {
-          // The listening socket failed before it was ready: the port is taken.
           server = null
           if (fallBack && port != 0) listen(0, fallBack = false, promise) else promise.reject("E_LISTEN", ex.toString(), ex)
           return
@@ -171,7 +157,6 @@ class LanServerModule : Module() {
   }
 }
 
-/** Non-loopback IPv4 addresses, private home-network ranges first and VPN-style ranges last. */
 private fun ipv4Addresses(): List<String> =
   NetworkInterface.getNetworkInterfaces().toList()
     .filter { it.isUp && !it.isLoopback }

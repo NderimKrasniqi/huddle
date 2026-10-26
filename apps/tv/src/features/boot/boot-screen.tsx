@@ -12,7 +12,6 @@ import {
 } from './boot-state';
 import { TvCreatingRoomScreen } from './tv-creating-room-screen';
 
-/** The TV before it has a safe room code to show. */
 export function TvBootScreen({ phase }: { readonly phase: TvBootPhase }) {
   if (phase === 'startup' || phase === 'opening' || phase === 'reconnecting') {
     return <TvCreatingRoomScreen phase={phase} />;
@@ -22,10 +21,6 @@ export function TvBootScreen({ phase }: { readonly phase: TvBootPhase }) {
   return <TvBootSystemState phase={phase} title={purpose} />;
 }
 
-/**
- * Platform recovery is part of the stage language. Keeping it here avoids
- * falling back to the phone's generic status card on a ten-foot screen.
- */
 function TvBootSystemState({
   phase,
   title,

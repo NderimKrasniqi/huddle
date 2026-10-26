@@ -80,6 +80,9 @@ blocked by the environment.
 - Runtime artwork is pinned by file name, size, alpha and SHA-256 in
   `tools/validate-architecture.py`. Replacing an image means updating its
   spec. PNG and JPEG are both read; use JPEG for opaque, photo-like backdrops.
+- Keep comments minimal: one line, only for what the code cannot say (a
+  platform quirk, a race, a protocol or timing rule). No narrative doc
+  comments, and no references to tests or retired systems.
 - Use the shared text components (`PlayroomText`, `GameText`, Trivia's
   `CosmicText`) rather than a bare `Text`. They cap how far type follows the
   system text size (`fontScaleCap`), so display headings do not split

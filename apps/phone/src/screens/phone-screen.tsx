@@ -11,14 +11,10 @@ import { usePhoneSession } from '../platform/session';
 import { PhoneLoadingScreen } from '../ui/native';
 import { PhoneFrame } from './seated/phone-frame';
 
-/** Root Phone coordinator: restore first, then seated room or manual entry. */
 export default function PhoneScreen() {
   const { session: current, restoringToken, notice, reportSeatLost, leave, clearNotice } = usePhoneSession();
   const room = useRoomClient();
   const problem = room.useConnectionProblem();
-  // A seated phone stays mounted through a momentary "unknown" while the
-  // session re-resolves: swapping to the loading screen would remount the
-  // room and drop whatever the player had open, such as a confirmation sheet.
   const [lastSeated, setLastSeated] = useState(current ?? undefined);
   if (current && current !== lastSeated) setLastSeated(current);
   if (current === null && lastSeated !== undefined) setLastSeated(undefined);

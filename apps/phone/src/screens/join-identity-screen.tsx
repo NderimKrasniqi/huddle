@@ -53,7 +53,6 @@ type IdentityStateSurfaceProps = {
   readonly loading?: boolean;
 };
 
-/** A full-screen state for deep-link and restoration guards. */
 function IdentityStateSurface({ title, message, testID, action, loading = false }: IdentityStateSurfaceProps) {
   return (
     <PhoneFrame
@@ -73,7 +72,6 @@ function IdentityStateSurface({ title, message, testID, action, loading = false 
   );
 }
 
-/** QR/manual identity route: choose a name and collectible before joining. */
 export default function JoinIdentityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -90,7 +88,6 @@ export default function JoinIdentityScreen() {
   } = usePhoneSession();
   const room = useRoomClient();
   const problem = room.useConnectionProblem();
-  // A QR from a TV that hosts its own room says where that TV listens.
   const linkedLan = useMemo(
     () => lanFromJoinParams(code, { hosts: params.hosts, port: params.port, tv: params.tv, relay: params.relay }),
     [code, params.hosts, params.port, params.tv, params.relay],
@@ -103,7 +100,6 @@ export default function JoinIdentityScreen() {
   const [profile, setProfile] = useState<GuestProfileV1>();
   const [nickname, setNickname] = useState('');
   const [chosenAvatarId, setAvatarId] = useState<AvatarId>('fox');
-  // Only an avatar the guest tapped is theirs to keep; a remembered one yields to the room.
   const [avatarPicked, setAvatarPicked] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isChangingRooms, setIsChangingRooms] = useState(false);
@@ -130,12 +126,8 @@ export default function JoinIdentityScreen() {
     };
   }, [cacheProfile]);
 
-  // A link to a room that does not exist has nothing to join, so it goes back
-  // to room-code entry with the code filled in and its inline "no room" error.
-  // Only the visible join screen may navigate. Each join link pushes a screen,
-  // and the earlier ones stay mounted underneath; when the phone leaves its
-  // seat they would all wake up and send it home for their own ended rooms.
   const linkedRoomMissing = routeState.kind === 'joining' && availability === null;
+  // Only the visible join screen may navigate; earlier ones stay mounted underneath.
   useFocusEffect(
     useCallback(() => {
       if (linkedRoomMissing) router.replace({ pathname: '/', params: { code } });
@@ -148,8 +140,6 @@ export default function JoinIdentityScreen() {
     }, [router, shouldReturnToSeat]),
   );
 
-  // A returning guest whose usual avatar is already in the room gets the first
-  // free one instead of an error they did nothing to cause.
   const isTaken = (candidate: AvatarId) => availability?.takenAvatarIds.includes(candidate) === true;
   const firstFreeAvatar = AVATAR_IDS.find((candidate) => !isTaken(candidate));
   const avatarId = !avatarPicked && isTaken(chosenAvatarId) && firstFreeAvatar !== undefined ? firstFreeAvatar : chosenAvatarId;
@@ -157,24 +147,18 @@ export default function JoinIdentityScreen() {
   const roomUnavailable = availability === null;
   const pending = availability === undefined;
   const canJoin = session === null && profile !== undefined && nickname.trim() !== '' && !selectedTaken && !pending && !roomUnavailable && availability?.full !== true && !isJoining && !isChangingRooms;
-  // The TV shows this form as an arriving seat while it could still join.
   useSeatPreview({
     code,
     nickname,
     avatarId,
     active: session === null && profile !== undefined && availability !== undefined && availability !== null && availability.full !== true && !selectedTaken && !isJoining,
   });
-  // A deep link must not evict the current seat until the destination has
-  // answered the same capacity check used by the room-code route. Keeping the
-  // guard beside the mutation also protects against a stale disabled render or
-  // an accessibility action firing between query updates.
   const canChangeRooms = sessionToken !== undefined && availability !== undefined && availability !== null && availability.full !== true && !isChangingRooms;
 
   const avatarLabels = useMemo(() => {
     return Object.fromEntries(AVATAR_IDS.map((id, index) => [id, `Avatar ${index + 1}`])) as Record<AvatarId, string>;
   }, []);
 
-  // A TV this phone cannot reach gets its own explanation instead of the form.
   if (problem !== undefined && (routeState.kind === 'joining' || routeState.kind === 'handoff')) {
     return <ConnectionProblemScreen problem={problem} onRetry={room.retryConnection} />;
   }
@@ -281,9 +265,7 @@ export default function JoinIdentityScreen() {
   }
 
   async function submit() {
-    // React state does not update until the current event has yielded. Keep a
-    // synchronous guard beside the visible busy state so two quick taps cannot
-    // mint two seats before the first mutation has settled.
+    // State updates land after this event; the ref stops a double tap minting two seats.
     if (!canJoin || profile === undefined || isJoiningRef.current) return;
     isJoiningRef.current = true;
     setIsJoining(true);
@@ -295,9 +277,6 @@ export default function JoinIdentityScreen() {
         avatar: avatarId,
         guestId: profile.guestId,
       });
-      // Claim the new credential synchronously before any storage await. A
-      // stale-session cleanup already in flight can then see the newer
-      // revision and repair this token instead of deleting it.
       completeJoin(session);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await rememberSession(phoneSessionTokenStore, session.sessionToken);
@@ -396,7 +375,6 @@ export default function JoinIdentityScreen() {
                   <View style={[styles.ring, selected ? styles.ringOn : null, taken ? styles.taken : null]}>
                     <PlayroomAvatar avatarId={candidate} size={54} />
                   </View>
-                  {/* Badges sit on the avatar's corner, never over a label. */}
                   {selected ? (
                     <View style={styles.check}>
                       <View style={styles.tick} />
@@ -448,8 +426,6 @@ const styles = StyleSheet.create({
     rowGap: 36,
     marginTop: 4,
   },
-  // Label and grid move as one group, centred in the space down to the button,
-  // instead of stopping halfway and leaving the bottom of the screen empty.
   picker: {
     flexGrow: 1,
     justifyContent: 'center',

@@ -1,20 +1,6 @@
 #!/usr/bin/env node
 /* global __dirname, Buffer */
 
-/**
- * Verify a phone export does not carry Trivia's question pack. The TV's room
- * host holds the rules and content (ADR-01); the phone renders views only.
- * Run after a phone export, for example:
- *
- *   pnpm verify:bundle-seam -- /private/tmp/huddle-phone-export
- *
- * The check intentionally reads bytes rather than depending on a particular
- * Metro/Hermes output format. It rejects the pack identity, the pack title,
- * the serialized pack, and every question text. Common answer words are not
- * used as markers because they also occur legitimately in UI copy and runtime
- * dependencies.
- */
-
 const fs = require('node:fs');
 const path = require('node:path');
 

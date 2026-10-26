@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { decodeJoinQr, roomJoinPath } from './scan-payload';
 
-/** Branded QR scanner route; camera is mounted only while this route is focused. */
 export function ScanScreen() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
@@ -65,7 +64,6 @@ export function ScanScreen() {
     }
     lockedRef.current = true;
     setMessage(undefined);
-    // A TV that hosts its own room puts its address in the QR; the join route carries it on.
     router.replace(roomJoinPath(result.code, result.lan));
   }
 

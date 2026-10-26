@@ -14,15 +14,6 @@ import { fontScaleCap } from '@huddle/ui/game-kit';
 
 import { MASCOT_ASPECT, TRIVIA_ART } from './art';
 
-/**
- * Cosmic Quiz: Trivia's own look. The colours and type live here, inside the
- * game, so Trivia never depends on the platform's design tokens; only the
- * Nunito faces are shared, because both apps already load them.
- *
- * Everything is drawn natively — panels, answer tiles, badges and pills are
- * views with real text — so labels scale, read aloud and never pixelate. Only
- * the logo, mascot and starfield are images.
- */
 export const cosmic = {
   navy: '#041B39',
   navyDeep: '#021226',
@@ -36,51 +27,29 @@ export const cosmic = {
   missed: '#6B7891',
 } as const;
 
-/** Translucent washes of the palette: rules, dividers and row tints. */
 export const cosmicWash = {
-  /** Turquoise rule across the dark sky. */
   rule: 'rgba(121,225,222,0.35)',
-  /** Cream divider on the dark sky. */
   divider: 'rgba(255,248,235,0.4)',
-  /** Navy rule on a cream panel. */
   panelRule: 'rgba(4,27,57,0.12)',
-  /** Navy tint behind a result row on a cream panel; visible from the couch. */
   rowTint: 'rgba(4,27,57,0.07)',
-  /** The lit top face of a podium step. */
   highlight: 'rgba(255,255,255,0.32)',
 } as const;
 
-/**
- * Trivia's motion. The curve and press timing match the platform's
- * (`playroomEasing.out`, `playroomMotion.press`), so the hand-off from the room
- * screens feels like one product; a game keeps its own copy because it may not
- * import the platform's motion tokens.
- */
 export const COSMIC_MOTION = {
-  /** An element arriving: under the 300 ms UI budget, no overshoot. */
   enter: 280,
-  /** Press-in feedback, and the quicker-feeling release. */
   press: 120,
   release: 160,
-  /** The once-per-game curtain into the night sky. */
   wipe: 600,
-  /** One beat drawing the eye to the revealed answer. */
   pulse: 320,
 } as const;
 
 let strongEaseOut: ((progress: number) => number) | undefined;
 
-/**
- * Strong ease-out: starts fast, so motion answers the moment it begins. Built
- * on first use, because the Node-run contract tests load this module without
- * React Native's `Easing`.
- */
 export function cosmicEaseOut(progress: number): number {
   strongEaseOut ??= Easing.bezier(0.23, 1, 0.32, 1);
   return strongEaseOut(progress);
 }
 
-/** A, B, C and D always wear the same colour on both screens. */
 const ANSWER_TONES = [cosmic.turquoise, cosmic.butter, cosmic.coral, cosmic.periwinkle] as const;
 
 export function answerTone(optionIndex: number): string {
@@ -100,7 +69,6 @@ const cosmicFont = {
 
 type Weight = keyof typeof cosmicFont;
 
-/** Text in a Nunito weight, sized and coloured by the caller. */
 export function CosmicText({
   weight = 'bold',
   size,
@@ -115,7 +83,6 @@ export function CosmicText({
   readonly size: number;
   readonly color?: string;
   readonly align?: TextStyle['textAlign'];
-  /** Letter spacing for the small caps labels ("QUESTION 3 OF 10"). */
   readonly tracking?: number;
   readonly style?: StyleProp<TextStyle>;
   readonly children?: ReactNode;
@@ -141,7 +108,6 @@ export function CosmicText({
   );
 }
 
-/** A rounded pill: "10 QUESTIONS", "12s", "Next question in 30s". */
 export function Pill({
   children,
   color = cosmic.butter,
@@ -160,7 +126,6 @@ export function Pill({
   );
 }
 
-/** The navy disc carrying an answer's letter. */
 export function LetterBadge({ optionIndex, size }: { readonly optionIndex: number; readonly size: number }) {
   return (
     <View
@@ -175,7 +140,6 @@ export function LetterBadge({ optionIndex, size }: { readonly optionIndex: numbe
   );
 }
 
-/** A tick in a circle: the reveal's "this one" and a round result's "Correct". */
 export function CheckBadge({ size, color = cosmic.correct }: { readonly size: number; readonly color?: string }) {
   return (
     <View
@@ -197,7 +161,6 @@ export function CheckBadge({ size, color = cosmic.correct }: { readonly size: nu
   );
 }
 
-/** A cross in a circle: a round result's "Missed". */
 export function MissBadge({ size }: { readonly size: number }) {
   const bar = { position: 'absolute' as const, width: size * 0.5, height: Math.max(2, size * 0.1), borderRadius: 2, backgroundColor: cosmic.cream };
   return (
@@ -212,7 +175,6 @@ export function MissBadge({ size }: { readonly size: number }) {
   );
 }
 
-/** A padlock drawn in views: the phone's "Answer locked!". */
 export function LockMark({ size }: { readonly size: number }) {
   const body = size * 0.46;
   return (
@@ -240,7 +202,6 @@ export function LockMark({ size }: { readonly size: number }) {
   );
 }
 
-/** The countdown ring: a cream disc in a turquoise ring, a big navy number. */
 export function CountdownRing({ seconds, size }: { readonly seconds: number; readonly size: number }) {
   return (
     <View
@@ -264,7 +225,6 @@ export function CountdownRing({ seconds, size }: { readonly seconds: number; rea
   );
 }
 
-/** The Cosmic Quiz logo; `on` is the background it sits on. */
 export function Logo({ width, on }: { readonly width: number; readonly on: 'dark' | 'light' }) {
   return (
     <Image
@@ -280,7 +240,6 @@ export function Logo({ width, on }: { readonly width: number; readonly on: 'dark
 
 export type MascotPose = keyof typeof MASCOT_ASPECT;
 
-/** The alien mascot, sized by width. Decorative. */
 export function Mascot({
   pose,
   width,
@@ -292,7 +251,6 @@ export function Mascot({
   readonly width: number;
   readonly style?: StyleProp<ViewStyle>;
   readonly reduceMotion: boolean | undefined;
-  /** Hold still, for a pose that rests on an edge (the peek). */
   readonly still?: boolean;
 }) {
   const bob = useLoop(reduceMotion !== false || still, 2400);
@@ -304,7 +262,6 @@ export function Mascot({
   );
 }
 
-/** A four-point twinkle, drawn as text so it needs no asset. Decorative. */
 export function Twinkle({
   size,
   color = cosmic.butter,
@@ -315,9 +272,7 @@ export function Twinkle({
   readonly size: number;
   readonly color?: string;
   readonly style?: StyleProp<ViewStyle>;
-  /** Pass the device setting to let it twinkle; still by default. */
   readonly reduceMotion?: boolean | undefined;
-  /** Twinkles use different periods so they never pulse in step. */
   readonly period?: number;
 }) {
   const pulse = useLoop(reduceMotion !== false, period);
@@ -330,11 +285,6 @@ export function Twinkle({
   );
 }
 
-/**
- * The hand-off into Trivia: the platform's cream countdown lifts away like a
- * launch, uncovering the night sky. Not drawn at all with reduced motion; held
- * in place for the frame or two before the setting is known.
- */
 export function LaunchWipe({
   width,
   height,
@@ -363,7 +313,6 @@ export function LaunchWipe({
         top: 0,
         width,
         height,
-        // The platform countdown's own canvas, so the cut is seamless.
         backgroundColor: PLATFORM_CANVAS,
         opacity: progress.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
         transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [0, -height] }) }],
@@ -372,16 +321,10 @@ export function LaunchWipe({
   );
 }
 
-/** The platform screens' background, used only where Trivia hands over from them. */
 const PLATFORM_CANVAS = '#F9F1E6';
 
 const CONFETTI_COLORS = [cosmic.butter, cosmic.turquoise, cosmic.coral, cosmic.periwinkle, cosmic.cream] as const;
 
-/**
- * A one-off confetti shower over the stage, for the final scores. Pieces fall
- * from above the top edge with a little sway and spin. Nothing with reduced
- * motion. Positions are fixed per mount so a re-render does not reshuffle them.
- */
 export function Confetti({
   width,
   height,
@@ -443,7 +386,6 @@ export function Confetti({
   );
 }
 
-/** A 0→1→0 loop for gentle idle motion; held at 0 when motion is reduced. */
 function useLoop(reduceMotion: boolean, periodMs: number): Animated.Value {
   const value = useState(() => new Animated.Value(0))[0];
   useEffect(() => {
@@ -459,10 +401,6 @@ function useLoop(reduceMotion: boolean, periodMs: number): Animated.Value {
   return value;
 }
 
-/**
- * Fades and lifts its children in once, after `delay`. With reduced motion the
- * children are simply there. Re-keying the element replays it.
- */
 export function Enter({
   children,
   delay = 0,
@@ -474,9 +412,7 @@ export function Enter({
 }: {
   readonly children: ReactNode;
   readonly delay?: number;
-  /** Distance travelled upward, in the screen's own units. */
   readonly from?: number;
-  /** Starting scale, for a pop rather than a lift. */
   readonly scale?: number;
   readonly reduceMotion: boolean | undefined;
   readonly style?: StyleProp<ViewStyle>;
@@ -484,7 +420,6 @@ export function Enter({
 }) {
   const progress = useState(() => new Animated.Value(reduceMotion === true ? 1 : 0))[0];
   useEffect(() => {
-    // Hold until the device says whether it wants motion.
     if (reduceMotion === undefined) return;
     if (reduceMotion) {
       progress.setValue(1);
@@ -519,11 +454,6 @@ export function Enter({
   );
 }
 
-/**
- * One gentle beat — up to 1.04 and back — after `delay`, so the room's eyes
- * land on what just appeared. It plays once per mount and never under reduced
- * motion.
- */
 export function Pulse({
   children,
   delay = 0,
@@ -554,10 +484,6 @@ export function Pulse({
   );
 }
 
-/**
- * A number that counts up from `from` to `to` once, so a score visibly grows
- * at the reveal. With reduced motion it simply shows `to`.
- */
 export function CountUp({
   from,
   to,
@@ -588,7 +514,6 @@ export function CountUp({
   return <CosmicText {...text}>{reduceMotion === false ? shown : to}</CosmicText>;
 }
 
-/** "08s": two digits, as the mockups' timer pills read. */
 export function timerLabel(seconds: number): string {
   return `${String(Math.max(0, seconds)).padStart(2, '0')}s`;
 }

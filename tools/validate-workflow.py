@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Validate the repository-local engineering workflow."""
 
 from __future__ import annotations
 
@@ -11,7 +10,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 from urllib.parse import unquote
-
 
 CURRENT_MARKDOWN = {
     "AGENTS.md",
@@ -39,14 +37,11 @@ ROOT_PATH = re.compile(r"^(?:\.agents|apps|convex|docs|games|packages|tools)/")
 REQUIREMENT_ID = re.compile(r"\b(?:ARCH|DATA|DOC|GAME|ID|PLAT|RATE|READY|REL|UI)-\d{3}\b")
 SHELL_FENCE = re.compile(r"```(?:sh|bash)\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
-
 def run(command: list[str], root: Path) -> None:
     print("$", " ".join(command))
     subprocess.run(command, cwd=root, check=True)
 
-
 def tracked_paths(root: Path, paths: list[Path]) -> list[str]:
-    """Return forbidden paths that are part of the repository index."""
 
     relative = [str(path.relative_to(root)) for path in paths]
     result = subprocess.run(
@@ -57,7 +52,6 @@ def tracked_paths(root: Path, paths: list[Path]) -> list[str]:
         text=True,
     )
     return [line for line in result.stdout.splitlines() if line]
-
 
 def markdown_paths(root: Path) -> list[Path]:
     result = subprocess.run(
@@ -73,9 +67,7 @@ def markdown_paths(root: Path) -> list[Path]:
         if line and (root / line).is_file()
     )
 
-
 def github_anchors(text: str) -> set[str]:
-    """Return GitHub-style heading anchors, including duplicate suffixes."""
 
     anchors = set(EXPLICIT_ANCHOR.findall(text))
     counts: Counter[str] = Counter()
@@ -89,7 +81,6 @@ def github_anchors(text: str) -> set[str]:
         counts[slug] += 1
     return anchors
 
-
 def workspace_packages(root: Path) -> dict[str, tuple[Path, dict[str, object]]]:
     packages: dict[str, tuple[Path, dict[str, object]]] = {}
     for pattern in ("apps/*/package.json", "games/*/package.json", "packages/*/package.json"):
@@ -99,7 +90,6 @@ def workspace_packages(root: Path) -> dict[str, tuple[Path, dict[str, object]]]:
             if isinstance(name, str):
                 packages[name] = (manifest_path, manifest)
     return packages
-
 
 def validate_link(path: Path, root: Path, raw_target: str) -> None:
     target = raw_target.strip()
@@ -123,7 +113,6 @@ def validate_link(path: Path, root: Path, raw_target: str) -> None:
             rel = path.relative_to(root).as_posix()
             raise SystemExit(f"broken Markdown anchor: {rel} -> {target}")
 
-
 def validate_repo_paths(path: Path, root: Path, text: str) -> None:
     rel = path.relative_to(root).as_posix()
     for value in INLINE_CODE.findall(text):
@@ -138,7 +127,6 @@ def validate_repo_paths(path: Path, root: Path, text: str) -> None:
             continue
         if not (root / candidate).exists():
             raise SystemExit(f"repository path does not exist: {rel} -> {candidate}")
-
 
 def validate_package_names(
     path: Path,
@@ -157,7 +145,6 @@ def validate_package_names(
         exports = packages[package_name][1].get("exports", {})
         if not isinstance(exports, dict) or subpath not in exports:
             raise SystemExit(f"unknown workspace package export in {rel}: {reference}")
-
 
 def validate_pnpm_commands(
     path: Path,
@@ -200,7 +187,6 @@ def validate_pnpm_commands(
             if command not in builtins and command not in root_scripts:
                 raise SystemExit(f"unknown root pnpm script in {path.as_posix()}: {line}")
 
-
 def validate_requirements(_root: Path, current_text: dict[str, str]) -> None:
     plan = current_text.get("docs/implementation-plan.md")
     if plan is None:
@@ -216,7 +202,6 @@ def validate_requirements(_root: Path, current_text: dict[str, str]) -> None:
         referenced = set(REQUIREMENT_ID.findall(requirement_line.group(1)))
         if not referenced:
             raise SystemExit(f"unfinished task {match.group(1)} has no requirement IDs")
-
 
 def validate_markdown(root: Path) -> None:
     forbidden = [entry for prefix in FORBIDDEN_DOC_ROOTS for entry in (root / prefix).rglob("*") if entry.is_file()]
@@ -257,7 +242,6 @@ def validate_markdown(root: Path) -> None:
 
     validate_requirements(root, current_text)
 
-
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     forbidden = [
@@ -266,8 +250,7 @@ def main() -> int:
         root / ".ai-workflow",
         root / "CLAUDE.md",
     ]
-    # Agent clients may keep ignored local state under these names. Repository
-    # truth only owns what is tracked, so ignored tool state is not a failure.
+
     present = tracked_paths(root, forbidden)
     if present:
         raise SystemExit("obsolete workflow paths remain: " + ", ".join(present))
@@ -277,7 +260,6 @@ def main() -> int:
     run([sys.executable, str(root / "tools" / "validate-architecture.py")], root)
     print("Workflow validation passed.")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

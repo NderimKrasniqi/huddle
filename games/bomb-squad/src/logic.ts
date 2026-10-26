@@ -10,41 +10,26 @@ export { clueHolds, dealRound, dealRounds, saboteurCount } from './clues';
 export { bombEventSchema, bombStateSchema } from './schemas';
 export type * from './types';
 
-/**
- * The rules, once, before the first bomb. It ends when everyone taps "Got it"
- * or the host starts; this is only the fallback for a player who never taps.
- */
 export const HOW_TO_SECONDS = 45;
-/** Long enough to read your clue twice. */
 export const BRIEF_SECONDS = 10;
-/** Long enough to see the wire, the blast and every vote. */
 export const CUT_SECONDS = 6;
 export const ACCUSE_SECONDS = 15;
 export const REVEAL_SECONDS = 10;
 export const DEFUSE_POINTS = 100;
 export const SABOTAGE_POINTS = 150;
-/** An honest player who names a saboteur. */
 export const CATCH_POINTS = 50;
-/** A saboteur most of the room failed to name. */
 const ESCAPE_POINTS = 50;
 
-/** Without a server seed (tests, legacy callers) the game still deals, just the same way each time. */
 const DEFAULT_SEED = 0x5eed;
 
 function bombBeat(state: BombState): string {
   return `${state.round}:${state.phase}`;
 }
 
-/** Whether the player is in this game; anyone who joined mid-game is watching. */
 function isPlaying(state: BombState, playerId: GamePlayerId): boolean {
   return state.standings.some((standing) => standing.playerId === playerId);
 }
 
-/**
- * The wire the room cut: the one with the most votes. When the top votes tie,
- * the round's seeded `tieOrder` picks one of the tied wires, so a split room
- * gambles instead of losing for sure. No votes at all cuts nothing.
- */
 function wireCut(votes: Readonly<Record<GamePlayerId, Wire>>, tieOrder: readonly Wire[]): { cut: Wire | null; tied: boolean } {
   const tally = new Map<Wire, number>();
   for (const wire of Object.values(votes)) tally.set(wire, (tally.get(wire) ?? 0) + 1);
@@ -55,7 +40,6 @@ function wireCut(votes: Readonly<Record<GamePlayerId, Wire>>, tieOrder: readonly
   return { cut: tieOrder.find((wire) => top.includes(wire)) ?? top[0]!, tied: true };
 }
 
-/** The wire is cut: the room sees the result and every vote, but not yet who lied. */
 function cutWire(state: BombState): BombState {
   const deal = state.rounds[state.round];
   if (deal === undefined) return state;
@@ -64,13 +48,6 @@ function cutWire(state: BombState): BombState {
   return { ...state, phase: 'cut', results: [...state.results, result] };
 }
 
-/**
- * Points for a round. A defused bomb pays every honest player; an explosion
- * pays every saboteur, except one who voted for the safe wire, so a saboteur
- * cannot win by quietly agreeing with the room. Then the accusations: an
- * honest player who named a saboteur scores, and a saboteur most of the room
- * missed scores too.
- */
 function roundGains(state: BombState, deal: RoundDeal, defused: boolean): Record<GamePlayerId, number> {
   const players = state.standings.map((standing) => standing.playerId);
   const gains: Record<GamePlayerId, number> = {};
@@ -101,7 +78,6 @@ function revealed(state: BombState): BombState {
   };
 }
 
-/** Whether every player still here has acted, so nobody is left to wait for. */
 function everyoneIn(state: BombState, acted: Readonly<Record<GamePlayerId, unknown>>, awayPlayerIds: readonly GamePlayerId[] | undefined): boolean {
   const away = new Set(awayPlayerIds ?? []);
   return state.standings.every((standing) => away.has(standing.playerId) || acted[standing.playerId] !== undefined);
@@ -132,7 +108,6 @@ function accused(state: BombState, event: Extract<BombEvent, { kind: 'accuse' }>
 }
 
 function advanced(state: BombState, event: BombAdvance): BombState {
-  // Only the room's clock moves a beat, except the Host may skip the rules, the cut or a reveal.
   const hostMayMove = event.fromHost === true && (event.phase === 'howTo' || event.phase === 'cut' || event.phase === 'reveal');
   if (event.playerId !== undefined && !hostMayMove) return state;
   if (event.round !== state.round || event.phase !== state.phase) return state;
@@ -156,7 +131,6 @@ function advanced(state: BombState, event: BombAdvance): BombState {
   }
 }
 
-/** Seconds each beat runs before the room moves on by itself. */
 function beatSeconds(state: BombState): number | undefined {
   switch (state.phase) {
     case 'howTo':
@@ -182,13 +156,6 @@ function bombDeadline(state: BombState): GameDeadline<BombAdvance> | undefined {
   return { beat: bombBeat(state), afterMs: seconds * 1000, event: { kind: 'advance', round: state.round, phase: state.phase } };
 }
 
-/**
- * What one viewer may see. Rounds still to come are dropped for everyone. In
- * the current round a player sees only their own clue, plus, if they are a
- * saboteur, the safe wire and their partners; the TV sees no secret at all.
- * Votes stay private until the wire is cut, and accusations until the reveal.
- * Revealed rounds are public, so the reveal can say who lied.
- */
 export function redactBombStateFor(state: BombState, viewer: GamePlayerId | undefined): BombState {
   const open = state.phase === 'reveal' || state.phase === 'finished';
   const votesOpen = open || state.phase === 'cut' || state.phase === 'accuse';

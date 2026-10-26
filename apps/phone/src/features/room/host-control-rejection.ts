@@ -1,23 +1,8 @@
 import type { HostControlRejection, RateLimitRejection } from '@huddle/domain';
 import { refusalOf } from '@huddle/contracts/protocol';
 
-/**
- * What the Host's phone says when transferring the room or removing a player
- * does not happen.
- *
- * Built exactly like `game-rejection.ts` and `join-rejection.ts`: the failure
- * is told apart by `kind` off
- * the refusal's `rejection`, never by matching a message somebody may reword.
- */
-
-/** When the failure is not one of the server's answers, but the trip itself. */
 const UNEXPECTED_FAILURE = 'Could not reach the room. Check your connection and try again.';
 
-/**
- * The `kind`s as values. Keyed by the union so a kind added to
- * `HostControlRejection` and not to this record is a compile error rather than a
- * silent fall-through to the generic line.
- */
 const REJECTION_KINDS: Readonly<Record<HostControlRejection['kind'], true>> = {
   notInRoom: true,
   notHost: true,
@@ -28,31 +13,16 @@ const REJECTION_KINDS: Readonly<Record<HostControlRejection['kind'], true>> = {
 
 type PhoneHostControlRejection = HostControlRejection | RateLimitRejection;
 
-/** Whether `data` off a room refusal is one of the host-control refusals. */
 function isHostControlRejection(data: unknown): data is PhoneHostControlRejection {
   return (
     typeof data === 'object' &&
     data !== null &&
     'kind' in data &&
     typeof data.kind === 'string' &&
-    // Own properties only, as in the others: every object has a `toString`, and
-    // a rejection of that kind is not one of ours.
     (Object.hasOwn(REJECTION_KINDS, data.kind) || data.kind === 'rateLimited')
   );
 }
 
-/**
- * A refusal in the words the Host reads.
- *
- * None of these is a refusal the roster's own controls set out to earn — the
- * host acts off the room's live subscription, so the pill and the seats are
- * already the truth. They are reachable anyway: a seat can leave between the
- * render and the tap (`targetNotInRoom`, `targetAway`), and the mutations are
- * public, so a phone that is not the Host can call them (`notHost`,
- * `notInRoom`). Each gets a line, because a silent tap is the one outcome a Host
- * cannot make sense of. `targetIsSelf` is a control the roster should never
- * offer on the Host's own row; it gets a line for the same reason.
- */
 export function hostControlRejectionMessage(rejection: PhoneHostControlRejection): string {
   switch (rejection.kind) {
     case 'targetAway':
@@ -70,16 +40,6 @@ export function hostControlRejectionMessage(rejection: PhoneHostControlRejection
   }
 }
 
-/**
- * What to show when a Host control throws, whatever it threw — `transferHost`,
- * or `removePlayer`, which share the gate and so share the refusals.
- *
- * `LeaveRoomSheet` routes its failures through here too, and it is the one
- * caller that does *not* share that gate: `players.leaveRoom` is a phone acting
- * on its own seat and throws no `HostControlRejection` at all, so every failure
- * of it lands on the generic line below. If it ever gains a refusal kind, this
- * is where it has to be taught one rather than being silently generic.
- */
 export function hostControlFailureMessage(error: unknown): string {
   const rejection = refusalOf(error);
   return isHostControlRejection(rejection) ? hostControlRejectionMessage(rejection) : UNEXPECTED_FAILURE;

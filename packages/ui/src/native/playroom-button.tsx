@@ -20,12 +20,6 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, ReduceM
 
 import { PlayroomBurst, PlayroomText } from './playroom-text';
 
-/**
- * `primary` orange with ink text, the screen's main action; `secondary`
- * surface with an ink border; `lavender` for a quieter action such as Make
- * host; `destructive` outlined in danger red; `link` for quiet exits such as
- * Leave room.
- */
 export type PlayroomButtonVariant = 'primary' | 'secondary' | 'lavender' | 'destructive' | 'link';
 
 export type PlayroomButtonProps = {
@@ -33,9 +27,7 @@ export type PlayroomButtonProps = {
   readonly onPress?: PressableProps['onPress'];
   readonly variant?: PlayroomButtonVariant;
   readonly disabled?: boolean;
-  /** Loading keeps the button's width and ignores further presses. */
   readonly busy?: boolean;
-  /** Burst dashes beside the button, for the screen's main action. */
   readonly bursts?: boolean;
   readonly accessibilityLabel?: string;
   readonly accessibilityHint?: string;
@@ -43,7 +35,6 @@ export type PlayroomButtonProps = {
   readonly testID?: string;
 };
 
-/** A phone action with default, pressed, disabled, and loading states. */
 export function PlayroomButton({
   label,
   onPress,
@@ -58,7 +49,6 @@ export function PlayroomButton({
 }: PlayroomButtonProps) {
   const inactive = disabled || busy;
   const tone = disabled && variant !== 'link' ? TONES.disabled : TONES[variant];
-  // Feedback on press-in, commit on press-out.
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const pressTo = (value: number) => {
@@ -81,7 +71,6 @@ export function PlayroomButton({
       style={bursts ? null : style}
     >
       <Animated.View style={[variant === 'link' ? styles.link : styles.button, tone.container, pressStyle]}>
-        {/* The label keeps its space while loading, so the width never jumps. */}
         <PlayroomText color={tone.text} style={[variant === 'link' ? styles.linkText : styles.label, busy ? styles.hidden : null]}>
           {label}
         </PlayroomText>
@@ -111,8 +100,6 @@ const TONES = {
     text: 'danger' as const,
   },
   link: { container: null, text: 'muted' as const },
-  // Outlined so a disabled action reads as "not yet" rather than missing, while
-  // the label keeps its contrast against the lighter fill.
   disabled: { container: { backgroundColor: playroomColors.disabled, borderWidth: 2, borderColor: playroomColors.border }, text: 'muted' as const },
 };
 

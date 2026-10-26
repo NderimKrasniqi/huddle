@@ -19,7 +19,6 @@ import { PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import type { SetupScreenProps } from './setup-screen';
 import { setupStyles as styles } from './setup-styles';
 
-/** Everyone raises a hand; the host starts once every hand is up. */
 export function ReadyScreen({
   module,
   setup,
@@ -66,7 +65,6 @@ export function ReadyScreen({
           <>
             <HostSteps current="Ready" />
             <PlayroomButton
-              // The waiting line above says who is missing; the button only says what it does.
               label={`Start ${module.metadata.title}`}
                 onPress={onStart}
               busy={busy === 'start'}
@@ -82,7 +80,6 @@ export function ReadyScreen({
       }
     >
       <PhoneTopBar back={youAreHost ? { label: 'Setup', onPress: onReopen, testID: 'setup-nav-back' } : undefined} you={you} />
-      {/* What the hand is for: a guest never saw setup, so name the game and how it's set. */}
       {youAreHost ? null : (
         <View style={styles.readyContext} testID="ready-game-context">
           <PlayroomHeading type={playroomPhone.type.title}>{module.metadata.title}</PlayroomHeading>
@@ -95,9 +92,7 @@ export function ReadyScreen({
           </View>
         </View>
       )}
-      {/* The hand sits in the lower half, where a thumb reaches it. */}
       <View style={styles.thumbSpacer} />
-      {/* One message: the hand and what it means. Settings and the count live on the TV. */}
       <Pressable
         onPress={raise}
         disabled={busy === 'ready'}
@@ -117,7 +112,6 @@ export function ReadyScreen({
         </View>
         <PlayroomText style={playroomPhone.type.heading}>{currentReady ? 'Hands up!' : 'Raise your hand'}</PlayroomText>
       </Pressable>
-      {/* The host sees everyone below, so the count is the guests' summary only. */}
       <PlayroomText color="muted" style={[playroomPhone.type.body, styles.center]}>
         {youAreHost ? status : `${readyCount} of ${roster.length} hands up`}
       </PlayroomText>
@@ -135,10 +129,6 @@ export function ReadyScreen({
   );
 }
 
-/**
- * The countdown on the phone: the same seconds as the TV, a haptic tick and
- * a flash of your colour each second, and a way to stop it.
- */
 export function CountdownScreen({
   module,
   you,
@@ -198,7 +188,6 @@ export function CountdownScreen({
   );
 }
 
-/** Whole seconds until the deadline on this phone's clock, 0 once it passes. */
 export function useSecondsLeft(endsAt: number): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

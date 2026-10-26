@@ -18,7 +18,6 @@ type PickerScreenProps = {
   readonly hostNickname?: string;
   readonly hostAvatar?: AvatarId;
   readonly you?: { readonly nickname: string; readonly avatarId: AvatarId };
-  /** Shown to guests, who wait on the host's choice with the room. */
   readonly roster?: readonly RosterSeat[];
   readonly busy: BusyAction;
   readonly failure?: string;
@@ -28,10 +27,6 @@ type PickerScreenProps = {
   readonly onLeave: () => void;
 };
 
-/**
- * Choosing a game. The host sees the game on the TV as a featured card and
- * the rest as a list; tapping one moves the TV. Guests watch the selection.
- */
 export function PickerScreen({
   browsingAt,
   youAreHost,
@@ -86,7 +81,6 @@ export function PickerScreen({
           testID={`phone-game-card-${focused.metadata.id}`}
         >
           <PhoneCard style={styles.featured}>
-            {/* Guests also see the room below, so their cover is a little smaller. */}
             <PlayroomGameCover gameId={focused.metadata.id} height={youAreHost ? 180 : 140} style={styles.cover} />
             <PlayroomText style={playroomPhone.type.hero}>
               {focused.metadata.title}
@@ -106,19 +100,12 @@ export function PickerScreen({
 const SHELF_CARD = 300;
 const SHELF_GAP = 14;
 
-/**
- * The host's games as a shelf: one cover card per game, swiped like the TV
- * carousel. Settling on a card moves the TV there, and the footer button sets
- * up whichever game is in the middle.
- */
 function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly busy: boolean; readonly onBrowse: (index: number) => void }) {
   const { width } = useWindowDimensions();
-  // The shelf spans the full screen width, so this centres each card exactly.
   const inset = Math.max((width - SHELF_CARD) / 2, 0);
   const ref = useRef<ScrollView>(null);
   const moving = useRef(false);
   const settle = (to: number) => ref.current?.scrollTo({ x: to * (SHELF_CARD + SHELF_GAP), animated: true });
-  // Follow the room's index, but never yank the shelf out from under a finger.
   useEffect(() => {
     if (!moving.current) settle(index);
   }, [index]);
@@ -138,7 +125,6 @@ function GameShelf({ index, busy, onBrowse }: { readonly index: number; readonly
       onMomentumScrollEnd={(event) => {
         moving.current = false;
         const next = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / (SHELF_CARD + SHELF_GAP)), 0), GAME_REGISTRY.length - 1);
-        // While a previous move is still landing, put the shelf back where the room is.
         if (busy) settle(index);
         else if (next !== index) onBrowse(next);
       }}
@@ -194,7 +180,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
-  // The game the host is on is the selection, so it is lavender whatever the game.
   featured: {
     backgroundColor: playroomColors.lavender,
     alignItems: 'center',

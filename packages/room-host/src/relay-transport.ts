@@ -1,11 +1,6 @@
 import type { HostPorts } from './ports';
 import type { HostConnection, RoomHost } from './room-host';
 
-/**
- * The few WebSocket members the relay transport uses. React Native, browsers
- * and Node 22 all have a global `WebSocket` of this shape; the caller passes a
- * factory, so this package names no platform global.
- */
 export type RelaySocket = {
   send(data: string): void;
   close(code?: number, reason?: string): void;
@@ -18,13 +13,10 @@ export type RelaySocket = {
 export type RelayState = 'connecting' | 'registered' | 'refused' | 'stopped';
 
 export type RelayHostOptions = {
-  /** The relay's base URL, such as `wss://relay.huddle.tv`; `/v1/host` is added. */
   readonly url: string;
-  /** 16–128 characters, kept by the TV so a restarted app reclaims its code. */
   readonly secret: string;
   readonly open: (url: string) => RelaySocket;
   readonly ports: Pick<HostPorts, 'setTimer' | 'log'>;
-  /** Called when the relay registers the room's code, refuses it, or drops. */
   readonly onState?: (state: RelayState, code: string) => void;
 };
 
@@ -33,9 +25,7 @@ export type RelayHost = {
   readonly stop: () => void;
 };
 
-/** Waits between attempts to reach the relay again. */
 const RETRY_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 30_000];
-/** How many fresh codes an empty room tries when the relay has its code taken. */
 const CODE_RETRIES = 5;
 
 type FromRelay =
@@ -45,17 +35,6 @@ type FromRelay =
   | { readonly type: 'frame'; readonly id: number; readonly data: string }
   | { readonly type: 'close'; readonly id: number };
 
-/**
- * Hosts the room through the relay (ADR-03): the TV opens one outgoing
- * WebSocket, registers its Room Code, and each phone the relay joins becomes a
- * room-host connection, exactly like one from the LAN server. The relay never
- * reads the frames.
- *
- * Room codes are minted on the TV, so another TV may already hold one on the
- * relay. An empty room then takes a fresh code; a room with players keeps its
- * code and stays LAN-only. When the room's code changes (a fresh room), the
- * transport registers the new one.
- */
 export function hostThroughRelay(host: RoomHost, options: RelayHostOptions): RelayHost {
   const connections = new Map<number, HostConnection>();
   let socket: RelaySocket | undefined;
@@ -93,8 +72,8 @@ export function hostThroughRelay(host: RoomHost, options: RelayHostOptions): Rel
         setState('registered');
         return;
       case 'refused':
+        // Codes are minted on the TV, so another TV may hold this one; an empty room takes a fresh code.
         if (message.reason === 'codeTaken' && codeRetries < CODE_RETRIES && host.replaceEmptyRoom()) {
-          // The new room's code arrives through `subscribeTv` and registers then.
           codeRetries += 1;
           return;
         }
@@ -143,7 +122,6 @@ export function hostThroughRelay(host: RoomHost, options: RelayHostOptions): Rel
       try {
         onMessage(JSON.parse(String(event.data)) as FromRelay);
       } catch {
-        // A frame the relay would never send; ignore it.
       }
     };
     opened.onerror = () => {};
@@ -156,7 +134,6 @@ export function hostThroughRelay(host: RoomHost, options: RelayHostOptions): Rel
     };
   }
 
-  /** Registers again under a new code: close, then connect with the new one. */
   const reregister = () => {
     const previous = socket;
     socket = undefined;

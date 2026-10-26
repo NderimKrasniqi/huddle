@@ -11,7 +11,6 @@ import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimate
 
 import { PLAYROOM_ARTWORK, PLAYROOM_AVATARS } from './playroom-artwork';
 
-/** Badges arrive from 0.9, never from nothing; reduced motion shows them at once. */
 const BADGE_POP = new Keyframe({
   0: { opacity: 0, transform: [{ scale: 0.9 }] },
   100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -19,43 +18,24 @@ const BADGE_POP = new Keyframe({
   .duration(playroomMotion.transition)
   .reduceMotion(ReduceMotion.System);
 
-/**
- * The portrait is drawn 1.3× the circle, shifted up and left, so the face
- * fills the circle and the shoulders reach its bottom edge.
- */
 const PORTRAIT_SCALE = 1.3;
 const PORTRAIT_LEFT = -0.15;
 const PORTRAIT_TOP = -0.2;
 
-/**
- * Art that fills more of its square than the rest (the dinosaur's spikes and
- * neck run to the edges) is drawn smaller, so every face reads the same size.
- */
 const PORTRAIT_FIT: Partial<Record<AvatarId, number>> = { puppy: 0.96, 'green-alien': 0.9 };
 
 export type PlayroomAvatarProps = {
   readonly avatarId: AvatarId;
-  /** Circle diameter. */
   readonly size: number;
-  /** Orange crown badge. */
   readonly host?: boolean;
-  /** Green check badge. */
   readonly ready?: boolean;
-  /** Orange raised-hand badge, for the ready check. */
   readonly handUp?: boolean;
-  /** Grey circle and faded portrait. */
   readonly away?: boolean;
-  /** Screen-reader label; omit when a visible name sits beside the avatar. */
   readonly accessibilityLabel?: string;
   readonly style?: StyleProp<ViewStyle>;
   readonly testID?: string;
 };
 
-/**
- * A player's portrait on its pastel circle. Below the circle's middle the
- * portrait is clipped to the circle; above it, hair and ears may break out of
- * the top, as in the concept boards. Leave room above the avatar for that.
- */
 export function PlayroomAvatar({
   avatarId,
   size,
@@ -90,8 +70,6 @@ export function PlayroomAvatar({
       >
         <Portrait source={source} size={size} top={PORTRAIT_TOP * size} away={away} fit={PORTRAIT_FIT[avatarId]} />
       </View>
-      {/* The top half again, unclipped, so it can break out of the circle. An
-          away portrait is translucent and stays inside its circle. */}
       {away ? null : (
         <View
           style={[
@@ -126,7 +104,6 @@ export function PlayroomAvatar({
       {handUp && !ready ? (
         <Animated.View
           entering={BADGE_POP}
-          // Bottom-left, mirroring the crown: a badge on the head would cover a face.
           style={[styles.badge, badgeBox(badge, border), { right: undefined, left: -badge * 0.12, backgroundColor: playroomColors.orange }]}
         >
           <Image source={PLAYROOM_ARTWORK.props.hand} style={{ width: badge * 0.62, height: badge * 0.62 }} resizeMode="contain" accessible={false} />
@@ -146,7 +123,6 @@ type PortraitProps = {
 };
 
 function Portrait({ source, size, top, left = PORTRAIT_LEFT * size, away, fit = 1 }: PortraitProps) {
-  // A smaller fit stays centred horizontally and keeps its chin on the circle's base.
   const drawn = size * PORTRAIT_SCALE * fit;
   const shift = size * PORTRAIT_SCALE - drawn;
   return (

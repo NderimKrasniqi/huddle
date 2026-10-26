@@ -1,4 +1,3 @@
-/** React Native entrypoint for the TV game's display-only pre-game flow. */
 export { TvGameFlowStage, TvPlatformStatusScreen } from './game-flow-stage';
 export type {
   TvGameFlowStageProps,

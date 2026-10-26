@@ -23,19 +23,16 @@ import {
 import { TvGameSetupScreen } from './game-setup-screen';
 import { useTvReducedMotion } from '../../ui';
 
-/** The room host's setup view consumed by the display-only flow. */
 export type TvGameSetupProjection = {
   readonly gameId: string;
   readonly settings: Readonly<Record<string, string>>;
   readonly mode: 'quick' | 'standard' | 'custom';
   readonly stage: 'configuring' | 'ready' | 'countdown';
   readonly readyPlayerIds: readonly string[];
-  /** Server epoch ms when the countdown's start is due; set only while counting down. */
   readonly countdownEndsAt?: number;
 };
 
 export type TvGameFlowStageProps = {
-  /** `null` means no Host selection has started; `undefined` is still loading. */
   readonly browsingAt: number | null | undefined;
   readonly setup: TvGameSetupProjection | null | undefined;
   readonly roster: readonly RosterSeat[];
@@ -43,12 +40,6 @@ export type TvGameFlowStageProps = {
   readonly reduceMotion?: boolean;
 };
 
-/**
- * Coordinates the TV's pre-game presentation without becoming a second source
- * of game state. The room host owns the browsing position, setup draft, and readiness;
- * the only local state here is whether this particular selection's decorative
- * art reveal has completed.
- */
 export function TvGameFlowStage({
   browsingAt,
   setup,
@@ -117,13 +108,8 @@ function TvGameSetupHandoff({
   const revealComplete = revealCompleteState || reduceMotion || !artAvailable;
 
   useEffect(() => {
-    // Motion can be enabled after the first static frame, but a mounted
-    // selection must never replay its art reveal when that preference changes
-    // back to normal motion. A new setup/game key owns the only reset.
     if (!reduceMotion) return;
     let active = true;
-    // The render above is immediately static; this microtask only latches the
-    // completed state so a later preference change cannot replay the reveal.
     void Promise.resolve().then(() => {
       if (active) setRevealComplete(true);
     });
@@ -158,10 +144,6 @@ function TvGameSetupHandoff({
   const readyPlayerIds = setup.readyPlayerIds.map(String);
   const players = roster.map((seat) => tvPlayer(seat, readyPlayerIds));
 
-  // The selected game's world owns both pre-start states. Keep the art and
-  // settings visible after every player is ready; the Host starts from the
-  // phone, which makes the running module replace this surface with its own
-  // countdown before the first playable beat.
   return (
     <TvGameSetupScreen
       gameId={setup.gameId}
@@ -199,10 +181,6 @@ export type TvPlatformStatusScreenProps = {
   readonly testID?: string;
 };
 
-/**
- * Shared passive platform state for unresolved TV data and device failures:
- * a status illustration, what happened, and the room it belongs to.
- */
 export function TvPlatformStatusScreen({
   kind,
   title,

@@ -1,6 +1,5 @@
 import type { GameMetadata } from '@huddle/domain';
 
-/** Metadata for Bomb Squad, shared by its client and server entries. */
 export const bombSquadMetadata: GameMetadata = {
   id: 'bomb-squad',
   title: 'Bomb Squad',

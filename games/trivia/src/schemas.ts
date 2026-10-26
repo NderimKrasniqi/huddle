@@ -6,7 +6,6 @@ const awayPlayerIdsSchema = z.array(playerIdSchema);
 const triviaQuestionSchema = z.strictObject({
   text: z.string(),
   options: z.tuple([z.string(), z.string(), z.string(), z.string()]),
-  // -2 is the redacted correct-answer sentinel used by client projections.
   correctIndex: z.number().int().min(-2).max(3).refine((value) => value !== -1),
   category: z.string().optional(),
 });
@@ -17,9 +16,7 @@ export const triviaStateSchema = z.strictObject({
   phase: z.enum(['intro', 'question', 'reveal', 'finished']),
   answers: z.record(playerIdSchema, z.number().int().min(0).max(3)),
   answerSeconds: z.record(playerIdSchema, z.number().finite().nonnegative()).optional(),
-  // TV-only live aggregate; no player ids or answer timing cross the seam.
   participationCount: z.number().int().nonnegative().optional(),
-  // TV reveal projection: normalized outcome only, never an option mapping.
   revealVerdicts: z.record(playerIdSchema, z.boolean()).optional(),
   revealAnswered: z.record(playerIdSchema, z.boolean()).optional(),
   revealGains: z.record(playerIdSchema, z.number().finite()).optional(),
@@ -29,7 +26,6 @@ export const triviaStateSchema = z.strictObject({
   ),
   scoring: z.enum(['flat', 'speed']).optional(),
 });
-
 
 const triviaAnswerEventSchema = z.strictObject({
   kind: z.literal('answer'),
@@ -51,7 +47,6 @@ const triviaAdvanceEventSchema = z.strictObject({
   fromHost: z.boolean().optional(),
 });
 
-/** Strict decoder for untrusted Trivia events, including server deadlines. */
 export const triviaEventSchema = z.union([
   triviaAnswerEventSchema,
   triviaAdvanceEventSchema,

@@ -1,6 +1,5 @@
 import { seedRoom, startWhenReady } from './seed-kit';
 
-/** One bot Host waits for a phone, starts Trivia, and holds the room. */
 const seed = await seedRoom([['Ana', 'fox']]);
 await seed.host.waitFor(() => seed.roomSize() >= 2);
 await seed.host.command('selectGame', { gameId: 'trivia' });

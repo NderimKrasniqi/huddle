@@ -57,20 +57,12 @@ import {
   type StoredGame,
 } from './state';
 
-/** A seat preview nobody refreshes for this long is dropped. */
 const SEAT_PREVIEW_TTL_MS = 20_000;
-/** How often the host looks for silent phones, stale previews and expiry. */
 const SWEEP_INTERVAL_MS = 1_000;
-/** Ten seats, a few join forms and some headroom. */
 export const CONNECTION_CAP = 32;
-/**
- * A connection without a seat that sends nothing for this long is closed, so
- * abandoned join forms cannot fill the cap. An open join form asks for
- * availability every three seconds.
- */
+// Abandoned join forms must not fill the cap; an open form asks every three seconds.
 const UNSEATED_IDLE_MS = 30_000;
 
-/** What the TV's own screens read, in-process. */
 export type TvViews = {
   readonly roomId: string;
   readonly code: string;
@@ -82,11 +74,8 @@ export type TvViews = {
   readonly arrivals: ViewValue<'arrivals'>;
 };
 
-/** One transport connection, as the transport drives it. */
 export type HostConnection = {
-  /** A text frame from the phone. */
   readonly receive: (frame: string) => void;
-  /** The transport closed. The seat stays; silence will mark it away. */
   readonly disconnect: () => void;
 };
 
@@ -98,9 +87,7 @@ type Connection = {
   readonly close: () => void;
   greeted: boolean;
   playerId?: string;
-  /** When this connection last sent a frame, by the host's clock. */
   lastFrameAt: number;
-  /** The last value sent per view, without its clock fields. */
   readonly sent: Map<ViewName, string>;
 };
 
@@ -110,14 +97,6 @@ type StartArgs = {
   readonly mode?: GameSetupMode;
 };
 
-/**
- * The room's authority, run by the TV (ADR-01).
- *
- * Every change goes through `change`, which recomputes the views, pushes the
- * ones that changed to each phone and to the TV's own screens, and saves a
- * snapshot. Rules refuse by throwing a `Refusal`; a refused command changes
- * nothing because every rule checks before it writes.
- */
 export class RoomHost {
   private room: RoomState;
   private readonly tvInstanceId: string;
@@ -129,7 +108,6 @@ export class RoomHost {
   private deadlineTimer: CancelTimer | undefined;
   private sweepTimer: CancelTimer | undefined;
   private disposed = false;
-  /** True when this host was rebuilt from a snapshot rather than opened fresh. */
   readonly restored: boolean;
 
   constructor(
@@ -148,8 +126,6 @@ export class RoomHost {
     this.flush();
   }
 
-  // ------------------------------------------------------------ public API
-
   info(): { readonly roomId: string; readonly code: string; readonly tvInstanceId: string; readonly hasRunningGame: boolean } {
     return {
       roomId: this.room.roomId,
@@ -159,7 +135,6 @@ export class RoomHost {
     };
   }
 
-  /** Accepts a transport connection, or closes it when the room is at capacity. */
   connect(send: (frame: string) => void, close: () => void): HostConnection {
     if (this.disposed || this.connections.size >= CONNECTION_CAP) {
       close();
@@ -175,23 +150,16 @@ export class RoomHost {
     };
   }
 
-  /** The TV's screens subscribe here; the listener runs now and on every change. */
   subscribeTv(listener: (views: TvViews) => void): () => void {
     this.tvListeners.add(listener);
     listener(this.tvViews());
     return () => this.tvListeners.delete(listener);
   }
 
-  /** The TV app went to the background (true) or came back (false). */
   setTvAway(away: boolean): void {
     this.change(() => (away ? this.markTvAway() : this.restoreTv()));
   }
 
-  /**
-   * Swaps a room nobody has joined for a fresh one with a new code, for a
-   * relay that has the old code taken. Returns false, changing nothing, once a
-   * player holds a seat. The TV's screens see a new room id and reopen it.
-   */
   replaceEmptyRoom(): boolean {
     if (this.disposed || this.room.seats.length > 0) return false;
     this.change(() => {
@@ -216,8 +184,6 @@ export class RoomHost {
     this.tvListeners.clear();
   }
 
-  // ------------------------------------------------------------ room lifecycle
-
   private freshRoom(): RoomState {
     return {
       roomId: this.newId('room'),
@@ -228,11 +194,6 @@ export class RoomHost {
     };
   }
 
-  /**
-   * A restarted TV app picks its room back up. Time spent down does not count
-   * against a running beat: its remainder at the moment of saving is kept and
-   * re-armed now. A countdown in progress returns to the ready check.
-   */
   private restoreRoom(snapshot: HostSnapshot): RoomState {
     const room = copy(snapshot.room);
     room.tvAway = false;
@@ -251,10 +212,6 @@ export class RoomHost {
     return room;
   }
 
-  /**
-   * The room ends: every phone is told, and the TV shows a new room with a new
-   * code. Reached when the TV has been away for the whole expiry window.
-   */
   private closeRoom(): void {
     for (const connection of this.connections.values()) {
       if (connection.playerId !== undefined) this.sendTo(connection, { type: 'closed', reason: 'roomClosed' });
@@ -269,18 +226,14 @@ export class RoomHost {
   }
 
   private markTvAway(): void {
+    // No phone can reach an away TV, so nobody is marked away meanwhile.
     if (this.room.tvAway) return;
     this.room.game = this.pauseGameClock(this.room.game);
     this.room.tvAway = true;
     this.room.tvAwaySince = this.ports.now();
-    // The countdown needs the TV to show it; it stops until the TV is back.
     this.reconcileCountdown();
   }
 
-  /**
-   * The TV is back. The game clock resumes from its remainder unless a player
-   * disconnect still holds it, which waits for the Host or the last return.
-   */
   private restoreTv(): void {
     if (!this.room.tvAway) return;
     this.room.tvAway = false;
@@ -291,18 +244,11 @@ export class RoomHost {
     this.room.game = this.resumePausedGameClock(running);
   }
 
-  /**
-   * Phones could not reach a TV that was down or in the background, so that
-   * silence is not theirs: every seat still present gets a fresh beat and the
-   * usual window to come back. Without it the first sweep marks them all away
-   * and the Host moves to whichever phone reconnects first.
-   */
+  // Phones cannot reach a TV that is down or backgrounded, so that silence is not theirs.
   private forgiveTvOutage(): void {
     const now = this.ports.now();
     for (const seat of this.room.seats) if (!seat.away) seat.lastSeenAt = now;
   }
-
-  // ------------------------------------------------------------ presence
 
   private armSweep(): void {
     this.sweepTimer = this.ports.setTimer(SWEEP_INTERVAL_MS, () => {
@@ -313,10 +259,6 @@ export class RoomHost {
     });
   }
 
-  /**
-   * The room noticing time pass: phones gone quiet become away, stale join
-   * previews go, and a TV away for the whole window ends the room.
-   */
   private sweep(): void {
     const now = this.ports.now();
     if (this.room.tvAway && this.room.tvAwaySince !== undefined && now - this.room.tvAwaySince >= ROOM_EXPIRY_MS) {
@@ -330,7 +272,6 @@ export class RoomHost {
         this.connections.delete(connection.id);
       }
     }
-    // While the TV is away no phone can reach it; that silence is not theirs.
     if (this.room.tvAway) return;
     for (const seat of this.room.seats) {
       if (!seat.away && now - seat.lastSeenAt >= AWAY_AFTER_MS) this.markAway(seat);
@@ -341,18 +282,14 @@ export class RoomHost {
     return this.ports.now() - seat.lastSeenAt;
   }
 
-  /** Whether the room is still hearing from this phone. */
   private beating(seat: Seat): boolean {
     return this.silenceOf(seat) < AWAY_AFTER_MS;
   }
 
-  /** A frame from a seated phone is its beat. */
   private touch(seat: Seat): void {
     seat.lastSeenAt = this.ports.now();
     if (!seat.away) return;
     seat.away = false;
-    // Coming back repairs a Host pointer that stayed on a silent seat, and can
-    // release a game held for disconnected players.
     this.restoreConnectedHost();
     this.resumeWhenEveryoneReturns();
   }
@@ -360,18 +297,11 @@ export class RoomHost {
   private markAway(seat: Seat): void {
     seat.away = true;
     this.reconcileCountdown();
-    // A host who has gone quiet has left the party as far as the room can tell.
     this.handOverRoom(seat, false);
     this.pauseForDisconnectedPlayer();
   }
 
-  /**
-   * Hands the room on if the departing seat holds it. The successor is the
-   * seat heard from most recently. A room nobody is beating in keeps its Host
-   * when that Host's seat survives (going quiet is not resigning); a leaver
-   * hands on to the earliest seat left even if it is quiet, so the room is
-   * never left pointing at a deleted seat.
-   */
+  // A quiet Host keeps the room when nobody else is beating either; going quiet is not resigning.
   private handOverRoom(departing: Seat, departingIsLeaving: boolean): void {
     if (this.room.hostPlayerId !== departing.playerId) return;
     const others = this.room.seats.filter((seat) => seat.playerId !== departing.playerId);
@@ -382,7 +312,6 @@ export class RoomHost {
     if (successor !== undefined) this.room.hostPlayerId = successor.playerId;
   }
 
-  /** Gives a room whose Host is silent to its earliest live seat. */
   private restoreConnectedHost(): void {
     const host = this.seatById(this.room.hostPlayerId);
     if (host !== undefined && this.beating(host)) return;
@@ -409,14 +338,11 @@ export class RoomHost {
     this.room.game = this.room.tvAway ? recovered : this.resumePausedGameClock(recovered);
   }
 
-  // ------------------------------------------------------------ connections
-
   private receive(connection: Connection, frame: string): void {
     if (this.disposed || !this.connections.has(connection.id)) return;
     connection.lastFrameAt = this.ports.now();
     const decoded = decodeClientMessage(frame);
     if (!decoded.ok && decoded.requestId !== undefined && connection.greeted) {
-      // A command with arguments out of range is refused, not punished with a disconnect.
       this.sendTo(connection, { type: 'result', requestId: decoded.requestId, ok: false, rejection: decoded.rejection });
       return;
     }
@@ -444,7 +370,6 @@ export class RoomHost {
     }
     const seat = this.seatById(connection.playerId);
     if (message.type === 'ping') {
-      // A beat from a present seat changes no view, so it skips the flush.
       if (seat !== undefined && !seat.away) seat.lastSeenAt = this.ports.now();
       else if (seat !== undefined) this.change(() => this.touch(seat));
       this.sendTo(connection, { type: 'pong', sentAt: message.sentAt });
@@ -465,7 +390,6 @@ export class RoomHost {
       const rejection: RoomRejection = error instanceof Refusal ? error.rejection : { kind: 'hostError' };
       if (!(error instanceof Refusal)) this.ports.log?.('Huddle room host error', { command: name });
       this.sendTo(connection, { type: 'result', requestId, ok: false, rejection });
-      // A refusal can follow writes that are still true (a beat), so views flush.
       this.flush();
     }
   }
@@ -478,7 +402,6 @@ export class RoomHost {
     return [...this.connections.values()].filter((connection) => connection.playerId === playerId);
   }
 
-  /** Unseat a phone's connections: it hears `session: null`, then `closed`. */
   private unseatConnections(playerId: string, reason: 'removed' | undefined): void {
     for (const connection of this.connectionsOf(playerId)) {
       connection.playerId = undefined;
@@ -503,14 +426,11 @@ export class RoomHost {
     connection.sent.clear();
   }
 
-  // ------------------------------------------------------------ dispatch
-
   private run<Name extends CommandName>(connection: Connection, name: Name, args: CommandArgs<Name>): CommandResult<Name> {
     if (!ANONYMOUS_COMMANDS.has(name) && this.seatById(connection.playerId) === undefined) {
       throw new Refusal({ kind: 'notJoined' });
     }
-    // A connection holds one seat. A second join would rebind it and leave the
-    // first seat behind as an orphan that blocks Start; a correct phone never sends one.
+    // A second join would rebind the connection and orphan its first seat.
     if (name === 'joinRoom' && this.seatById(connection.playerId) !== undefined) {
       throw new Refusal({ kind: 'badMessage' });
     }
@@ -541,7 +461,6 @@ export class RoomHost {
       if (existing === undefined) {
         const held = new Set(this.room.seats.map((seat) => seat.avatar));
         const shown = this.room.previews.filter((preview) => !held.has(preview.avatar)).length;
-        // Never more arriving seats than the room has free ones.
         if (this.room.seats.length + shown >= ROOM_PLAYER_CAP) return null;
         this.room.previews.push({ previewId: this.newId('preview'), previewKey: args.previewKey, nickname, avatar: args.avatar, updatedAt: now });
         return null;
@@ -570,8 +489,6 @@ export class RoomHost {
       this.limiter.consume('joinRoom', this.room.roomId);
       this.limiter.consume('joinGuest', args.guestId ?? 'legacy-clients');
       const seats = this.room.seats;
-      // The cap first: "name taken" would send someone to think of another name
-      // for a room with no seat left for any name.
       if (seats.length >= ROOM_PLAYER_CAP) throw new Refusal({ kind: 'roomFull', cap: ROOM_PLAYER_CAP });
       if (seats.some((seat) => seat.nickname.trim().toLowerCase() === nickname.toLowerCase())) {
         throw new Refusal({ kind: 'nameTaken', nickname });
@@ -589,7 +506,6 @@ export class RoomHost {
       };
       seats.push(seat);
       if (this.needsHost()) this.room.hostPlayerId = seat.playerId;
-      // A new seat is not Ready, so a running countdown stops.
       this.reconcileCountdown();
       this.bind(connection, seat.playerId);
       return {
@@ -613,7 +529,6 @@ export class RoomHost {
     leaveRoom: (connection) => {
       const seat = this.requireSeat(connection);
       this.limiter.consume('memberCommand', seat.playerId);
-      // Before the seat goes, so the successor is chosen from a roster it is on.
       this.handOverRoom(seat, true);
       this.room.seats = this.room.seats.filter((candidate) => candidate.playerId !== seat.playerId);
       this.unseatConnections(seat.playerId, undefined);
@@ -623,7 +538,6 @@ export class RoomHost {
         this.resumeWhenEveryoneReturns();
         return null;
       }
-      // The TV owns the room: the last leaver leaves an empty lobby behind.
       this.deadlineTimer?.();
       this.deadlineTimer = undefined;
       this.countdownTimer?.();
@@ -656,7 +570,6 @@ export class RoomHost {
 
     browseGame: (connection, { index }) => {
       this.requireHost(connection, 'hostCommand');
-      // A TV in the background keeps the last committed card.
       if (this.room.tvAway) return null;
       this.room.browsingGameIndex = browsingIndex(index);
       return null;
@@ -696,7 +609,6 @@ export class RoomHost {
       if (setup === undefined) throw new Refusal({ kind: 'setupNotFound' });
       setupForGame(setup.gameId, setup.mode, setup.settings);
       this.cancelCountdownTimer();
-      // Locking setup is the Host saying they are ready.
       this.room.setup = { ...withoutCountdown(setup), stage: 'ready', readyPlayerIds: [host.playerId] };
       return null;
     },
@@ -712,7 +624,6 @@ export class RoomHost {
         ? current.includes(seat.playerId) ? current : [...current, seat.playerId]
         : current.filter((playerId) => playerId !== seat.playerId);
       this.room.setup = { ...setup, readyPlayerIds };
-      // An un-Ready during the countdown stops it.
       this.reconcileCountdown();
       return null;
     },
@@ -745,7 +656,6 @@ export class RoomHost {
     startCountdown: (connection) => {
       this.requireHost(connection, 'hostCommand');
       const setup = this.room.setup;
-      // A second tap during the countdown asks for what is already happening.
       if (setup?.stage === 'countdown') return null;
       this.validatedStart({});
       const endsAt = this.ports.now() + COUNTDOWN_MS;
@@ -768,7 +678,6 @@ export class RoomHost {
       this.deadlineTimer?.();
       this.deadlineTimer = undefined;
       this.cancelCountdownTimer();
-      // The next lobby starts at the first card, not the game that just ended.
       this.room.game = undefined;
       this.room.setup = undefined;
       this.room.browsingGameIndex = undefined;
@@ -778,10 +687,8 @@ export class RoomHost {
     continueAfterDisconnect: (connection) => {
       this.requireHost(connection, 'hostCommand');
       const running = this.room.game;
-      // Idempotent for a duplicate tap or a choice that arrived after everyone came back.
       if (running?.playerPaused !== true) return null;
       const { playerPaused: _paused, ...continuing } = running;
-      // A TV pause has display precedence: remember the choice, re-arm on TV return.
       this.room.game = this.room.tvAway ? continuing : this.resumePausedGameClock(continuing);
       return null;
     },
@@ -791,14 +698,10 @@ export class RoomHost {
       this.limiter.consume('gameEvent', seat.playerId);
       if (this.room.tvAway || this.room.game?.playerPaused === true) return null;
       if (typeof event !== 'object' || event === null || Array.isArray(event)) return null;
-      // The seat the connection holds names the player; whatever the phone
-      // wrote there is a claim the host does not read.
       this.playGameEvent({ ...(event as object), playerId: seat.playerId });
       return null;
     },
   };
-
-  // ------------------------------------------------------------ authorization
 
   private requireSeat(connection: Connection): Seat {
     const seat = this.seatById(connection.playerId);
@@ -813,7 +716,6 @@ export class RoomHost {
     return seat;
   }
 
-  /** The seat a host control names: in this room, and not the Host's own. */
   private targetSeat(actor: Seat, playerId: string): Seat {
     const target = this.seatById(playerId);
     if (target === undefined) throw new Refusal({ kind: 'targetNotInRoom' });
@@ -830,8 +732,6 @@ export class RoomHost {
     if (setup !== undefined) this.room.setup = { ...setup, readyPlayerIds: setup.readyPlayerIds.filter((id) => id !== playerId) };
   }
 
-  // ------------------------------------------------------------ setup and countdown
-
   private readyCheckComplete(): boolean {
     const setup = this.room.setup;
     if (setup === undefined || this.room.game !== undefined || this.room.tvAway) return false;
@@ -843,10 +743,6 @@ export class RoomHost {
     }).complete;
   }
 
-  /**
-   * Stops the countdown when the ready check no longer holds. Called after
-   * every change that can break it; it never starts one.
-   */
   private reconcileCountdown(): void {
     const setup = this.room.setup;
     if (setup?.stage !== 'countdown' || this.readyCheckComplete()) return;
@@ -867,7 +763,6 @@ export class RoomHost {
     this.countdownTimer = undefined;
   }
 
-  /** The countdown ran out: start the game if the ready check still holds. */
   private launchCountdown(endsAt: number): void {
     const setup = this.room.setup;
     if (setup?.stage !== 'countdown' || setup.countdownEndsAt !== endsAt) return;
@@ -883,11 +778,6 @@ export class RoomHost {
     }
   }
 
-  /**
-   * Every refusal a start can meet, in the order the room hears them, or the
-   * game, seats and settings it would use. The Host's Start and the start
-   * itself share it, so a countdown only begins on a room that could start.
-   */
   private validatedStart(args: StartArgs): { game: GameLogic; players: GamePlayer[]; requestedSettings: GameSettings | undefined } {
     const setup = this.room.setup;
     if (this.room.tvAway) throw new Refusal({ kind: 'tvUnavailable' });
@@ -939,9 +829,6 @@ export class RoomHost {
     this.room.setup = undefined;
   }
 
-  // ------------------------------------------------------------ game clock
-
-  /** Stops the prior beat's timer and arms `deadline`, if any, for the next. */
   private windGameClock(running: StoredGame, deadline: { beat: string; afterMs: number; event: unknown } | undefined, afterMs?: number): StoredGame {
     this.deadlineTimer?.();
     this.deadlineTimer = undefined;
@@ -956,7 +843,6 @@ export class RoomHost {
     return { ...rest, deadlineAt: this.ports.now() + wait, deadlineBeat: deadline.beat, deadlineEvent: deadline.event };
   }
 
-  /** Stops the clock once and keeps the exact remainder for recovery. */
   private pauseGameClock(running: StoredGame | undefined): StoredGame | undefined {
     if (running === undefined || running.deadlineAt === undefined) return running;
     this.deadlineTimer?.();
@@ -965,7 +851,6 @@ export class RoomHost {
     return { ...rest, pausedRemainingMs: Math.max(0, deadlineAt - this.ports.now()) };
   }
 
-  /** Re-arms a paused game from its remainder, re-reading the beat's deadline. */
   private resumePausedGameClock(running: StoredGame): StoredGame {
     const remaining = running.pausedRemainingMs;
     const { pausedRemainingMs: _paused, ...rest } = running;
@@ -985,11 +870,6 @@ export class RoomHost {
     this.playGameEvent(event as GameEvent);
   }
 
-  /**
-   * Puts an event to the running game's rules and winds the clock to the beat
-   * that leaves it on. A phone's tap and the room's own deadline both come
-   * through here, judged by the same reducer.
-   */
   private playGameEvent(event: GameEvent): void {
     const running = this.room.game;
     if (this.room.tvAway || running === undefined || running.playerPaused === true) return;
@@ -1002,7 +882,7 @@ export class RoomHost {
     try {
       decodedEvent = game.decodeEvent({
         ...event,
-        // Always the host's value, so a phone cannot send its own when no deadline is pending.
+        // Always the host's value, so a phone cannot send its own.
         msRemaining: running.deadlineAt === undefined ? undefined : running.deadlineAt - now,
         awayPlayerIds: this.room.seats.filter((seat) => seat.away).map((seat) => seat.playerId),
         fromHost: event.playerId !== undefined && event.playerId === this.room.hostPlayerId,
@@ -1038,8 +918,6 @@ export class RoomHost {
       running.deadlineBeat === nextDeadline.deadline?.beat;
     this.room.game = sameBeat ? updated : this.windGameClock(updated, nextDeadline.deadline);
   }
-
-  // ------------------------------------------------------------ views
 
   private gamePlayers(): GamePlayer[] {
     return this.room.seats.map((seat) => ({ playerId: seat.playerId, nickname: seat.nickname, away: seat.away, avatar: seat.avatar }));
@@ -1133,7 +1011,6 @@ export class RoomHost {
     };
   }
 
-  /** Runs a change, then pushes what changed and saves. Nested calls flush once. */
   private depth = 0;
   private change(run: () => void): void {
     this.depth += 1;
@@ -1178,13 +1055,11 @@ export class RoomHost {
   }
 }
 
-/** The setup with no countdown on it; the stage and the deadline go together. */
 function withoutCountdown(setup: Setup): Setup {
   const { countdownEndsAt: _endsAt, ...rest } = setup;
   return { ...rest, stage: setup.stage === 'countdown' ? 'ready' : setup.stage };
 }
 
-/** A game's settings for a mode, or the refusal that says why not. */
 function setupForGame(gameId: string, mode: GameSetupMode | undefined, chosen: GameSettings | undefined) {
   const game = gameLogicById(gameId);
   if (game === undefined) throw new Refusal({ kind: 'gameNotInstalled', gameId });
@@ -1199,12 +1074,11 @@ function setupForGame(gameId: string, mode: GameSetupMode | undefined, chosen: G
   return { game, settings, mode: resolvedMode };
 }
 
-/** A deep copy of JSON-safe room state. Hermes has no `structuredClone`. */
+// Hermes has no structuredClone.
 function copy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-/** A view without the remainders that change every millisecond, for diffing. */
 function withoutClock(value: unknown): unknown {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return value;
   const { clockRemainingMs: _clock, countdownRemainingMs: _countdown, ...rest } = value as Record<string, unknown>;

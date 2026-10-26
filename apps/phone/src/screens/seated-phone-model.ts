@@ -16,11 +16,6 @@ type SetupReadiness = {
   readonly currentReady: boolean;
 };
 
-/**
- * The local readiness preview shown by the Phone before `startGame` validates
- * the same facts atomically. It keeps Host and guest copies of the setup
- * screen aligned while the server remains the authority against races.
- */
 export function setupReadiness({
   stage,
   playerRange,
@@ -45,14 +40,11 @@ type PickerControlInput = {
 };
 
 type PickerControlState = {
-  /** A card tap only moves the shared browse index. */
   readonly cardAction: 'browse' | null;
-  /** Selecting the focused installed card is a separate action. */
   readonly selectEnabled: boolean;
   readonly guestWaiting: boolean;
 };
 
-/** Capabilities for the shared picker, including the guest's passive view. */
 export function pickerControlState({
   youAreHost,
   busy,
@@ -68,18 +60,11 @@ export function pickerControlState({
 
 type PickerVisibilityInput = {
   readonly youAreHost: boolean;
-  /** Local optimism while the Host's first browse mutation is settling. */
   readonly pickerOpen: boolean;
-  /** Shared room index; once present, the picker is the room's pre-game state. */
   readonly browsingAt: number | null | undefined;
   readonly hasSetup: boolean;
 };
 
-/**
- * Whether a lobby should remain on the shared picker. A browse index has no
- * clearing mutation, so a local Back action must not put only one phone back in
- * a room view while every other client remains on the carousel.
- */
 export function pickerVisibility({
   youAreHost,
   pickerOpen,
@@ -89,7 +74,6 @@ export function pickerVisibility({
   return hasSetup || browsingAt !== null && browsingAt !== undefined || youAreHost && pickerOpen;
 }
 
-/** Keeps setup mode labels available to pure render seams without guessing a game. */
 export function setupModeLabel(mode: GameSettingsMode): string {
   return mode.slice(0, 1).toUpperCase() + mode.slice(1);
 }

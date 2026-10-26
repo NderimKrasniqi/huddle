@@ -14,8 +14,6 @@ const forbiddenPresentationImports = [
   '@huddle/ui/fonts',
 ];
 
-// Playroom platform motion runs on Reanimated; game modules own their own
-// presentation and stay without it.
 const forbiddenGameImports = [...forbiddenPresentationImports, 'react-native-reanimated'];
 
 module.exports = defineConfig([

@@ -9,13 +9,8 @@ import { tvHostCopy, tvReadiness, type TvGamePlayer, gameTitleFor } from './game
 import type { TvGameSetupScreenProps } from './game-setup-screen';
 import { TvPlayroomFrame } from './playroom-frame';
 
-/** How far a player lifts when they raise their hand. */
 const LIFT = playroomMotion.entranceTravel;
 
-/**
- * The ready check: everyone raises a hand on their phone. A ready player's
- * avatar lifts with an orange hand, and a bar fills one segment per player.
- */
 export function TvReadyCheckScreen({
   gameId,
   gameTitle,
@@ -42,7 +37,6 @@ export function TvReadyCheckScreen({
         <View style={styles.column} pointerEvents="none" focusable={false}>
           <PlayroomHeading type={playroomTv.type.heading}>{`Hands up for ${title}!`}</PlayroomHeading>
           {summary.length > 0 ? (
-            // One short chip per setting reads at a glance; one long line did not.
             <View style={styles.chips} testID="tv-game-setup-settings" accessible accessibilityLabel={[title, ...summary].join(', ')}>
               {summary.map((item, index) => (
                 <PlayroomPill key={settingsSchema?.[index]?.key ?? index} textStyle={playroomTv.type.caption}>{item}</PlayroomPill>
@@ -73,7 +67,6 @@ export function TvReadyCheckScreen({
   );
 }
 
-/** Names who the room waits for, or how many more players the game needs. */
 function waitingCopy(waiting: readonly string[], playerCount: number, min: number | undefined): string {
   if (waiting.length > 0) return `Waiting for ${listNames(waiting)}`;
   const missing = (min ?? 0) - playerCount;
@@ -96,7 +89,6 @@ function Seat({
     lift.set(reduceMotion ? to : withTiming(to, { duration: playroomMotion.entrance, easing: Easing.bezier(...playroomEasing.out) }));
   }, [lift, ready, reduceMotion]);
   const lifted = useAnimatedStyle(() => ({ transform: [{ translateY: lift.get() }] }));
-  // The phone that raised its hand flashes in this player's colour; the TV echoes it.
   const echo = useSharedValue(0);
   const raised = useRef(ready);
   useEffect(() => {
@@ -155,7 +147,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 96,
     paddingBottom: playroomTv.safeY,
-    // Generous rhythm: a small room fills the stage instead of leaving a band empty below.
     gap: 32,
   },
   chips: {
@@ -171,11 +162,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     columnGap: 60,
-    // Heads break out of the top of their circles, so rows need room above.
     rowGap: 20,
     marginTop: 48,
   },
-  // A disc in the player's own colour behind their avatar, flashed when they raise a hand.
   echo: {
     position: 'absolute',
     top: 0,

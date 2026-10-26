@@ -1,6 +1,3 @@
-//! The relay's shared state: which TV holds which room code, and which phone
-//! connections belong to it. It holds no game state and no Room Protocol data.
-
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Mutex;
@@ -23,7 +20,6 @@ struct Room {
     secret: String,
     host: Option<Host>,
     phones: HashMap<u64, Sender<Message>>,
-    /// While the TV is away: when the code goes back to the pool.
     reserved_until: Option<Instant>,
 }
 
@@ -39,7 +35,6 @@ pub struct Relay {
     max_per_ip: u32,
 }
 
-/// A close frame with a relay close code.
 pub fn close_frame(code: u16, reason: &'static str) -> Message {
     Message::Close(Some(CloseFrame {
         code,
@@ -52,7 +47,6 @@ fn valid_code(code: &str) -> bool {
 }
 
 impl Relay {
-    /// A relay that lets each IP address hold `max_per_ip` connections.
     pub fn new(max_per_ip: u32) -> Self {
         Self {
             inner: Mutex::default(),
@@ -62,7 +56,6 @@ impl Relay {
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
-        // A panic while holding the lock leaves plain maps behind; keep serving.
         self.inner
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -92,8 +85,6 @@ impl Relay {
         }
     }
 
-    /// Claims `code` for a TV. The same secret reclaims it after a restart;
-    /// any other secret is refused while the room or its reservation lasts.
     pub fn register(
         &self,
         code: &str,
@@ -109,7 +100,6 @@ impl Relay {
         match inner.rooms.get_mut(code) {
             Some(room) if room.secret != secret => Err("codeTaken"),
             Some(room) => {
-                // The same TV again: phones on an older connection start over.
                 if let Some(old) = room.host.take() {
                     let _ = old.tx.try_send(close_frame(close::TV_GONE, "replaced"));
                 }
@@ -136,8 +126,6 @@ impl Relay {
         }
     }
 
-    /// The TV's connection ended: its phones are closed and the code stays
-    /// reserved for it for `HOST_GRACE`.
     pub fn host_gone(&self, code: &str, generation: u64) {
         let mut inner = self.lock();
         let Some(room) = inner.rooms.get_mut(code) else {
@@ -153,7 +141,6 @@ impl Relay {
         }
     }
 
-    /// Adds a phone to a room whose TV is connected; returns its id and the TV.
     pub fn join(&self, code: &str, tx: Sender<Message>) -> Result<(u64, Sender<Message>), u16> {
         let id = self.next();
         let mut inner = self.lock();
@@ -171,7 +158,6 @@ impl Relay {
         Ok((id, host_tx))
     }
 
-    /// The TV this phone's room belongs to, while both are connected.
     pub fn host_of(&self, code: &str, id: u64) -> Option<Sender<Message>> {
         let inner = self.lock();
         let room = inner.rooms.get(code)?;
@@ -185,7 +171,6 @@ impl Relay {
         self.lock().rooms.get(code)?.phones.get(&id).cloned()
     }
 
-    /// Removes a phone; returns the TV to tell, if it is still connected.
     pub fn remove_phone(&self, code: &str, id: u64) -> Option<Sender<Message>> {
         let mut inner = self.lock();
         let room = inner.rooms.get_mut(code)?;
@@ -193,7 +178,6 @@ impl Relay {
         room.host.as_ref().map(|host| host.tx.clone())
     }
 
-    /// Returns reserved codes whose TV never came back to the pool.
     pub fn sweep(&self) -> usize {
         let now = Instant::now();
         let mut inner = self.lock();

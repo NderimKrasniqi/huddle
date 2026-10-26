@@ -4,7 +4,6 @@ import { StyleSheet, View } from 'react-native';
 
 import { phoneLoadingPresentation, type PhoneLoadingPhase } from './loading-state';
 
-/** Startup and session-restoring screen for the phone app. */
 export function PhoneLoadingScreen({ phase }: { readonly phase: PhoneLoadingPhase }) {
   return (
     <View style={styles.screen} testID={`phone-${phase}-surface`}>

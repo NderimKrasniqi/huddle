@@ -43,7 +43,6 @@ export type {
 const FLAT_SCORE_PER_CORRECT_ANSWER = 100;
 const SPEED_BONUS_PER_CORRECT_ANSWER = 100;
 
-/** Highest score first, retaining the original order for ties. */
 function inScoreOrder(standings: readonly TriviaStanding[]): readonly TriviaStanding[] {
   return [...standings].sort((first, second) => second.score - first.score);
 }
@@ -57,7 +56,6 @@ function secondsLeftOn(msRemaining: number | undefined, questionSeconds: number)
   return Math.min(Math.max(msRemaining / 1000, 0), questionSeconds);
 }
 
-/** Price a correct answer using the timer selected for this game. */
 function scoreForCorrectAnswer(state: TriviaState, secondsRemaining: number): number {
   if (state.scoring !== 'speed') return FLAT_SCORE_PER_CORRECT_ANSWER;
 
@@ -68,7 +66,6 @@ function scoreForCorrectAnswer(state: TriviaState, secondsRemaining: number): nu
   );
 }
 
-/** Move the current question into its shared reveal and update the standings. */
 function revealed(state: TriviaState): TriviaState {
   const question = state.questions[state.questionIndex];
   if (question === undefined) return state;
@@ -85,7 +82,6 @@ function revealed(state: TriviaState): TriviaState {
   return { ...state, phase: 'reveal', standings: inScoreOrder(scored) };
 }
 
-/** Apply a first answer only while its question is still live. */
 function answerTaken(
   state: TriviaState,
   event: Extract<TriviaEvent, { kind: 'answer' }>,
@@ -115,18 +111,13 @@ function answerTaken(
   const answered = { ...state, answers, answerSeconds };
   const counted = playersCounted(answered, event.awayPlayerIds);
 
-  // If every player the room can currently hear has answered, reveal early.
-  // An entirely quiet room stays on the server-owned question timer.
   return counted > 0 && answersIn(answered) === counted ? revealed(answered) : answered;
 }
 
-/** Apply a server-owned deadline event to the beat it names. */
 function advanced(
   state: TriviaState,
   event: Extract<TriviaEvent, { kind: 'advance' }>,
 ): TriviaState {
-  // Phones cannot advance a beat, with one exception: the Host may end the
-  // break after a reveal early. `fromHost` is the hub's, never the phone's.
   if (event.playerId !== undefined && !(event.fromHost === true && event.phase === 'reveal')) return state;
   if (event.questionIndex !== state.questionIndex || event.phase !== state.phase) return state;
 
@@ -154,7 +145,6 @@ const WITHHELD_QUESTION: TriviaQuestion = {
   correctIndex: HIDDEN_CORRECT_INDEX,
 };
 
-/** Keep only the question the room has reached; hide its answer until reveal. */
 function questionsAsAsked(state: TriviaState): readonly TriviaQuestion[] {
   if (state.phase !== 'question') return state.questions.map(() => WITHHELD_QUESTION);
 
@@ -164,13 +154,6 @@ function questionsAsAsked(state: TriviaState): readonly TriviaQuestion[] {
   });
 }
 
-/**
- * A question projection for a reveal only needs the current shared prompt and
- * answer key. Earlier questions have already left the stage and future ones
- * must remain server-only. Phones receive the withheld form for every phase
- * after question time, since their renderer is eyes-up and has no reason to
- * retain the deck.
- */
 function questionsForViewer(
   state: TriviaState,
   viewer: GamePlayerId | undefined,
@@ -186,11 +169,6 @@ function questionsForViewer(
   return state.questions.map(() => WITHHELD_QUESTION);
 }
 
-/**
- * What each player scored on the question just revealed, for the TV's "+100".
- * Nothing new: the TV can already subtract one reveal's standings from the
- * next. It just arrives in time to be drawn.
- */
 function revealGainsFor(state: TriviaState): Readonly<Record<GamePlayerId, number>> {
   const question = state.questions[state.questionIndex];
   if (question === undefined) return {};
@@ -205,7 +183,6 @@ function revealGainsFor(state: TriviaState): Readonly<Record<GamePlayerId, numbe
   );
 }
 
-/** Every entry for the TV; only the viewer's own for a phone. */
 function forViewer(
   all: Readonly<Record<GamePlayerId, boolean>>,
   viewer: GamePlayerId | undefined,
@@ -214,14 +191,12 @@ function forViewer(
   return Object.hasOwn(all, viewer) ? { [viewer]: all[viewer] === true } : undefined;
 }
 
-/** Whether each seated player answered the question just revealed at all. */
 function revealAnsweredFor(state: TriviaState): Readonly<Record<GamePlayerId, boolean>> {
   return Object.fromEntries(
     state.standings.map(({ playerId }) => [playerId, state.answers?.[playerId] !== undefined]),
   );
 }
 
-/** Normalize the just-revealed outcome for the shared TV projection. */
 function revealVerdictsFor(
   state: TriviaState,
 ): Readonly<Record<GamePlayerId, boolean>> {
@@ -236,7 +211,6 @@ function revealVerdictsFor(
   );
 }
 
-/** Project one state for TV or a single phone without leaking private answers. */
 function redactTriviaStateFor(
   state: TriviaState,
   viewer: GamePlayerId | undefined,
@@ -251,23 +225,13 @@ function redactTriviaStateFor(
     ...current,
     questions: questionsForViewer(current, viewer),
     answers,
-    // Answer timing is a scoring input and is never a client concern, even
-    // after the reveal has made the shared outcome visible.
     answerSeconds: undefined,
-    // Every client may show the same safe participation progress. Phones get
-    // only their own answer above; this count carries no answer choice or
-    // timing information about any other player.
     participationCount:
       current.phase === 'question'
         ? Object.keys(current.answers ?? {}).length
         : undefined,
-    // The TV gets every normalized reveal outcome. A phone gets only its own,
-    // which the TV is showing the whole room at that moment anyway; it never
-    // receives a field from which it could infer another player's answer.
     revealVerdicts: current.phase === 'reveal' ? forViewer(revealVerdictsFor(current), viewer) : undefined,
-    // A phone's own "did I answer at all"; the TV shows only right or wrong.
     revealAnswered: current.phase === 'reveal' && viewer !== undefined ? forViewer(revealAnsweredFor(current), viewer) : undefined,
-    // The TV alone draws everyone's round points.
     revealGains: current.phase === 'reveal' && viewer === undefined ? revealGainsFor(current) : undefined,
   };
 

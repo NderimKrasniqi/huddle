@@ -7,7 +7,6 @@ const SECOND = 1_000;
 
 type Bucket = { readonly rate: number; readonly period: number; readonly capacity: number };
 
-/** The limits the retired Convex backend enforced, kept unchanged. */
 const RATE_LIMITS = {
   joinGlobal: { rate: 600, period: MINUTE, capacity: 1_200 },
   joinRoom: { rate: 120, period: MINUTE, capacity: 240 },
@@ -32,15 +31,12 @@ const OPERATION: Record<LimitName, RateLimitOperation> = {
   seatPreviewKey: 'seatPreview',
 };
 
-/** In-memory token buckets, one per limit and key. */
 export class RateLimiter {
   private readonly buckets = new Map<string, { tokens: number; at: number }>();
-  /** Bucket states before the current command, so a refused command spends nothing. */
   private journal: Map<string, { tokens: number; at: number } | undefined> | undefined;
 
   constructor(private readonly now: () => number) {}
 
-  /** Takes one token or refuses with `rateLimited`. */
   consume(name: LimitName, key: string): void {
     const limit = RATE_LIMITS[name];
     const id = `${name}:${key}`;
@@ -57,11 +53,6 @@ export class RateLimiter {
     this.buckets.set(id, { tokens: tokens - 1, at: now });
   }
 
-  /**
-   * Opens a command. The retired Convex backend ran each command as one
-   * transaction, so a refused command (a taken name, not the Host) cost no
-   * tokens; `rollback` keeps that, `commit` keeps what a command spent.
-   */
   begin(): void {
     this.journal = new Map();
   }
@@ -82,7 +73,6 @@ export class RateLimiter {
     if (this.journal !== undefined && !this.journal.has(id)) this.journal.set(id, this.buckets.get(id));
   }
 
-  /** Drops buckets that have refilled completely, so keys do not pile up. */
   prune(): void {
     const now = this.now();
     for (const [id, bucket] of this.buckets) {

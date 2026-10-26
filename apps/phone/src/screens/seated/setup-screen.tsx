@@ -56,7 +56,6 @@ export type SetupScreenProps = {
   readonly onLeave: () => void;
 };
 
-/** The pre-game phone surface, following the server's setup stage. */
 export function SetupScreen(props: SetupScreenProps) {
   const { setup } = props;
   if (setup.stage === 'countdown' && setup.countdownEndsAt !== undefined) {
@@ -93,7 +92,6 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
     );
   }
 
-  /** Custom settings keep to the keys and options the game allows in Custom. */
   function customSettings(): GameSettings {
     return Object.fromEntries(
       module.settingsSchema.map((setting) => {
@@ -138,10 +136,8 @@ function HostSetup({ module, setup, you, busy, failure, onConfigure, onFinalize,
         ))}
       </View>
       {setup.mode !== 'custom' ? (
-        // A preset reads as one sentence; changing it is one tap away, not five rows.
         <PhoneCard style={styles.presetCard}>
           <PlayroomText style={playroomPhone.type.title}>{presentation?.presets?.find((preset) => preset.mode === setup.mode)?.label ?? setupModeLabel(setup.mode)}</PlayroomText>
-          {/* One chip per setting, like the TV: scannable, never a sentence broken mid-phrase. */}
           <View style={styles.summaryChips} accessible accessibilityLabel={module.settingsSchema.map((setting) => settingSummaryText(setting, settings[setting.key] ?? setting.defaultValue)).join(', ')}>
             {module.settingsSchema.map((setting) => (
               <PlayroomPill key={setting.key} textStyle={playroomPhone.type.caption}>

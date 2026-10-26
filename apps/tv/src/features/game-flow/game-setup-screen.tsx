@@ -36,16 +36,10 @@ export type TvGameSetupScreenProps = {
   readonly players?: readonly TvGamePlayer[];
   readonly readyPlayerIds?: readonly string[];
   readonly stage?: 'configuring' | 'ready' | 'countdown';
-  /** Server epoch ms when the countdown's start is due; set only while counting down. */
   readonly countdownEndsAt?: number;
   readonly reduceMotion?: boolean;
 };
 
-/**
- * Display-only pre-game surface. The phone owns every control; the TV shows
- * the host's setup as it changes, then the ready check, then the countdown,
- * following the server's setup stage.
- */
 export function TvGameSetupScreen(props: TvGameSetupScreenProps) {
   const { stage = 'configuring' } = props;
   if (stage === 'countdown' && props.countdownEndsAt !== undefined) {
@@ -126,7 +120,6 @@ function ModeTabs({ mode }: { readonly mode: string | undefined }) {
   );
 }
 
-/** One setting; when the host changes it, the row lights up and fades back. */
 function SettingRow({ setting, reduceMotion }: { readonly setting: TvSetupSetting; readonly reduceMotion: boolean }) {
   const highlight = useSharedValue(0);
   const previous = useRef(setting.value);
@@ -215,7 +208,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: playroomRadii.pill,
   },
-  // The chosen preset is the selection, so it is the lavender one.
   modeOn: {
     backgroundColor: playroomColors.lavender,
   },

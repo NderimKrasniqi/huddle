@@ -1,9 +1,3 @@
-/**
- * Stand-in for @shopify/react-native-skia in the phone app, which does not ship
- * Skia's native module. Games bundle their TV screens into both apps; only the
- * TV renders Skia art (see Bomb Squad's skia-art.tsx), so here every shape draws
- * nothing. Wired up by apps/phone/metro.config.js and vitest.config.ts.
- */
 import { forwardRef } from 'react';
 
 const Nothing = forwardRef<unknown, Record<string, unknown>>(function Nothing() {
@@ -31,7 +25,6 @@ const emptyPath = {
   getPoint: () => ({ x: 0, y: 0 }),
 };
 
-/** Path builders return a path that draws nothing. */
 export const Skia = {
   Path: { Make: () => emptyPath, MakeFromSVGString: () => emptyPath },
   ContourMeasureIter: () => ({ next: () => null }),

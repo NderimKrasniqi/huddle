@@ -18,16 +18,13 @@ export type PhoneSessionContextValue = {
   readonly session: PlayerSession | null | undefined;
   readonly sessionToken: string | undefined;
   readonly restoringToken: boolean;
-  /** Ephemeral acknowledgement, set only by an authoritative join. */
   readonly joinWelcomeUntil?: number;
   readonly notice: string | undefined;
   readonly rememberedProfile: GuestProfileV1 | undefined;
   readonly seat: PlayerSession | null | undefined;
   readonly completeJoin: (session: PlayerSession & { readonly sessionToken: string }) => void;
   readonly rememberProfile: (profile: GuestProfileV1) => void;
-  /** Marks a user-initiated Leave before its authoritative mutation can update subscriptions. */
   readonly beginLeave: () => void;
-  /** Rolls back a Leave marker when the authoritative mutation is refused. */
   readonly cancelLeave: () => void;
   readonly reportSeatLost: (reason: string) => void;
   readonly leave: () => Promise<void>;
@@ -36,14 +33,6 @@ export type PhoneSessionContextValue = {
 
 const PhoneSessionContext = createContext<PhoneSessionContextValue | null>(null);
 
-/**
- * Room credential and lifecycle authority shared by every Phone route.
- *
- * The lookup intentionally delegates to `resumeSession`, including its late
- * answer behavior: a slow session query may fill the form after its patience
- * deadline, but it can never overwrite a newly joined seat.
- */
-/** Shown when a phone reopens with a saved seat the room has since let go. */
 const RESTORED_SEAT_GONE = 'Your seat was freed while Huddle was closed. Join again with the code on the TV.';
 
 export function PhoneSessionProvider({ children }: PropsWithChildren) {
@@ -71,8 +60,6 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
   const clearPersistedCredential = useCallback(() => {
     const revision = credentialRevisionRef.current;
     void forgetSession(phoneSessionTokenStore).then(() => {
-      // A stale clear may finish after a newer join has written its token. Put
-      // that newer credential back so storage latency cannot undo the winner.
       if (credentialRevisionRef.current === revision) return;
       const currentToken = activeTokenRef.current;
       if (currentToken !== undefined) void rememberSession(phoneSessionTokenStore, currentToken);
@@ -84,9 +71,6 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
     return resumeSession(
       phoneSessionTokenStore,
       async (token) => {
-        // Keep a timed-out token out of the active query arguments. If its
-        // answer arrives late, the report callback below restores this exact
-        // candidate only when no newer join/leave decision has won.
         candidateTokenRef.current = token;
         try {
           const result = await lookupSession(token);
@@ -106,17 +90,11 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
           late,
           ignoreLateResume: ignoreLateResumeRef.current,
         });
-        // Refs make the winner explicit before React batches either setter:
-        // a late restore cannot race a join or deliberate leave that has
-        // already updated the active seat/token in this launch.
         activeSessionRef.current = next.session;
         activeTokenRef.current = next.sessionToken;
         setSession(next.session);
         setSessionToken(next.sessionToken);
 
-        // Only a completed room lookup that authoritatively returned null can
-        // retire a stale durable token. The patience timeout also reports null,
-        // but clearing at that point could erase a valid late seat's token.
         if (
           !restoreNullClearedRef.current &&
           shouldClearRestoredCredential({
@@ -128,8 +106,6 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
         ) {
           restoreNullClearedRef.current = true;
           clearPersistedCredential();
-          // This phone had a seat and the room no longer holds it: say so,
-          // rather than dropping the player on the join form without a word.
           setNotice(RESTORED_SEAT_GONE);
         }
       },
@@ -138,9 +114,6 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
         if (status === 'present') {
           setRestoringToken(true);
         } else {
-          // A deep-linked identity route can finish a join while SecureStore's
-          // initial read is still in flight. Its late "missing" status must not
-          // erase that newer seat or credential.
           if (ignoreLateResumeRef.current || (activeSessionRef.current !== undefined && activeSessionRef.current !== null)) return;
           setRestoringToken(false);
           activeSessionRef.current = null;
@@ -180,9 +153,6 @@ export function PhoneSessionProvider({ children }: PropsWithChildren) {
 
   const reportSeatLost = useCallback((reason: string) => {
     ignoreLateResumeRef.current = true;
-    // Leave removes the seat on the server before local storage finishes
-    // clearing. Suppress that expected subscription update rather than
-    // showing a false host-removal or closed-room notice.
     if (deliberateLeaveRef.current) {
       credentialRevisionRef.current += 1;
       activeSessionRef.current = null;

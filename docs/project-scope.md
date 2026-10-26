@@ -112,8 +112,8 @@ The owner approved these behaviors with ADR-01 to ADR-04 in
 [`architecture.md`](architecture.md#architecture-decisions), and they now
 apply: the TV hosts every room. The phone screens for items 2, 3 and 5 exist.
 
-1. A phone joins only on the same Wi-Fi network as the TV, until the relay
-   ships.
+1. A phone joins only on the same Wi-Fi network as the TV, unless a relay is
+   hosted (built, not hosted yet).
 2. On the first join, an iPhone asks for Local Network access. If the player
    denies it, the phone explains why it needs it and links to Settings.
 3. When the network blocks traffic between devices, the phone shows "Can't

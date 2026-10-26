@@ -14,7 +14,6 @@ import { StyleSheet, View } from 'react-native';
 
 import type { RosterSeat } from '../../models';
 
-/** Generic TV runtime mount; the hub never branches on a game id here. */
 export function GameStage({
   module,
   state,
@@ -83,12 +82,9 @@ export function TvRuntimeStatus({
           <PlayroomPill textStyle={playroomTv.type.caption}>{paused ? `${gameTitle} · paused` : `Room ${normalizedCode}`}</PlayroomPill>
           <PlayroomHeading type={playroomTv.type.heading}>{paused ? 'Game paused' : 'Game unavailable'}</PlayroomHeading>
           {waitingForPlayers && missing.length > 0 ? (
-            // One card per missing player, wrapping onto a second row when a
-            // big room drops out, so no name ever runs off the stage.
             <View style={styles.missing} testID="tv-paused-roster">
               {missing.slice(0, 10).map((player) => (
                 <View key={String(player.playerId)} style={[styles.player, missing.length > 5 ? styles.playerCompact : null]}>
-                  {/* Full colour in a dashed ring: missed, not gone. A faded face read as disabled. */}
                   <View style={[styles.ring, missing.length > 5 ? styles.ringCompact : null]}>
                     <PlayroomAvatar avatarId={player.avatar} size={missing.length > 5 ? 96 : 140} />
                   </View>

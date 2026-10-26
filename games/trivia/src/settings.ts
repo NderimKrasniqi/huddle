@@ -18,8 +18,6 @@ const QUESTION_SECONDS_OPTIONS = [10, 15, 20, 30] as const;
 export type QuestionSeconds = (typeof QUESTION_SECONDS_OPTIONS)[number];
 
 const SCORING_KEY = 'scoring';
-// `questions` is the persisted key from the launch-proof module. Keep it
-// stable while the rest of Trivia's settings grow around it.
 const QUESTION_COUNT_KEY = 'questions';
 const DIFFICULTY_KEY = 'difficulty';
 const QUESTION_SECONDS_KEY = 'questionSeconds';

@@ -18,14 +18,9 @@ import { LAN_PORT, lanServer } from '../lan-server/native';
 import type { OpenRoom, TvRoomClient, TvViewName, TvViews } from './index';
 import { setupView, stable } from './views';
 
-/** Saving waits this long after the last change, so a burst of taps is one write. */
 const SAVE_DEBOUNCE_MS = 300;
 const SNAPSHOT_FILE = 'huddle-room-snapshot.json';
 const RELAY_SECRET_FILE = 'huddle-relay-secret.txt';
-/**
- * The relay's base URL (ADR-03), such as `wss://relay.huddle.tv`. Unset, the
- * TV hosts on the LAN only. Metro inlines it at bundle time.
- */
 const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL;
 
 type Store = {
@@ -34,19 +29,8 @@ type Store = {
   readonly lan: LanJoin | undefined;
 };
 
-/**
- * The room client when the TV hosts its own room (ADR-01): the room host runs
- * in this app, phones reach it through the LAN server, and the TV's screens
- * read the host's shared views in-process.
- *
- * The host is created on the first `openRoom` and lives for the app. When the
- * app leaves the foreground the TV is marked away and the server stops (Apple
- * TV suspends a backgrounded app within seconds); coming back restarts the
- * server, advertises again and lets phones resume their seats.
- */
 export function lanTvRoomClient(): TvRoomClient {
   let host: RoomHost | undefined;
-  /** The room a restarted app picked back up; any later room is a new one. */
   let restoredRoomId: string | undefined;
   let starting: Promise<RoomHost> | undefined;
   let port = LAN_PORT;
@@ -57,9 +41,7 @@ export function lanTvRoomClient(): TvRoomClient {
   let appState: AppStateStatus = AppState.currentState;
 
   let relay: RelayHost | undefined;
-  /** The relay URL while the relay holds this room's code. */
   let relayJoin: string | undefined;
-  /** The code the LAN server announces, while it runs. */
   let advertisedCode: string | undefined;
 
   const snapshotFile = new File(Paths.document, SNAPSHOT_FILE);
@@ -104,7 +86,6 @@ export function lanTvRoomClient(): TvRoomClient {
     }
   }
 
-  /** The secret that lets this TV reclaim its code on the relay after a restart. */
   function relaySecret(): string {
     const file = new File(Paths.document, RELAY_SECRET_FILE);
     try {
@@ -113,7 +94,6 @@ export function lanTvRoomClient(): TvRoomClient {
         if (saved.length >= 16) return saved;
       }
     } catch {
-      // A new secret only means the relay holds the old code a while longer.
     }
     const bytes = new Uint8Array(24);
     Crypto.getRandomValues(bytes);
@@ -144,7 +124,6 @@ export function lanTvRoomClient(): TvRoomClient {
     relay = hostThroughRelay(running, {
       url,
       secret: relaySecret(),
-      // React Native's WebSocket has these members; its handler types name DOM events.
       open: (address) => new WebSocket(address) as unknown as RelaySocket,
       ports,
       onState: (state) => {
@@ -169,7 +148,6 @@ export function lanTvRoomClient(): TvRoomClient {
   }
 
   function publish(views: HostViews): void {
-    // A fresh room has a new code; announce that one instead.
     if (advertisedCode !== undefined && advertisedCode !== views.code) {
       lanServer.stopAdvertising();
       advertise(views.code);
@@ -225,6 +203,7 @@ export function lanTvRoomClient(): TvRoomClient {
     AppState.addEventListener('change', (next) => {
       const wasActive = appState === 'active';
       appState = next;
+      // Apple TV suspends a backgrounded app within seconds, so stop serving and mark the TV away.
       if (wasActive && next === 'background') {
         running.setTvAway(true);
         void stopServer();

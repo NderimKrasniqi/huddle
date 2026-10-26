@@ -5,38 +5,12 @@ import { sumoBumpersGameLogic } from '@huddle/game-sumo-bumpers/logic';
 
 import { clampBrowsingIndex } from './browsing';
 
-/**
- * The installed games as the server holds them: rules only, no screens.
- *
- * Same installed games as `./registry` and in the same order — `registry.test.ts`
- * is what holds the two lists to each other. It is a
- * separate entry point rather than a filter over the other list because the
- * point is what is *not* imported: the
- * room host, which seeds and reduces a game's state, reaches for this one, and
- * a module's screens are React Native that has no business in the host.
- * Each game's `/logic` entry point is taken here, so the two `/logic` exports
- * are all the server ever pulls in.
- */
 export const GAME_LOGIC_REGISTRY: GameLogicRegistry = [triviaGameLogic, bombSquadGameLogic, sumoBumpersGameLogic];
 
-/**
- * The installed game answering to `gameId`, or `undefined` if none does.
- *
- * The id arrives from a phone (the Host names the game it is starting), so "no
- * such game" is an ordinary answer here and not an exceptional one — the caller
- * turns it into the room's refusal.
- */
 export function gameLogicById(gameId: string): GameLogic | undefined {
   return GAME_LOGIC_REGISTRY.find((game) => game.metadata.id === gameId);
 }
 
-/**
- * The carousel index, clamped for the server to the installed games.
- *
- * It goes through `./browsing` and emphatically not through `./carousel`:
- * re-exporting it from there put `GAME_REGISTRY` and every screen it holds into
- * the room host, which is the one thing this entry point exists to prevent.
- */
 export function browsingIndex(stored: number | undefined | null): number {
   return clampBrowsingIndex(stored, GAME_LOGIC_REGISTRY.length);
 }

@@ -160,6 +160,6 @@ pnpm sim:tv
 pnpm sim:all
 ```
 
-The remaining release gate is real camera permission and QR join, mixed-phone
-reconnect/seat loss, physical Android TV remote traversal, and the physical
-Phone + Android TV party check.
+The physical party check passed on a Philips Android TV with an iPhone. Still
+open: the iPhone Wi-Fi toggle, an Android phone, a physical Apple TV, and a
+guest Wi-Fi, which needs a hosted relay.

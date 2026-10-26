@@ -14,11 +14,6 @@ import { keepRoomPresent, tvSessionToken, useRoomExpiry } from '../platform/room
 import { tvPurposeForSurface } from './tv-purpose';
 import { tvSurface, type TvSurface } from './tv-surface';
 
-/**
- * Owns the live TV room session after a safe room code exists. It resolves
- * subscriptions and lifecycle, then hands already-resolved state to the
- * display stages; it does not decide game rules or render Room internals.
- */
 export function TvSessionController({
   room,
   opening: _opening,
@@ -28,7 +23,6 @@ export function TvSessionController({
   readonly opening: RoomOpening;
   readonly onExpired: (expired: OpenRoom) => void;
 }) {
-  // Every room view is asked as this room's TV; the room shows nobody else.
   const tvToken = tvSessionToken();
   const asTv: TvViewer | undefined = useMemo(
     () => (tvToken === undefined ? undefined : { roomId: room.roomId, tvSessionToken: tvToken }),
@@ -50,7 +44,6 @@ export function TvSessionController({
     runningPending: running === undefined,
     hasRunningGame: room.hasRunningGame,
   });
-  // Arrivals change on every keystroke of a join form; only the room screen draws them.
   const arrivals = tvRoomClient.useView('arrivals', surface === 'room' ? asTv : undefined);
   const lan = tvRoomClient.useLanJoin();
 
@@ -78,7 +71,6 @@ export function TvSessionController({
   );
 }
 
-/** Renders the resolved TV surface without owning subscriptions or lifecycle. */
 function TvSessionPresentation({
   surface,
   runtime,
@@ -103,14 +95,11 @@ function TvSessionPresentation({
   readonly gameId?: string;
   readonly roomCode: string;
   readonly roster: readonly RosterSeat[];
-  /** People on the join form, shown as arriving seats in the room. */
   readonly arrivals?: readonly SeatArrival[];
   readonly browsingAt?: number | null;
   readonly setup?: TvGameSetupProjection | null;
   readonly reduceMotion?: boolean;
 }) {
-  // Runtime state is authoritative. Keep a stale surface projection from
-  // flashing the invitation, picker, or setup while a game payload is ready.
   if (runtimeScreen?.kind === 'game' || runtimeScreen?.kind === 'finished') {
     return (
       <GameStage
@@ -135,8 +124,6 @@ function TvSessionPresentation({
     );
   }
 
-  // A restored room can briefly have a pending running query. Keep that
-  // handoff visibly distinct from a failed runtime while subscriptions settle.
   if (runtimeScreen?.kind === 'lobby' && surface === 'runtime-status') {
     return (
       <TvPlatformStatusScreen
@@ -165,8 +152,6 @@ function TvSessionPresentation({
     );
   }
 
-  // A surface with no matching screen above: keep the component total and say
-  // what the TV is waiting for, rather than render nothing.
   const title = tvPurposeForSurface(surface, runtime, gameId);
   return <TvPlatformStatusScreen
     kind="error"

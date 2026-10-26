@@ -9,7 +9,6 @@ import { bomb } from './theme';
 import { BombText } from './text';
 import { type BombEvent, type BombState, type Wire, WIRES } from './types';
 
-/** The phone: your secret, and your vote. Nothing here is shown on the TV. */
 export function BombSquadPhoneScreen({
   state,
   player,
@@ -32,13 +31,11 @@ export function BombSquadPhoneScreen({
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, phaseSeconds(state), `${state.round}:${state.phase}`);
   const insets = { top: safeAreaInsets?.top ?? 0, bottom: (safeAreaInsets?.bottom ?? 0) + (hostChromeInsetBottom ?? 0) };
 
-  // One tap of feedback when this phone's own round result lands.
   const gain = result?.gains[me];
   const resultKey = result === undefined ? undefined : `${state.round}:${gain ?? 0}`;
   useEffect(() => {
     if (resultKey === undefined || !playing) return;
     feedback?.((gain ?? 0) > 0 ? 'success' : 'error');
-    // Fires once per round's result; `feedback` identity is not a trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultKey]);
 
@@ -295,7 +292,6 @@ function Screen({ children, insets }: { readonly children: ReactNode; readonly i
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: bomb.night },

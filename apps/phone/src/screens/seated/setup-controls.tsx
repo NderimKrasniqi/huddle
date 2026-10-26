@@ -13,10 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SettingControl } from '../../features/game-picker/settings-choice';
 import { setupStyles as styles } from './setup-styles';
 
-/**
- * Counts use a stepper, short lists a segmented control, and long lists a
- * row that opens a sheet.
- */
 export function SettingControlView({
   setting,
   control,

@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Derive the native app identity files from the supplied Huddle-Platform set.
-
-Usage: python3 tools/generate-app-icons.py <Huddle-Platform/app folder>
-
-The supplied folder holds the approved artwork: the iOS icon, the Android
-adaptive foreground and monochrome layers, the splash logo, and the Android TV
-banner. This script only resizes, flattens onto the Playroom canvas colour,
-and pads; it never redraws. Output is deterministic for a given Pillow build,
-and the architecture validator pins the Apple TV results by digest.
-"""
 
 from __future__ import annotations
 
@@ -22,8 +12,6 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "packages" / "ui" / "assets" / "app-icons"
 CANVAS = (0xF9, 0xF1, 0xE6)
 
-# Apple TV canvases, each filled with the canvas colour and the banner
-# centred at the height that fits.
 APPLE_TV = {
     "huddle-tv-icon-1280x768.png": (1280, 768),
     "huddle-tv-icon-400x240.png": (400, 240),
@@ -34,21 +22,17 @@ APPLE_TV = {
     "huddle-tv-top-shelf-wide-4640x1440.png": (4640, 1440),
 }
 
-
 def flattened(image: Image.Image) -> Image.Image:
-    """The image over the canvas colour, with no alpha channel."""
 
     rgba = image.convert("RGBA")
     base = Image.new("RGBA", rgba.size, CANVAS + (255,))
     return Image.alpha_composite(base, rgba).convert("RGB")
-
 
 def save(image: Image.Image, name: str) -> None:
     path = OUT / name
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, format="PNG", optimize=False)
     print(f"wrote {path.relative_to(ROOT)} {image.size[0]}x{image.size[1]}")
-
 
 def main() -> int:
     if len(sys.argv) != 2:
@@ -64,13 +48,13 @@ def main() -> int:
     icon = flattened(ios_icon)
     for name in (
         "huddle-app-icon-light.png",
-        # iOS shows the same cream icon in dark mode; the mark stays readable.
+
         "huddle-app-icon-dark.png",
         "huddle-android-legacy.png",
         "huddle-android-tv-icon.png",
     ):
         save(icon, name)
-    # The adaptive layers are used exactly as supplied.
+
     for supplied, name in (
         (foreground, "huddle-android-adaptive-foreground.png"),
         (monochrome, "huddle-android-monochrome.png"),
@@ -87,7 +71,6 @@ def main() -> int:
         canvas.paste(banner.resize(size, Image.Resampling.LANCZOS), ((width - size[0]) // 2, (height - size[1]) // 2))
         save(canvas, f"apple-tv/{name}")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

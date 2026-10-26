@@ -6,7 +6,6 @@ import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimate
 import { DEFAULT_TV_CAROUSEL_CARDS, tvHostCopy, type TvGameCarouselCard, type TvGamePlayer } from './game-flow-model';
 import { TvPlayroomFrame, TvRosterRow } from './playroom-frame';
 
-/** The card the host moves onto settles in; it never grows from nothing. */
 const SELECT = new Keyframe({
   0: { opacity: 0.6, transform: [{ scale: 0.97 }] },
   100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -16,23 +15,13 @@ const SELECT = new Keyframe({
 
 export type TvGameCarouselScreenProps = {
   readonly hostName?: string;
-  /** The authoritative carousel position, used when selectedGameId is absent. */
   readonly selectedIndex?: number;
-  /** Stable registry id; preferred when the parent already resolved the window. */
   readonly selectedGameId?: string;
-  /** A registry-derived ordered list; three cards are painted at a time. */
   readonly cards?: readonly TvGameCarouselCard[];
-  /** The room, shown along the bottom. */
   readonly players?: readonly TvGamePlayer[];
   readonly reduceMotion?: boolean;
 };
 
-/**
- * Display-only TV picker. The phone owns browsing; this stage mirrors the
- * authoritative index with three cards. The window stops at each end of the
- * catalogue rather than wrapping, and the card the host is on is lavender
- * with an ink border.
- */
 export function TvGameCarouselScreen({
   hostName,
   selectedIndex = 0,
@@ -41,7 +30,6 @@ export function TvGameCarouselScreen({
   players = [],
   reduceMotion = false,
 }: TvGameCarouselScreenProps) {
-  // Direct previews can pass an empty list while data is resolving.
   const catalog = cards.length > 0 ? cards : DEFAULT_TV_CAROUSEL_CARDS;
   const index = clamp(
     selectedGameId === undefined ? selectedIndex : Math.max(catalog.findIndex((card) => card.id === selectedGameId), 0),
@@ -69,8 +57,6 @@ export function TvGameCarouselScreen({
               <GameCard key={card.id} card={card} selected={position === 1} reduceMotion={reduceMotion} />
             ) : <View key={`edge-${position}`} style={styles.edge} />)}
           </View>
-          {/* Sits on the overscan-safe bottom edge; in the flow, so larger system text
-              moves it down rather than drawing it over the cards. */}
           <View style={styles.roster} pointerEvents="none" focusable={false}>
             <TvRosterRow players={players} />
           </View>
@@ -91,7 +77,6 @@ function GameCard({
 }) {
   return (
     <Animated.View
-      // A new key when selection moves replays the settle on the new card only.
       key={selected ? 'selected' : 'side'}
       entering={selected && !reduceMotion ? SELECT : undefined}
       style={[styles.card, selected ? styles.selected : null]}
@@ -110,7 +95,6 @@ function GameCard({
           {card.subtitle}
         </PlayroomText>
       ) : null}
-      {/* A white pill on the lavender selection or a grey coming-soon card, lavender on a white card. */}
       <PlayroomPill tone={selected ? 'surface' : 'lavender'} textStyle={playroomTv.type.caption} style={styles.pill}>
         Available
       </PlayroomPill>
@@ -153,7 +137,6 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 26,
     borderRadius: playroomRadii.card,
-    // Every game is a white card; only the one the host is on is lavender.
     backgroundColor: playroomColors.surface,
     borderWidth: 3,
     borderColor: 'transparent',

@@ -12,13 +12,6 @@ function shouldRestoreTvRoom(room: OpenRoom): boolean {
   return room.restored && !room.hasRunningGame;
 }
 
-/**
- * The TV route coordinator owns room opening, subscriptions, and surface selection.
- *
- * The real app owns the TV session and room subscriptions here instead of
- * accepting a demo view model: room, browse, setup, and runtime phases remain
- * display-only projections of the authoritative room state.
- */
 export function TvScreen() {
   const { opening, reopen } = useRoomOpening();
   const [restoredRoomHandoff, setRestoredRoomHandoff] = useState<

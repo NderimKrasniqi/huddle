@@ -18,7 +18,6 @@ type TvCreatingRoomScreenProps = {
   readonly phase: TvAnimatedBootPhase;
 };
 
-/** The splash settles in once, from slightly small and transparent. */
 const SPLASH_ENTER = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: playroomMotion.entranceTravel }, { scale: 0.98 }] },
   100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: Easing.bezier(...playroomEasing.out) },
@@ -34,7 +33,6 @@ const COPY_ENTER = new Keyframe({
   .delay(playroomMotion.entrance)
   .reduceMotion(ReduceMotion.System);
 
-/** Display-only startup, room-opening, and reconnecting stage. */
 export function TvCreatingRoomScreen({
   phase,
 }: TvCreatingRoomScreenProps) {

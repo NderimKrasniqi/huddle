@@ -1,6 +1,5 @@
 import type { GameMetadata } from '@huddle/domain';
 
-/** Metadata for the installed Trivia game, shared by its client and server entries. */
 export const triviaMetadata: GameMetadata = {
   id: 'trivia',
   title: 'Trivia',

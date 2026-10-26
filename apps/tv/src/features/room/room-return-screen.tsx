@@ -15,7 +15,6 @@ export function RoomReturnScreen({ players }: { readonly players: readonly RoomI
     <View style={styles.roster}>
       <PlayroomRosterRow
         players={players.map((player) => ({ ...player, isHost: player.host }))}
-        // Avatars are the point of the screen: as large as the room size allows.
         size={players.length > 6 ? playroomTv.avatar.row : playroomTv.avatar.grid}
         width={ROSTER_WIDTH}
       />

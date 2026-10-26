@@ -20,7 +20,6 @@ export type PlayroomTextProps = Omit<TextProps, 'style'> & {
   readonly style?: StyleProp<TextStyle>;
 };
 
-/** Nunito text in Playroom ink. Pass a Playroom type token as `style`. */
 export function PlayroomText({ children, color = 'ink', style, maxFontSizeMultiplier, ...textProps }: PlayroomTextProps) {
   const textStyle = [styles.text, { color: playroomColors[color] }, style];
   return (
@@ -31,14 +30,11 @@ export function PlayroomText({ children, color = 'ink', style, maxFontSizeMultip
 }
 
 export type PlayroomBurstProps = {
-  /** Height of the burst; the three dashes scale with it. */
   readonly size: number;
-  /** Which side of the content the burst sits on; its dashes point inward. */
   readonly side: 'left' | 'right';
   readonly style?: StyleProp<ViewStyle>;
 };
 
-/** Three orange dashes that fan out beside a heading or the main action. */
 export function PlayroomBurst({ size, side, style }: PlayroomBurstProps) {
   const thickness = Math.max(2, size * 0.14);
   const length = size * 0.36;
@@ -69,7 +65,6 @@ export function PlayroomBurst({ size, side, style }: PlayroomBurstProps) {
 
 export type PlayroomHeadingProps = {
   readonly children: ReactNode;
-  /** A Playroom type token: heading, title, and so on. */
   readonly type: TextStyle;
   readonly bursts?: boolean;
   readonly color?: PlayroomColor;
@@ -78,7 +73,6 @@ export type PlayroomHeadingProps = {
   readonly testID?: string;
 };
 
-/** A Playroom heading, framed by burst dashes on both sides. */
 export function PlayroomHeading({
   children,
   type,
@@ -113,7 +107,6 @@ export type PlayroomWordmarkProps = {
   readonly testID?: string;
 };
 
-/** The supplied Huddle wordmark: deep purple with orange dashes. */
 export function PlayroomWordmark({ height, style, testID }: PlayroomWordmarkProps) {
   return (
     <View style={style} accessible accessibilityRole="image" accessibilityLabel="Huddle" testID={testID}>

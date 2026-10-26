@@ -13,10 +13,8 @@ import {
 
 import { PLAYROOM_AVATARS } from './playroom-artwork';
 
-// React Native's ImageProps omit the View focusable flag even though the
-// Android ImageView can otherwise become a D-pad target. Keep the explicit
-// passive flag in the rendered host props without weakening the public type.
 const HuddleImage = Image as unknown as ComponentType<ComponentProps<typeof Image> & {
+  // An Android ImageView can become a D-pad focus target on Android TV unless focus is turned off explicitly.
   readonly focusable?: boolean;
 }>;
 
@@ -33,7 +31,6 @@ export type AvatarPortraitProps = {
   readonly imageStyle?: StyleProp<ImageStyle>;
 };
 
-/** Collectible avatar portrait that becomes a button only when requested. */
 export function AvatarPortrait({
   avatarId,
   source = PLAYROOM_AVATARS[avatarId],
@@ -47,8 +44,6 @@ export function AvatarPortrait({
   imageStyle,
 }: AvatarPortraitProps) {
   const label = displayName === undefined ? `${avatarId} avatar` : `${displayName}'s avatar`;
-  // The character sits on its pastel circle, drawn 1.3× and shifted up so
-  // the face fills the circle, as on the platform screens.
   const image = (
     <View
       focusable={false}
@@ -60,9 +55,6 @@ export function AvatarPortrait({
       <HuddleImage
         source={source}
         resizeMode="contain"
-        // The image is either a child of the interactive Pressable below or a
-        // passive portrait. It must never become a second Android TV D-pad
-        // target in either case.
         focusable={false}
         accessible={false}
         style={[styles.image, portraitBox(size, avatarId), imageStyle]}
@@ -96,7 +88,6 @@ export function AvatarPortrait({
   );
 }
 
-/** Art that fills more of its square than the rest is drawn smaller; see PlayroomAvatar. */
 const PORTRAIT_FIT: Partial<Record<string, number>> = { puppy: 0.96, 'green-alien': 0.9 };
 
 function portraitBox(size: number, avatarId: string): ImageStyle {

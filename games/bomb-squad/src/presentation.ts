@@ -13,7 +13,6 @@ export function wireName(wire: Wire): string {
   return wire.charAt(0).toUpperCase() + wire.slice(1);
 }
 
-/** A clue in words, as the phone shows it and a player would say it aloud. */
 export function clueText(clue: Clue): string {
   switch (clue.kind) {
     case 'not':
@@ -27,7 +26,6 @@ export function clueText(clue: Clue): string {
   }
 }
 
-/** Fallback seconds for each beat, before the room's clock arrives. */
 export function phaseSeconds(state: BombState): number {
   switch (state.phase) {
     case 'howTo':

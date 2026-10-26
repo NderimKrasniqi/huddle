@@ -5,10 +5,6 @@ import { StyleSheet, View } from 'react-native';
 const STEPS = ['Room', 'Game', 'Setup', 'Ready'] as const;
 type HostStep = (typeof STEPS)[number];
 
-/**
- * Where the host is on the way to a game, shown above their main action on
- * every screen of the flow, so the next tap never comes as a surprise.
- */
 export function HostSteps({ current }: { readonly current: HostStep }) {
   const at = STEPS.indexOf(current);
   return (

@@ -4,18 +4,9 @@ import { useEffect, useState } from 'react';
 
 import { useRoomClient } from '../../platform/room-client/native';
 
-/** Wait for typing to settle before telling the TV. */
 const PREVIEW_DEBOUNCE_MS = 300;
-/** Well inside the server's 20-second preview lifetime. */
 const PREVIEW_REFRESH_MS = 10_000;
 
-/**
- * Shows the TV what this join form is picking — an arriving seat with the
- * avatar and the name as typed — while `active`, and takes it away when the
- * form stops being active or goes away. Best effort: a failed send (an older
- * server, a rate limit, no network) only means the TV shows no preview, so
- * errors are dropped rather than shown to someone who is still choosing.
- */
 export function useSeatPreview({
   code,
   nickname,

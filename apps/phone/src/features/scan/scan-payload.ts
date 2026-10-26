@@ -4,7 +4,6 @@ export type ScanPayloadResult =
   | { readonly kind: 'join'; readonly code: string; readonly lan?: LanJoin }
   | { readonly kind: 'malformed' };
 
-/** Strictly accepts the canonical QR protocol emitted by the TV. */
 export function decodeJoinQr(payload: string): ScanPayloadResult {
   const link = parseRoomJoinLink(payload);
   if (link === undefined) return { kind: 'malformed' };
@@ -18,13 +17,10 @@ export function decodeJoinQr(payload: string): ScanPayloadResult {
   return link.lan === undefined ? { kind: 'join', code } : { kind: 'join', code, lan: link.lan };
 }
 
-
-/** The in-app join route for a scanned code, keeping a hosting TV's address. */
 export function roomJoinPath(code: string, lan: LanJoin | undefined): `/join/${string}` {
   return roomJoinLink(code, lan).replace(/^[a-z]+:\/\//u, '/') as `/join/${string}`;
 }
 
-/** The hosting TV's address from the join route's parameters, if they carry one. */
 export function lanFromJoinParams(
   code: string,
   params: {

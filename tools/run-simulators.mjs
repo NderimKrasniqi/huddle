@@ -196,8 +196,6 @@ function bootSimulator(device) {
     allowFailure: true,
     timeoutMs: PROBE_TIMEOUT_MS,
   });
-  // `getenv` succeeds only for a booted device. The boot command itself is
-  // idempotent enough for the remaining state and has a useful error message.
   if (!state) {
     run('xcrun', ['simctl', 'boot', device.udid], {
       allowFailure: true,
@@ -423,8 +421,6 @@ function runAndroidTv() {
     ANDROID.apk,
     `Android TV build completed but the release APK is missing at ${relative(ANDROID.apk)}.`,
   );
-  // Every adb call includes the emulator serial. This prevents accidental use
-  // of a connected physical TV or another developer device.
   run(ANDROID.adb, ['-s', ANDROID_SERIAL, 'install', '-r', ANDROID.apk], {
     timeoutMs: PROBE_TIMEOUT_MS,
   });

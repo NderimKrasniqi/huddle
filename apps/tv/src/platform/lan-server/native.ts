@@ -12,6 +12,5 @@ declare class LanServerModule extends NativeModule<LanServerEvents> implements L
   stopAdvertising(): void;
 }
 
-/** The native server in `modules/lan-server`: Java-WebSocket on Android TV, Network.framework on Apple TV. */
 export const lanServer = requireNativeModule<LanServerModule>('LanServer');
 export { LAN_PORT, type LanServer, type LanServerEvents } from './index';
