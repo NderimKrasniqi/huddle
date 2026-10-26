@@ -105,7 +105,12 @@ after a restart), and each phone the relay opens is a room-host connection
 like a LAN one. Codes are minted on the TV, so the relay may have one taken:
 an empty room then takes a fresh code; a room with players stays LAN-only.
 The TV app turns the relay on with `EXPO_PUBLIC_HUDDLE_RELAY_URL` and stops it
-with the LAN server in the background.
+with the LAN server in the background. Both TV shells share one core,
+`apps/tv/src/platform/room-client/hosted-room.ts` (host, snapshot, views,
+relay, join address); the native shell adds the LAN server and the web shell
+only the relay. Behind a proxy, `HUDDLE_RELAY_TRUST_PROXY=1` makes the relay
+limit clients by the last `X-Forwarded-For` entry; TLS (`wss://`) terminates at
+the host in front of it.
 
 ### Discovery and the phone client
 
@@ -198,7 +203,8 @@ stage with a 5% overscan-safe frame; phone layouts use Safe Area insets and a
 scrollable single column. The visual reference is
 [`design/playroom/README.md`](design/playroom/README.md); runtime artwork is
 pinned by file name, size, alpha and SHA-256 in
-`tools/validate-architecture.py`.
+`tools/architecture/common.py`; `tools/validate-architecture.py` runs the
+rules in `tools/architecture/` (boundaries, assets, native config, stack).
 
 ## Verification gates
 

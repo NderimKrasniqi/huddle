@@ -2,7 +2,7 @@ mod limits;
 mod rooms;
 mod wire;
 
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -10,7 +10,7 @@ use axum::Router;
 use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{ConnectInfo, Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use futures_util::stream::{SplitSink, SplitStream};
@@ -24,10 +24,10 @@ use crate::limits::{
     OUTBOX, PHONE_RATE, PING_INTERVAL, REGISTER_TIMEOUT, TokenBucket, close,
 };
 use crate::rooms::{Relay, close_frame};
+use crate::wire::{FromHost, ToHost};
 
 // axum's 128 KiB default cost 1.5 GB for 11,000 mostly idle sockets.
 const SOCKET_BUFFER: usize = 4 * 1024;
-use crate::wire::{FromHost, ToHost};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -41,7 +41,8 @@ async fn main() -> std::io::Result<()> {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(MAX_CONNECTIONS_PER_IP);
-    let relay = Arc::new(Relay::new(max_per_ip));
+    let trust_proxy = std::env::var("HUDDLE_RELAY_TRUST_PROXY").is_ok_and(|value| value == "1");
+    let relay = Arc::new(Relay::new(max_per_ip, trust_proxy));
     spawn_sweeper(relay.clone());
 
     let app = Router::new()
@@ -52,7 +53,7 @@ async fn main() -> std::io::Result<()> {
 
     let addr = std::env::var("HUDDLE_RELAY_ADDR").unwrap_or_else(|_| "0.0.0.0:8787".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    info!(%addr, max_per_ip, "Huddle relay listening");
+    info!(%addr, max_per_ip, trust_proxy, "Huddle relay listening");
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
@@ -81,8 +82,9 @@ async fn host_upgrade(
     ws: WebSocketUpgrade,
     State(relay): State<Arc<Relay>>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
 ) -> Response {
-    let ip = peer.ip();
+    let ip = relay.client_ip(peer.ip(), &headers);
     if !relay.acquire_ip(ip) {
         return StatusCode::TOO_MANY_REQUESTS.into_response();
     }
@@ -100,8 +102,9 @@ async fn join_upgrade(
     Path(code): Path<String>,
     State(relay): State<Arc<Relay>>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
 ) -> Response {
-    let ip: IpAddr = peer.ip();
+    let ip = relay.client_ip(peer.ip(), &headers);
     if !relay.acquire_ip(ip) {
         return StatusCode::TOO_MANY_REQUESTS.into_response();
     }

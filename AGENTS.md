@@ -78,7 +78,7 @@ blocked by the environment.
   their own palettes: the Cosmic Quiz colours belong to `games/trivia` only.
   `pnpm validate:architecture` enforces both.
 - Runtime artwork is pinned by file name, size, alpha and SHA-256 in
-  `tools/validate-architecture.py`. Replacing an image means updating its
+  `tools/architecture/common.py`. Replacing an image means updating its
   spec. PNG and JPEG are both read; use JPEG for opaque, photo-like backdrops.
 - Keep comments minimal: one line, only for what the code cannot say (a
   platform quirk, a race, a protocol or timing rule). No narrative doc

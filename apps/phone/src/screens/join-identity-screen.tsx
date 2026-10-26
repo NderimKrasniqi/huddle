@@ -201,7 +201,7 @@ export default function JoinIdentityScreen() {
     setError(undefined);
     beginLeave();
     try {
-      await room.command('leaveRoom', { roomId: session.roomId, sessionToken }, {});
+      await room.command('leaveRoom', sessionToken, {});
       await leave();
     } catch (leaveError) {
       cancelLeave();

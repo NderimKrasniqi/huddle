@@ -1,4 +1,4 @@
-import type { GameDeadline, GameLogic } from '@huddle/domain';
+import type { GameDeadline, GameEvent, GameLogic } from '@huddle/domain';
 import { gameLogicById } from '@huddle/game-registry/logic';
 
 import type { HostPorts } from './ports';
@@ -82,4 +82,38 @@ export function projectRuntime(runtime: DecodedRuntime, viewer: string | undefin
   } catch {
     return undefined;
   }
+}
+
+export type GameStep = { readonly game: GameLogic; readonly state: unknown; readonly deadline?: GameDeadline };
+
+export function advanceGame(log: HostPorts['log'], roomId: string, running: StoredGame, event: GameEvent): GameStep | undefined {
+  const runtime = decodeStoredRuntime(log, roomId, running);
+  if (runtime === undefined) return undefined;
+  const { game, state } = runtime;
+  let decodedEvent: GameEvent;
+  try {
+    decodedEvent = game.decodeEvent(event);
+    if (decodedEvent === undefined) throw new Error('event decoder returned undefined');
+  } catch {
+    runtimeFailure(log, roomId, running, 'eventDecode');
+    return undefined;
+  }
+  let next: unknown;
+  try {
+    next = game.reduce(state, decodedEvent);
+  } catch {
+    runtimeFailure(log, roomId, running, 'reducer');
+    return undefined;
+  }
+  if (next === undefined || next === state) return undefined;
+  try {
+    next = game.decodeState(next);
+    if (next === undefined) throw new Error('reducer decoder returned undefined');
+  } catch {
+    runtimeFailure(log, roomId, running, 'reducerOutput');
+    return undefined;
+  }
+  const deadline = validatedDeadline(log, roomId, running, game, next);
+  if (!deadline.ok) return undefined;
+  return { game, state: next, ...(deadline.deadline === undefined ? {} : { deadline: deadline.deadline }) };
 }

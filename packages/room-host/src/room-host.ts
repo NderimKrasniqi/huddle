@@ -9,7 +9,6 @@ import {
   PROTOCOL_VERSION,
   type RoomRejection,
   type ViewName,
-  type ViewValue,
   ANONYMOUS_COMMANDS,
 } from '@huddle/contracts/protocol';
 import {
@@ -39,23 +38,24 @@ import {
 import { browsingIndex, GAME_LOGIC_REGISTRY, gameLogicById } from '@huddle/game-registry/logic';
 
 import {
+  advanceGame,
   decodeStoredRuntime,
-  type DecodedRuntime,
-  projectRuntime,
-  runtimeFailure,
   validatedDeadline,
 } from './game-runtime';
 import type { CancelTimer, HostPorts } from './ports';
 import { RateLimiter } from './rate-limits';
+import { setupForGame, withoutCountdown } from './setup';
 import { Refusal } from './refusal';
 import {
   type HostSnapshot,
   type RoomState,
   type Seat,
-  type Setup,
   SNAPSHOT_VERSION,
   type StoredGame,
 } from './state';
+import { sessionOf, type TvViews, tvViewsOf, type Viewer, viewOf, withoutClock } from './views';
+
+export type { TvViews };
 
 const SEAT_PREVIEW_TTL_MS = 20_000;
 const SWEEP_INTERVAL_MS = 1_000;
@@ -63,23 +63,10 @@ export const CONNECTION_CAP = 32;
 // Abandoned join forms must not fill the cap; an open form asks every three seconds.
 const UNSEATED_IDLE_MS = 30_000;
 
-export type TvViews = {
-  readonly roomId: string;
-  readonly code: string;
-  readonly roster: ViewValue<'roster'>;
-  readonly setup: ViewValue<'setup'>;
-  readonly browsing: ViewValue<'browsing'>;
-  readonly running: ViewValue<'running'>;
-  readonly connection: ViewValue<'connection'>;
-  readonly arrivals: ViewValue<'arrivals'>;
-};
-
 export type HostConnection = {
   readonly receive: (frame: string) => void;
   readonly disconnect: () => void;
 };
-
-type Viewer = { readonly kind: 'tv' } | { readonly kind: 'player'; readonly playerId: string };
 
 type Connection = {
   readonly id: number;
@@ -152,7 +139,7 @@ export class RoomHost {
 
   subscribeTv(listener: (views: TvViews) => void): () => void {
     this.tvListeners.add(listener);
-    listener(this.tvViews());
+    listener(tvViewsOf(this.room, this.ports.now(), this.ports.log));
     return () => this.tvListeners.delete(listener);
   }
 
@@ -537,7 +524,7 @@ export class RoomHost {
       if (seat === undefined) return null;
       this.bind(connection, seat.playerId);
       this.touch(seat);
-      return this.sessionOf(seat);
+      return sessionOf(this.room, seat);
     },
 
     leaveRoom: (connection) => {
@@ -887,142 +874,21 @@ export class RoomHost {
   private playGameEvent(event: GameEvent): void {
     const running = this.room.game;
     if (this.room.tvAway || running === undefined || running.playerPaused === true) return;
-    const runtime = decodeStoredRuntime(this.ports.log, this.room.roomId, running);
-    if (runtime === undefined) return;
-    const { game, state } = runtime;
-    const now = this.ports.now();
-
-    let decodedEvent: GameEvent;
-    try {
-      decodedEvent = game.decodeEvent({
-        ...event,
-        // Always the host's value, so a phone cannot send its own.
-        msRemaining: running.deadlineAt === undefined ? undefined : running.deadlineAt - now,
-        awayPlayerIds: this.room.seats.filter((seat) => seat.away).map((seat) => seat.playerId),
-        fromHost: event.playerId !== undefined && event.playerId === this.room.hostPlayerId,
-      });
-      if (decodedEvent === undefined) throw new Error('event decoder returned undefined');
-    } catch {
-      runtimeFailure(this.ports.log, this.room.roomId, running, 'eventDecode');
-      return;
-    }
-
-    let next: unknown;
-    try {
-      next = game.reduce(state, decodedEvent);
-    } catch {
-      runtimeFailure(this.ports.log, this.room.roomId, running, 'reducer');
-      return;
-    }
-    if (next === undefined || next === state) return;
-    try {
-      next = game.decodeState(next);
-      if (next === undefined) throw new Error('reducer decoder returned undefined');
-    } catch {
-      runtimeFailure(this.ports.log, this.room.roomId, running, 'reducerOutput');
-      return;
-    }
-
-    const nextDeadline = validatedDeadline(this.ports.log, this.room.roomId, running, game, next);
-    if (!nextDeadline.ok) return;
-    const updated: StoredGame = { ...running, stateVersion: game.stateVersion, state: next };
-    const sameBeat =
-      running.deadlineAt !== undefined &&
-      this.deadlineTimer !== undefined &&
-      running.deadlineBeat === nextDeadline.deadline?.beat;
-    this.room.game = sameBeat ? updated : this.windGameClock(updated, nextDeadline.deadline);
+    const step = advanceGame(this.ports.log, this.room.roomId, running, {
+      ...event,
+      // Always the host's value, so a phone cannot send its own.
+      msRemaining: running.deadlineAt === undefined ? undefined : running.deadlineAt - this.ports.now(),
+      awayPlayerIds: this.room.seats.filter((seat) => seat.away).map((seat) => seat.playerId),
+      fromHost: event.playerId !== undefined && event.playerId === this.room.hostPlayerId,
+    });
+    if (step === undefined) return;
+    const updated: StoredGame = { ...running, stateVersion: step.game.stateVersion, state: step.state };
+    const sameBeat = running.deadlineAt !== undefined && this.deadlineTimer !== undefined && running.deadlineBeat === step.deadline?.beat;
+    this.room.game = sameBeat ? updated : this.windGameClock(updated, step.deadline);
   }
 
   private gamePlayers(): GamePlayer[] {
     return this.room.seats.map((seat) => ({ playerId: seat.playerId, nickname: seat.nickname, away: seat.away, avatar: seat.avatar }));
-  }
-
-  private sessionOf(seat: Seat): NonNullable<ViewValue<'session'>> {
-    return { playerId: seat.playerId, roomId: this.room.roomId, code: this.room.code, nickname: seat.nickname, avatar: seat.avatar };
-  }
-
-  private view<Name extends ViewName>(name: Name, viewer: Viewer): ViewValue<Name> {
-    const room = this.room;
-    const now = this.ports.now();
-    switch (name) {
-      case 'session': {
-        const seat = viewer.kind === 'player' ? this.seatById(viewer.playerId) : undefined;
-        return (seat === undefined ? null : this.sessionOf(seat)) as ViewValue<Name>;
-      }
-      case 'roster':
-        return room.seats.map((seat) => ({
-          playerId: seat.playerId,
-          nickname: seat.nickname,
-          away: seat.away,
-          host: seat.playerId === room.hostPlayerId,
-          avatar: seat.avatar,
-        })) as ViewValue<Name>;
-      case 'setup': {
-        const setup = room.setup;
-        if (setup === undefined) return null as ViewValue<Name>;
-        return {
-          gameId: setup.gameId,
-          settings: setup.settings,
-          mode: setup.mode,
-          stage: setup.stage,
-          readyPlayerIds: [...setup.readyPlayerIds],
-          ...(setup.stage === 'countdown' && setup.countdownEndsAt !== undefined
-            ? { countdownRemainingMs: Math.max(0, setup.countdownEndsAt - now) }
-            : {}),
-        } as ViewValue<Name>;
-      }
-      case 'browsing':
-        return (room.browsingGameIndex === undefined ? null : browsingIndex(room.browsingGameIndex)) as ViewValue<Name>;
-      case 'running':
-        return this.runningView(viewer, now) as ViewValue<Name>;
-      case 'connection':
-        return { away: room.tvAway } as ViewValue<Name>;
-      case 'arrivals': {
-        if (viewer.kind !== 'tv') return [] as ViewValue<Name>;
-        const held = new Set(room.seats.map((seat) => seat.avatar));
-        return room.previews
-          .filter((preview) => !held.has(preview.avatar))
-          .map((preview) => ({ previewId: preview.previewId, nickname: preview.nickname, avatar: preview.avatar })) as ViewValue<Name>;
-      }
-      default:
-        return null as ViewValue<Name>;
-    }
-  }
-
-  private runningView(viewer: Viewer, now: number): ViewValue<'running'> {
-    const running = this.room.game;
-    if (running === undefined) return null;
-    const runtime: DecodedRuntime | undefined = decodeStoredRuntime(this.ports.log, this.room.roomId, running);
-    if (runtime === undefined) return { kind: 'unavailable', gameId: running.gameId };
-    if (this.room.tvAway) return { kind: 'paused', gameId: running.gameId, reason: 'tvDisconnected' };
-    if (running.playerPaused === true) return { kind: 'paused', gameId: running.gameId, reason: 'playerDisconnected' };
-    const state = projectRuntime(runtime, viewer.kind === 'tv' ? undefined : viewer.playerId);
-    if (state === undefined) {
-      runtimeFailure(this.ports.log, this.room.roomId, running, 'projection');
-      return { kind: 'unavailable', gameId: running.gameId };
-    }
-    return {
-      kind: 'running',
-      gameId: running.gameId,
-      state,
-      ...(running.settings === undefined ? {} : { settings: running.settings }),
-      ...(running.mode === undefined ? {} : { mode: running.mode }),
-      ...(running.deadlineAt === undefined ? {} : { clockRemainingMs: Math.max(0, running.deadlineAt - now) }),
-    };
-  }
-
-  private tvViews(): TvViews {
-    const tv: Viewer = { kind: 'tv' };
-    return {
-      roomId: this.room.roomId,
-      code: this.room.code,
-      roster: this.view('roster', tv),
-      setup: this.view('setup', tv),
-      browsing: this.view('browsing', tv),
-      running: this.view('running', tv),
-      connection: this.view('connection', tv),
-      arrivals: this.view('arrivals', tv),
-    };
   }
 
   private depth = 0;
@@ -1038,11 +904,12 @@ export class RoomHost {
 
   private flush(): void {
     if (this.disposed) return;
+    const now = this.ports.now();
     for (const connection of this.connections.values()) {
       if (connection.playerId === undefined) continue;
       const viewer: Viewer = { kind: 'player', playerId: connection.playerId };
       for (const name of PHONE_VIEWS) {
-        const value = this.view(name, viewer);
+        const value = viewOf(this.room, name, viewer, now, this.ports.log);
         const key = JSON.stringify(withoutClock(value));
         if (connection.sent.get(name) === key) continue;
         connection.sent.set(name, key);
@@ -1050,7 +917,7 @@ export class RoomHost {
       }
     }
     if (this.tvListeners.size > 0) {
-      const views = this.tvViews();
+      const views = tvViewsOf(this.room, now, this.ports.log);
       for (const listener of this.tvListeners) listener(views);
     }
     const save = this.ports.save;
@@ -1069,32 +936,7 @@ export class RoomHost {
   }
 }
 
-function withoutCountdown(setup: Setup): Setup {
-  const { countdownEndsAt: _endsAt, ...rest } = setup;
-  return { ...rest, stage: setup.stage === 'countdown' ? 'ready' : setup.stage };
-}
-
-function setupForGame(gameId: string, mode: GameSetupMode | undefined, chosen: GameSettings | undefined) {
-  const game = gameLogicById(gameId);
-  if (game === undefined) throw new Refusal({ kind: 'gameNotInstalled', gameId });
-  const resolvedMode = mode ?? 'standard';
-  const preset =
-    resolvedMode === 'custom'
-      ? undefined
-      : game.settingsPresentation?.presets?.find((candidate) => candidate.mode === resolvedMode)?.settings;
-  const settings = chosen ?? preset ?? settingsFrom(game.settingsSchema, undefined);
-  const refusal = settingsRefusalForMode(game.settingsSchema, game.settingsPresentation, settings, resolvedMode);
-  if (refusal !== null) throw new Refusal(refusal);
-  return { game, settings, mode: resolvedMode };
-}
-
 // Hermes has no structuredClone.
 function copy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function withoutClock(value: unknown): unknown {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return value;
-  const { clockRemainingMs: _clock, countdownRemainingMs: _countdown, ...rest } = value as Record<string, unknown>;
-  return rest;
 }
