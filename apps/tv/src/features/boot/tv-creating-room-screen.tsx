@@ -6,6 +6,7 @@ import {
   PlayroomTvStage,
   PlayroomWordmark,
 } from '@huddle/ui/native';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimated';
 
@@ -17,6 +18,10 @@ import { useTvReducedMotion } from '../../ui';
 type TvCreatingRoomScreenProps = {
   readonly phase: TvAnimatedBootPhase;
 };
+
+// tvOS can paint a late image from an unmounted view into a reused one, so a fast boot loads no art.
+const ART_DELAY_MS = 500;
+const WORDMARK_HEIGHT = 132;
 
 const SPLASH_ENTER = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: playroomMotion.entranceTravel }, { scale: 0.98 }] },
@@ -38,6 +43,11 @@ export function TvCreatingRoomScreen({
 }: TvCreatingRoomScreenProps) {
   const reduceMotion = useTvReducedMotion();
   const copy = tvBootAnimationCopy(phase);
+  const [showArt, setShowArt] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowArt(true), ART_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View
@@ -50,15 +60,28 @@ export function TvCreatingRoomScreen({
       testID="tv-boot-animated"
     >
       <PlayroomTvStage wordmark={false} testID="tv-boot-stage">
-        <PlayroomFloat prop="starPurple" width={96} height={96} style={{ left: 300, top: 200 }} reduceMotion={reduceMotion} />
-        <PlayroomFloat prop="starYellow" width={120} height={120} style={{ left: 190, top: 330 }} reduceMotion={reduceMotion} delay={300} />
-        <PlayroomFloat prop="ballOrange" width={90} height={90} style={{ right: 250, top: 190 }} reduceMotion={reduceMotion} delay={200} />
-        <PlayroomFloat prop="ballPurple" width={60} height={60} style={{ right: 180, top: 460 }} reduceMotion={reduceMotion} delay={600} />
+        {showArt ? (
+          <>
+            <PlayroomFloat prop="starPurple" width={96} height={96} style={{ left: 300, top: 200 }} reduceMotion={reduceMotion} />
+            <PlayroomFloat prop="starYellow" width={120} height={120} style={{ left: 190, top: 330 }} reduceMotion={reduceMotion} delay={300} />
+            <PlayroomFloat prop="ballOrange" width={90} height={90} style={{ right: 250, top: 190 }} reduceMotion={reduceMotion} delay={200} />
+            <PlayroomFloat prop="ballPurple" width={60} height={60} style={{ right: 180, top: 460 }} reduceMotion={reduceMotion} delay={600} />
+          </>
+        ) : null}
         <View style={styles.content} pointerEvents="none" focusable={false}>
-          <Animated.View entering={reduceMotion ? undefined : SPLASH_ENTER}>
-            <Image source={PLAYROOM_ARTWORK.brand.splash} style={styles.splash} resizeMode="contain" accessible={false} />
-          </Animated.View>
-          <PlayroomWordmark height={132} style={styles.wordmark} />
+          {showArt ? (
+            <>
+              <Animated.View entering={reduceMotion ? undefined : SPLASH_ENTER}>
+                <Image source={PLAYROOM_ARTWORK.brand.splash} style={styles.splash} resizeMode="contain" accessible={false} />
+              </Animated.View>
+              <PlayroomWordmark height={WORDMARK_HEIGHT} style={styles.wordmark} />
+            </>
+          ) : (
+            <>
+              <View style={styles.splash} />
+              <View style={[styles.wordmark, { height: WORDMARK_HEIGHT }]} />
+            </>
+          )}
           <Animated.View entering={reduceMotion ? undefined : COPY_ENTER} style={styles.copy}>
             <PlayroomText color="ink" style={playroomTv.type.heading}>{copy.title}</PlayroomText>
             <PlayroomText color="muted" style={playroomTv.type.body}>{copy.subtitle}</PlayroomText>
