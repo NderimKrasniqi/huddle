@@ -12,7 +12,7 @@ import {
 
 export const PROTOCOL_VERSION = 2;
 
-export const MAX_FRAME_LENGTH = 256 * 1024;
+const MAX_FRAME_LENGTH = 256 * 1024;
 
 const id = z.string().min(1).max(64);
 const text = z.string().max(256);
@@ -22,7 +22,7 @@ const settings = z.record(z.string().max(64), z.string().max(64));
 
 const noArgs = z.object({});
 
-export const COMMAND_ARGS = {
+const COMMAND_ARGS = {
   joinAvailability: z.object({ code: text }),
   previewSeat: z.object({ code: text, previewKey: text, nickname: text, avatar: text }),
   clearSeatPreview: z.object({ previewKey: text }),
@@ -69,7 +69,7 @@ const seatedSession = session.extend({ sessionToken: z.string() });
 
 const availability = z.object({ full: z.boolean(), takenAvatarIds: z.array(avatar) }).nullable();
 
-export const VIEW_VALUES = {
+const VIEW_VALUES = {
   session: session.nullable(),
   roster: z.array(
     z.object({ playerId: id, nickname: z.string(), away: z.boolean(), host: z.boolean(), avatar }),
@@ -114,7 +114,7 @@ export type ViewValue<Name extends ViewName> = z.infer<(typeof VIEW_VALUES)[Name
 
 export const PHONE_VIEWS: readonly ViewName[] = ['session', 'roster', 'setup', 'browsing', 'running', 'connection'];
 
-export const COMMAND_RESULTS = {
+const COMMAND_RESULTS = {
   joinAvailability: availability,
   joinRoom: seatedSession,
   resumeSession: session.nullable(),

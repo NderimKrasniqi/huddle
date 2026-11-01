@@ -13,10 +13,10 @@ export type * from './types';
 export const HOW_TO_SECONDS = 45;
 export const REPLAY_SECONDS = 5;
 export const MATCH_OVER_SECONDS = 6;
-export const MAX_ROUNDS = 8;
+const MAX_ROUNDS = 8;
 export const SURVIVE_POINTS = 5;
 export const KNOCKOUT_POINTS = 20;
-export const GHOST_KNOCKOUT_POINTS = 10;
+const GHOST_KNOCKOUT_POINTS = 10;
 export const WIN_POINTS = 30;
 const ARENA_START = 1;
 const ARENA_SHRINK = 0.88;
@@ -218,7 +218,7 @@ function sumoDeadline(state: SumoState): GameDeadline<SumoAdvance> | undefined {
   };
 }
 
-export function redactSumoStateFor(state: SumoState, viewer: GamePlayerId | undefined): SumoState {
+function redactSumoStateFor(state: SumoState, viewer: GamePlayerId | undefined): SumoState {
   const own = viewer !== undefined && state.aims[viewer] !== undefined ? { [viewer]: state.aims[viewer]! } : {};
   return { ...state, aims: own, aimedCount: Object.keys(state.aims).length };
 }

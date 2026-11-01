@@ -1,6 +1,6 @@
 import type { GamePlayer, PhoneGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait, useCountdownSeconds } from '@huddle/ui/game-kit';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AvatarPortrait, useCountdownSeconds, useOncePerKey } from '@huddle/ui/game-kit';
+import { useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 
 import { FRICTION, MAX_SPEED, PUCK_SPEED } from './sim';
@@ -34,11 +34,9 @@ export function SumoBumpersPhoneScreen({
   const ghost = state.blobs[me]?.alive === false;
   const knockedOutNow = state.phase === 'replay' && state.lastRound?.knockedOut.includes(me) === true;
 
-  useEffect(() => {
-    if (state.phase !== 'replay' || !playing) return;
-    feedback?.(knockedOutNow ? 'error' : 'success');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase, state.round, state.match]);
+  useOncePerKey(`${state.phase}:${state.round}:${state.match}`, () => {
+    if (state.phase === 'replay' && playing) feedback?.(knockedOutNow ? 'error' : 'success');
+  });
 
   if (!playing) {
     return (

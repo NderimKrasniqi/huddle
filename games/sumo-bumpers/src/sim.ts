@@ -8,8 +8,8 @@ export const PUCK_RADIUS = 0.06;
 export const MAX_SPEED = 2.2;
 export const PUCK_SPEED = 2.0;
 export const FRICTION = 1.5;
-export const RESTITUTION = 0.85;
-export const SIM_STEPS = 240;
+const RESTITUTION = 0.85;
+const SIM_STEPS = 240;
 const PUCK_MASS = 0.5;
 const PUCK_PREFIX = 'puck:';
 
@@ -23,7 +23,7 @@ export function stopDistance(power: number): number {
   return (power * MAX_SPEED) / FRICTION;
 }
 
-export function puckId(playerId: GamePlayerId): string {
+function puckId(playerId: GamePlayerId): string {
   return `${PUCK_PREFIX}${playerId}`;
 }
 

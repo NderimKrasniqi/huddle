@@ -1,7 +1,7 @@
 import { Refusal } from '../refusal';
-import type { CommandTable, HostCore } from '../core';
+import type { CommandTable, RoomCore } from '../core';
 
-export function hostingCommands(core: HostCore): Pick<CommandTable, 'transferHost' | 'removePlayer'> {
+export function hostingCommands(core: RoomCore): Pick<CommandTable, 'transferHost' | 'removePlayer'> {
   return {
     transferHost: (connection, { playerId }) => {
       const actor = core.requireHost(connection, 'hostCommand');

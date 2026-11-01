@@ -3,9 +3,9 @@ import { browsingIndex, GAME_LOGIC_REGISTRY, gameLogicById } from '@huddle/game-
 
 import { Refusal } from '../refusal';
 import { setupForGame, withoutCountdown } from '../setup';
-import type { CommandTable, HostCore } from '../core';
+import type { CommandTable, RoomCore } from '../core';
 
-export function gameSetupCommands(core: HostCore): Pick<CommandTable, 'browseGame' | 'selectGame' | 'configureGame' | 'finalizeGameSetup' | 'setGameReady' | 'reopenGameSetup' | 'cancelGameSetup' | 'startGame' | 'startCountdown' | 'stopCountdown'> {
+export function gameSetupCommands(core: RoomCore): Pick<CommandTable, 'browseGame' | 'selectGame' | 'configureGame' | 'finalizeGameSetup' | 'setGameReady' | 'reopenGameSetup' | 'cancelGameSetup' | 'startGame' | 'startCountdown' | 'stopCountdown'> {
   return {
     browseGame: (connection, { index }) => {
       core.requireHost(connection, 'hostCommand');

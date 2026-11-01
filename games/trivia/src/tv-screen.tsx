@@ -1,7 +1,7 @@
 import type { TvGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait, useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
+import { AvatarPortrait, useCountdownSeconds, useStageScale, useSystemReducedMotion } from '@huddle/ui/game-kit';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 import { TRIVIA_ART } from './art';
 import {
@@ -38,8 +38,7 @@ function useSkyFirst(): readonly [boolean, () => void] {
 }
 
 export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<TriviaState>) {
-  const viewport = useWindowDimensions();
-  const scale = safeScale(viewport.width, viewport.height);
+  const scale = useStageScale();
   const reduceMotion = useSystemReducedMotion();
   const [skyShown, showStage] = useSkyFirst();
   const phase = state.phase;
@@ -234,11 +233,6 @@ function AnswerTile({ option }: { readonly option: WatchedOption }) {
 function questionAccessibilityLabel(screen: Extract<WatchedScreen, { kind: 'question' }>): string {
   const choices = screen.options.map((option) => optionAccessibilityLabel(option, false)).join('; ');
   return `Question ${screen.questionNumber} of ${screen.questionCount}. ${screen.text}. Choices: ${choices}. ${screen.answered} of ${screen.playerCount} answered. ${screen.countdownSeconds} seconds remaining.`;
-}
-
-function safeScale(width: number, height: number): number {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const FOOTER_SEATS_WIDTH = 900;

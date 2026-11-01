@@ -12,7 +12,7 @@ function shouldRestoreTvRoom(room: OpenRoom): boolean {
   return room.restored && !room.hasRunningGame;
 }
 
-export function TvScreen() {
+export default function TvScreen() {
   const { opening, reopen } = useRoomOpening();
   const [restoredRoomHandoff, setRestoredRoomHandoff] = useState<
     OpenRoom['roomId'] | undefined
@@ -46,5 +46,3 @@ export function TvScreen() {
     />
   );
 }
-
-export default TvScreen;

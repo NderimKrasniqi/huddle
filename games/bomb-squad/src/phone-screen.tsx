@@ -1,6 +1,6 @@
 import type { GamePlayer, PhoneGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait, useCountdownSeconds } from '@huddle/ui/game-kit';
-import { useEffect, type ReactNode } from 'react';
+import { AvatarPortrait, useCountdownSeconds, useOncePerKey } from '@huddle/ui/game-kit';
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 
 import { CATCH_POINTS, DEFUSE_POINTS, SABOTAGE_POINTS } from './logic';
@@ -33,11 +33,9 @@ export function BombSquadPhoneScreen({
 
   const gain = result?.gains[me];
   const resultKey = result === undefined ? undefined : `${state.round}:${gain ?? 0}`;
-  useEffect(() => {
-    if (resultKey === undefined || !playing) return;
-    feedback?.((gain ?? 0) > 0 ? 'success' : 'error');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resultKey]);
+  useOncePerKey(resultKey, () => {
+    if (playing) feedback?.((gain ?? 0) > 0 ? 'success' : 'error');
+  });
 
   if (!playing) {
     return (

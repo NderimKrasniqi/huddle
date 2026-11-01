@@ -282,7 +282,7 @@ function introTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined
   };
 }
 
-export function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
+function questionTimer(state: TriviaState): GameDeadline<TriviaAdvance> | undefined {
   if (state.phase !== 'question') return undefined;
 
   return {

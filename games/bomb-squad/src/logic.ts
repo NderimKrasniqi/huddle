@@ -156,7 +156,7 @@ function bombDeadline(state: BombState): GameDeadline<BombAdvance> | undefined {
   return { beat: bombBeat(state), afterMs: seconds * 1000, event: { kind: 'advance', round: state.round, phase: state.phase } };
 }
 
-export function redactBombStateFor(state: BombState, viewer: GamePlayerId | undefined): BombState {
+function redactBombStateFor(state: BombState, viewer: GamePlayerId | undefined): BombState {
   const open = state.phase === 'reveal' || state.phase === 'finished';
   const votesOpen = open || state.phase === 'cut' || state.phase === 'accuse';
   const lastShown = Math.min(state.round, state.rounds.length - 1);

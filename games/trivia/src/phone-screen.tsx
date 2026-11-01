@@ -1,25 +1,11 @@
-import { useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
+import { useCountdownSeconds, useOncePerKey, useSystemReducedMotion } from '@huddle/ui/game-kit';
 import type { PhoneGameScreenProps, PhoneSafeAreaInsets } from '@huddle/domain';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Animated, Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { answerScreen, type AnswerOption } from './answering';
-import {
-  answerTone,
-  cosmic,
-  CosmicText,
-  COSMIC_MOTION,
-  cosmicEaseOut,
-  Enter,
-  LetterBadge,
-  LockMark,
-  Logo,
-  Mascot,
-  Pill,
-  timerLabel,
-  Twinkle,
-  type MascotPose,
-} from './cosmic';
+import { answerTone, cosmic, CosmicText, Enter, LetterBadge, LockMark, Logo, Mascot, type MascotPose, Pill } from './cosmic';
+import { Header, phoneStyles, PressScale, Surface } from './phone-frame';
+import { RevealSurface, revealVerdict } from './phone-reveal';
 import { QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 import type { TriviaEvent, TriviaState } from './types';
 
@@ -48,11 +34,9 @@ export function TriviaPhoneScreen({
   const frame = { insets, chromeTop };
   const ownVerdict = current.phase === 'reveal' ? revealVerdict(current, player.playerId) : undefined;
   const verdictKey = ownVerdict === undefined ? undefined : `${current.questionIndex}:${ownVerdict}`;
-  useEffect(() => {
-    if (verdictKey === undefined) return;
-    feedback?.(verdictKey.endsWith(':right') ? 'success' : 'error');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verdictKey]);
+  useOncePerKey(verdictKey, () => {
+    feedback?.(verdictKey?.endsWith(':right') === true ? 'success' : 'error');
+  });
 
   const count = current.questions.length;
 
@@ -61,7 +45,7 @@ export function TriviaPhoneScreen({
       <Surface {...frame} testID="trivia-phone-intro">
         <Logo width={200} on="light" />
         <Enter reduceMotion={reduceMotion}>
-          <CosmicText weight="black" size={40} align="center" accessibilityRole="header" style={styles.heading}>Get ready!</CosmicText>
+          <CosmicText weight="black" size={40} align="center" accessibilityRole="header" style={phoneStyles.heading}>Get ready!</CosmicText>
         </Enter>
         <Mascot pose="wave" width={210} reduceMotion={reduceMotion} />
         <Pill color={cosmic.turquoise} style={styles.pill}>
@@ -82,7 +66,7 @@ export function TriviaPhoneScreen({
       <Surface {...frame} testID="trivia-phone-waiting-after-answer">
         <Header progress={progress} seconds={seconds} />
         <Enter reduceMotion={reduceMotion}>
-          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Answer locked!</CosmicText>
+          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={phoneStyles.heading}>Answer locked!</CosmicText>
         </Enter>
         <Enter reduceMotion={reduceMotion} scale={0.88} from={0} delay={80}>
           <LockMark size={150} />
@@ -168,7 +152,7 @@ export function TriviaPhoneScreen({
           <CosmicText weight="black" size={16} tracking={1.5}>GAME COMPLETE</CosmicText>
         </Pill>
         <Enter reduceMotion={reduceMotion}>
-          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>
+          <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={phoneStyles.heading}>
             {won ? (place.shared ? 'It’s a tie!' : 'You won!') : 'That’s a wrap!'}
           </CosmicText>
         </Enter>
@@ -193,99 +177,6 @@ export function TriviaPhoneScreen({
   return <EyesUp {...frame} pose="point" line={model.kind === 'eyesUp' ? model.line : ''} reduceMotion={reduceMotion} testID={`trivia-phone-${current.phase}`} />;
 }
 
-type RevealVerdict = 'right' | 'wrong' | 'missed';
-
-const VERDICT_COPY: Readonly<Record<RevealVerdict, { readonly title: string; readonly line: string; readonly tone: string }>> = {
-  right: { title: 'You got it!', line: 'Nice one. See how everyone did on the TV.', tone: cosmic.turquoise },
-  wrong: { title: 'Not this time', line: 'The answer and scores are on the TV.', tone: cosmic.coral },
-  missed: { title: 'Out of time', line: 'No answer this round. The next one is yours.', tone: cosmic.butter },
-};
-
-function verdictLine(verdict: RevealVerdict, last: boolean): string {
-  return verdict === 'missed' && last ? 'No answer on the last one. Final scores are next.' : VERDICT_COPY[verdict].line;
-}
-
-function revealVerdict(state: TriviaState, playerId: string): RevealVerdict | undefined {
-  const right = state.revealVerdicts?.[playerId];
-  if (right === undefined) return undefined;
-  if (right) return 'right';
-  return state.revealAnswered?.[playerId] === false ? 'missed' : 'wrong';
-}
-
-function RevealSurface({
-  insets,
-  chromeTop,
-  state,
-  verdict,
-  progress,
-  seconds,
-  isHost,
-  hostNickname,
-  reduceMotion,
-  onNext,
-}: {
-  readonly hostNickname?: string;
-  readonly insets: PhoneSafeAreaInsets;
-  readonly chromeTop: number;
-  readonly state: TriviaState;
-  readonly verdict: RevealVerdict | undefined;
-  readonly progress: string;
-  readonly seconds: number;
-  readonly isHost: boolean;
-  readonly reduceMotion: boolean | undefined;
-  readonly onNext: () => void;
-}) {
-  const last = state.questionIndex + 1 >= state.questions.length;
-  return (
-    <Surface insets={insets} chromeTop={chromeTop} testID="trivia-phone-reveal">
-      <Logo width={130} on="light" />
-      <CosmicText weight="black" size={16} align="center">{progress}</CosmicText>
-      {verdict === undefined ? (
-        <>
-          <Enter reduceMotion={reduceMotion}>
-            <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Eyes on the TV!</CosmicText>
-          </Enter>
-          <Mascot pose="point" width={200} reduceMotion={reduceMotion} />
-          <CosmicText size={16} align="center" style={{ marginTop: 6 }}>The answer and scores are on the TV.</CosmicText>
-        </>
-      ) : (
-        <>
-          <Enter reduceMotion={reduceMotion} scale={0.88} from={0} testID="trivia-phone-verdict">
-            <View style={[styles.verdictBadge, { backgroundColor: VERDICT_COPY[verdict].tone }]}>
-              <CosmicText weight="black" size={28} align="center" accessibilityRole="header">
-                {VERDICT_COPY[verdict].title}
-              </CosmicText>
-            </View>
-          </Enter>
-          <Mascot pose={verdict === 'right' ? 'celebrate' : 'point'} width={190} reduceMotion={reduceMotion} />
-          <CosmicText size={16} align="center" style={{ marginTop: 6 }}>
-            {verdictLine(verdict, last)}
-          </CosmicText>
-        </>
-      )}
-      <View style={styles.clockRow} accessible accessibilityLabel={`${last ? 'Final scores' : 'Next question'} in ${seconds} seconds`} testID="trivia-phone-next-clock">
-        <CosmicText weight="bold" size={18} color={cosmic.muted}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
-        <CosmicText weight="black" size={22}>{`${seconds}s`}</CosmicText>
-      </View>
-      {isHost ? (
-        <>
-          <PressScale
-            onPress={onNext}
-            reduceMotion={reduceMotion}
-            accessibilityLabel={last ? 'Show final scores' : 'Next question'}
-            testID="trivia-phone-next"
-            style={styles.nextButton}
-          >
-            <CosmicText weight="black" size={22}>{last ? 'Show final scores' : 'Next question'}</CosmicText>
-          </PressScale>
-        </>
-      ) : (
-        <CosmicText size={16} color={cosmic.muted} align="center" style={{ marginTop: 12 }}>{`${hostNickname ?? 'The host'} can move on sooner.`}</CosmicText>
-      )}
-    </Surface>
-  );
-}
-
 function EyesUp({
   insets,
   chromeTop,
@@ -304,24 +195,10 @@ function EyesUp({
   return (
     <Surface insets={insets} chromeTop={chromeTop} testID={testID}>
       <Logo width={190} on="light" />
-      <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={styles.heading}>Eyes up.</CosmicText>
+      <CosmicText weight="black" size={36} align="center" accessibilityRole="header" style={phoneStyles.heading}>Eyes up.</CosmicText>
       <Mascot pose={pose} width={200} reduceMotion={reduceMotion} />
       <CosmicText size={16} align="center">{line}</CosmicText>
     </Surface>
-  );
-}
-
-function Header({ progress, seconds }: { readonly progress: string; readonly seconds: number }) {
-  return (
-    <View style={styles.header}>
-      <Logo width={120} on="light" />
-      <View style={styles.headerRow}>
-        <CosmicText weight="black" size={16} accessibilityLabel={`Question ${progress.replace(' / ', ' of ')}`}>{progress}</CosmicText>
-        <Pill style={styles.timer} testID="trivia-phone-clock">
-          <CosmicText weight="black" size={22} accessibilityLabel={`${seconds} seconds remaining`}>{timerLabel(seconds)}</CosmicText>
-        </Pill>
-      </View>
-    </View>
   );
 }
 
@@ -353,101 +230,6 @@ function AnswerButton({
   );
 }
 
-function PressScale({
-  children,
-  onPress,
-  disabled = false,
-  reduceMotion,
-  accessibilityLabel,
-  accessibilityState,
-  testID,
-  style,
-}: {
-  readonly children: ReactNode;
-  readonly onPress: () => void;
-  readonly disabled?: boolean;
-  readonly reduceMotion: boolean | undefined;
-  readonly accessibilityLabel: string;
-  readonly accessibilityState?: { readonly disabled?: boolean; readonly selected?: boolean };
-  readonly testID?: string;
-  readonly style?: object;
-}) {
-  const scale = useState(() => new Animated.Value(1))[0];
-  const to = (value: number) => {
-    if (reduceMotion !== false) return;
-    Animated.timing(scale, {
-      toValue: value,
-      duration: value === 1 ? COSMIC_MOTION.release : COSMIC_MOTION.press,
-      easing: cosmicEaseOut,
-      useNativeDriver: true,
-    }).start();
-  };
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => to(0.97)}
-      onPressOut={() => to(1)}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={accessibilityState ?? { disabled }}
-      testID={testID}
-      style={styles.pressable}
-    >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
-    </Pressable>
-  );
-}
-
-function Surface({
-  insets,
-  chromeTop,
-  children,
-  testID,
-  scrollTestID,
-  align = 'center',
-}: {
-  readonly insets: PhoneSafeAreaInsets;
-  readonly chromeTop: number;
-  readonly children: ReactNode;
-  readonly testID: string;
-  readonly scrollTestID?: string;
-  readonly align?: 'center' | 'stretch';
-}) {
-  return (
-    <View style={styles.screen} testID={testID}>
-      <StatusBar barStyle="dark-content" backgroundColor={cosmic.cream} />
-      <Twinkle size={22} style={{ left: 28, top: insets.top + 90 }} />
-      <Twinkle size={18} style={{ right: 32, top: insets.top + 60 }} />
-      <Twinkle size={16} style={{ right: 40, top: '55%' }} />
-      <Twinkle size={18} style={{ left: 30, bottom: insets.bottom + 120 }} />
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-            paddingTop: insets.top + chromeTop + 16,
-            paddingBottom: insets.bottom + 24,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        testID={scrollTestID}
-      >
-        {align === 'stretch' ? (
-          <View style={[styles.page, styles.pageStretch]}>{children}</View>
-        ) : (
-          <View style={styles.page}>
-            <View style={styles.spaceAbove} />
-            {children}
-            <View style={styles.spaceBelow} />
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
 function finishingPlace(state: TriviaState, playerId: string) {
   const own = state.standings.find((standing) => standing.playerId === playerId);
   if (!own) return undefined;
@@ -469,17 +251,7 @@ function finiteInset(value: number | undefined): number {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: cosmic.cream },
-  scroll: { flexGrow: 1 },
-  page: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', alignItems: 'center', paddingHorizontal: 24, gap: 8 },
-  spaceAbove: { flexGrow: 1 },
-  spaceBelow: { flexGrow: 1.8 },
-  pageStretch: { alignItems: 'stretch', justifyContent: 'flex-start' },
-  heading: { marginVertical: 8 },
   pill: { paddingHorizontal: 22, paddingVertical: 8, marginTop: 8 },
-  header: { alignItems: 'center' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 2 },
-  timer: { paddingHorizontal: 16, paddingVertical: 4, minWidth: 74 },
   categoryChip: { alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 4, marginTop: 12 },
   question: { marginTop: 10, marginBottom: 16 },
   questionArea: { flexGrow: 1, justifyContent: 'flex-start', paddingTop: 16 },
@@ -488,8 +260,4 @@ const styles = StyleSheet.create({
   answerClosed: { opacity: 0.45 },
   answerText: { flex: 1 },
   placeCard: { alignItems: 'center', borderRadius: 28, paddingHorizontal: 36, paddingVertical: 12, marginBottom: 14 },
-  verdictBadge: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 999, marginVertical: 8 },
-  nextButton: { marginTop: 8, minHeight: 56, borderRadius: 999, backgroundColor: cosmic.turquoise, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', paddingHorizontal: 32 },
-  pressable: { alignSelf: 'stretch' },
-  clockRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginTop: 16 },
 });

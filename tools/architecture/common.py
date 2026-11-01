@@ -49,10 +49,6 @@ SERVER_CONTENT_IMPORT = re.compile(
     r"(?:curated-pack|questions|prompts|server|node:[a-z0-9_/]+)", re.IGNORECASE
 )
 
-PHONE_JOIN_RENDERER = Path("apps/phone/src/features/join/room-code-screen.tsx")
-
-PHONE_IDENTITY_RENDERER = Path("apps/phone/src/screens/join-identity-screen.tsx")
-
 PHONE_SCAN_RENDERER = Path("apps/phone/src/features/scan/scan-screen.tsx")
 
 TV_ROOM_RENDERER = Path("apps/tv/src/features/room/room-invitation-screen.tsx")
@@ -65,26 +61,6 @@ TV_RESTORE_INDICATOR = Path("apps/tv/src/features/boot/tv-restore-indicator.tsx"
 
 TV_BOOT_RENDERERS = frozenset(
     (TV_BOOT_RENDERER, TV_RESTORE_RENDERER, TV_RESTORE_INDICATOR)
-)
-
-TV_GAME_FLOW_RENDERERS = frozenset(
-    (
-        Path("apps/tv/src/features/game-flow/game-carousel-screen.tsx"),
-        Path("apps/tv/src/features/game-flow/game-art-reveal-screen.tsx"),
-        Path("apps/tv/src/features/game-flow/game-setup-screen.tsx"),
-        Path("apps/tv/src/features/game-flow/game-ready-screen.tsx"),
-    )
-)
-
-APPROVED_ILLUSTRATED_RENDERERS = frozenset(
-    (
-        PHONE_JOIN_RENDERER,
-        PHONE_IDENTITY_RENDERER,
-        PHONE_SCAN_RENDERER,
-        TV_ROOM_RENDERER,
-        *TV_BOOT_RENDERERS,
-        *TV_GAME_FLOW_RENDERERS,
-    )
 )
 
 TV_SVG_RENDERERS = frozenset(
@@ -196,13 +172,6 @@ def source_files(src: Path) -> list[Path]:
         if not path.name.endswith(".d.ts") and "node_modules" not in path.parts
     )
 
-def is_approved_illustrated_renderer(path: Path, root: Path = ROOT) -> bool:
-
-    return any(path.resolve() == (root / approved).resolve() for approved in APPROVED_ILLUSTRATED_RENDERERS)
-
-def is_approved_interactive_renderer(path: Path, root: Path = ROOT) -> bool:
-
-    return is_approved_illustrated_renderer(path, root)
 
 TV_CONTROL_REFERENCE = re.compile(
     r"\b(?:Pressable|TextInput|TouchableOpacity|TouchableWithoutFeedback|"
@@ -211,20 +180,6 @@ TV_CONTROL_REFERENCE = re.compile(
     r"\bfocusable\s*=\s*(?:\{\s*)?true\b|"
     r"accessibilityRole\s*=\s*['\"]button['\"]"
 )
-
-def owner_for(path: Path, src: Path) -> Owner | None:
-    for kind, directory in (("feature", src / "features"), ("platform", src / "platform")):
-        if path.is_relative_to(directory):
-            parts = path.relative_to(directory).parts
-            if parts:
-                return Owner(kind, parts[0], directory / parts[0])
-    if path.is_relative_to(src / "models"):
-        return Owner("models", "models", src / "models")
-    if path.is_relative_to(src / "ui"):
-        return Owner("ui", "ui", src / "ui")
-    if path.is_relative_to(src / "screens"):
-        return Owner("screens", "screens", src / "screens")
-    return None
 
 def resolve_import(source: Path, imported: str) -> Path | None:
     if not imported.startswith("."):

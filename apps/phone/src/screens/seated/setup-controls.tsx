@@ -107,7 +107,7 @@ export function Segment({
   );
 }
 
-export function StepButton({
+function StepButton({
   label,
   hint,
   disabled,

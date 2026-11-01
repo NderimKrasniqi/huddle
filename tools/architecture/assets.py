@@ -3,36 +3,6 @@ from __future__ import annotations
 from .common import *  # noqa: F403
 
 
-def validate_png_asset_set(
-    asset_root: Path,
-    specs: dict[str, tuple[tuple[int, int], str]],
-    label: str,
-    root: Path = ROOT,
-) -> None:
-
-    if not asset_root.is_dir():
-        fail(f"{label} asset directory missing: {relative(asset_root, root)}")
-    actual_assets = {path.name for path in asset_root.iterdir() if path.is_file()}
-    if actual_assets != set(specs):
-        fail(f"{label} assets must contain only the approved PNGs")
-
-    for name, (expected_dimensions, expected_digest) in specs.items():
-        path = asset_root / name
-        payload = path.read_bytes()
-        if payload[:8] != b"\x89PNG\r\n\x1a\n":
-            fail(f"{label} asset is not PNG: {relative(path, root)}")
-        if len(payload) < 26:
-            fail(f"{label} asset has no PNG color metadata: {relative(path, root)}")
-        actual_dimensions = struct.unpack(">II", payload[16:24])
-        if actual_dimensions != expected_dimensions:
-            fail(
-                f"{label} asset has wrong dimensions: {relative(path, root)} "
-                f"({actual_dimensions}, expected {expected_dimensions})"
-            )
-        if hashlib.sha256(payload).hexdigest() != expected_digest:
-            fail(f"{label} asset differs from supplied PNG: {relative(path, root)}")
-
-
 def png_dimensions_and_alpha(path: Path, label: str, root: Path = ROOT) -> tuple[tuple[int, int], bool]:
 
     payload = path.read_bytes()

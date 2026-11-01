@@ -76,8 +76,9 @@ runs in the TV app and under Node (`pnpm headless-tv`, the e2e seeds).
   than ten minutes; a running beat keeps the time it had left.
 - Games are not told who the Host is: the host stamps `fromHost` and the
   acting `playerId` on events itself.
-- Commands live in `src/commands/` (joining, hosting, game setup, game) and
-  reach the room through the `HostCore` in `src/core.ts`.
+- `RoomCore` (`src/core.ts`) owns the room state, presence, countdown and
+  game clock; commands in `src/commands/` call it directly. `RoomHost` keeps
+  connections (`src/connections.ts`), frames and view pushes.
 
 ### Room Protocol and transport
 

@@ -1,7 +1,7 @@
 import type { GamePlayer, TvGameScreenProps } from '@huddle/domain';
-import { AvatarPortrait, useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
+import { AvatarPortrait, useCountdownSeconds, useStageScale, useSystemReducedMotion } from '@huddle/ui/game-kit';
 import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
-import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { CATCH_POINTS } from './logic';
 import { phaseSeconds, WIRE_COLOR, wireName } from './presentation';
@@ -15,8 +15,7 @@ const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
 
 export function BombSquadTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<BombState>) {
-  const viewport = useWindowDimensions();
-  const scale = Math.min(viewport.width / STAGE_WIDTH, viewport.height / STAGE_HEIGHT) || 1;
+  const scale = useStageScale();
   const reduceMotion = useSystemReducedMotion() ?? true;
   const fallback = phaseSeconds(state);
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, fallback, `${state.round}:${state.phase}`);

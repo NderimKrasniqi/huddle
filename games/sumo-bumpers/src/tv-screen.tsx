@@ -1,8 +1,8 @@
 import type { GamePlayer, TvGameScreenProps } from '@huddle/domain';
 import { BlurMask, Canvas, Circle, RadialGradient, vec } from '@shopify/react-native-skia';
-import { AvatarPortrait, useCountdownSeconds, useSystemReducedMotion } from '@huddle/ui/game-kit';
+import { AvatarPortrait, useCountdownSeconds, useStageScale, useSystemReducedMotion } from '@huddle/ui/game-kit';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { BLOB_RADIUS, PUCK_RADIUS, puckOwner, simulateRound } from './logic';
 import { beatKey, HOW_TO_STEPS, knockoutLine, phaseSeconds } from './presentation';
@@ -17,8 +17,7 @@ const ARENA_CENTER = { x: STAGE_WIDTH / 2, y: 590 };
 const REPLAY_MS = 4300;
 
 export function SumoBumpersTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<SumoState>) {
-  const viewport = useWindowDimensions();
-  const scale = Math.min(viewport.width / STAGE_WIDTH, viewport.height / STAGE_HEIGHT) || 1;
+  const scale = useStageScale();
   const reduceMotion = useSystemReducedMotion() ?? true;
   const seconds = useCountdownSeconds(state.phase === 'finished' ? 0 : clockRemainingMs, phaseSeconds(state), beatKey(state));
   const playing = players.filter((player) => state.standings.some((standing) => standing.playerId === player.playerId));

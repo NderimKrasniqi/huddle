@@ -1,8 +1,9 @@
 import { playroomColors, playroomTv } from '@huddle/design-tokens';
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { PlayroomWordmark } from './playroom-text';
+import { useStageScale } from './stage-scale';
 
 export type PlayroomTvStageProps = PropsWithChildren<{
   readonly wordmark?: boolean;
@@ -11,8 +12,7 @@ export type PlayroomTvStageProps = PropsWithChildren<{
 }>;
 
 export function PlayroomTvStage({ children, wordmark = true, style, testID }: PlayroomTvStageProps) {
-  const viewport = useWindowDimensions();
-  const scale = stageScale(viewport.width, viewport.height);
+  const scale = useStageScale();
 
   return (
     <View style={styles.viewport} testID={testID}>
@@ -28,11 +28,6 @@ export function PlayroomTvStage({ children, wordmark = true, style, testID }: Pl
       </View>
     </View>
   );
-}
-
-function stageScale(width: number, height: number): number {
-  const scale = Math.min(width / playroomTv.width, height / playroomTv.height);
-  return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
 const styles = StyleSheet.create({

@@ -1,6 +1,6 @@
-import type { CommandTable, HostCore } from '../core';
+import type { CommandTable, RoomCore } from '../core';
 
-export function gameCommands(core: HostCore): Pick<CommandTable, 'endGame' | 'continueAfterDisconnect' | 'sendEvent'> {
+export function gameCommands(core: RoomCore): Pick<CommandTable, 'endGame' | 'continueAfterDisconnect' | 'sendEvent'> {
   return {
     endGame: (connection) => {
       core.requireHost(connection, 'hostCommand');

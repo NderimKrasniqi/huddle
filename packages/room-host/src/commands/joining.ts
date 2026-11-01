@@ -3,9 +3,9 @@ import { generateSessionToken, isAvatarId, isGuestId, NICKNAME_MAX_LENGTH, norma
 import { Refusal } from '../refusal';
 import type { Seat } from '../state';
 import { sessionOf } from '../views';
-import type { CommandTable, HostCore } from '../core';
+import type { CommandTable, RoomCore } from '../core';
 
-export function joiningCommands(core: HostCore): Pick<CommandTable, 'joinAvailability' | 'previewSeat' | 'clearSeatPreview' | 'joinRoom' | 'resumeSession' | 'leaveRoom'> {
+export function joiningCommands(core: RoomCore): Pick<CommandTable, 'joinAvailability' | 'previewSeat' | 'clearSeatPreview' | 'joinRoom' | 'resumeSession' | 'leaveRoom'> {
   return {
     joinAvailability: (connection, { code }) => {
       const normalized = normalizeRoomCode(code);

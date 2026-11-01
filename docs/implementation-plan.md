@@ -155,7 +155,10 @@ longer polls; this is protocol version 2. New flows `e2e:seat-restore` and
 `e2e:room-handoff` cover a relaunch and moving to another room. The seated
 room hook shares its action state (`use-room-action.ts`) and game actions
 (`use-game-actions.ts`), the Trivia TV screen is split by stage, and the
-pinned artwork moved to `tools/architecture/assets.json`.
+pinned artwork moved to `tools/architecture/assets.json`. A second pass gave the room host a
+`RoomCore` class, shared `useOncePerKey` and `useStageScale` hooks in the game
+kit, split the Trivia phone screen, the seated runtime screens and the TV
+seat components, and removed dead exports and validator code.
 
 ### TV-hosted rooms on simulators (TASK-11 to TASK-18)
 

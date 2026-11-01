@@ -13,7 +13,7 @@ import {
 } from '@huddle/contracts/protocol';
 import { HEARTBEAT_INTERVAL_MS } from '@huddle/domain';
 
-export class BotRefusal extends Error {
+class BotRefusal extends Error {
   constructor(readonly rejection: RoomRejection) {
     super(`refused: ${rejection.kind}`);
   }
