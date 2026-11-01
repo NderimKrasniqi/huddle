@@ -13,29 +13,21 @@ import {
 } from '@huddle/contracts/protocol';
 import {
   AWAY_AFTER_MS,
-  COUNTDOWN_MS,
   type GameEvent,
   type GameLogic,
   type GamePlayer,
   type GameSettings,
-  type GameSetupMode,
   generateRoomCode,
   generateSessionToken,
-  isAvatarId,
-  isGuestId,
-  NICKNAME_MAX_LENGTH,
-  normalizeRoomCode,
   readiness,
   refusalToStart,
-  ROOM_CODE_LENGTH,
   ROOM_EXPIRY_MS,
-  ROOM_PLAYER_CAP,
   roomPhase,
   settingsFrom,
   settingsRefusal,
   settingsRefusalForMode,
 } from '@huddle/domain';
-import { browsingIndex, GAME_LOGIC_REGISTRY, gameLogicById } from '@huddle/game-registry/logic';
+import { gameLogicById } from '@huddle/game-registry/logic';
 
 import {
   advanceGame,
@@ -44,7 +36,7 @@ import {
 } from './game-runtime';
 import type { CancelTimer, HostPorts } from './ports';
 import { RateLimiter } from './rate-limits';
-import { setupForGame, withoutCountdown } from './setup';
+import { withoutCountdown } from './setup';
 import { Refusal } from './refusal';
 import {
   type HostSnapshot,
@@ -53,7 +45,12 @@ import {
   SNAPSHOT_VERSION,
   type StoredGame,
 } from './state';
-import { sessionOf, type TvViews, tvViewsOf, type Viewer, viewOf, withoutClock } from './views';
+import { gameCommands } from './commands/game';
+import { gameSetupCommands } from './commands/game-setup';
+import { hostingCommands } from './commands/hosting';
+import { joiningCommands } from './commands/joining';
+import type { CommandTable, Connection, HostCore, StartArgs } from './core';
+import { type TvViews, tvViewsOf, type Viewer, viewOf, withoutClock } from './views';
 
 export type { TvViews };
 
@@ -66,22 +63,6 @@ const UNSEATED_IDLE_MS = 30_000;
 export type HostConnection = {
   readonly receive: (frame: string) => void;
   readonly disconnect: () => void;
-};
-
-type Connection = {
-  readonly id: number;
-  readonly send: (frame: string) => void;
-  readonly close: () => void;
-  greeted: boolean;
-  playerId?: string;
-  lastFrameAt: number;
-  readonly sent: Map<ViewName, string>;
-};
-
-type StartArgs = {
-  readonly gameId?: string;
-  readonly settings?: Record<string, string>;
-  readonly mode?: GameSetupMode;
 };
 
 export class RoomHost {
@@ -439,269 +420,50 @@ export class RoomHost {
     return handler(connection, args);
   }
 
-  private readonly commands: {
-    readonly [Name in CommandName]: (connection: Connection, args: CommandArgs<Name>) => CommandResult<Name>;
-  } = {
-    joinAvailability: (_connection, { code }) => {
-      const normalized = normalizeRoomCode(code);
-      if (normalized.length !== ROOM_CODE_LENGTH || normalized !== this.room.code) return null;
-      return {
-        full: this.room.seats.length >= ROOM_PLAYER_CAP,
-        takenAvatarIds: this.room.seats.map((seat) => seat.avatar),
-      };
-    },
+  // Field initializers can run before the constructor sets these, so they are read late.
+  private readonly core: HostCore = (() => {
+    const host = this;
+    return {
+      get room() {
+        return host.room;
+      },
+      get limiter() {
+        return host.limiter;
+      },
+      get ports() {
+        return host.ports;
+      },
+      newId: (prefix) => host.newId(prefix),
+      bind: (connection, playerId) => host.bind(connection, playerId),
+      touch: (seat) => host.touch(seat),
+      beating: (seat) => host.beating(seat),
+      needsHost: () => host.needsHost(),
+      requireSeat: (connection) => host.requireSeat(connection),
+      requireHost: (connection, limit) => host.requireHost(connection, limit),
+      targetSeat: (actor, playerId) => host.targetSeat(actor, playerId),
+      handOverRoom: (departing, leaving) => host.handOverRoom(departing, leaving),
+      unseatConnections: (playerId, reason) => host.unseatConnections(playerId, reason),
+      dropReady: (playerId) => host.dropReady(playerId),
+      resumeWhenEveryoneReturns: () => host.resumeWhenEveryoneReturns(),
+      reconcileCountdown: () => host.reconcileCountdown(),
+      armCountdown: (endsAt, afterMs) => host.armCountdown(endsAt, afterMs),
+      cancelCountdownTimer: () => host.cancelCountdownTimer(),
+      validatedStart: (args) => host.validatedStart(args),
+      startFromSetup: (args) => host.startFromSetup(args),
+      stopGameClock: () => {
+        host.deadlineTimer?.();
+        host.deadlineTimer = undefined;
+      },
+      resumePausedGameClock: (running) => host.resumePausedGameClock(running),
+      playGameEvent: (event) => host.playGameEvent(event),
+    };
+  })();
 
-    previewSeat: (_connection, args) => {
-      const code = normalizeRoomCode(args.code);
-      if (code !== this.room.code || !isGuestId(args.previewKey) || !isAvatarId(args.avatar)) return null;
-      this.limiter.consume('seatPreviewRoom', this.room.roomId);
-      this.limiter.consume('seatPreviewKey', args.previewKey);
-      const nickname = Array.from(args.nickname.trim()).slice(0, NICKNAME_MAX_LENGTH).join('');
-      const now = this.ports.now();
-      const existing = this.room.previews.find((preview) => preview.previewKey === args.previewKey);
-      if (existing === undefined) {
-        const held = new Set(this.room.seats.map((seat) => seat.avatar));
-        const shown = this.room.previews.filter((preview) => !held.has(preview.avatar)).length;
-        if (this.room.seats.length + shown >= ROOM_PLAYER_CAP) return null;
-        this.room.previews.push({ previewId: this.newId('preview'), previewKey: args.previewKey, nickname, avatar: args.avatar, updatedAt: now });
-        return null;
-      }
-      existing.nickname = nickname;
-      existing.avatar = args.avatar;
-      existing.updatedAt = now;
-      return null;
-    },
-
-    clearSeatPreview: (_connection, { previewKey }) => {
-      this.room.previews = this.room.previews.filter((preview) => preview.previewKey !== previewKey);
-      return null;
-    },
-
-    joinRoom: (connection, args) => {
-      const code = normalizeRoomCode(args.code);
-      const nickname = args.nickname.trim();
-      if (nickname === '' || [...nickname].length > NICKNAME_MAX_LENGTH) {
-        throw new Refusal({ kind: 'nameUnusable', maxLength: NICKNAME_MAX_LENGTH });
-      }
-      if (!isAvatarId(args.avatar)) throw new Refusal({ kind: 'avatarUnknown', avatar: args.avatar });
-      if (args.guestId !== undefined && !isGuestId(args.guestId)) throw new Refusal({ kind: 'guestIdInvalid' });
-      if (code !== this.room.code) throw new Refusal({ kind: 'roomNotFound', code });
-      this.limiter.consume('joinGlobal', 'global');
-      this.limiter.consume('joinRoom', this.room.roomId);
-      this.limiter.consume('joinGuest', args.guestId ?? 'legacy-clients');
-      const seats = this.room.seats;
-      if (seats.length >= ROOM_PLAYER_CAP) throw new Refusal({ kind: 'roomFull', cap: ROOM_PLAYER_CAP });
-      if (seats.some((seat) => seat.nickname.trim().toLowerCase() === nickname.toLowerCase())) {
-        throw new Refusal({ kind: 'nameTaken', nickname });
-      }
-      if (seats.some((seat) => seat.avatar === args.avatar)) throw new Refusal({ kind: 'avatarTaken', avatar: args.avatar });
-
-      const seat: Seat = {
-        playerId: this.newId('player'),
-        nickname,
-        sessionToken: generateSessionToken(this.ports.random),
-        lastSeenAt: this.ports.now(),
-        away: false,
-        avatar: args.avatar,
-        ...(args.guestId === undefined ? {} : { guestId: args.guestId }),
-      };
-      seats.push(seat);
-      if (this.needsHost()) this.room.hostPlayerId = seat.playerId;
-      this.reconcileCountdown();
-      this.bind(connection, seat.playerId);
-      return {
-        playerId: seat.playerId,
-        roomId: this.room.roomId,
-        code: this.room.code,
-        nickname,
-        avatar: seat.avatar,
-        sessionToken: seat.sessionToken,
-      };
-    },
-
-    resumeSession: (connection, { sessionToken }) => {
-      const seat = this.room.seats.find((candidate) => candidate.sessionToken === sessionToken);
-      if (seat === undefined) return null;
-      this.bind(connection, seat.playerId);
-      this.touch(seat);
-      return sessionOf(this.room, seat);
-    },
-
-    leaveRoom: (connection) => {
-      const seat = this.requireSeat(connection);
-      this.limiter.consume('memberCommand', seat.playerId);
-      this.handOverRoom(seat, true);
-      this.room.seats = this.room.seats.filter((candidate) => candidate.playerId !== seat.playerId);
-      this.unseatConnections(seat.playerId, undefined);
-      if (this.room.seats.length > 0) {
-        this.dropReady(seat.playerId);
-        this.reconcileCountdown();
-        this.resumeWhenEveryoneReturns();
-        return null;
-      }
-      this.deadlineTimer?.();
-      this.deadlineTimer = undefined;
-      this.countdownTimer?.();
-      this.countdownTimer = undefined;
-      this.room.hostPlayerId = undefined;
-      this.room.game = undefined;
-      this.room.setup = undefined;
-      this.room.browsingGameIndex = undefined;
-      return null;
-    },
-
-    transferHost: (connection, { playerId }) => {
-      const actor = this.requireHost(connection, 'hostCommand');
-      const target = this.targetSeat(actor, playerId);
-      if (!this.beating(target)) throw new Refusal({ kind: 'targetAway' });
-      this.room.hostPlayerId = target.playerId;
-      return null;
-    },
-
-    removePlayer: (connection, { playerId }) => {
-      const actor = this.requireHost(connection, 'hostCommand');
-      const target = this.targetSeat(actor, playerId);
-      this.room.seats = this.room.seats.filter((seat) => seat.playerId !== target.playerId);
-      this.unseatConnections(target.playerId, 'removed');
-      this.dropReady(target.playerId);
-      this.reconcileCountdown();
-      this.resumeWhenEveryoneReturns();
-      return null;
-    },
-
-    browseGame: (connection, { index }) => {
-      this.requireHost(connection, 'hostCommand');
-      if (this.room.tvAway) return null;
-      this.room.browsingGameIndex = browsingIndex(index);
-      return null;
-    },
-
-    selectGame: (connection, args) => {
-      this.requireHost(connection, 'hostCommand');
-      if (this.room.game !== undefined) throw new Refusal({ kind: 'setupAlreadyRunning' });
-      const selected = setupForGame(args.gameId, args.mode, undefined);
-      const index = GAME_LOGIC_REGISTRY.findIndex((entry) => entry.metadata.id === args.gameId);
-      this.cancelCountdownTimer();
-      this.room.setup = { gameId: args.gameId, settings: selected.settings, mode: selected.mode, stage: 'configuring', readyPlayerIds: [] };
-      if (index >= 0) this.room.browsingGameIndex = browsingIndex(index);
-      return null;
-    },
-
-    configureGame: (connection, args) => {
-      this.requireHost(connection, 'hostCommand');
-      if (this.room.game !== undefined) throw new Refusal({ kind: 'setupAlreadyRunning' });
-      const setup = this.room.setup;
-      const gameId = args.gameId ?? setup?.gameId;
-      if (gameId === undefined) throw new Refusal({ kind: 'setupNotFound' });
-      if (setup?.stage === 'ready' || setup?.stage === 'countdown') throw new Refusal({ kind: 'setupLocked' });
-      const game = gameLogicById(gameId);
-      if (game === undefined) throw new Refusal({ kind: 'gameNotInstalled', gameId });
-      const merged = { ...setup?.settings, ...args.settings };
-      const mode = args.mode ?? setup?.mode ?? 'custom';
-      const refusal = settingsRefusalForMode(game.settingsSchema, game.settingsPresentation, merged, mode);
-      if (refusal !== null) throw new Refusal(refusal);
-      this.room.setup = { gameId, settings: settingsFrom(game.settingsSchema, merged), mode, stage: 'configuring', readyPlayerIds: [] };
-      return null;
-    },
-
-    finalizeGameSetup: (connection) => {
-      const host = this.requireHost(connection, 'hostCommand');
-      const setup = this.room.setup;
-      if (setup === undefined) throw new Refusal({ kind: 'setupNotFound' });
-      setupForGame(setup.gameId, setup.mode, setup.settings);
-      this.cancelCountdownTimer();
-      this.room.setup = { ...withoutCountdown(setup), stage: 'ready', readyPlayerIds: [host.playerId] };
-      return null;
-    },
-
-    setGameReady: (connection, { ready }) => {
-      const seat = this.requireSeat(connection);
-      this.limiter.consume('memberCommand', seat.playerId);
-      const setup = this.room.setup;
-      if (setup === undefined) throw new Refusal({ kind: 'setupNotFound' });
-      if (setup.stage !== 'ready' && setup.stage !== 'countdown') throw new Refusal({ kind: 'setupNotReady' });
-      const current = setup.readyPlayerIds;
-      const readyPlayerIds = ready
-        ? current.includes(seat.playerId) ? current : [...current, seat.playerId]
-        : current.filter((playerId) => playerId !== seat.playerId);
-      this.room.setup = { ...setup, readyPlayerIds };
-      this.reconcileCountdown();
-      return null;
-    },
-
-    reopenGameSetup: (connection) => {
-      this.requireHost(connection, 'hostCommand');
-      const setup = this.room.setup;
-      if (setup === undefined) throw new Refusal({ kind: 'setupNotFound' });
-      this.cancelCountdownTimer();
-      this.room.setup = { ...withoutCountdown(setup), stage: 'configuring', readyPlayerIds: [] };
-      return null;
-    },
-
-    cancelGameSetup: (connection) => {
-      this.requireHost(connection, 'hostCommand');
-      if (this.room.game === undefined) {
-        this.cancelCountdownTimer();
-        this.room.setup = undefined;
-        this.room.browsingGameIndex = undefined;
-      }
-      return null;
-    },
-
-    startGame: (connection, args) => {
-      this.requireHost(connection, 'hostCommand');
-      this.startFromSetup(args);
-      return null;
-    },
-
-    startCountdown: (connection) => {
-      this.requireHost(connection, 'hostCommand');
-      const setup = this.room.setup;
-      if (setup?.stage === 'countdown') return null;
-      this.validatedStart({});
-      const endsAt = this.ports.now() + COUNTDOWN_MS;
-      this.room.setup = { ...setup!, stage: 'countdown', countdownEndsAt: endsAt };
-      this.armCountdown(endsAt, COUNTDOWN_MS);
-      return null;
-    },
-
-    stopCountdown: (connection) => {
-      this.requireHost(connection, 'hostCommand');
-      const setup = this.room.setup;
-      if (setup?.stage !== 'countdown') return null;
-      this.cancelCountdownTimer();
-      this.room.setup = withoutCountdown(setup);
-      return null;
-    },
-
-    endGame: (connection) => {
-      this.requireHost(connection, 'hostCommand');
-      this.deadlineTimer?.();
-      this.deadlineTimer = undefined;
-      this.cancelCountdownTimer();
-      this.room.game = undefined;
-      this.room.setup = undefined;
-      this.room.browsingGameIndex = undefined;
-      return null;
-    },
-
-    continueAfterDisconnect: (connection) => {
-      this.requireHost(connection, 'hostCommand');
-      const running = this.room.game;
-      if (running?.playerPaused !== true) return null;
-      const { playerPaused: _paused, ...continuing } = running;
-      this.room.game = this.room.tvAway ? continuing : this.resumePausedGameClock(continuing);
-      return null;
-    },
-
-    sendEvent: (connection, { event }) => {
-      const seat = this.requireSeat(connection);
-      this.limiter.consume('gameEvent', seat.playerId);
-      if (this.room.tvAway || this.room.game?.playerPaused === true) return null;
-      if (typeof event !== 'object' || event === null || Array.isArray(event)) return null;
-      this.playGameEvent({ ...(event as object), playerId: seat.playerId });
-      return null;
-    },
+  private readonly commands: CommandTable = {
+    ...joiningCommands(this.core),
+    ...hostingCommands(this.core),
+    ...gameSetupCommands(this.core),
+    ...gameCommands(this.core),
   };
 
   private requireSeat(connection: Connection): Seat {
@@ -906,15 +668,12 @@ export class RoomHost {
     if (this.disposed) return;
     const now = this.ports.now();
     for (const connection of this.connections.values()) {
-      if (connection.playerId === undefined) continue;
-      const viewer: Viewer = { kind: 'player', playerId: connection.playerId };
-      for (const name of PHONE_VIEWS) {
-        const value = viewOf(this.room, name, viewer, now, this.ports.log);
-        const key = JSON.stringify(withoutClock(value));
-        if (connection.sent.get(name) === key) continue;
-        connection.sent.set(name, key);
-        this.sendTo(connection, { type: 'view', name, value } as HostMessage);
+      if (connection.playerId === undefined) {
+        if (connection.watchingAvailability === true) this.pushView(connection, 'availability', { kind: 'tv' }, now);
+        continue;
       }
+      const viewer: Viewer = { kind: 'player', playerId: connection.playerId };
+      for (const name of PHONE_VIEWS) this.pushView(connection, name, viewer, now);
     }
     if (this.tvListeners.size > 0) {
       const views = tvViewsOf(this.room, now, this.ports.log);
@@ -927,6 +686,14 @@ export class RoomHost {
     if (saved === this.lastSaved) return;
     this.lastSaved = saved;
     save(this.snapshot());
+  }
+
+  private pushView(connection: Connection, name: ViewName, viewer: Viewer, now: number): void {
+    const value = viewOf(this.room, name, viewer, now, this.ports.log);
+    const key = JSON.stringify(withoutClock(value));
+    if (connection.sent.get(name) === key) return;
+    connection.sent.set(name, key);
+    this.sendTo(connection, { type: 'view', name, value } as HostMessage);
   }
 
   private lastSaved: string | undefined;

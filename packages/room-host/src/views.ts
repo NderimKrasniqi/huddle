@@ -1,4 +1,5 @@
 import type { ViewName, ViewValue } from '@huddle/contracts/protocol';
+import { ROOM_PLAYER_CAP } from '@huddle/domain';
 import { browsingIndex } from '@huddle/game-registry/logic';
 
 import { decodeStoredRuntime, projectRuntime, runtimeFailure } from './game-runtime';
@@ -56,6 +57,8 @@ export function viewOf<Name extends ViewName>(room: RoomState, name: Name, viewe
       return runningView(room, viewer, now, log) as ViewValue<Name>;
     case 'connection':
       return { away: room.tvAway } as ViewValue<Name>;
+    case 'availability':
+      return { full: room.seats.length >= ROOM_PLAYER_CAP, takenAvatarIds: room.seats.map((seat) => seat.avatar) } as ViewValue<Name>;
     case 'arrivals': {
       if (viewer.kind !== 'tv') return [] as ViewValue<Name>;
       const held = new Set(room.seats.map((seat) => seat.avatar));

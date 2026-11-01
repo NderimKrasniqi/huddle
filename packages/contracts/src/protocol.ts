@@ -10,7 +10,7 @@ import {
   type RateLimitRejection,
 } from './room-contracts';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 export const MAX_FRAME_LENGTH = 256 * 1024;
 
@@ -67,6 +67,8 @@ const session = z.object({
 
 const seatedSession = session.extend({ sessionToken: z.string() });
 
+const availability = z.object({ full: z.boolean(), takenAvatarIds: z.array(avatar) }).nullable();
+
 export const VIEW_VALUES = {
   session: session.nullable(),
   roster: z.array(
@@ -103,6 +105,8 @@ export const VIEW_VALUES = {
     .nullable(),
   connection: z.object({ away: z.boolean() }).nullable(),
   arrivals: z.array(z.object({ previewId: id, nickname: z.string(), avatar })),
+  // Pushed to a join form that asked, until it joins or closes.
+  availability,
 } as const;
 
 export type ViewName = keyof typeof VIEW_VALUES;
@@ -111,7 +115,7 @@ export type ViewValue<Name extends ViewName> = z.infer<(typeof VIEW_VALUES)[Name
 export const PHONE_VIEWS: readonly ViewName[] = ['session', 'roster', 'setup', 'browsing', 'running', 'connection'];
 
 export const COMMAND_RESULTS = {
-  joinAvailability: z.object({ full: z.boolean(), takenAvatarIds: z.array(avatar) }).nullable(),
+  joinAvailability: availability,
   joinRoom: seatedSession,
   resumeSession: session.nullable(),
 } as const satisfies Partial<Record<CommandName, z.ZodType>>;

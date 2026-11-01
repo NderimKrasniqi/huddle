@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { pickerControlState } from '../seated-phone-model';
-import type { BusyAction } from '../use-seated-room';
+import type { BusyAction } from '../use-room-action';
 import type { RosterSeat } from '../../features/room';
 import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';

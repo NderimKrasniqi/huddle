@@ -1,8 +1,6 @@
 import { useRoomMoments, useSystemReducedMotion } from '@huddle/ui/native';
-import type { GameEvent, GameModule, GameSettings, GameSettingsMode } from '@huddle/domain';
 import { GAME_REGISTRY, runningGameScreen } from '@huddle/game-registry';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   hostControlFailureMessage,
@@ -10,38 +8,12 @@ import {
   seatLossNotice,
   type RosterSeat,
 } from '../features/room';
-import { lifecycleFailureMessage } from '../models/lifecycle-rejection';
 import { useHeartbeat } from '../platform/presence/native';
 import { useRoomClient } from '../platform/room-client/native';
 import { usePhoneSession, type PlayerSession } from '../platform/session';
 import { pickerVisibility } from './seated-phone-model';
-
-export type BusyAction =
-  | 'leave'
-  | 'transfer'
-  | 'remove'
-  | 'browse'
-  | 'select'
-  | 'configure'
-  | 'finalize'
-  | 'reopen'
-  | 'cancel'
-  | 'ready'
-  | 'start'
-  | 'stop'
-  | 'end'
-  | 'continue'
-  | 'event'
-  | null;
-
-export type Confirmation = {
-  readonly title: string;
-  readonly message: string;
-  readonly confirmLabel: string;
-  readonly destructive?: boolean;
-  readonly action: Exclude<BusyAction, null>;
-  readonly onConfirm: () => void;
-};
+import { useGameActions } from './use-game-actions';
+import { useRoomAction } from './use-room-action';
 
 export function useSeatedRoom({
   session,
@@ -64,14 +36,10 @@ export function useSeatedRoom({
   const browsingAt = room.useView('browsing', token);
   const setupDraft = room.useView('setup', token);
   const standing = lobbyStanding(roster, session.playerId);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [busy, setBusy] = useState<BusyAction>(null);
-  const [failure, setFailure] = useState<string>();
-  const [success, setSuccess] = useState<string>();
-  const [confirmation, setConfirmation] = useState<Confirmation>();
-  useFocusEffect(useCallback(() => () => setConfirmation(undefined), []));
+  const [pickerOpen, setPickerOpen] = useState(() => setupDraft !== null && setupDraft !== undefined);
+  const action = useRoomAction(token);
+  const { run, confirm, setFailure, setSuccess, dismissConfirmation } = action;
   const [managedPlayer, setManagedPlayer] = useState<RosterSeat>();
-  const busyRef = useRef<BusyAction>(null);
   const seatLossReported = useRef(false);
 
   useEffect(() => {
@@ -88,22 +56,14 @@ export function useSeatedRoom({
     previousHostId.current = hostId;
     if (before === undefined || hostId === undefined || before === hostId || hostSeat === undefined) return;
     setSuccess(hostSeat.playerId === session.playerId ? 'You’re the host now.' : `${hostSeat.nickname} is now the host.`);
-  }, [hostSeat, session.playerId]);
+  }, [hostSeat, session.playerId, setSuccess]);
 
-  useEffect(() => {
-    if (success === undefined) return;
-    const timeout = setTimeout(() => setSuccess(undefined), 2600);
-    return () => clearTimeout(timeout);
-  }, [success]);
-
-  useEffect(() => {
-    if (setupDraft !== null && setupDraft !== undefined) {
-      setPickerOpen(true);
-      return;
-    }
-
-    if (browsingAt === null) setPickerOpen(false);
-  }, [browsingAt, setupDraft]);
+  const [pickerSource, setPickerSource] = useState({ browsingAt, setupDraft });
+  if (pickerSource.browsingAt !== browsingAt || pickerSource.setupDraft !== setupDraft) {
+    setPickerSource({ browsingAt, setupDraft });
+    if (setupDraft !== null && setupDraft !== undefined) setPickerOpen(true);
+    else if (browsingAt === null) setPickerOpen(false);
+  }
 
   const screen = runningGameScreen(running);
   const playerIds = useMemo(() => rosterAnswer?.map((player) => String(player.playerId)), [rosterAnswer]);
@@ -127,27 +87,8 @@ export function useSeatedRoom({
     hasSetup: setupDraft !== null && setupDraft !== undefined,
   });
 
-  async function runAction(action: Exclude<BusyAction, null>, callback: () => Promise<unknown>, message = lifecycleFailureMessage) {
-    if (busyRef.current !== null || token === undefined) return false;
-    busyRef.current = action;
-    setBusy(action);
-    setFailure(undefined);
-    setSuccess(undefined);
-    try {
-      await callback();
-      return true;
-    } catch (error) {
-      setFailure(message(error));
-      return false;
-    } finally {
-      busyRef.current = null;
-      setBusy(null);
-    }
-  }
-
   function confirmLeave() {
-    setFailure(undefined);
-    setConfirmation({
+    confirm({
       title: 'Leave the room?',
       message: 'You can rejoin with the same code while the room is open.',
       confirmLabel: 'Leave',
@@ -155,7 +96,7 @@ export function useSeatedRoom({
       action: 'leave',
       onConfirm: () => {
         void (async () => {
-          const didLeave = await runAction('leave', async () => {
+          const didLeave = await run('leave', async () => {
             beginLeave();
             try {
               await room.command('leaveRoom', token as string, {});
@@ -165,25 +106,24 @@ export function useSeatedRoom({
               throw error;
             }
           });
-          if (didLeave) setConfirmation(undefined);
+          if (didLeave) dismissConfirmation();
         })();
       },
     });
   }
 
   function confirmTransfer(target: RosterSeat) {
-    setFailure(undefined);
     setManagedPlayer(undefined);
-    setConfirmation({
+    confirm({
       title: `Make ${target.nickname} host?`,
       message: 'They will run the room from their phone.',
       confirmLabel: 'Make host',
       action: 'transfer',
       onConfirm: () => {
         void (async () => {
-          const didTransfer = await runAction('transfer', () => room.command('transferHost', token as string, { playerId: target.playerId }), hostControlFailureMessage);
+          const didTransfer = await run('transfer', () => room.command('transferHost', token as string, { playerId: target.playerId }), hostControlFailureMessage);
           if (didTransfer) {
-            setConfirmation(undefined);
+            dismissConfirmation();
             setSuccess(`${target.nickname} is now the host.`);
           }
         })();
@@ -192,9 +132,8 @@ export function useSeatedRoom({
   }
 
   function confirmRemove(target: RosterSeat) {
-    setFailure(undefined);
     setManagedPlayer(undefined);
-    setConfirmation({
+    confirm({
       title: `Remove ${target.nickname}?`,
       message: 'They will leave this room and can rejoin with a new seat.',
       confirmLabel: 'Remove',
@@ -202,9 +141,9 @@ export function useSeatedRoom({
       action: 'remove',
       onConfirm: () => {
         void (async () => {
-          const didRemove = await runAction('remove', () => room.command('removePlayer', token as string, { playerId: target.playerId }), hostControlFailureMessage);
+          const didRemove = await run('remove', () => room.command('removePlayer', token as string, { playerId: target.playerId }), hostControlFailureMessage);
           if (didRemove) {
-            setConfirmation(undefined);
+            dismissConfirmation();
             setSuccess(`${target.nickname} was removed from the room.`);
           }
         })();
@@ -212,111 +151,16 @@ export function useSeatedRoom({
     });
   }
 
-  function openPicker() {
-    if (!standing.youAreHost || token === undefined) return;
-    setPickerOpen(true);
-    const index = browsingAt ?? 0;
-    void (async () => {
-      await runAction('browse', () => room.command('browseGame', token, { index }));
-      setPickerOpen(false);
-    })();
-  }
-
-  function browse(index: number) {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('browse', () => room.command('browseGame', token, { index }));
-  }
-
-  function chooseGame(module: GameModule) {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('select', () => room.command('selectGame', token, { gameId: module.metadata.id, mode: 'standard' }));
-  }
-
-  function configure(mode: GameSettingsMode, settings: GameSettings) {
-    if (!standing.youAreHost || token === undefined || setupDraft === null || setupDraft === undefined) return;
-    void runAction('configure', () => room.command('configureGame', token, { gameId: setupDraft.gameId, settings: { ...settings }, mode }));
-  }
-
-  function finalize() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('finalize', () => room.command('finalizeGameSetup', token, {}));
-  }
-
-  function reopen() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('reopen', () => room.command('reopenGameSetup', token, {}));
-  }
-
-  function confirmReturnToRoom(hasDraft: boolean) {
-    if (!standing.youAreHost || token === undefined) return;
-    setFailure(undefined);
-    setConfirmation({
-      title: 'Back to the room?',
-      message: hasDraft
-        ? 'This clears the unfinished setup for everyone. You can choose it again anytime.'
-        : 'This closes game browsing for everyone. You can choose again anytime.',
-      confirmLabel: 'Back to room',
-      action: 'cancel',
-      onConfirm: () => {
-        void (async () => {
-          const didReturn = await runAction('cancel', () => room.command('cancelGameSetup', token, {}));
-          if (didReturn) {
-            setPickerOpen(false);
-            setConfirmation(undefined);
-          }
-        })();
-      },
-    });
-  }
-
-  function toggleReady() {
-    if (token === undefined || setupDraft === null || setupDraft === undefined) return;
-    const ready = setupDraft.readyPlayerIds.includes(session.playerId);
-    void runAction('ready', () => room.command('setGameReady', token, { ready: !ready }));
-  }
-
-  function start() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('start', () => room.command('startCountdown', token, {}));
-  }
-
-  function stopTheCountdown() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('stop', () => room.command('stopCountdown', token, {}));
-  }
-
-  function end() {
-    if (!standing.youAreHost || token === undefined) return;
-    setFailure(undefined);
-    setConfirmation({
-      title: 'Back to the room?',
-      message: screen.kind === 'finished'
-        ? 'Everyone goes back to the room to choose the next game.'
-        : 'This ends the current game for everyone.',
-      confirmLabel: 'Back to room',
-      destructive: screen.kind !== 'finished',
-      action: 'end',
-      onConfirm: () => {
-        void (async () => {
-          const didEnd = await runAction('end', () => room.command('endGame', token, {}));
-          if (didEnd) {
-            setPickerOpen(false);
-            setConfirmation(undefined);
-          }
-        })();
-      },
-    });
-  }
-
-  function continueGame() {
-    if (!standing.youAreHost || token === undefined) return;
-    void runAction('continue', () => room.command('continueAfterDisconnect', token, {}));
-  }
-
-  function event(event: GameEvent) {
-    if (token === undefined || busy !== null) return;
-    void runAction('event', () => room.command('sendEvent', token, { event }));
-  }
+  const game = useGameActions({
+    token,
+    playerId: session.playerId,
+    youAreHost: standing.youAreHost,
+    browsingAt,
+    setupDraft,
+    finished: screen.kind === 'finished',
+    action,
+    setPickerOpen,
+  });
 
   function managePlayer(target: RosterSeat) {
     if (!standing.youAreHost || target.host) return;
@@ -326,7 +170,7 @@ export function useSeatedRoom({
 
   return {
     returned: moments.returned,
-    welcoming: joinWelcomeUntil !== undefined && joinWelcomeUntil > Date.now(),
+    welcoming: joinWelcomeUntil !== undefined,
     session,
     reduceMotion,
     roster,
@@ -338,29 +182,17 @@ export function useSeatedRoom({
     installedOrSelectedModule,
     hostPicker,
     guestPicker,
-    busy,
-    failure,
-    success,
-    confirmation,
+    busy: action.busy,
+    failure: action.failure,
+    success: action.success,
+    confirmation: action.confirmation,
     managedPlayer,
-    dismissConfirmation: () => setConfirmation(undefined),
+    dismissConfirmation,
     dismissManagedPlayer: () => setManagedPlayer(undefined),
     confirmLeave,
     confirmTransfer,
     confirmRemove,
-    openPicker,
-    browse,
-    chooseGame,
-    configure,
-    finalize,
-    reopen,
-    confirmReturnToRoom,
-    toggleReady,
-    start,
-    stopCountdown: stopTheCountdown,
-    end,
-    continueGame,
-    event,
+    ...game,
     managePlayer,
   };
 }

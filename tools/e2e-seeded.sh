@@ -11,4 +11,6 @@ for _ in $(seq 1 30); do
   [ -s "$code_file" ] && break
   sleep 1
 done
-CODE="$(cat "$code_file")" "$root/tools/e2e-flow.sh" -e CODE="$(cat "$code_file")" "$root/$flow"
+code="$(sed -n 1p "$code_file")"
+code2="$(sed -n 2p "$code_file")"
+CODE="$code" "$root/tools/e2e-flow.sh" -e CODE="$code" -e CODE2="$code2" "$root/$flow"

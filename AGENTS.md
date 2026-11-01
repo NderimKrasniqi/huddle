@@ -52,7 +52,9 @@ check that gives confidence, and preserve unrelated dirty-worktree changes.
   bots that go quiet and checks the phone names them in a short list.
   `pnpm e2e:host-handoff` uses the same seed and checks the host-change toast.
   `pnpm e2e:trivia` joins a Trivia room and answers the first question.
-  `pnpm e2e:sumo` plays a Sumo Bumpers round. To run a flow through the
+  `pnpm e2e:sumo` plays a Sumo Bumpers round. `pnpm e2e:seat-restore` and
+  `pnpm e2e:room-handoff` seed two rooms (ports 7777 and 7778) and check a
+  seat survives a relaunch and "Leave and join" moves the phone. To run a flow through the
   relay, start it (`relay/`, port 8787), run Metro with
   `EXPO_PUBLIC_HUDDLE_RELAY_URL=ws://127.0.0.1:8787`, and prefix the flow with
   `HEADLESS_TV_RELAY=ws://127.0.0.1:8787 HEADLESS_TV_LAN=0`. Port 7777 must be free (an Apple
@@ -78,8 +80,8 @@ blocked by the environment.
   their own palettes: the Cosmic Quiz colours belong to `games/trivia` only.
   `pnpm validate:architecture` enforces both.
 - Runtime artwork is pinned by file name, size, alpha and SHA-256 in
-  `tools/architecture/common.py`. Replacing an image means updating its
-  spec. PNG and JPEG are both read; use JPEG for opaque, photo-like backdrops.
+  `tools/architecture/assets.json`. Replacing an image means updating its
+  entry there. PNG and JPEG are both read; use JPEG for opaque, photo-like backdrops.
 - Keep comments minimal: one line, only for what the code cannot say (a
   platform quirk, a race, a protocol or timing rule). No narrative doc
   comments, and no references to tests or retired systems.

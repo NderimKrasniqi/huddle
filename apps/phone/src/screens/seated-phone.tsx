@@ -14,7 +14,8 @@ import { PhoneFrame, PhoneNotice, PhoneTopBar, type PhoneTopBarProps } from './s
 import { HostToast, useHostToast } from './seated/host-toast';
 import { PickerScreen } from './seated/picker-screen';
 import { SetupScreen } from './seated/setup-screen';
-import { useSeatedRoom, type BusyAction, type Confirmation } from './use-seated-room';
+import type { BusyAction, Confirmation } from './use-room-action';
+import { useSeatedRoom } from './use-seated-room';
 
 export function SeatedPhone({
   session,

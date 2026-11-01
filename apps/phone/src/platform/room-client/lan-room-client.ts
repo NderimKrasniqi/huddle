@@ -8,7 +8,8 @@ import type { ConnectionProblem, JoinAvailability, PlayerSession, RoomClient, Ro
 import { type Endpoint, endpointKey, IncompatibleTv, LocalNetworkDenied, RoomMissing, TvLink, TvUnreachable } from './tv-link';
 
 const DISCOVERY_TIMEOUT_MS = 4_000;
-const AVAILABILITY_REFRESH_MS = 3_000;
+const AVAILABILITY_RETRY_MS = 3_000;
+const AVAILABILITY_KEEPALIVE_MS = 10_000;
 const SEAT_RECORD_KEY = 'huddle.seat.v2';
 const RELAY_URL = process.env.EXPO_PUBLIC_HUDDLE_RELAY_URL || undefined;
 
@@ -179,24 +180,52 @@ export function lanRoomClient(): RoomClient {
       useEffect(() => {
         if (code === undefined) return;
         let live = true;
+        let watched: TvLink | undefined;
+        let unsubscribe = () => {};
+        const show = (value: JoinAvailability) => {
+          if (live) setAnswer({ code, value });
+        };
+        let asking = false;
+        let lastPing = Date.now();
         const ask = async () => {
+          if (asking) return;
+          asking = true;
           try {
             const value = await reaching(async () => {
               const endpoint = await endpointForCode(code);
-              return endpoint === undefined
-                ? null
-                : ((await (await linkFor(endpoint)).request('joinAvailability', { code })) as JoinAvailability);
+              if (endpoint === undefined) return null;
+              const link = await linkFor(endpoint);
+              if (link !== watched) {
+                unsubscribe();
+                watched = link;
+                // The TV pushes changes to a form that asked, so later answers arrive on their own.
+                unsubscribe = link.subscribe(() => {
+                  const pushed = link.view('availability');
+                  if (pushed !== undefined) show(pushed as JoinAvailability);
+                });
+              }
+              return (await link.request('joinAvailability', { code })) as JoinAvailability;
             });
-            if (live) setAnswer({ code, value });
+            show(value);
           } catch (error) {
-            if (error instanceof RoomMissing && live) setAnswer({ code, value: null });
+            if (error instanceof RoomMissing) show(null);
+          } finally {
+            asking = false;
           }
         };
         void ask();
-        const refresh = setInterval(() => void ask(), AVAILABILITY_REFRESH_MS);
+        const keepWatching = setInterval(() => {
+          if (watched?.connected !== true) {
+            void ask();
+          } else if (Date.now() - lastPing >= AVAILABILITY_KEEPALIVE_MS) {
+            lastPing = Date.now();
+            watched.ping();
+          }
+        }, AVAILABILITY_RETRY_MS);
         return () => {
           live = false;
-          clearInterval(refresh);
+          unsubscribe();
+          clearInterval(keepWatching);
         };
       }, [code]);
       return code !== undefined && answer?.code === code ? answer.value : undefined;

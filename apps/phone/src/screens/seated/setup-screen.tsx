@@ -23,7 +23,7 @@ import { View } from 'react-native';
 import type { RosterSeat } from '../../features/room';
 import { settingsControls } from '../../features/game-picker/settings-choice';
 import { setupModeLabel } from '../seated-phone-model';
-import type { BusyAction } from '../use-seated-room';
+import type { BusyAction } from '../use-room-action';
 import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import { OptionSheet, Segment, SettingControlView } from './setup-controls';

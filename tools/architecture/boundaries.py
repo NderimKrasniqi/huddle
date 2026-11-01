@@ -24,9 +24,7 @@ def tv_presentation_sources(root: Path = ROOT) -> list[Path]:
 
     sources = source_files(root / "apps" / "tv" / "src") if (root / "apps" / "tv" / "src").is_dir() else []
     for game in ("trivia", "bomb-squad", "sumo-bumpers"):
-        path = root / "games" / game / "src" / "tv-screen.tsx"
-        if path.is_file():
-            sources.append(path)
+        sources.extend((root / "games" / game / "src").glob("tv-*.tsx"))
     return sorted(set(sources))
 
 

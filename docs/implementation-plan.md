@@ -146,6 +146,17 @@ Tizen or webOS shell: Skia needs CanvasKit (stubbed on the web, so Bomb Squad
 and Sumo lose their TV art), storage is `localStorage`, networking is
 relay-only, and `crypto.randomUUID` needs a secure context.
 
+### Code improvements after the audit
+
+The room host's commands moved into `packages/room-host/src/commands/`, and
+the join screen's logic into `apps/phone/src/screens/use-join-identity.ts`.
+The TV now pushes `availability` to a join form that asked, so the phone no
+longer polls; this is protocol version 2. New flows `e2e:seat-restore` and
+`e2e:room-handoff` cover a relaunch and moving to another room. The seated
+room hook shares its action state (`use-room-action.ts`) and game actions
+(`use-game-actions.ts`), the Trivia TV screen is split by stage, and the
+pinned artwork moved to `tools/architecture/assets.json`.
+
 ### TV-hosted rooms on simulators (TASK-11 to TASK-18)
 
 All three games played to the finish with nine bots and a guest iPhone on

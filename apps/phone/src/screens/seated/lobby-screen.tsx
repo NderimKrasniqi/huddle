@@ -14,7 +14,7 @@ import Animated, { Easing, Keyframe, ReduceMotion } from 'react-native-reanimate
 
 import { rosterRowControls, type lobbyStanding, type RosterSeat } from '../../features/room';
 import type { PlayerSession } from '../../platform/session';
-import type { BusyAction } from '../use-seated-room';
+import type { BusyAction } from '../use-room-action';
 import { HostSteps } from './host-steps';
 import { PhoneCard, PhoneFrame, PhoneNotice, PhoneTopBar } from './phone-frame';
 import { RoomFaces } from './room-faces';

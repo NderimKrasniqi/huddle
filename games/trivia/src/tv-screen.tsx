@@ -5,30 +5,26 @@ import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { TRIVIA_ART } from './art';
 import {
-  answerLetter,
   answerTone,
-  CheckBadge,
   cosmic,
   cosmicWash,
   CosmicText,
   CountdownRing,
-  Confetti,
-  CountUp,
-  COSMIC_MOTION,
   Enter,
-  Pulse,
   LaunchWipe,
   LetterBadge,
   Logo,
   Mascot,
-  MissBadge,
   Pill,
   timerLabel,
   Twinkle,
 } from './cosmic';
 import { INTRO_SECONDS, QUESTION_SECONDS, REVEAL_SECONDS } from './state';
 import type { TriviaState } from './types';
-import { watchedScreen, type FinalStanding, type WatchedOption, type WatchedScreen } from './watching';
+import { watchedScreen, type WatchedOption, type WatchedScreen } from './watching';
+import { FinishedStage } from './tv-finished';
+import { RevealStage } from './tv-reveal';
+import { optionAccessibilityLabel, panel, type Players, SAFE_X, SAFE_Y, STAGE_HEIGHT, STAGE_WIDTH, stageStyles } from './tv-stage';
 
 const SKY_WAIT_MS = 600;
 
@@ -40,13 +36,6 @@ function useSkyFirst(): readonly [boolean, () => void] {
   }, []);
   return [shown, () => setShown(true)];
 }
-
-const STAGE_WIDTH = 1920;
-const STAGE_HEIGHT = 1080;
-const SAFE_X = 96;
-const SAFE_Y = 54;
-
-type Players = TvGameScreenProps<TriviaState>['players'];
 
 export function TriviaTvScreen({ state, players, clockRemainingMs, hostNickname }: TvGameScreenProps<TriviaState>) {
   const viewport = useWindowDimensions();
@@ -174,7 +163,7 @@ function QuestionStage({
   const seatWidth = named ? Math.min(220, Math.floor((FOOTER_SEATS_WIDTH - 14 * (players.length - 1)) / Math.max(1, players.length))) : undefined;
   return (
     <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={questionAccessibilityLabel(screen)}>
-      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
+      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={stageStyles.topLabel}>
         {`QUESTION ${screen.questionNumber} OF ${screen.questionCount}`}
       </CosmicText>
       <Pill style={styles.timer} testID="trivia-tv-clock">
@@ -203,7 +192,7 @@ function QuestionStage({
       <View style={styles.footer}>
         <View style={styles.footerRule} />
         <View style={styles.footerRow}>
-          <View style={styles.clockRow}>
+          <View style={stageStyles.clockRow}>
             <CosmicText weight="black" size={56} color={cosmic.butter}>{screen.answered}</CosmicText>
             <CosmicText weight="bold" size={40} color={cosmic.cream}>{` of ${screen.playerCount} answered`}</CosmicText>
           </View>
@@ -225,14 +214,6 @@ function QuestionStage({
   );
 }
 
-function tallyQuip(right: number, total: number): string | undefined {
-  if (total < 2) return undefined;
-  if (right === total) return 'Big brains all round!';
-  if (right === 0) return 'Nobody saw that coming!';
-  if (right === 1) return 'A lone genius walks among us.';
-  return undefined;
-}
-
 function questionSize(text: string): number {
   if (text.length > 90) return 52;
   if (text.length > 55) return 60;
@@ -243,256 +224,11 @@ function AnswerTile({ option }: { readonly option: WatchedOption }) {
   return (
     <View style={[styles.answerTile, { backgroundColor: answerTone(option.optionIndex) }]}>
       <LetterBadge optionIndex={option.optionIndex} size={82} />
-      <CosmicText weight="black" size={option.text.length > 24 ? 40 : 56} numberOfLines={2} style={styles.answerText}>
+      <CosmicText weight="black" size={option.text.length > 24 ? 40 : 56} numberOfLines={2} style={stageStyles.answerText}>
         {option.text}
       </CosmicText>
     </View>
   );
-}
-
-function RevealStage({
-  screen,
-  seconds,
-  reduceMotion,
-  hostNickname,
-}: {
-  readonly screen: Extract<WatchedScreen, { kind: 'reveal' }>;
-  readonly seconds: number;
-  readonly reduceMotion: boolean | undefined;
-  readonly hostNickname?: string;
-}) {
-  const correct = screen.options.find((option) => option.correct === true);
-  const last = screen.questionNumber >= screen.questionCount;
-  const compact = screen.scoreboard.length > 5;
-  const roomy = screen.scoreboard.length <= 4;
-  const anyGain = screen.scoreboard.some((row) => row.gain !== undefined && row.gain > 0);
-  const gotIt = screen.verdicts.filter((verdict) => verdict.correct).length;
-  const verdictOf = (playerId: string) => screen.verdicts.find((verdict) => verdict.playerId === playerId)?.correct === true;
-
-  return (
-    <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={revealAccessibilityLabel(screen, seconds)}>
-      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
-        {`THE REVEAL • ${screen.questionNumber} / ${screen.questionCount}`}
-      </CosmicText>
-      <View style={styles.revealRow}>
-        <Enter reduceMotion={reduceMotion} style={styles.answerPanel}>
-          <CosmicText weight="black" size={56} align="center" numberOfLines={1}>Correct answer</CosmicText>
-          <CosmicText weight="extraBold" size={40} align="center" numberOfLines={4} style={{ marginTop: 28 }}>
-            {screen.text}
-          </CosmicText>
-          {correct ? (
-            <Enter reduceMotion={reduceMotion} delay={350} scale={0.9} from={0} style={{ alignSelf: 'stretch', marginTop: 36 }}>
-              <Pulse reduceMotion={reduceMotion} delay={350 + COSMIC_MOTION.enter}>
-                <View style={[styles.correctTile, { backgroundColor: answerTone(correct.optionIndex) }]}>
-                  <LetterBadge optionIndex={correct.optionIndex} size={72} />
-                  <CosmicText weight="black" size={correctAnswerSize(correct.text)} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.answerText}>
-                    {correct.text}
-                  </CosmicText>
-                  <CheckBadge size={56} />
-                </View>
-              </Pulse>
-            </Enter>
-          ) : null}
-          <Enter reduceMotion={reduceMotion} delay={700} from={10} style={styles.tally} testID="trivia-tv-tally">
-            <View style={styles.tallyRow}>
-              <CosmicText weight="black" size={64} color={cosmic.correct}>{gotIt}</CosmicText>
-              <CosmicText weight="extraBold" size={30}>{` of ${screen.verdicts.length} got it right`}</CosmicText>
-            </View>
-            {tallyQuip(gotIt, screen.verdicts.length) ? (
-              <CosmicText weight="bold" size={30} color={cosmic.muted} align="center">{tallyQuip(gotIt, screen.verdicts.length)}</CosmicText>
-            ) : null}
-          </Enter>
-        </Enter>
-        <Enter reduceMotion={reduceMotion} delay={120} style={styles.resultsPanel}>
-          <CosmicText weight="black" size={72} align="center">Round results</CosmicText>
-          <View style={[styles.resultRows, compact ? styles.resultRowsCompact : null, roomy ? styles.resultRowsRoomy : null]} testID="trivia-tv-verdict-grid">
-            {screen.scoreboard.map((row, index) => {
-              const right = verdictOf(row.playerId);
-              return (
-                <Enter key={row.playerId} reduceMotion={reduceMotion} delay={150 + index * 40} from={14} style={[styles.resultRow, compact ? styles.resultRowCompact : null]} testID={`trivia-tv-verdict-row-${row.playerId}`}>
-                  {row.avatar ? <AvatarPortrait avatarId={row.avatar} displayName={row.nickname} size={compact ? 48 : roomy ? 84 : 72} disabled={row.away} /> : null}
-                  <CosmicText weight="bold" size={compact ? 30 : roomy ? 40 : 40} numberOfLines={1} style={styles.resultName}>{row.nickname}</CosmicText>
-                  <View style={[styles.verdict, compact ? styles.verdictCompact : null, roomy ? styles.verdictRoomy : null]}>
-                    {right ? <CheckBadge size={compact ? 40 : roomy ? 56 : 40} /> : <MissBadge size={compact ? 40 : roomy ? 56 : 40} />}
-                    {compact ? null : (
-                      <CosmicText weight="extraBold" size={roomy ? 40 : 30} color={right ? cosmic.correct : cosmic.missed}>
-                        {right ? 'Correct' : 'Missed'}
-                      </CosmicText>
-                    )}
-                  </View>
-                  {compact ? (
-                    anyGain ? (
-                      <View style={styles.gainSlotCompact} testID="trivia-tv-gain-slot">
-                        {row.gain !== undefined && row.gain > 0 ? (
-                          <Enter reduceMotion={reduceMotion} delay={350 + index * 40} scale={0.85} from={0}>
-                            <Pill color={cosmic.butter} style={styles.gainPillCompact}>
-                              <CosmicText weight="black" size={24}>{`+${row.gain}`}</CosmicText>
-                            </Pill>
-                          </Enter>
-                        ) : null}
-                      </View>
-                    ) : null
-                  ) : row.gain !== undefined && row.gain > 0 ? (
-                    <Enter reduceMotion={reduceMotion} delay={350 + index * 40} scale={0.85} from={0}>
-                      <Pill color={cosmic.butter} style={styles.gainPill}>
-                        <CosmicText weight="black" size={roomy ? 30 : 24}>{`+${row.gain}`}</CosmicText>
-                      </Pill>
-                    </Enter>
-                  ) : null}
-                  <CountUp
-                    from={row.score - (row.gain ?? 0)}
-                    to={row.score}
-                    delay={400 + index * 40}
-                    reduceMotion={reduceMotion}
-                    weight="black"
-                    size={compact ? 30 : roomy ? 40 : 40}
-                    align="right"
-                    style={compact ? styles.resultScoreCompact : styles.resultScore}
-                  />
-                </Enter>
-              );
-            })}
-          </View>
-        </Enter>
-      </View>
-      <View style={styles.nextBar}>
-        <Pill style={styles.nextPill}>
-          <View style={styles.clockRow}>
-            <CosmicText weight="extraBold" size={40}>{last ? 'Final scores in ' : 'Next question in '}</CosmicText>
-            <CosmicText weight="black" size={56}>{`${seconds}s`}</CosmicText>
-          </View>
-        </Pill>
-        <CosmicText weight="bold" size={30} color={cosmic.cream} align="center" style={styles.nextHint}>{`${hostNickname ?? 'The host'} can move on sooner`}</CosmicText>
-      </View>
-      <Mascot pose="celebrate" width={220} reduceMotion={reduceMotion} style={styles.revealMascot} />
-    </View>
-  );
-}
-
-const PODIUM_SLOT_WIDTH = 386;
-const REST_SEAT_WIDTH = 236;
-
-function WinnersCircle({ winners, reduceMotion }: { readonly winners: readonly FinalStanding[]; readonly reduceMotion: boolean | undefined }) {
-  const size = winners.length > 6 ? 96 : 120;
-  const score = winners[0]?.score ?? 0;
-  const seat = size + 90;
-  const columns = winners.length > 6 ? Math.ceil(winners.length / 2) : winners.length;
-  return (
-    <View style={styles.circle} testID="trivia-tv-winners-circle">
-      <View style={[styles.circleRow, { width: columns * seat + (columns - 1) * 28 }]}>
-        {winners.map((winner, index) => (
-          <Enter key={winner.playerId} reduceMotion={reduceMotion} delay={250 + index * 60} scale={0.88} from={0} style={[styles.circleSeat, { width: seat }]} testID={`trivia-tv-final-row-${winner.playerId}`}>
-            <View style={[styles.circleRing, { width: size + 20, height: size + 20, borderRadius: (size + 20) / 2 }]}>
-              {winner.avatar ? <AvatarPortrait avatarId={winner.avatar} displayName={winner.nickname} size={size} disabled={winner.away} /> : null}
-            </View>
-            <CosmicText weight="extraBold" size={30} color={cosmic.cream} numberOfLines={1} style={{ maxWidth: seat }}>{winner.nickname}</CosmicText>
-          </Enter>
-        ))}
-      </View>
-      <Pill color={cosmic.butter} style={styles.circleScore}>
-        <CosmicText weight="black" size={30}>{`${winners.length} winners · ${score} points each`}</CosmicText>
-      </Pill>
-      <Twinkle size={40} style={{ top: -10, left: 40 }} reduceMotion={reduceMotion} period={2600} />
-      <Twinkle size={30} style={{ top: 40, right: 30 }} reduceMotion={reduceMotion} period={3300} />
-    </View>
-  );
-}
-
-const PODIUM_SLOTS = [2, 1, 3] as const;
-
-const STEP_BY_RANK = {
-  1: { color: cosmic.butter, height: 250, avatar: 150 },
-  2: { color: cosmic.periwinkle, height: 205, avatar: 124 },
-  3: { color: cosmic.coral, height: 185, avatar: 124 },
-} as const;
-
-function stepFor(rank: number) {
-  return STEP_BY_RANK[Math.min(Math.max(rank, 1), 3) as 1 | 2 | 3];
-}
-
-function FinishedStage({
-  screen,
-  reduceMotion,
-}: {
-  readonly screen: Extract<WatchedScreen, { kind: 'finished' }>;
-  readonly reduceMotion: boolean | undefined;
-}) {
-  const winners = screen.standings.filter((standing) => standing.winner);
-  const circle = winners.length > PODIUM_SLOTS.length;
-  const top = circle ? [] : screen.standings.slice(0, 3);
-  const rest = circle ? screen.standings.filter((standing) => !standing.winner) : screen.standings.slice(3);
-  const byPlace = (place: number): FinalStanding | undefined => top[place - 1];
-  const compactRest = rest.length > 4;
-  const restColumns = compactRest ? Math.ceil(Math.min(rest.length, 7) / 2) : rest.length;
-
-  return (
-    <View style={StyleSheet.absoluteFill} accessible accessibilityRole="text" accessibilityLabel={finishedAccessibilityLabel(screen)}>
-      <CosmicText weight="extraBold" size={40} color={cosmic.cream} tracking={7} align="center" style={styles.topLabel}>
-        FINAL SCORES
-      </CosmicText>
-      <Enter reduceMotion={reduceMotion} scale={0.85} from={0} style={styles.winnerPill}>
-        <CosmicText weight="black" size={screen.headline.length > 24 ? 72 : 104} align="center" numberOfLines={1} adjustsFontSizeToFit>
-          {screen.headline}
-        </CosmicText>
-      </Enter>
-      {circle ? <WinnersCircle winners={winners} reduceMotion={reduceMotion} /> : null}
-      <View style={styles.podium} testID="trivia-tv-final-grid">
-        {circle ? null : PODIUM_SLOTS.map((place, index) => {
-          const standing = byPlace(place);
-          if (standing === undefined) return <View key={place} style={styles.podiumSlot} />;
-          const { color, height, avatar } = stepFor(standing.rank);
-          return (
-            <Enter key={standing.playerId} reduceMotion={reduceMotion} delay={250 + index * 160} from={120} style={styles.podiumSlot} testID={`trivia-tv-final-row-${standing.playerId}`}>
-              {standing.winner && standing.avatar ? (
-                <>
-                  <View style={[styles.winnerRing, { width: avatar + 28, height: avatar + 28, borderRadius: (avatar + 28) / 2, top: -14 }]} pointerEvents="none" />
-                  <Twinkle size={40} style={{ top: -30, left: PODIUM_SLOT_WIDTH / 2 + avatar / 2 - 6 }} reduceMotion={reduceMotion} period={2600} />
-                  <Twinkle size={30} style={{ top: avatar * 0.55, left: PODIUM_SLOT_WIDTH / 2 - avatar / 2 - 40 }} reduceMotion={reduceMotion} period={3300} />
-                </>
-              ) : null}
-              {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={avatar} disabled={standing.away} /> : null}
-              <View style={[styles.podiumBlock, { height, backgroundColor: color }]}>
-                <View style={styles.podiumTop} pointerEvents="none" />
-                <View style={styles.rankBadge}>
-                  <CosmicText weight="black" size={40} style={{ lineHeight: 42 }}>{standing.rank}</CosmicText>
-                </View>
-                <CosmicText weight="black" size={40} numberOfLines={1} style={{ maxWidth: 340 }}>{standing.nickname}</CosmicText>
-                <CosmicText weight="black" size={40}>{standing.score}</CosmicText>
-              </View>
-            </Enter>
-          );
-        })}
-        {circle ? null : <View style={styles.podiumFloor} pointerEvents="none" />}
-      </View>
-      {rest.length > 0 ? (
-        <Enter reduceMotion={reduceMotion} delay={800} style={styles.restDock}>
-          <View style={[styles.restRow, compactRest ? { width: restColumns * REST_SEAT_WIDTH + (restColumns - 1) * 30 + 64 } : null]}>
-          {rest.slice(0, 7).map((standing) => (
-            <View key={standing.playerId} style={[styles.restSeat, compactRest ? styles.restSeatCompact : null]} testID={`trivia-tv-final-row-${standing.playerId}`}>
-              <View style={styles.restRank}>
-                <CosmicText weight="black" size={30} style={{ lineHeight: 34 }}>{standing.rank}</CosmicText>
-              </View>
-              {standing.avatar ? <AvatarPortrait avatarId={standing.avatar} displayName={standing.nickname} size={compactRest ? 48 : 64} disabled={standing.away} /> : null}
-              <View style={compactRest ? styles.restText : null}>
-                <CosmicText weight="bold" size={compactRest ? 24 : 30} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={compactRest ? null : { maxWidth: 240 }}>{standing.nickname}</CosmicText>
-                <CosmicText weight="black" size={compactRest ? 24 : 30}>{standing.score}</CosmicText>
-              </View>
-            </View>
-          ))}
-          </View>
-        </Enter>
-      ) : null}
-      <CosmicText weight="black" size={40} color={cosmic.cream} align="center" style={styles.thanks}>
-        Thanks for playing together!
-      </CosmicText>
-      <Mascot pose="celebrate" width={220} reduceMotion={reduceMotion} style={styles.revealMascot} />
-      <Confetti width={STAGE_WIDTH} height={STAGE_HEIGHT} reduceMotion={reduceMotion} />
-    </View>
-  );
-}
-
-function optionAccessibilityLabel(option: WatchedOption, revealed: boolean): string {
-  return `${answerLetter(option.optionIndex)}: ${option.text}${revealed && option.correct === true ? ', correct answer' : ''}`;
 }
 
 function questionAccessibilityLabel(screen: Extract<WatchedScreen, { kind: 'question' }>): string {
@@ -500,41 +236,9 @@ function questionAccessibilityLabel(screen: Extract<WatchedScreen, { kind: 'ques
   return `Question ${screen.questionNumber} of ${screen.questionCount}. ${screen.text}. Choices: ${choices}. ${screen.answered} of ${screen.playerCount} answered. ${screen.countdownSeconds} seconds remaining.`;
 }
 
-function revealAccessibilityLabel(screen: Extract<WatchedScreen, { kind: 'reveal' }>, seconds: number): string {
-  const choices = screen.options.map((option) => optionAccessibilityLabel(option, true)).join('; ');
-  const results = screen.scoreboard
-    .map((row) => {
-      const verdict = screen.verdicts.find((candidate) => candidate.playerId === row.playerId);
-      return `${row.nickname}, ${verdict?.correct ? 'Correct' : 'Missed'}, ${row.score} points`;
-    })
-    .join('; ');
-  const next = screen.questionNumber >= screen.questionCount ? 'Final scores' : 'Next question';
-  return `Reveal for question ${screen.questionNumber} of ${screen.questionCount}. ${screen.text}. Choices: ${choices}. Round results: ${results}. ${next} in ${seconds} seconds.`;
-}
-
-function finishedAccessibilityLabel(screen: Extract<WatchedScreen, { kind: 'finished' }>): string {
-  const standings = screen.standings
-    .map((standing) => `${standing.rank}. ${standing.nickname}, ${standing.score} points${standing.winner ? ', winner' : ''}`)
-    .join('; ');
-  return `${screen.headline}. Final Trivia standings: ${standings}.`;
-}
-
 function safeScale(width: number, height: number): number {
   const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
   return Number.isFinite(scale) && scale > 0 ? scale : 1;
-}
-
-const panel = {
-  backgroundColor: cosmic.cream,
-  borderRadius: 56,
-} as const;
-
-function correctAnswerSize(text: string): number {
-  const longestWord = Math.max(...text.split(/\s+/).map((word) => word.length));
-  if (text.length <= 7) return 54;
-  if (longestWord <= 10 && text.length <= 16) return 40;
-  if (longestWord > 12) return 28;
-  return 34;
 }
 
 const FOOTER_SEATS_WIDTH = 900;
@@ -544,8 +248,6 @@ const styles = StyleSheet.create({
   space: { position: 'absolute', left: 0, top: 0, width: STAGE_WIDTH, height: STAGE_HEIGHT },
   stage: { width: STAGE_WIDTH, height: STAGE_HEIGHT, overflow: 'hidden', backgroundColor: cosmic.navy },
   logo: { position: 'absolute', left: SAFE_X - 20, top: SAFE_Y - 10 },
-  centered: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 240 },
-
   introColumn: { position: 'absolute', top: SAFE_Y + 16, bottom: 300, left: 300, right: 300, alignItems: 'center', justifyContent: 'space-between' },
   countPill: { paddingHorizontal: 44, paddingVertical: 12, marginBottom: 6 },
   introRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 48 },
@@ -555,8 +257,6 @@ const styles = StyleSheet.create({
   crewLabel: { paddingHorizontal: 36, paddingVertical: 8, borderRadius: 999, borderWidth: 3, borderColor: cosmic.turquoise, backgroundColor: cosmic.navy },
   crewRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 26, rowGap: 10, marginTop: 18 },
   crewSeat: { alignItems: 'center' },
-
-  topLabel: { position: 'absolute', top: SAFE_Y + 18, left: 500, right: 500 },
   timer: { position: 'absolute', top: SAFE_Y + 4, right: SAFE_X + 60, paddingHorizontal: 34, paddingVertical: 8 },
   questionColumn: { position: 'absolute', top: 176, left: 340, right: 340, gap: 32 },
   categoryChip: { alignSelf: 'center', paddingHorizontal: 30, paddingVertical: 6, marginBottom: -46, zIndex: 1, borderWidth: 4, borderColor: cosmic.navy },
@@ -564,7 +264,6 @@ const styles = StyleSheet.create({
   answerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 32 },
   answerCell: { width: 604 },
   answerTile: { height: 148, borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 28, gap: 30 },
-  answerText: { flex: 1 },
   peekingMascot: { position: 'absolute', right: 56, bottom: SAFE_Y + 96 },
   peekingMascotNamed: { bottom: SAFE_Y + 128 },
   footer: { position: 'absolute', left: SAFE_X, right: SAFE_X, bottom: SAFE_Y },
@@ -574,51 +273,4 @@ const styles = StyleSheet.create({
   footerSeat: { alignItems: 'center' },
   footerName: { marginTop: 2, maxWidth: '100%' },
   footerDivider: { width: 2, height: 64, backgroundColor: cosmicWash.divider },
-
-  revealRow: { position: 'absolute', top: 220, left: SAFE_X, right: SAFE_X, bottom: 200, flexDirection: 'row', gap: 40 },
-  answerPanel: { ...panel, width: 560, paddingHorizontal: 44, paddingVertical: 48, alignItems: 'center' },
-  correctTile: { borderRadius: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 22, gap: 20 },
-  tally: { marginTop: 'auto', alignItems: 'center', gap: 4 },
-  tallyRow: { flexDirection: 'row', alignItems: 'baseline' },
-  resultsPanel: { ...panel, flex: 1, paddingHorizontal: 40, paddingTop: 36, paddingBottom: 28 },
-  resultRows: { marginTop: 18, gap: 10 },
-  resultRowsRoomy: { flex: 1, justifyContent: 'center', gap: 18, marginTop: 0 },
-  resultRowsCompact: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, columnGap: 24 },
-  resultRow: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: cosmicWash.rowTint },
-  resultRowCompact: { width: 510, gap: 8, paddingVertical: 4 },
-  resultName: { flex: 1 },
-  verdict: { flexDirection: 'row', alignItems: 'center', gap: 12, width: 200 },
-  verdictCompact: { width: 38 },
-  verdictRoomy: { width: 250 },
-  resultScore: { width: 110 },
-  gainPill: { paddingHorizontal: 14, paddingVertical: 2 },
-  gainSlotCompact: { minWidth: 72, alignItems: 'flex-end' },
-  gainPillCompact: { paddingHorizontal: 10, paddingVertical: 0 },
-  resultScoreCompact: { width: 76 },
-  nextBar: { position: 'absolute', left: 0, right: 0, bottom: SAFE_Y + 4, alignItems: 'center' },
-  clockRow: { flexDirection: 'row', alignItems: 'baseline' },
-  nextHint: { alignSelf: 'stretch', marginTop: 10 },
-  nextPill: { paddingHorizontal: 52, paddingVertical: 12 },
-  revealMascot: { position: 'absolute', right: 24, bottom: 8 },
-
-  winnerPill: { ...panel, position: 'absolute', top: 150, left: 520, right: 520, paddingVertical: 22, paddingHorizontal: 40, alignItems: 'center' },
-  podium: { position: 'absolute', left: 360, right: 360, bottom: 330, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 14 },
-  podiumSlot: { width: PODIUM_SLOT_WIDTH, alignItems: 'center' },
-  podiumBlock: { alignSelf: 'stretch', borderTopLeftRadius: 40, borderTopRightRadius: 40, alignItems: 'center', paddingTop: 16, marginTop: -16 },
-  winnerRing: { position: 'absolute', alignSelf: 'center', borderWidth: 6, borderColor: cosmic.butter },
-  podiumTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 22, borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: cosmicWash.highlight },
-  rankBadge: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: cosmic.navy, backgroundColor: cosmic.cream, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  restDock: { position: 'absolute', left: 200, right: 200, bottom: 186, alignItems: 'center' },
-  podiumFloor: { position: 'absolute', left: -48, right: -48, bottom: -14, height: 14, borderRadius: 7, backgroundColor: cosmic.turquoise, opacity: 0.55 },
-  restRow: { ...panel, maxWidth: '100%', minHeight: 100, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 30, rowGap: 10, paddingHorizontal: 32, paddingVertical: 14 },
-  restSeat: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  restSeatCompact: { width: REST_SEAT_WIDTH, gap: 10 },
-  restText: { flex: 1 },
-  circle: { position: 'absolute', left: 200, right: 200, top: 330, bottom: 300, alignItems: 'center', justifyContent: 'center', gap: 30 },
-  circleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 28, rowGap: 18 },
-  circleSeat: { alignItems: 'center', gap: 8 },
-  circleRing: { borderWidth: 6, borderColor: cosmic.butter, alignItems: 'center', justifyContent: 'center' },
-  circleScore: { paddingHorizontal: 30, paddingVertical: 8 },
-  restRank: { width: 48, height: 48, borderRadius: 24, backgroundColor: cosmic.periwinkle, alignItems: 'center', justifyContent: 'center' },
-  thanks: { position: 'absolute', left: 0, right: 0, bottom: SAFE_Y + 10 },
 });

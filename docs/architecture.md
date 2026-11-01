@@ -76,6 +76,8 @@ runs in the TV app and under Node (`pnpm headless-tv`, the e2e seeds).
   than ten minutes; a running beat keeps the time it had left.
 - Games are not told who the Host is: the host stamps `fromHost` and the
   acting `playerId` on events itself.
+- Commands live in `src/commands/` (joining, hosting, game setup, game) and
+  reach the room through the `HostCore` in `src/core.ts`.
 
 ### Room Protocol and transport
 
@@ -84,8 +86,9 @@ room code); a different version gets `incompatible` and the phone shows
 "Update Huddle". The connection is anonymous until `joinRoom` or
 `resumeSession` binds it to one seat, so later commands carry no Session
 Token. Results carry the room's rejection unions; views are pushed
-(`session`, `roster`, `setup`, `browsing`, `running`, `connection`, and
-`arrivals` for the TV alone). Clocks travel as milliseconds remaining. Frames
+(`session`, `roster`, `setup`, `browsing`, `running`, `connection`,
+`arrivals` for the TV alone, and `availability` for an unseated join form
+that asked `joinAvailability`). Clocks travel as milliseconds remaining. Frames
 are capped at 256 KB. Bump `PROTOCOL_VERSION` for any change an older peer
 would misread.
 
@@ -203,7 +206,7 @@ stage with a 5% overscan-safe frame; phone layouts use Safe Area insets and a
 scrollable single column. The visual reference is
 [`design/playroom/README.md`](design/playroom/README.md); runtime artwork is
 pinned by file name, size, alpha and SHA-256 in
-`tools/architecture/common.py`; `tools/validate-architecture.py` runs the
+`tools/architecture/assets.json`; `tools/validate-architecture.py` runs the
 rules in `tools/architecture/` (boundaries, assets, native config, stack).
 
 ## Verification gates
