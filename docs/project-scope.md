@@ -32,6 +32,7 @@ The shelf holds the installed games, in order:
 
 1. Trivia.
 2. Bomb Squad.
+3. Sumo Bumpers.
 
 The Host browses the shelf from the Phone; the TV mirrors the registry index
 and card art without controls. The Host chooses Quick, Standard, or Custom. The module
@@ -41,7 +42,8 @@ busy state, and locked state without inventing game settings.
 Trivia settings are Questions (5/10/15/20), Difficulty
 (Easy/Medium/Hard/Mixed), Time per question (10/15/20/30 seconds), Category
 (All plus the curated categories), and Scoring (Flat/Speed). Bomb Squad
-settings are Bombs (3/5/7) and Time to argue (30/45/60 seconds).
+settings are Bombs (3/5/7) and Time to argue (30/45/60 seconds). Sumo Bumpers
+settings are Matches (1/3/5) and Time to aim (8/12/15 seconds).
 
 Ready is individual on every Phone: each player raises a hand, and the TV
 lifts that player's avatar and fills one segment of the ready bar. Locking
@@ -128,8 +130,8 @@ apply: the TV hosts every room. The phone screens for items 2, 3 and 5 exist.
 ## Remaining acceptance work
 
 The behavioral implementation, screen-by-screen fidelity pass, representative
-Phone/TV simulator captures, Android TV remote/focus verification, and focused
-render/contract/integration checks are complete. Remaining acceptance work is
+Phone/TV simulator captures, Android TV remote/focus verification, and the
+Maestro end-to-end flows in `e2e/` are complete. Remaining acceptance work is
 physical-device evidence: real camera permission and QR join, mixed-phone
 lifecycle and reconnect/seat-loss traversal, and the final mixed Phone + Android
 TV living-room party check.
